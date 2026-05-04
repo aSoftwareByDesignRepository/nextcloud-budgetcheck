@@ -1,0 +1,1323 @@
+/*
+ * BudgetCheck design system.
+ *
+ * - Color and surfaces come from Nextcloud variables (--color-*, --color-main-*).
+ * - App-specific tokens are prefixed --bc-* and only define spacing, radii,
+ *   typography scale, shadows, and tints derived via color-mix(). No raw hex
+ *   colors leak into page or feature CSS (§14 guardrail 6).
+ * - WCAG 2.1 AA: visible focus, 4.5:1 text contrast, 44x44 touch targets,
+ *   reflow-friendly grids, no hover-only essential information.
+ * - Buttons and button-like controls: label text and icons are vertically and
+ *   horizontally centered (inline-flex + min-height); see “Controls” block below.
+ */
+
+:root {
+	/* Spacing scale */
+	--bc-space-1: 4px;
+	--bc-space-2: 8px;
+	--bc-space-3: 12px;
+	--bc-space-4: 16px;
+	--bc-space-5: 24px;
+	--bc-space-6: 32px;
+	--bc-space-7: 48px;
+
+	/* Radii */
+	--bc-radius-sm: 6px;
+	--bc-radius-md: 12px;
+	--bc-radius-lg: 16px;
+
+	/* Type scale */
+	--bc-fs-xs: 0.75rem;
+	--bc-fs-sm: 0.875rem;
+	--bc-fs-md: 1rem;
+	--bc-fs-lg: 1.125rem;
+	--bc-fs-xl: 1.5rem;
+	--bc-fs-2xl: 1.875rem;
+	--bc-fs-3xl: 2.25rem;
+	--bc-line-tight: 1.2;
+	--bc-line-base: 1.45;
+
+	/* Shadows */
+	--bc-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text, #1d1d1d) 8%, transparent);
+	--bc-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text, #1d1d1d) 12%, transparent);
+
+	/* Surfaces (tints derived from NC variables; degrade to background on older NC) */
+	--bc-bg-soft: color-mix(in srgb, var(--color-main-background, #fff) 96%, var(--color-main-text, #1d1d1d) 4%);
+	--bc-bg-card: var(--color-main-background, #fff);
+	--bc-bg-stripe: color-mix(in srgb, var(--color-main-background, #fff) 92%, var(--color-main-text, #1d1d1d) 8%);
+	--bc-border: color-mix(in srgb, var(--color-main-text, #1d1d1d) 12%, transparent);
+	--bc-border-strong: color-mix(in srgb, var(--color-main-text, #1d1d1d) 24%, transparent);
+	--bc-muted: color-mix(in srgb, var(--color-main-text, #1d1d1d) 60%, transparent);
+
+	/* Workspace-type accents (tints, not solid fills) */
+	--bc-tint-household: color-mix(in srgb, var(--color-success, #46ba61) 18%, transparent);
+	--bc-tint-project: color-mix(in srgb, var(--color-primary-element, #0082c9) 18%, transparent);
+
+	/* Severity */
+	--bc-tint-info: color-mix(in srgb, var(--color-primary-element, #0082c9) 14%, transparent);
+	--bc-tint-warning: color-mix(in srgb, var(--color-warning, #c98600) 18%, transparent);
+	--bc-tint-critical: color-mix(in srgb, var(--color-error, #cc4646) 18%, transparent);
+
+	/* Signed / semantic money in tables & lists: tint + accent bar; text stays --color-main-text for contrast on all NC themes */
+	--bc-amount-income-surface: color-mix(in srgb, var(--color-success, #46ba61) 14%, var(--color-main-background, #fff) 86%);
+	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error, #cc4646) 14%, var(--color-main-background, #fff) 86%);
+	--bc-amount-income-line: var(--color-success, #46ba61);
+	--bc-amount-expense-line: var(--color-error, #cc4646);
+
+	--bc-tab-num: tabular-nums;
+}
+
+/* Skip link */
+.bc-skip-link {
+	position: absolute;
+	left: -9999px;
+	top: var(--bc-space-2);
+	padding: var(--bc-space-2) var(--bc-space-4);
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+	border-radius: var(--bc-radius-sm);
+	z-index: 1000;
+	font-weight: 600;
+}
+.bc-skip-link:focus {
+	left: var(--bc-space-3);
+}
+
+/* Screen-reader-only */
+.bc-sr-only {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+}
+
+/* App shell */
+.bc-app {
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+	background: var(--bc-bg-soft);
+}
+/*
+ * Nextcloud core (#app-content #app-content-wrapper) uses flex row + stretch for
+ * list/detail apps. BudgetCheck stacks header + main; without column direction
+ * the header and main become side-by-side flex items and break every view.
+ */
+.bc-shell {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: var(--bc-space-5) var(--bc-space-5) var(--bc-space-7);
+	box-sizing: border-box;
+}
+.bc-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-5);
+	outline: none;
+}
+
+/* Header + breadcrumb */
+.bc-page-header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+	margin-bottom: var(--bc-space-5);
+}
+.bc-breadcrumb {
+	font-size: var(--bc-fs-sm);
+	color: var(--bc-muted);
+}
+.bc-breadcrumb ol {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--bc-space-2);
+	padding: 0;
+	margin: 0;
+	list-style: none;
+}
+.bc-breadcrumb__brand {
+	color: inherit;
+	font-weight: 600;
+	text-decoration: none;
+}
+.bc-breadcrumb__brand:hover { text-decoration: underline; }
+.bc-breadcrumb__current { font-weight: 500; color: var(--color-main-text, #1d1d1d); }
+.bc-breadcrumb__sep { color: var(--bc-muted); }
+.bc-page-header__main {
+	display: grid;
+	grid-template-columns: 64px 1fr auto;
+	gap: var(--bc-space-4);
+	align-items: start;
+}
+.bc-page-header__icon {
+	display: grid;
+	place-items: center;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--bc-radius-md);
+	background: var(--bc-tint-info);
+	color: var(--color-primary-element, #0082c9);
+}
+.bc-page-header__icon-svg { width: 32px; height: 32px; }
+.bc-page-header__text h1 {
+	margin: 0;
+	font-size: var(--bc-fs-2xl);
+	line-height: var(--bc-line-tight);
+}
+.bc-page-header__lead {
+	margin: var(--bc-space-1) 0 0 0;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+}
+.bc-page-header__actions {
+	display: flex;
+	gap: var(--bc-space-2);
+	min-height: 36px;
+	align-self: center;
+}
+
+/* Scope strip */
+.bc-scope-strip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--bc-space-3);
+	padding: var(--bc-space-3) var(--bc-space-4);
+	background: var(--bc-bg-card);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	font-size: var(--bc-fs-sm);
+}
+.bc-scope-strip__name {
+	font-weight: 600;
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-scope-strip__dates,
+.bc-scope-strip__currency {
+	color: var(--bc-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Badges */
+.bc-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	font-size: var(--bc-fs-xs);
+	font-weight: 600;
+	border-radius: 999px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	background: var(--bc-bg-stripe);
+	color: var(--color-main-text, #1d1d1d);
+	border: 1px solid var(--bc-border);
+}
+.bc-badge--household { background: var(--bc-tint-household); }
+.bc-badge--project { background: var(--bc-tint-project); }
+
+/* Cards + sections */
+.bc-card {
+	background: var(--bc-bg-card);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	box-shadow: var(--bc-shadow-sm);
+	padding: var(--bc-space-5);
+}
+.bc-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-4);
+}
+.bc-section--close {
+	border-color: var(--bc-tint-warning);
+}
+.bc-section__header {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: start;
+	gap: var(--bc-space-3) var(--bc-space-4);
+}
+.bc-section__header h2 {
+	margin: 0;
+	font-size: var(--bc-fs-xl);
+	line-height: var(--bc-line-tight);
+}
+.bc-section__sub {
+	margin: var(--bc-space-1) 0 0;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+}
+.bc-section__controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+	align-items: center;
+	min-width: 0;
+}
+.bc-section__controls--stack {
+	flex-direction: column;
+	align-items: stretch;
+}
+.bc-section__control-hint {
+	margin: 0;
+	max-width: min(44ch, 100%);
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+	line-height: var(--bc-line-base);
+}
+.bc-fieldset {
+	border: none;
+	padding: 0;
+	margin: 0;
+	min-width: 0;
+}
+.bc-fieldset__legend {
+	padding: 0;
+	margin: 0 0 var(--bc-space-1) 0;
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	color: var(--bc-text);
+}
+.bc-period-picker__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+	align-items: flex-end;
+}
+.bc-period-picker .bc-input {
+	min-height: 44px;
+}
+.bc-period-picker-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: var(--bc-space-1);
+	min-width: 0;
+}
+/* Period block in section header: top-right column, content right-aligned inside the cell */
+.bc-section__header > .bc-section__controls.bc-section__controls--stack.bc-period-picker-wrap {
+	justify-self: end;
+	max-width: 100%;
+}
+.bc-section__header > .bc-section__controls.bc-section__controls--stack.bc-period-picker-wrap .bc-period-picker__row {
+	justify-content: flex-end;
+}
+.bc-section__header > .bc-section__controls.bc-section__controls--stack.bc-period-picker-wrap .bc-section__control-hint {
+	text-align: end;
+	max-width: min(44ch, 100%);
+}
+/* Yearly / other stacked controls in header: sit in the right column, top-aligned */
+.bc-section__header > .bc-section__controls--stack:not(.bc-period-picker-wrap) {
+	justify-self: end;
+	align-items: flex-end;
+	max-width: 100%;
+}
+.bc-section__header > .button {
+	justify-self: end;
+	align-self: start;
+}
+.bc-section__header > .bc-hint-dismiss {
+	justify-self: end;
+	align-self: start;
+}
+.bc-period-project-hint {
+	margin: var(--bc-space-1) 0 0;
+	max-width: min(52ch, 100%);
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+	line-height: var(--bc-line-base);
+}
+
+.bc-ledger-help {
+	margin-top: var(--bc-space-1);
+	max-width: min(52ch, 100%);
+}
+.bc-ledger-help__line {
+	margin: 0;
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+	line-height: var(--bc-line-base);
+}
+.bc-ledger-help__line + .bc-ledger-help__line {
+	margin-top: var(--bc-space-1);
+}
+
+.bc-field__hint {
+	display: block;
+	margin: var(--bc-space-1) 0 0;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-xs);
+	line-height: 1.45;
+	max-width: 52ch;
+}
+
+.bc-chip-list {
+	list-style: none;
+	margin: var(--bc-space-2) 0 var(--bc-space-3);
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+	align-items: center;
+	min-height: 2.75rem;
+}
+.bc-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--bc-space-2);
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-stripe);
+	border: 1px solid var(--bc-border);
+	font-size: var(--bc-fs-sm);
+}
+.bc-chip__text {
+	font-variant-numeric: tabular-nums;
+	word-break: break-all;
+}
+.bc-chip__remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	color: var(--bc-muted);
+	padding: var(--bc-space-1);
+	min-width: 44px;
+	min-height: 44px;
+	border-radius: var(--bc-radius-sm);
+	line-height: 1;
+	font-size: 1.25rem;
+}
+.bc-chip__remove:hover {
+	color: var(--color-main-text, #1d1d1d);
+	background: color-mix(in srgb, var(--color-main-text, #1d1d1d) 8%, transparent);
+}
+.bc-chip__remove:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 1px;
+}
+
+.bc-user-search-results {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+	margin-top: var(--bc-space-2);
+	max-height: 240px;
+	overflow-y: auto;
+}
+.bc-user-search-hit {
+	width: 100%;
+	text-align: start;
+	justify-content: flex-start;
+}
+
+/* Empty / hint cards */
+.bc-empty p, .bc-empty h2 { margin: 0 0 var(--bc-space-3); }
+.bc-empty p:last-child, .bc-empty h2:last-child { margin-bottom: 0; }
+
+.bc-callout {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+	padding: var(--bc-space-3) var(--bc-space-4);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-tint-info);
+}
+.bc-callout--info { background: var(--bc-tint-info); }
+.bc-callout--warning { background: var(--bc-tint-warning); }
+.bc-callout--critical { background: var(--bc-tint-critical); }
+.bc-callout p { margin: 0; }
+.bc-callout__hint {
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+}
+
+.bc-explainer-steps {
+	margin: 0;
+	padding-left: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+}
+.bc-explainer-steps li {
+	line-height: 1.5;
+}
+
+.bc-glossary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--bc-space-3);
+	margin: 0;
+}
+.bc-glossary__item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	padding: var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-stripe);
+}
+.bc-glossary__item dt {
+	font-weight: 600;
+	color: var(--bc-text);
+}
+.bc-glossary__item dd {
+	margin: 0;
+	color: var(--bc-muted);
+	line-height: 1.5;
+}
+
+.bc-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	border-radius: 999px;
+	background: var(--bc-bg-stripe);
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-xs);
+	font-variant-numeric: tabular-nums;
+}
+
+.bc-loading {
+	color: var(--bc-muted);
+	font-style: italic;
+}
+
+/* Forms */
+.bc-form-grid,
+.bc-filter-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--bc-space-3);
+	align-items: start;
+}
+
+/*
+ * On multi-column rows, stacked fields (label + control [+ hint]) must share the
+ * same vertical rhythm. Without a hint row, `align-items: end` pushed controls up
+ * when a sibling field had a per-field hint. Reserve hint space with ::after so
+ * all inputs share one baseline; normalize label block height when labels wrap.
+ */
+.bc-filter-grid > .bc-field:not(.bc-field--inline) .bc-field__label,
+.bc-form-grid > .bc-field:not(.bc-field--inline):not(.bc-field--radio) .bc-field__label {
+	min-height: 2.75em;
+	display: flex;
+	align-items: flex-end;
+}
+.bc-filter-grid > .bc-field:not(.bc-field--inline):not(:has(.bc-field__hint))::after,
+.bc-form-grid > .bc-field:not(.bc-field--inline):not(.bc-field--radio):not(:has(.bc-field__hint))::after {
+	content: '';
+	display: block;
+	margin-top: var(--bc-space-1);
+	min-height: calc(2 * var(--bc-line-base) * var(--bc-fs-xs));
+	pointer-events: none;
+}
+
+.bc-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+/*
+ * .bc-field sets display:flex, which overrides the UA [hidden] { display:none }
+ * rule on labels, so toggling the hidden attribute from JS had no visual effect.
+ * Match both main app shell and modal overlay (modal content is not under .bc-app).
+ */
+.bc-app [hidden] {
+	display: none !important;
+}
+/* openModal appends to document.body, outside .bc-app */
+.bc-modal [hidden] {
+	display: none !important;
+}
+.bc-field--inline { flex-direction: row; align-items: center; gap: var(--bc-space-2); }
+
+/* Checkbox + copy in an input-sized box (same border/padding rhythm as .bc-input) */
+.bc-boolean-control {
+	display: flex;
+	align-items: center;
+	gap: var(--bc-space-3);
+	width: 100%;
+	box-sizing: border-box;
+	min-height: 44px;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border: 1px solid var(--bc-border-strong);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-card);
+	color: var(--color-main-text, #1d1d1d);
+	cursor: pointer;
+}
+.bc-boolean-control:has(input:disabled) {
+	cursor: not-allowed;
+	opacity: 0.72;
+}
+.bc-boolean-control input[type="checkbox"] {
+	flex-shrink: 0;
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: 0;
+	cursor: pointer;
+	accent-color: var(--color-primary-element, #0082c9);
+}
+.bc-boolean-control:has(input:disabled) input {
+	cursor: not-allowed;
+}
+.bc-boolean-control__text {
+	flex: 1;
+	min-width: 0;
+	line-height: 1.45;
+	font-size: var(--bc-fs-sm);
+}
+.bc-boolean-control:focus-within {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 1px;
+}
+/* Transaction filter: two toggles share one row so equal height when one label wraps */
+.bc-filter-bool-row {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: stretch;
+	gap: var(--bc-space-3);
+	grid-column: 1 / -1;
+}
+.bc-filter-bool-row > .bc-field {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 100%;
+}
+/*
+ * Filter toggles: flex (not grid+auto) — min-width:0 on a grid let the "auto" checkbox column
+ * collapse to a tall sliver; the outer bordered box is enough contrast without a second outline on the input.
+ */
+.bc-boolean-control.bc-boolean-control--filter-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--bc-space-3);
+	min-height: 48px;
+	padding: var(--bc-space-3);
+	flex: 1;
+	align-self: stretch;
+	width: 100%;
+	box-sizing: border-box;
+}
+.bc-filter-bool-row .bc-boolean-control--filter-row {
+	min-height: 100%;
+}
+.bc-boolean-control--filter-row input[type="checkbox"] {
+	flex: 0 0 auto;
+	width: 1.25rem;
+	height: 1.25rem;
+}
+.bc-boolean-control--filter-row .bc-boolean-control__text {
+	flex: 1;
+	min-width: 0;
+	text-align: start;
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	color: var(--color-main-text, #1d1d1d);
+	line-height: 1.4;
+}
+@media (max-width: 720px) {
+	.bc-filter-bool-row {
+		grid-template-columns: 1fr;
+	}
+}
+.bc-field--radio {
+	flex-direction: row;
+	align-items: flex-start;
+	gap: var(--bc-space-3);
+	padding: var(--bc-space-1) 0;
+}
+.bc-field--radio input[type="radio"] {
+	flex-shrink: 0;
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: 0.2em 0 0;
+	cursor: pointer;
+	accent-color: var(--color-primary-element, #0082c9);
+}
+.bc-field--radio > span {
+	flex: 1;
+	min-width: 0;
+	line-height: 1.45;
+	font-size: var(--bc-fs-sm);
+}
+.bc-field__label {
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-input {
+	width: 100%;
+	min-height: 44px;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--bc-border-strong);
+	background: var(--bc-bg-card);
+	color: var(--color-main-text, #1d1d1d);
+	font: inherit;
+}
+.bc-input:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 1px;
+}
+.bc-fieldset {
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	padding: var(--bc-space-3) var(--bc-space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+}
+.bc-fieldset__legend {
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	padding: 0 var(--bc-space-2);
+}
+.bc-form-actions,
+.bc-filter-actions {
+	display: flex;
+	gap: var(--bc-space-2);
+	flex-wrap: wrap;
+	grid-column: 1 / -1;
+}
+
+/* Compound fields or hit lists: own row in bc-form-grid (avoids multi-column layout bugs) */
+.bc-form-grid > .bc-field--full-width,
+.bc-form-grid > .bc-user-search-results {
+	grid-column: 1 / -1;
+}
+
+/* Fieldsets (e.g. savings mode radios) span the form width */
+.bc-form-grid > .bc-fieldset,
+.bc-modal .bc-form-grid > .bc-fieldset {
+	grid-column: 1 / -1;
+}
+
+/* Savings target: modes left, values right (stacks on narrow viewports) */
+.bc-form-grid > .bc-savings-layout {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 26rem);
+	gap: var(--bc-space-4) var(--bc-space-5);
+	align-items: start;
+}
+.bc-savings-layout__modes {
+	min-width: 0;
+}
+.bc-savings-layout__values {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+	padding: var(--bc-space-3) var(--bc-space-4);
+	background: var(--bc-bg-stripe);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	box-sizing: border-box;
+}
+.bc-savings-layout__values .bc-field {
+	min-width: 0;
+}
+.bc-fieldset.bc-fieldset--mode-group {
+	border: none;
+	background: transparent;
+	padding: 0;
+	gap: 0;
+	width: 100%;
+	box-sizing: border-box;
+}
+.bc-fieldset.bc-fieldset--mode-group .bc-fieldset__legend {
+	padding: 0;
+	margin: 0 0 var(--bc-space-2) 0;
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-fieldset.bc-fieldset--mode-group .bc-field--radio {
+	padding: var(--bc-space-2) var(--bc-space-3);
+	align-items: center;
+	min-height: 44px;
+	box-sizing: border-box;
+	border-radius: var(--bc-radius-sm);
+}
+.bc-fieldset.bc-fieldset--mode-group .bc-field--radio:has(input:checked) {
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 12%, transparent);
+}
+.bc-fieldset.bc-fieldset--mode-group .bc-field--radio + .bc-field--radio {
+	border-top: 1px solid var(--bc-border);
+}
+.bc-fieldset.bc-fieldset--mode-group .bc-field--radio input[type="radio"] {
+	margin-top: 0;
+}
+@media (max-width: 720px) {
+	.bc-form-grid > .bc-savings-layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+/*
+ * Buttons & button-like controls (Nextcloud `.button`, native buttons, text links
+ * styled as buttons). Labels + icons must be vertically and horizontally centered
+ * inside the hit area; min 44px height for touch (WCAG 2.5.5 / 2.1 AA target size).
+ * Scoped to BudgetCheck surfaces so core settings pages are not globally overridden.
+ */
+#app-navigation.bc-nav .button,
+#app-navigation.bc-nav a.button,
+.bc-app .button,
+.bc-app a.button,
+.bc-app button.button,
+.bc-app input[type="submit"].button,
+.bc-app input[type="button"].button,
+.bc-app input[type="reset"].button,
+.bc-admin-settings .button,
+.bc-admin-settings a.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--bc-space-2);
+	box-sizing: border-box;
+	min-height: 44px;
+	line-height: 1.25;
+	text-align: center;
+	white-space: normal;
+}
+
+/* List hits: full-width row buttons keep left-aligned label, still vertically centered */
+.bc-app .button.bc-user-search-hit {
+	justify-content: flex-start;
+	text-align: start;
+}
+
+/* Primary / submit already inherit flex from rules above */
+#app-navigation.bc-nav .button.primary,
+#app-navigation.bc-nav button.primary,
+.bc-app .button.primary,
+.bc-app button.primary,
+.bc-app input[type="submit"].button.primary,
+.bc-admin-settings .button.primary,
+.bc-admin-settings a.button.primary {
+	min-height: 44px;
+}
+
+/* Tables */
+.bc-table-scroll {
+	overflow-x: auto;
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--bc-border);
+}
+.bc-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: var(--bc-bg-card);
+	font-variant-numeric: var(--bc-tab-num);
+}
+.bc-table th, .bc-table td {
+	padding: var(--bc-space-3) var(--bc-space-4);
+	text-align: left;
+	vertical-align: middle;
+	border-bottom: 1px solid var(--bc-border);
+}
+.bc-table thead th {
+	background: var(--bc-bg-stripe);
+	font-size: var(--bc-fs-sm);
+	font-weight: 600;
+}
+.bc-table tbody tr:nth-child(even) td {
+	background: color-mix(in srgb, var(--bc-bg-card) 96%, var(--color-main-text, #1d1d1d) 4%);
+}
+.bc-table__col--num { text-align: right; }
+
+/* Income / expense amounts: never bare success/error on body text (fails on tinted rows & some themes) */
+.bc-table td.bc-tx-amount--income .bc-tx-amount__value,
+.bc-table td.bc-tx-amount--expense .bc-tx-amount__value {
+	display: inline-block;
+	margin: 1px 0;
+	padding: var(--bc-space-1) var(--bc-space-2);
+	padding-inline-start: calc(var(--bc-space-2) + 2px);
+	border-radius: var(--bc-radius-sm);
+	font-weight: 600;
+	font-variant-numeric: var(--bc-tab-num);
+	line-height: var(--bc-line-tight);
+	color: var(--color-main-text, #1d1d1d);
+	border-inline-start: 3px solid transparent;
+}
+.bc-table td.bc-tx-amount--income .bc-tx-amount__value {
+	background: var(--bc-amount-income-surface);
+	border-inline-start-color: var(--bc-amount-income-line);
+}
+.bc-table td.bc-tx-amount--expense .bc-tx-amount__value {
+	background: var(--bc-amount-expense-surface);
+	border-inline-start-color: var(--bc-amount-expense-line);
+}
+.bc-table td.bc-tx-amount--income:not(:has(.bc-tx-amount__value)),
+.bc-table td.bc-tx-amount--expense:not(:has(.bc-tx-amount__value)) {
+	font-weight: 600;
+	font-variant-numeric: var(--bc-tab-num);
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-table td.bc-tx-amount--income:not(:has(.bc-tx-amount__value)) {
+	background: var(--bc-amount-income-surface);
+	box-shadow: inset 3px 0 0 0 var(--bc-amount-income-line);
+}
+.bc-table td.bc-tx-amount--expense:not(:has(.bc-tx-amount__value)) {
+	background: var(--bc-amount-expense-surface);
+	box-shadow: inset 3px 0 0 0 var(--bc-amount-expense-line);
+}
+
+/* Summary grid */
+.bc-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: var(--bc-space-3);
+}
+.bc-summary-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: var(--bc-space-4);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	background: var(--bc-bg-card);
+}
+.bc-summary-tile--primary {
+	background: var(--bc-tint-info);
+	border-color: transparent;
+}
+.bc-summary-tile__label {
+	font-size: var(--bc-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--bc-muted);
+}
+.bc-summary-tile__value {
+	font-size: var(--bc-fs-2xl);
+	font-weight: 700;
+	font-variant-numeric: var(--bc-tab-num);
+}
+.bc-summary-tile__value--small { font-size: var(--bc-fs-lg); }
+.bc-summary-tile__hint { font-size: var(--bc-fs-xs); color: var(--bc-muted); }
+
+/* Warnings */
+.bc-warnings { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--bc-space-3); }
+.bc-warning {
+	display: grid;
+	grid-template-columns: 24px 1fr auto;
+	gap: var(--bc-space-3);
+	align-items: start;
+	padding: var(--bc-space-3) var(--bc-space-4);
+	border-radius: var(--bc-radius-sm);
+	border-left: 4px solid var(--color-primary-element, #0082c9);
+	background: var(--bc-tint-info);
+}
+.bc-warning--info { border-left-color: var(--color-primary-element, #0082c9); background: var(--bc-tint-info); }
+.bc-warning--warning { border-left-color: var(--color-warning, #c98600); background: var(--bc-tint-warning); }
+.bc-warning--critical { border-left-color: var(--color-error, #cc4646); background: var(--bc-tint-critical); }
+.bc-warning__title { font-weight: 600; }
+.bc-warning__message { font-size: var(--bc-fs-sm); color: var(--color-main-text, #1d1d1d); }
+.bc-warning__action { align-self: center; }
+
+/* Transaction list (mobile fallback) */
+.bc-tx-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--bc-space-2); }
+.bc-tx-list__item {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: var(--bc-space-2);
+	padding: var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--bc-border);
+	background: var(--bc-bg-card);
+}
+.bc-tx-list__title { font-weight: 600; }
+.bc-tx-list__meta { color: var(--bc-muted); font-size: var(--bc-fs-sm); }
+.bc-tx-list__amount { font-weight: 600; font-variant-numeric: var(--bc-tab-num); }
+.bc-tx-list__amount.bc-tx-amount--income,
+.bc-tx-list__amount.bc-tx-amount--expense {
+	display: inline-block;
+	margin: 1px 0;
+	padding: var(--bc-space-1) var(--bc-space-2);
+	padding-inline-start: calc(var(--bc-space-2) + 2px);
+	border-radius: var(--bc-radius-sm);
+	line-height: var(--bc-line-tight);
+	color: var(--color-main-text, #1d1d1d);
+	border-inline-start: 3px solid transparent;
+}
+.bc-tx-list__amount.bc-tx-amount--income {
+	background: var(--bc-amount-income-surface);
+	border-inline-start-color: var(--bc-amount-income-line);
+}
+.bc-tx-list__amount.bc-tx-amount--expense {
+	background: var(--bc-amount-expense-surface);
+	border-inline-start-color: var(--bc-amount-expense-line);
+}
+
+/* Pagination */
+.bc-pagination {
+	display: flex;
+	gap: var(--bc-space-2);
+	justify-content: flex-end;
+	align-items: center;
+	margin-top: var(--bc-space-3);
+	flex-wrap: wrap;
+}
+
+/* Sidebar styling */
+#app-navigation.bc-nav { display: flex; flex-direction: column; }
+.bc-brand {
+	display: flex;
+	align-items: center;
+	gap: var(--bc-space-3);
+	padding: var(--bc-space-4);
+	border-bottom: 1px solid var(--bc-border);
+}
+.bc-brand__title { margin: 0; font-size: var(--bc-fs-md); }
+.bc-brand__subtitle { margin: 0; color: var(--bc-muted); font-size: var(--bc-fs-xs); }
+.bc-brand__icon-svg { width: 28px; height: 28px; color: var(--color-primary-element, #0082c9); }
+
+.bc-switcher {
+	padding: var(--bc-space-3);
+	border-bottom: 1px solid var(--bc-border);
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+}
+.bc-switcher__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.bc-switcher__title {
+	margin: 0;
+	font-size: var(--bc-fs-sm);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--bc-muted);
+}
+.bc-switcher__add {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--bc-space-2);
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: transparent;
+	color: var(--color-main-text, #1d1d1d);
+	cursor: pointer;
+	min-height: 44px;
+	min-width: 44px;
+	box-sizing: border-box;
+	line-height: 1.2;
+	font: inherit;
+}
+.bc-switcher__group { display: flex; flex-direction: column; gap: var(--bc-space-1); }
+.bc-switcher__group-title { margin: 0; font-size: var(--bc-fs-xs); color: var(--bc-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.bc-switcher__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.bc-switcher__link {
+	display: grid;
+	grid-template-columns: 24px 1fr;
+	gap: var(--bc-space-2);
+	align-items: center;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	color: var(--color-main-text, #1d1d1d);
+	text-decoration: none;
+	min-height: 44px;
+}
+.bc-switcher__link:hover { background: var(--bc-bg-stripe); }
+.bc-switcher__link.is-active { background: var(--bc-tint-info); font-weight: 600; }
+.bc-switcher__name { display: block; }
+.bc-switcher__meta { display: block; font-size: var(--bc-fs-xs); color: var(--bc-muted); }
+.bc-switcher__empty { color: var(--bc-muted); font-size: var(--bc-fs-sm); margin: 0; }
+.bc-switcher__cta { margin-top: var(--bc-space-2); }
+
+.bc-nav__list { list-style: none; padding: var(--bc-space-2); margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.bc-nav__link {
+	display: grid;
+	grid-template-columns: 24px 1fr;
+	gap: var(--bc-space-2);
+	align-items: center;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	color: var(--color-main-text, #1d1d1d);
+	text-decoration: none;
+	min-height: 44px;
+}
+.bc-nav__link:hover { background: var(--bc-bg-stripe); }
+.bc-nav__item.is-active .bc-nav__link { background: var(--bc-tint-info); font-weight: 600; }
+.bc-nav__name { display: block; }
+.bc-nav__hint { display: block; font-size: var(--bc-fs-xs); color: var(--bc-muted); }
+
+/* Common icon */
+.bc-icon { width: 20px; height: 20px; vertical-align: middle; }
+.bc-icon--inline { width: 16px; height: 16px; }
+
+/* Quickstart */
+.bc-quickstart { list-style: decimal inside; padding: 0; margin: 0; display: grid; gap: var(--bc-space-3); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.bc-quickstart__item {
+	padding: var(--bc-space-4);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-card);
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+}
+.bc-quickstart__item p { margin: 0; color: var(--bc-muted); font-size: var(--bc-fs-sm); }
+.bc-hint-dismiss {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 1px solid var(--bc-border);
+	color: var(--color-main-text, #1d1d1d);
+	border-radius: var(--bc-radius-sm);
+	padding: var(--bc-space-2) var(--bc-space-3);
+	cursor: pointer;
+	min-height: 44px;
+	min-width: 44px;
+	box-sizing: border-box;
+	line-height: 1.2;
+	font: inherit;
+	text-align: center;
+}
+
+/* Month grid (yearly) */
+.bc-month-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--bc-space-3); }
+.bc-month-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	padding: var(--bc-space-4);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-card);
+	text-decoration: none;
+	color: inherit;
+}
+.bc-month-card__name { font-weight: 600; }
+.bc-month-card__net { font-size: var(--bc-fs-lg); font-variant-numeric: var(--bc-tab-num); }
+.bc-month-card__meta { color: var(--bc-muted); font-size: var(--bc-fs-xs); }
+.bc-month-card--over { border-color: var(--color-error, #cc4646); }
+.bc-month-card--closed { background: var(--bc-tint-info); }
+
+/* Cap meter */
+.bc-cap__bar {
+	width: 100%;
+	height: 12px;
+	background: var(--bc-bg-stripe);
+	border-radius: 999px;
+	overflow: hidden;
+	position: relative;
+}
+.bc-cap__bar-fill {
+	height: 100%;
+	background: var(--color-success, #46ba61);
+	transition: width 250ms ease;
+}
+.bc-cap--warning .bc-cap__bar-fill { background: var(--color-warning, #c98600); }
+.bc-cap--critical .bc-cap__bar-fill { background: var(--color-error, #cc4646); }
+.bc-cap__legend { display: flex; gap: var(--bc-space-4); margin-top: var(--bc-space-2); font-size: var(--bc-fs-sm); color: var(--bc-muted); }
+
+/* Modal */
+.bc-modal {
+	position: fixed;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: color-mix(in srgb, var(--color-main-text, #000) 60%, transparent);
+	z-index: 1100;
+}
+.bc-modal__dialog {
+	background: var(--bc-bg-card);
+	border-radius: var(--bc-radius-md);
+	box-shadow: var(--bc-shadow-md);
+	max-width: min(640px, 92vw);
+	width: 100%;
+	max-height: 90vh;
+	overflow: auto;
+	padding: var(--bc-space-5);
+}
+.bc-modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--bc-space-3); }
+.bc-modal__close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	padding: var(--bc-space-2);
+	border-radius: var(--bc-radius-sm);
+	min-width: 44px;
+	min-height: 44px;
+	box-sizing: border-box;
+	line-height: 1;
+	font: inherit;
+}
+.bc-modal__close:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent); }
+
+/* Toasts */
+.bc-toasts {
+	position: fixed;
+	bottom: var(--bc-space-4);
+	right: var(--bc-space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+	z-index: 1200;
+	max-width: min(400px, 90vw);
+}
+.bc-toast {
+	background: var(--bc-bg-card);
+	border: 1px solid var(--bc-border);
+	border-left: 4px solid var(--color-primary-element, #0082c9);
+	padding: var(--bc-space-3) var(--bc-space-4);
+	border-radius: var(--bc-radius-sm);
+	box-shadow: var(--bc-shadow-sm);
+	display: flex;
+	gap: var(--bc-space-2);
+	align-items: center;
+}
+.bc-toast--success { border-left-color: var(--color-success, #46ba61); }
+.bc-toast--error { border-left-color: var(--color-error, #cc4646); }
+.bc-toast--warning { border-left-color: var(--color-warning, #c98600); }
+.bc-toast__close {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	padding: var(--bc-space-2);
+	min-height: 44px;
+	min-width: 44px;
+	box-sizing: border-box;
+	line-height: 1;
+	font: inherit;
+}
+
+/* Glossary + spreadsheet bridge (native disclosure, keyboard-friendly) */
+.bc-help-panels {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+}
+.bc-details {
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	background: var(--bc-bg-soft);
+}
+.bc-details__summary {
+	cursor: pointer;
+	list-style: none;
+	font-weight: 600;
+	padding: var(--bc-space-4);
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	color: var(--color-main-text);
+}
+.bc-details__summary::-webkit-details-marker { display: none; }
+.bc-details__summary::after {
+	content: '';
+	margin-inline-start: auto;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-inline-end: 2px solid var(--color-main-text);
+	border-block-end: 2px solid var(--color-main-text);
+	transform: rotate(45deg);
+	opacity: 0.7;
+}
+.bc-details[open] .bc-details__summary::after { transform: rotate(-135deg); }
+.bc-details__body {
+	padding: 0 var(--bc-space-4) var(--bc-space-4);
+	border-top: 1px solid var(--bc-border);
+}
+.bc-glossary {
+	margin: 0;
+	display: grid;
+	gap: var(--bc-space-3);
+}
+.bc-glossary dt { font-weight: 600; }
+.bc-glossary dd { margin: 0 0 0 var(--bc-space-3); max-width: 52rem; }
+.bc-bridge-list { margin: 0; padding-inline-start: 1.25rem; }
+.bc-bridge-note {
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+	margin-block-end: var(--bc-space-3);
+}
+
+/* Access denied page */
+.bc-app--access-denied { display: grid; place-items: center; min-height: 60vh; }
+.bc-denied { padding: var(--bc-space-5); }
+.bc-denied .bc-card { display: flex; flex-direction: column; align-items: center; gap: var(--bc-space-3); text-align: center; max-width: 540px; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+	.bc-shell { padding: var(--bc-space-4); }
+	.bc-page-header__main { grid-template-columns: 48px 1fr; }
+	.bc-page-header__actions { grid-column: 1 / -1; }
+	.bc-page-header__icon { width: 48px; height: 48px; }
+	.bc-page-header__icon-svg { width: 24px; height: 24px; }
+	.bc-form-grid, .bc-filter-grid { grid-template-columns: 1fr; }
+	.bc-summary-grid { grid-template-columns: 1fr 1fr; }
+	.bc-section__header {
+		grid-template-columns: 1fr;
+	}
+	.bc-section__header > .bc-period-picker-wrap,
+	.bc-section__header > .bc-section__controls--stack:not(.bc-period-picker-wrap) {
+		justify-self: stretch;
+		align-items: stretch;
+	}
+	.bc-section__header > .bc-period-picker-wrap .bc-period-picker__row {
+		justify-content: flex-start;
+	}
+	.bc-section__header > .bc-period-picker-wrap .bc-section__control-hint {
+		text-align: start;
+	}
+	.bc-section__header > .button,
+	.bc-section__header > .bc-hint-dismiss {
+		justify-self: start;
+	}
+}
+@media (max-width: 480px) {
+	.bc-summary-grid { grid-template-columns: 1fr; }
+	.bc-table-scroll table { min-width: 540px; }
+}
+
+/* Force tabular figures on amount-only inputs */
+input[type=number], input[type=month], input[type=date], .bc-input--date { font-variant-numeric: var(--bc-tab-num); }
+
+.bc-field__hint--block {
+	margin: 0 0 var(--bc-space-2, 0.5rem);
+	grid-column: 1 / -1;
+}

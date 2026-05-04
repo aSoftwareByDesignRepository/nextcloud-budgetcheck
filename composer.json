@@ -1,0 +1,39 @@
+{
+	"name": "software-by-design/nextcloud-budgetcheck",
+	"description": "Scoped household and project finance for Nextcloud",
+	"type": "project",
+	"license": "AGPL-3.0-or-later",
+	"authors": [
+		{
+			"name": "Alexander Mäule",
+			"email": "info@software-by-design.de"
+		}
+	],
+	"require": {
+		"php": ">=8.2"
+	},
+	"require-dev": {
+		"nextcloud/ocp": "^32",
+		"phpunit/phpunit": "^9.6"
+	},
+	"autoload": {
+		"psr-4": {
+			"OCA\\BudgetCheck\\": "lib/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"OCA\\BudgetCheck\\Tests\\": "tests/",
+			"OCP\\": "vendor/nextcloud/ocp/OCP/",
+			"NCU\\": "vendor/nextcloud/ocp/NCU/"
+		}
+	},
+	"scripts": {
+		"test": "phpunit --testsuite unit",
+		"test:unit": "phpunit --testsuite unit"
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"sort-packages": true
+	}
+}

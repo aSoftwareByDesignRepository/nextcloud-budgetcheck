@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>budgetcheck</id>
+	<name>BudgetCheck</name>
+	<summary>Scoped household and project finance with auditable monthly close, budgets, and savings targets</summary>
+	<description>
+		BudgetCheck is a scoped finance app for Nextcloud. Each workspace is either a household (recurring monthly rhythm with budgets, savings targets and yearly overview) or a bounded project (project window, period overview, optional cap warning). Every workspace owns its ledger, categories, members and tax settings. The server is the source of truth for every calculation; money is stored in minor units and never as floating-point. Monthly close produces an immutable snapshot with a verifiable calc hash; controlled reopen restores editing. Optional tax-aware mode supports net or gross entry with deterministic VAT conversion. The interface is workspace-scoped — household and project totals never blend — and built to WCAG 2.1 AA with full keyboard support and responsive layouts down to 320 pixels.
+	</description>
+	<version>1.0.1</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author mail="info@software-by-design.de" homepage="https://software-by-design.de">Alexander Mäule</author>
+	<namespace>BudgetCheck</namespace>
+	<category>organization</category>
+	<website>https://software-by-design.de</website>
+	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues</bugs>
+	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck.git</repository>
+	<dependencies>
+		<nextcloud min-version="32" max-version="33"/>
+	</dependencies>
+	<keywords>
+		<keyword>budget</keyword>
+		<keyword>finance</keyword>
+		<keyword>household</keyword>
+		<keyword>project</keyword>
+		<keyword>ledger</keyword>
+		<keyword>savings</keyword>
+	</keywords>
+	<settings>
+		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
+	</settings>
+	<release>
+		<databases>
+			<database>mysql</database>
+			<database>pgsql</database>
+		</databases>
+		<php min-version="8.2" max-version="8.5"/>
+		<platforms>
+			<platform>linux</platform>
+		</platforms>
+	</release>
+</info>

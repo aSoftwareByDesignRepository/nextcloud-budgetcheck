@@ -1,0 +1,258 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\BudgetCheck\AppInfo;
+
+use OCA\BudgetCheck\Listener\UserDeletedListener;
+use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
+use OCA\BudgetCheck\Service\AccessControlService;
+use OCA\BudgetCheck\Service\AuditLogService;
+use OCA\BudgetCheck\Service\BudgetService;
+use OCA\BudgetCheck\Service\CategoryService;
+use OCA\BudgetCheck\Service\LocaleFormatService;
+use OCA\BudgetCheck\Service\MoneyService;
+use OCA\BudgetCheck\Service\RateLimitService;
+use OCA\BudgetCheck\Service\RecurringRuleService;
+use OCA\BudgetCheck\Service\SavingsTargetService;
+use OCA\BudgetCheck\Service\SnapshotService;
+use OCA\BudgetCheck\Service\SummaryService;
+use OCA\BudgetCheck\Service\TimezoneCatalog;
+use OCA\BudgetCheck\Service\TransactionService;
+use OCA\BudgetCheck\Service\WarningEngine;
+use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Settings\AdminSettings;
+use OCP\AppFramework\App;
+use OCP\AppFramework\Bootstrap\IBootContext;
+use OCP\AppFramework\Bootstrap\IBootstrap;
+use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\INavigationManager;
+use OCP\L10N\IFactory;
+use OCP\User\Events\UserDeletedEvent;
+
+/**
+ * BudgetCheck application bootstrap.
+ *
+ * - Registers all services explicitly so wiring is deterministic across PHP/NC versions.
+ * - Shared frontend assets (CSS + common JS) are registered from
+ *   {@see \OCA\BudgetCheck\Controller\PageController::page()} so every in-app
+ *   view loads globals before the page module (path-based boot detection is
+ *   unreliable across servers and custom_apps URL layouts).
+ * - Adds the Files-style sidebar navigation entry only for users that are members
+ *   of at least one workspace (or are app admins). UI hiding is convenience only;
+ *   server enforcement lives in the access middleware and per-route service checks.
+ */
+class Application extends App implements IBootstrap
+{
+	public const APP_ID = 'budgetcheck';
+
+	public function __construct()
+	{
+		parent::__construct(self::APP_ID);
+	}
+
+	public function register(IRegistrationContext $context): void
+	{
+		// --- Cross-cutting access middleware --------------------------------
+		$context->registerService(AccessControlService::class, function ($c): AccessControlService {
+			return new AccessControlService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(\OCP\IUserSession::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(MoneyService::class),
+			);
+		});
+
+		$context->registerService(AppAccessMiddleware::class, function ($c): AppAccessMiddleware {
+			return new AppAccessMiddleware(
+				$c->query(\OCP\IUserSession::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\IRequest::class),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\OCP\L10N\IFactory::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerMiddleware(AppAccessMiddleware::class);
+
+		// --- Utility services -----------------------------------------------
+		$context->registerService(MoneyService::class, fn () => new MoneyService());
+		$context->registerService(TimezoneCatalog::class, fn () => new TimezoneCatalog());
+
+		$context->registerService(LocaleFormatService::class, function ($c): LocaleFormatService {
+			return new LocaleFormatService(
+				$c->query(\OCP\L10N\IFactory::class),
+				$c->query(\OCP\IDateTimeFormatter::class),
+				$c->query(\OCP\IUserSession::class),
+				$c->query(\OCP\IDateTimeZone::class),
+				$c->query(\OCP\IConfig::class),
+			);
+		});
+
+		$context->registerService(AuditLogService::class, function ($c): AuditLogService {
+			return new AuditLogService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IRequest::class),
+				$c->query(\OCP\IConfig::class),
+			);
+		});
+
+		$context->registerService(RateLimitService::class, function ($c): RateLimitService {
+			return new RateLimitService(
+				$c->query(\OCP\IConfig::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		// --- Domain services ------------------------------------------------
+		$context->registerService(WorkspaceService::class, function ($c): WorkspaceService {
+			return new WorkspaceService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+				$c->query(TimezoneCatalog::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(CategoryService::class),
+				$c->query(MoneyService::class),
+			);
+		});
+
+		$context->registerService(CategoryService::class, function ($c): CategoryService {
+			return new CategoryService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(TransactionService::class, function ($c): TransactionService {
+			return new TransactionService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+				$c->query(CategoryService::class),
+			);
+		});
+
+		$context->registerService(BudgetService::class, function ($c): BudgetService {
+			return new BudgetService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+				$c->query(CategoryService::class),
+				$c->query(IFactory::class)->get(self::APP_ID),
+			);
+		});
+
+		$context->registerService(SavingsTargetService::class, function ($c): SavingsTargetService {
+			return new SavingsTargetService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(RecurringRuleService::class, function ($c): RecurringRuleService {
+			return new RecurringRuleService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(SummaryService::class, function ($c): SummaryService {
+			return new SummaryService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(BudgetService::class),
+				$c->query(SavingsTargetService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(CategoryService::class),
+				$c->query(WarningEngine::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(TransactionService::class),
+			);
+		});
+
+		$context->registerService(WarningEngine::class, function ($c): WarningEngine {
+			return new WarningEngine(
+				$c->query(MoneyService::class),
+			);
+		});
+
+		$context->registerService(SnapshotService::class, function ($c): SnapshotService {
+			return new SnapshotService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(SummaryService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		// Admin section entry — configures global app defaults.
+		$context->registerService(AdminSettings::class, function ($c): AdminSettings {
+			return new AdminSettings(
+				$c->query(\OCP\IConfig::class),
+				$c->query(\OCP\L10N\IFactory::class),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(AccessControlService::class),
+				$c->query(TimezoneCatalog::class),
+			);
+		});
+
+		// React to permanent user deletions: remove memberships, scrub configured
+		// app-admin entries. Snapshots and historical ledger rows stay intact for audit.
+		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
+	}
+
+	public function boot(IBootContext $context): void
+	{
+		$this->registerNavigationWhenAllowed();
+	}
+
+	private function registerNavigationWhenAllowed(): void
+	{
+		try {
+			$container = $this->getContainer();
+			$user = $container->get(\OCP\IUserSession::class)->getUser();
+			if ($user === null) {
+				return;
+			}
+			$access = $container->get(AccessControlService::class);
+			if (!$access->canUseApp($user->getUID())) {
+				return;
+			}
+			$navigationManager = $container->get(INavigationManager::class);
+			$urlGenerator = $container->get(\OCP\IURLGenerator::class);
+			$l10nFactory = $container->get(IFactory::class);
+			$navigationManager->add(function () use ($urlGenerator, $l10nFactory): array {
+				return [
+					'id' => self::APP_ID,
+					'app' => self::APP_ID,
+					'order' => 11,
+					'href' => $urlGenerator->linkToRoute('budgetcheck.page.index'),
+					'icon' => $urlGenerator->imagePath(self::APP_ID, 'app.svg'),
+					'name' => $l10nFactory->get(self::APP_ID)->t('BudgetCheck'),
+				];
+			});
+		} catch (\Throwable) {
+			// Navigation registration is best-effort.
+		}
+	}
+}
