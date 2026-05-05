@@ -125,8 +125,25 @@
 		} else {
 			setVal(form, 'projectStartDate', Ws.workspace.projectStartDate ? String(Ws.workspace.projectStartDate) : '');
 			setVal(form, 'projectEndDate', Ws.workspace.projectEndDate ? String(Ws.workspace.projectEndDate) : '');
-			setVal(form, 'projectTotalCapMinor', Ws.workspace.projectTotalCapMinor !== null ? String(Ws.workspace.projectTotalCapMinor) : '');
+			setVal(
+				form,
+				'projectTotalCapMinor',
+				Ws.workspace.projectTotalCapMinor !== null
+					? formatMinorForInput(Ws.workspace.projectTotalCapMinor, workspaceCurrencyDecimals())
+					: ''
+			);
 		}
+	}
+
+	function workspaceCurrencyDecimals() {
+		return typeof Ws.workspace?.currencyDecimals === 'number'
+			? Ws.workspace.currencyDecimals
+			: (Ws.workspace?.currencyCode === 'JPY' ? 0 : 2);
+	}
+
+	function formatMinorForInput(minor, decimals) {
+		const div = Math.pow(10, decimals);
+		return (Number(minor) / div).toFixed(decimals);
 	}
 
 	function hydrateTaxForm() {
@@ -199,7 +216,16 @@
 				payload.projectStartDate = startRaw;
 				payload.projectEndDate = endRaw;
 				const cap = getVal(form, 'projectTotalCapMinor').trim();
-				payload.projectTotalCapMinor = cap === '' ? null : Number.parseInt(cap, 10);
+				if (cap === '') {
+					payload.projectTotalCapMinor = null;
+				} else {
+					try {
+						payload.projectTotalCapMinor = Money.parseHuman(cap, workspaceCurrencyDecimals());
+					} catch (err) {
+						Msg.announce(err.message || t('budgetcheck', 'Amount is not a valid number.'), 'error');
+						return;
+					}
+				}
 			}
 			if (payload.overspendThresholdMinor !== null) {
 				payload.overspendThresholdMinor = Number.parseInt(payload.overspendThresholdMinor, 10);

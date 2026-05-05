@@ -63,8 +63,8 @@ $canManage = !empty($_['canManageWorkspace']);
 						<input type="date" name="projectEndDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?>>
 					</label>
 					<label class="bc-field bc-field--full-width">
-						<span class="bc-field__label"><?php p($l->t('Project cap (minor units, optional)')); ?></span>
-						<input type="number" min="0" step="1" name="projectTotalCapMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
+						<span class="bc-field__label"><?php p($l->t('Project cap (optional)')); ?></span>
+						<input type="text" inputmode="decimal" name="projectTotalCapMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
 					</label>
 				<?php endif; ?>
 				<?php if ($canManage): ?>

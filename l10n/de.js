@@ -353,7 +353,7 @@ OC.L10N.register(
     "Project (start/end dates)" : "Projekt (Start/Ende)",
     "Project at a glance" : "Projekt im Überblick",
     "Project cap" : "Projekt-Obergrenze",
-    "Project cap (minor units, optional)" : "Projekt-Obergrenze (Untereinheiten, optional)",
+    "Project cap (optional)" : "Projekt-Obergrenze (optional)",
     "Project end" : "Projektende",
     "Project end (project only)" : "Projektende (nur Projekt)",
     "Project period" : "Projektzeitraum",
