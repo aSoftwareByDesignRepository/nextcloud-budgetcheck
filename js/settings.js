@@ -41,6 +41,9 @@
 		} else if (Ws.workspace) {
 			loadCategories();
 		}
+		if (Ws.workspace && Ws.workspace.type === 'project') {
+			loadBookingStatuses();
+		}
 		wireHelpPanels();
 	}
 
@@ -279,6 +282,105 @@
 	}
 
 	// ------ Categories ------
+	async function loadBookingStatuses() {
+		const tbody = document.querySelector('[data-bc-booking-status-rows]');
+		if (!tbody || !Ws.workspace || Ws.workspace.type !== 'project') return;
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: Ws.workspace.id, includeInactive: '1' });
+			tbody.replaceChildren();
+			(data.statuses || []).forEach((status) => tbody.appendChild(renderBookingStatusRow(status)));
+			if ((data.statuses || []).length === 0) {
+				tbody.appendChild(C.createElement('tr', null, [
+					C.createElement('td', { attrs: { colspan: Ws.canManage ? '4' : '3' }, class: 'bc-loading', text: t('budgetcheck', 'No booking statuses yet.') }),
+				]));
+			}
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+		document.querySelectorAll('[data-bc-action="open-create-booking-status"]').forEach((btn) => {
+			if (btn.dataset.bcBookingStatusWired === '1') return;
+			btn.dataset.bcBookingStatusWired = '1';
+			btn.addEventListener('click', () => openBookingStatusModal(null));
+		});
+	}
+
+	function renderBookingStatusRow(status) {
+		const tr = C.createElement('tr');
+		tr.appendChild(C.createElement('td', { text: status.name }));
+		tr.appendChild(C.createElement('td', { text: String(status.sortOrder) }));
+		tr.appendChild(C.createElement('td', { text: status.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
+		if (Ws.canManage) {
+			const actions = C.createElement('td');
+			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
+			edit.addEventListener('click', () => openBookingStatusModal(status));
+			actions.appendChild(edit);
+			if (status.isActive) {
+				const deactivate = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
+				deactivate.addEventListener('click', () => deactivateBookingStatus(status));
+				actions.appendChild(deactivate);
+			}
+			tr.appendChild(actions);
+		}
+		return tr;
+	}
+
+	function openBookingStatusModal(status) {
+		const isEdit = !!status;
+		C.openModal({
+			title: isEdit ? t('budgetcheck', 'Edit booking status') : t('budgetcheck', 'New booking status'),
+			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add status'),
+			render: () => {
+				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
+				const name = C.createElement('input', { type: 'text', class: 'bc-input', maxlength: 80, required: true, value: status ? status.name : '' });
+				wrap(form, t('budgetcheck', 'Name'), name, t('budgetcheck', 'Short label shown in filters and booking lists.'));
+				const order = C.createElement('input', { type: 'number', class: 'bc-input', min: '0', max: '10000', step: '1', value: status ? String(status.sortOrder) : '100' });
+				wrap(form, t('budgetcheck', 'Order'), order, t('budgetcheck', 'Lower numbers appear first in status pickers.'));
+				form._collect = () => ({
+					workspaceId: Ws.workspace.id,
+					name: name.value.trim(),
+					sortOrder: Number.parseInt(order.value, 10) || 100,
+				});
+				return form;
+			},
+			onSubmit: async ({ close, body }) => {
+				const payload = body && body._collect ? body._collect() : null;
+				if (!payload) return false;
+				try {
+					if (isEdit) {
+						await Api.put('/apps/budgetcheck/api/booking-statuses/' + status.id, payload);
+						Msg.announce(t('budgetcheck', 'Booking status updated.'), 'success');
+					} else {
+						await Api.post('/apps/budgetcheck/api/booking-statuses', payload);
+						Msg.announce(t('budgetcheck', 'Booking status created.'), 'success');
+					}
+					await loadBookingStatuses();
+					close(true);
+				} catch (err) {
+					Msg.handleApiError(err);
+					return false;
+				}
+			},
+		});
+	}
+
+	async function deactivateBookingStatus(status) {
+		const ok = await C.confirmDialog({
+			title: t('budgetcheck', 'Deactivate this status?'),
+			body: t('budgetcheck', 'Bookings currently using it will be reset to no status.'),
+			confirmLabel: t('budgetcheck', 'Deactivate'),
+			danger: true,
+		});
+		if (!ok) return;
+		try {
+			await Api.post('/apps/budgetcheck/api/booking-statuses/' + status.id + '/deactivate');
+			Msg.announce(t('budgetcheck', 'Booking status deactivated.'), 'success');
+			loadBookingStatuses();
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	// ------ Categories ------
 	async function loadCategories() {
 		const tbody = document.querySelector('[data-bc-category-rows]');
 		if (!tbody) return;
@@ -312,7 +414,8 @@
 			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
 			edit.addEventListener('click', () => { void openCategoryModal(cat); });
 			actions.appendChild(edit);
-			if (cat.isActive) {
+			const canDeactivate = cat.isActive && cat.groupKey !== INTERNAL_UNCATEGORIZED_GROUP;
+			if (canDeactivate) {
 				const off = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
 				off.addEventListener('click', () => deactivateCategory(cat));
 				actions.appendChild(off);
@@ -338,13 +441,13 @@
 			render: () => {
 				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
 				const name = C.createElement('input', { type: 'text', name: 'name', class: 'bc-input', maxlength: 120, required: true, value: cat ? cat.name : '' });
-				wrap(form, t('budgetcheck', 'Name'), name);
+				wrap(form, t('budgetcheck', 'Name'), name, t('budgetcheck', 'Give the category a clear name people will recognize quickly.'));
 				const typeSelect = C.createElement('select', { name: 'type', class: 'bc-input', disabled: isEdit }, [
 					C.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense') }),
 					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
 				]);
 				typeSelect.value = cat ? cat.type : 'expense';
-				wrap(form, t('budgetcheck', 'Direction'), typeSelect);
+				wrap(form, t('budgetcheck', 'Direction'), typeSelect, t('budgetcheck', 'Choose whether this category is used for incoming or outgoing money.'));
 				const groupSelect = C.createElement('select', { name: 'groupKeyChoice', class: 'bc-input' });
 				groupSelect.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'No group') }));
 				const sorted = [...new Set(groupKeys)].sort();
@@ -358,7 +461,7 @@
 					customWrap.hidden = !show;
 				};
 				groupSelect.addEventListener('change', syncGroupCustom);
-				wrap(form, t('budgetcheck', 'Group'), groupSelect);
+				wrap(form, t('budgetcheck', 'Group'), groupSelect, t('budgetcheck', 'Optional: group related categories together (for example Home, Travel).'));
 				const customWrap = C.createElement('label', { class: 'bc-field', attrs: { 'data-bc-group-custom': '1' } });
 				customWrap.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'New group name') }));
 				customWrap.appendChild(groupCustom);
@@ -380,14 +483,14 @@
 					C.createElement('option', { value: 'tax_exempt', text: t('budgetcheck', 'Tax exempt') }),
 				]);
 				taxSelect.value = cat ? cat.taxHandlingMode : 'inherit_workspace';
-				wrap(form, t('budgetcheck', 'Tax handling'), taxSelect);
+				wrap(form, t('budgetcheck', 'Tax handling'), taxSelect, t('budgetcheck', 'Controls how this category behaves when tax mode is enabled.'));
 				const specialOuter = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
 				specialOuter.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Category options') }));
 				const specialRow = C.createElement('span', { class: 'bc-boolean-control' });
 				const specialInput = C.createElement('input', { type: 'checkbox', name: 'isSpecial', value: '1' });
 				specialInput.checked = !!(cat && cat.isSpecial);
 				specialRow.appendChild(specialInput);
-				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special by default') }));
+				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Enable this if entries in this category are usually one-off or exceptional.') }));
 				specialOuter.appendChild(specialRow);
 				form.appendChild(specialOuter);
 				form._collect = () => {
@@ -645,13 +748,13 @@
 			render: () => {
 				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
 				const titleInput = C.createElement('input', { type: 'text', name: 'title', class: 'bc-input', maxlength: 180, required: true, value: rule ? rule.title : '' });
-				wrap(form, t('budgetcheck', 'Title'), titleInput);
+				wrap(form, t('budgetcheck', 'Title'), titleInput, t('budgetcheck', 'Use a short name that explains what repeats.'));
 				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [
 					C.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense') }),
 					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
 				]);
 				directionSelect.value = rule ? rule.direction : 'expense';
-				wrap(form, t('budgetcheck', 'Direction'), directionSelect);
+				wrap(form, t('budgetcheck', 'Type (income or expense)'), directionSelect, t('budgetcheck', 'Select whether this repeats as income or expense.'));
 				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
 				const filter = () => {
 					catSelect.replaceChildren();
@@ -665,13 +768,13 @@
 				};
 				filter();
 				directionSelect.addEventListener('change', filter);
-				wrap(form, t('budgetcheck', 'Category'), catSelect);
+				wrap(form, t('budgetcheck', 'Category'), catSelect, t('budgetcheck', 'Only active categories of the selected type are shown.'));
 				const amountInput = C.createElement('input', {
 					type: 'text', inputmode: 'decimal', name: 'amount', class: 'bc-input', required: true,
 					value: rule ? (rule.amount.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',') : '',
 					attrs: { 'aria-label': t('budgetcheck', 'Amount') },
 				});
-				wrap(form, t('budgetcheck', 'Amount'), amountInput);
+				wrap(form, t('budgetcheck', 'Amount'), amountInput, t('budgetcheck', 'Enter the amount for each occurrence.'));
 				const freqSelect = C.createElement('select', { name: 'frequency', class: 'bc-input' }, [
 					C.createElement('option', { value: 'monthly', text: t('budgetcheck', 'Monthly') }),
 					C.createElement('option', { value: 'quarterly', text: t('budgetcheck', 'Quarterly') }),
@@ -679,9 +782,9 @@
 					C.createElement('option', { value: 'custom_interval', text: t('budgetcheck', 'Custom (months)') }),
 				]);
 				freqSelect.value = rule ? rule.frequency : 'monthly';
-				wrap(form, t('budgetcheck', 'Frequency'), freqSelect);
+				wrap(form, t('budgetcheck', 'Repeat'), freqSelect, t('budgetcheck', 'Choose how often this rule should create a suggestion.'));
 				const intervalInput = C.createElement('input', { type: 'number', name: 'intervalCount', min: 1, max: 36, class: 'bc-input', value: rule ? String(rule.intervalCount) : '1' });
-				wrap(form, t('budgetcheck', 'Interval count'), intervalInput);
+				wrap(form, t('budgetcheck', 'Every how many months'), intervalInput, t('budgetcheck', 'Used when Repeat is set to custom months.'));
 				const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 				const startDh = 'bc-rec-dh-s-' + Math.random().toString(36).slice(2);
 				const startInput = C.createElement('input', {
@@ -693,6 +796,7 @@
 				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Start date') }),
 					startInput,
+					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'First date when this rule can create a booking.') }),
 					startHint,
 				]));
 				const endDh = 'bc-rec-dh-e-' + Math.random().toString(36).slice(2);
@@ -705,6 +809,7 @@
 				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'End date (optional)') }),
 					endInput,
+					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Leave empty if this rule should continue indefinitely.') }),
 					endHint,
 				]));
 
@@ -791,11 +896,20 @@
 		const el = form.querySelector('[name="' + name + '"]');
 		return el ? String(el.value || '') : '';
 	}
-	function wrap(form, label, control) {
-		const wrapper = C.createElement('label', { class: 'bc-field' }, [
+	function wrap(form, label, control, hint = '') {
+		const children = [
 			C.createElement('span', { class: 'bc-field__label', text: label }),
 			control,
-		]);
+		];
+		if (hint) {
+			const hintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
+			children.push(C.createElement('span', { id: hintId, class: 'bc-field__hint', text: hint }));
+			if (control && typeof control.setAttribute === 'function') {
+				const current = control.getAttribute('aria-describedby');
+				control.setAttribute('aria-describedby', current ? (current + ' ' + hintId) : hintId);
+			}
+		}
+		const wrapper = C.createElement('label', { class: 'bc-field' }, children);
 		form.appendChild(wrapper);
 	}
 })();

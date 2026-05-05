@@ -25,7 +25,7 @@ $canContribute = !empty($_['canContribute']);
 				</button>
 			<?php endif; ?>
 		</header>
-		<form class="bc-filter-grid" data-bc-tx-filters>
+		<form class="bc-filter-grid bc-filter-grid--transactions" data-bc-tx-filters>
 			<p id="bc-tx-date-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.')); ?></p>
 			<label class="bc-field">
 				<span class="bc-field__label"><?php p($l->t('From')); ?></span>
@@ -41,6 +41,14 @@ $canContribute = !empty($_['canContribute']);
 					<option value=""><?php p($l->t('Any')); ?></option>
 				</select>
 			</label>
+			<?php if ($workspace['type'] === 'project'): ?>
+				<label class="bc-field">
+					<span class="bc-field__label"><?php p($l->t('Booking status')); ?></span>
+					<select name="statusId" class="bc-input" data-bc-filter="statusId" data-bc-status-select>
+						<option value=""><?php p($l->t('Any')); ?></option>
+					</select>
+				</label>
+			<?php endif; ?>
 			<label class="bc-field">
 				<span class="bc-field__label"><?php p($l->t('Search title or notes')); ?></span>
 				<input type="search" name="q" class="bc-input" autocomplete="off" data-bc-filter="q" aria-describedby="bc-tx-search-hint">
@@ -86,6 +94,9 @@ $canContribute = !empty($_['canContribute']);
 						<th scope="col"><?php p($l->t('Category')); ?></th>
 						<th scope="col" class="bc-table__col--num"><?php p($l->t('Amount')); ?></th>
 						<th scope="col"><?php p($l->t('Direction')); ?></th>
+						<?php if ($workspace['type'] === 'project'): ?>
+							<th scope="col"><?php p($l->t('Status')); ?></th>
+						<?php endif; ?>
 						<th scope="col"><?php p($l->t('Tags')); ?></th>
 						<?php if ($canContribute): ?>
 							<th scope="col" class="bc-sr-only"><?php p($l->t('Actions')); ?></th>
@@ -93,7 +104,7 @@ $canContribute = !empty($_['canContribute']);
 					</tr>
 				</thead>
 				<tbody data-bc-tx-rows>
-					<tr><td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
+					<tr><td colspan="<?php p(($canContribute ? 7 : 6) + ($workspace['type'] === 'project' ? 1 : 0)); ?>" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
 				</tbody>
 			</table>
 		</div>

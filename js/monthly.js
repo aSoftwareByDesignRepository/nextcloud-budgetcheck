@@ -8,14 +8,14 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 
-	if (!Ws.workspace) return;
-	const ws = Ws.workspace;
-	if (ws.type !== 'household') return; // PageController also redirects, but be safe.
-
 	const state = { yearMonth: Dates.currentYearMonth(), summary: null };
 	let periodPicker = null;
+	/** @type {{ id: number, type: string, currencyCode: string } | null} */
+	let ws = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
+		ws = Ws.workspace;
+		if (!ws || ws.type !== 'household') return; // PageController also redirects, but be safe.
 		const sp = new URLSearchParams(window.location.search);
 		const ym = sp.get('yearMonth');
 		if (ym && /^\d{4}-(0[1-9]|1[0-2])$/.test(ym)) state.yearMonth = ym;
@@ -51,6 +51,7 @@
 		const warningsList = document.querySelector('[data-bc-warnings-list]');
 		const tbody = document.querySelector('[data-bc-month-budget-rows]');
 		grid?.setAttribute('aria-busy', 'true');
+		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
 			state.summary = data.summary;
@@ -112,7 +113,7 @@
 	}
 
 	function renderConsumption(tbody, budget) {
-		if (!tbody) return;
+		if (!tbody || !ws) return;
 		tbody.replaceChildren();
 		const rows = budget.byCategory || [];
 		if (rows.length === 0) {
@@ -148,6 +149,7 @@
 	}
 
 	async function closeMonth() {
+		if (!ws) return;
 		const ok = await C.confirmDialog({
 			title: t('budgetcheck', 'Close this month?'),
 			body: t('budgetcheck', 'Closing locks the ledger for {month} and stores an immutable snapshot. Reopening requires a manager.').replace('{month}', Dates.formatYearMonth(state.yearMonth, Ws.htmlLang)),
@@ -165,6 +167,7 @@
 	}
 
 	async function reopenMonth() {
+		if (!ws) return;
 		const ok = await C.confirmDialog({
 			title: t('budgetcheck', 'Reopen this month?'),
 			body: t('budgetcheck', 'Reopening removes the snapshot and re-enables edits. The action is logged.'),

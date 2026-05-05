@@ -18,7 +18,7 @@ use OCP\IUserManager;
  *  - Workspace `type` is required at creation and immutable after.
  *  - Household workspaces force `fiscal_year_start_month = 1` and reject any
  *    project-only payload field. Project workspaces require both project dates,
- *    end >= start, and reject the household-only `auto_copy_budgets_from_previous_month`
+ *    end >= start, and reject the household-only `auto_copy_prev_month`
  *    knob (which only makes sense in a calendar-month rhythm).
  *  - The creator becomes a workspace manager in the same DB transaction so we
  *    cannot end up with an orphaned workspace nobody can edit.
@@ -31,6 +31,13 @@ class WorkspaceService
 	public const TYPE_PROJECT = 'project';
 
 	private const TYPES = [self::TYPE_HOUSEHOLD, self::TYPE_PROJECT];
+
+	/** DB column for API `autoCopyBudgetsFromPreviousMonth` (≤30 chars for portability). */
+	private const COL_AUTO_COPY_PREV_MONTH = 'auto_copy_prev_month';
+
+	/** Former column name before migration; hydrate accepts during upgrade. */
+	private const LEGACY_COL_AUTO_COPY_PREV_MONTH = 'auto_copy_budgets_from_previous_month';
+
 	private const TAX_BUDGET_BASES = ['net', 'gross'];
 
 	public function __construct(
@@ -139,7 +146,7 @@ class WorkspaceService
 					'tax_mode_enabled' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
 					'tax_budget_basis' => $qb->createNamedParameter('gross'),
 					'overspend_threshold_minor' => $qb->createNamedParameter($overspendThreshold, $overspendThreshold === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-					'auto_copy_budgets_from_previous_month' => $qb->createNamedParameter($autoCopy, \PDO::PARAM_BOOL),
+					self::COL_AUTO_COPY_PREV_MONTH => $qb->createNamedParameter($autoCopy, \PDO::PARAM_BOOL),
 					'is_closed' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
 					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
 					'project_total_cap_minor' => $qb->createNamedParameter($projectCap, $projectCap === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
@@ -184,6 +191,9 @@ class WorkspaceService
 		$this->access->rememberLastUsedWorkspace($userId, $id);
 		$this->audit->record($userId, 'workspace_created', 'workspace', (string)$id, ['type' => $type, 'name' => $name], $id);
 		$this->categories->ensureSystemCategoriesForWorkspace($id, $userId);
+		if ($type === self::TYPE_PROJECT) {
+			$this->ensureDefaultBookingStatusesForWorkspace($id);
+		}
 		return $workspace;
 	}
 
@@ -235,7 +245,7 @@ class WorkspaceService
 		if ($workspace['type'] === self::TYPE_HOUSEHOLD && array_key_exists('autoCopyBudgetsFromPreviousMonth', $payload)) {
 			$autoCopy = (bool)$payload['autoCopyBudgetsFromPreviousMonth'];
 			if ($autoCopy !== $workspace['autoCopyBudgetsFromPreviousMonth']) {
-				$updates['auto_copy_budgets_from_previous_month'] = $autoCopy;
+				$updates[self::COL_AUTO_COPY_PREV_MONTH] = $autoCopy;
 				$logChanges['autoCopyBudgetsFromPreviousMonth'] = $autoCopy;
 			}
 		}
@@ -522,7 +532,9 @@ class WorkspaceService
 			'taxModeEnabled' => (bool)$row['tax_mode_enabled'],
 			'taxBudgetBasis' => (string)$row['tax_budget_basis'],
 			'overspendThresholdMinor' => $row['overspend_threshold_minor'] === null ? null : (int)$row['overspend_threshold_minor'],
-			'autoCopyBudgetsFromPreviousMonth' => (bool)$row['auto_copy_budgets_from_previous_month'],
+			'autoCopyBudgetsFromPreviousMonth' => (bool)($row[self::COL_AUTO_COPY_PREV_MONTH]
+				?? $row[self::LEGACY_COL_AUTO_COPY_PREV_MONTH]
+				?? false),
 			'isClosed' => (bool)$row['is_closed'],
 			'isActive' => (bool)$row['is_active'],
 			'projectTotalCapMinor' => $row['project_total_cap_minor'] === null ? null : (int)$row['project_total_cap_minor'],
@@ -747,5 +759,31 @@ class WorkspaceService
 	private function utcNow(): string
 	{
 		return $this->timeFactory->getDateTime('now', new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+	}
+
+	private function ensureDefaultBookingStatusesForWorkspace(int $workspaceId): void
+	{
+		$defaults = [
+			['name' => 'Open', 'sort' => 10],
+			['name' => 'In Progress', 'sort' => 20],
+			['name' => 'Blocked', 'sort' => 30],
+			['name' => 'Paid', 'sort' => 40],
+		];
+		$now = $this->utcNow();
+		foreach ($defaults as $default) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_booking_statuses')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'name' => $qb->createNamedParameter($default['name']),
+					'sort_order' => $qb->createNamedParameter($default['sort'], \PDO::PARAM_INT),
+					// `is_done` kept false for all seeded statuses; semantics currently unused.
+					'is_done' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
+					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+				]);
+			$qb->executeStatement();
+		}
 	}
 }

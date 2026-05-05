@@ -664,6 +664,16 @@
 	align-items: start;
 }
 
+/* Full-width rule inside form grids (e.g. before project-only fields) */
+.bc-form-grid > .bc-form-grid__divider {
+	grid-column: 1 / -1;
+	width: 100%;
+	height: 0;
+	margin: var(--bc-space-1) 0;
+	border: 0;
+	border-top: 1px solid var(--bc-border);
+}
+
 /*
  * On multi-column rows, stacked fields (label + control [+ hint]) must share the
  * same vertical rhythm. Without a hint row, `align-items: end` pushed controls up
@@ -795,6 +805,9 @@
 	.bc-filter-bool-row {
 		grid-template-columns: 1fr;
 	}
+	.bc-filter-grid--transactions {
+		padding: var(--bc-space-2);
+	}
 }
 .bc-field--radio {
 	flex-direction: row;
@@ -854,6 +867,27 @@
 	gap: var(--bc-space-2);
 	flex-wrap: wrap;
 	grid-column: 1 / -1;
+}
+
+/* Transactions filters: cleaner grouping and visual rhythm */
+.bc-filter-grid--transactions {
+	gap: var(--bc-space-4) var(--bc-space-3);
+	padding: var(--bc-space-3);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-md);
+	background: color-mix(in srgb, var(--bc-bg-card) 94%, var(--color-main-text, #1d1d1d) 6%);
+}
+.bc-filter-grid--transactions > .bc-field:has([data-bc-filter="q"]) {
+	grid-column: 1 / -1;
+}
+.bc-filter-grid--transactions .bc-filter-bool-row {
+	margin-top: calc(var(--bc-space-1) * -1);
+}
+.bc-filter-grid--transactions .bc-filter-actions {
+	margin-top: calc(var(--bc-space-1) * -1);
+	padding-top: var(--bc-space-2);
+	border-top: 1px solid var(--bc-border);
+	justify-content: flex-start;
 }
 
 /* Compound fields or hit lists: own row in bc-form-grid (avoids multi-column layout bugs) */

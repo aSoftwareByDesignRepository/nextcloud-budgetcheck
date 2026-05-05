@@ -19,13 +19,8 @@ $favoriteWorkspaceIds = array_map('intval', (array)($_['favoriteWorkspaceIds'] ?
 $urls = $_['urls'] ?? [];
 $canAdminApp = !empty($_['canAdminApp']);
 $overviewUrl = (string)($urls['workspaceOverview'] ?? '#');
-$overviewActive = false;
-foreach ($nav as $item) {
-	if (($item['id'] ?? '') === 'workspace-overview') {
-		$overviewActive = !empty($item['active']);
-		break;
-	}
-}
+$pageIdNav = (string)($_['pageId'] ?? '');
+$overviewActive = $pageIdNav === 'workspace-overview';
 
 $favorites = [];
 foreach ($workspaces as $w) {
@@ -61,10 +56,11 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 				<li class="bc-nav__item <?php p($overviewActive ? 'is-active active' : ''); ?>">
 					<a class="bc-nav__link" href="<?php p($overviewUrl); ?>" <?php if ($overviewActive): ?>aria-current="page"<?php endif; ?>>
 						<span class="bc-nav__icon" aria-hidden="true">
-							<?php print_unescaped(IconCatalog::render('search')); ?>
+							<?php print_unescaped(IconCatalog::render('users')); ?>
 						</span>
 						<span class="bc-nav__label">
 							<span class="bc-nav__name"><?php p($l->t('Workspace overview')); ?></span>
+							<span class="bc-nav__hint"><?php p($l->t('Find and pin workspaces quickly')); ?></span>
 						</span>
 					</a>
 				</li>

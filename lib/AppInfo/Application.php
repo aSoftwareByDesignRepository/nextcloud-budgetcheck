@@ -9,6 +9,7 @@ use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
+use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\LocaleFormatService;
 use OCA\BudgetCheck\Service\MoneyService;
@@ -140,6 +141,17 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(AuditLogService::class),
 				$c->query(CategoryService::class),
+				$c->query(BookingStatusService::class),
+			);
+		});
+
+		$context->registerService(BookingStatusService::class, function ($c): BookingStatusService {
+			return new BookingStatusService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
 			);
 		});
 

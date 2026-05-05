@@ -8,15 +8,13 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 
-	if (!Ws.workspace) return;
-	const ws = Ws.workspace;
-	if (ws.type !== 'project') return;
-
 	document.addEventListener('DOMContentLoaded', () => {
-		load();
+		const ws = Ws.workspace;
+		if (!ws || ws.type !== 'project') return;
+		void load(ws);
 	});
 
-	async function load() {
+	async function load(ws) {
 		const grid = document.querySelector('[data-bc-summary-grid]');
 		const period = document.querySelector('[data-bc-summary-period]');
 		grid?.setAttribute('aria-busy', 'true');

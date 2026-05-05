@@ -40,7 +40,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('tax_mode_enabled', 'boolean', ['notnull' => true, 'default' => false]);
 			$t->addColumn('tax_budget_basis', 'string', ['length' => 8, 'notnull' => true, 'default' => 'gross']);
 			$t->addColumn('overspend_threshold_minor', 'bigint', ['notnull' => false]);
-			$t->addColumn('auto_copy_budgets_from_previous_month', 'boolean', ['notnull' => true, 'default' => false]);
+			$t->addColumn('auto_copy_prev_month', 'boolean', ['notnull' => true, 'default' => false]);
 			$t->addColumn('is_closed', 'boolean', ['notnull' => true, 'default' => false]);
 			$t->addColumn('is_active', 'boolean', ['notnull' => true, 'default' => true]);
 			$t->addColumn('project_total_cap_minor', 'bigint', ['notnull' => false]);
@@ -50,7 +50,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('created_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_ws_pk');
 			$t->addIndex(['type', 'is_active'], 'bc_ws_type_active_idx');
 			$t->addIndex(['created_by'], 'bc_ws_creator_idx');
 		}
@@ -62,7 +62,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('user_id', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('role', 'string', ['length' => 16, 'notnull' => true, 'default' => 'viewer']);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_wsm_pk');
 			$t->addUniqueIndex(['workspace_id', 'user_id'], 'bc_ws_mem_uidx');
 			$t->addIndex(['user_id'], 'bc_ws_mem_user_idx');
 		}
@@ -80,7 +80,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('created_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_cat_pk');
 			// Active categories must be unique on (workspace, name, type). Inactive duplicates
 			// are tolerated so renames do not collide with archived rows. Enforced in service.
 			$t->addIndex(['workspace_id', 'is_active', 'type'], 'bc_cat_ws_active_idx');
@@ -111,7 +111,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('deleted_at', 'datetime', ['notnull' => false]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_tx_pk');
 			$t->addIndex(['workspace_id', 'booking_date'], 'bc_tx_ws_date_idx');
 			$t->addIndex(['workspace_id', 'category_id'], 'bc_tx_ws_cat_idx');
 			$t->addIndex(['workspace_id', 'is_special'], 'bc_tx_ws_special_idx');
@@ -135,7 +135,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('created_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_rr_pk');
 			$t->addIndex(['workspace_id', 'is_active'], 'bc_rr_ws_active_idx');
 			$t->addIndex(['workspace_id', 'next_due_date'], 'bc_rr_ws_due_idx');
 		}
@@ -150,7 +150,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('planned_minor', 'bigint', ['notnull' => true]);
 			$t->addColumn('updated_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_bud_pk');
 			// Uniqueness on (workspace, year_month, category_id) is enforced in the service
 			// because some DBs treat NULL in unique indexes inconsistently. We provide a
 			// covering index for fast lookup either way.
@@ -168,7 +168,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('target_minor', 'bigint', ['notnull' => false]);
 			$t->addColumn('updated_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_sav_pk');
 			$t->addUniqueIndex(['workspace_id', 'year_month'], 'bc_sav_ws_ym_uidx');
 		}
 
@@ -181,7 +181,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('calc_hash', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('generated_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('generated_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_msnap_pk');
 			$t->addUniqueIndex(['workspace_id', 'year_month'], 'bc_snap_ws_ym_uidx');
 		}
 
@@ -197,7 +197,7 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('ip_hash', 'string', ['length' => 64, 'notnull' => false]);
 			$t->addColumn('user_agent_hash', 'string', ['length' => 64, 'notnull' => false]);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
-			$t->setPrimaryKey(['id']);
+			$t->setPrimaryKey(['id'], 'bc_audit_pk');
 			$t->addIndex(['action', 'created_at'], 'bc_audit_action_idx');
 			$t->addIndex(['actor_user_id'], 'bc_audit_actor_idx');
 			$t->addIndex(['workspace_id', 'created_at'], 'bc_audit_ws_idx');

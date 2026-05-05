@@ -172,6 +172,10 @@
 				workspaceIds: Array.from(next.values()),
 			});
 			syncSidebarQuickAccess(next);
+			updateWorkspaceDataset();
+			window.dispatchEvent(new CustomEvent('bc:workspace-favorites-changed', {
+				detail: { workspaceIds: Array.from(next.values()) },
+			}));
 			Msg.announce(t('budgetcheck', 'Quick access updated.'), 'success');
 		} catch (err) {
 			state.favorites = previous;
@@ -184,9 +188,9 @@
 	}
 
 	function syncSidebarQuickAccess(favoritesSet) {
-		const slot = document.querySelector('#app-navigation [data-bc-quickaccess-slot]');
 		const switcher = document.querySelector('#app-navigation .bc-switcher');
-		if (!slot || !switcher) return;
+		if (!switcher) return;
+		const slot = document.querySelector('#app-navigation [data-bc-quickaccess-slot]');
 
 		const iconTemplates = {};
 		['household', 'project'].forEach((type) => {
@@ -196,10 +200,12 @@
 			}
 		});
 
-		slot.replaceChildren();
+		const renderTarget = slot || ensureQuickaccessFallbackContainer(switcher);
+		if (!renderTarget) return;
+		renderTarget.replaceChildren();
 		const favorites = state.workspaces.filter((w) => favoritesSet.has(Number(w.id)) && w.isActive !== false);
 		if (favorites.length === 0) {
-			slot.appendChild(C.createElement('p', { class: 'bc-switcher__empty', text: t('budgetcheck', 'No quick access workspaces yet.') }));
+			renderTarget.appendChild(C.createElement('p', { class: 'bc-switcher__empty', text: t('budgetcheck', 'No quick access workspaces yet.') }));
 			return;
 		}
 
@@ -238,6 +244,29 @@
 		});
 
 		group.appendChild(list);
-		slot.appendChild(group);
+		renderTarget.appendChild(group);
+	}
+
+	function ensureQuickaccessFallbackContainer(switcher) {
+		let existing = switcher.querySelector('[data-bc-quickaccess-fallback]');
+		if (existing) return existing;
+		const insertionPoint = switcher.querySelector('.bc-switcher__group') || switcher.querySelector('.bc-switcher__empty');
+		const container = C.createElement('div', { attrs: { 'data-bc-quickaccess-fallback': '1' } });
+		if (insertionPoint && insertionPoint.parentNode) {
+			insertionPoint.parentNode.insertBefore(container, insertionPoint);
+		} else {
+			switcher.appendChild(container);
+		}
+		return container;
+	}
+
+	function updateWorkspaceDataset() {
+		const appContent = document.getElementById('app-content');
+		if (!appContent) return;
+		try {
+			appContent.dataset.bcWorkspaces = JSON.stringify(state.workspaces);
+		} catch (_) {
+			// Ignore dataset sync failures; sidebar sync already updated visible UI.
+		}
 	}
 })();

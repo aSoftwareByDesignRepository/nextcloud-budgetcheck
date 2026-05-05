@@ -281,6 +281,7 @@ class PageController extends Controller
 		$canAdminApp = $this->access->isAppAdmin($userId);
 		$navigation = $this->buildNavigation($template, $selected, $canAdminApp, $canManage);
 
+		$wsQuery = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
 		$response = new TemplateResponse($this->appName, $template, [
 			'pageId' => $template,
 			'pageTitle' => $title,
@@ -302,7 +303,7 @@ class PageController extends Controller
 				'monthly'      => $this->urlGenerator->linkToRoute('budgetcheck.page.monthly'),
 				'period'       => $this->urlGenerator->linkToRoute('budgetcheck.page.period'),
 				'yearly'       => $this->urlGenerator->linkToRoute('budgetcheck.page.yearly'),
-				'workspaceOverview' => $this->urlGenerator->linkToRoute('budgetcheck.page.workspaceOverview'),
+				'workspaceOverview' => $this->urlGenerator->linkToRoute('budgetcheck.page.workspaceOverview', $wsQuery),
 				'settings'     => $this->urlGenerator->linkToRoute('budgetcheck.page.settings'),
 				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
@@ -360,7 +361,6 @@ class PageController extends Controller
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],
-			['id' => 'workspace-overview', 'label' => $this->l10n->t('Workspace overview'), 'icon' => 'users', 'route' => 'budgetcheck.page.workspaceOverview', 'show' => true, 'hint' => $this->l10n->t('Find and pin workspaces quickly')],
 			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null && $canManageWorkspace, 'hint' => $this->l10n->t('Members, categories, tax, and workspace details.')],
 			['id' => 'app-settings', 'label' => $this->l10n->t('App settings'),   'icon' => 'shield-check',   'route' => 'budgetcheck.page.appSettings',  'show' => $canAdminApp, 'hint' => $this->l10n->t('Directory access, app administrators, and defaults for new workspaces.')],
 		];

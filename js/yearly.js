@@ -8,13 +8,13 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 
-	if (!Ws.workspace) return;
-	const ws = Ws.workspace;
-	if (ws.type !== 'household') return;
-
 	const state = { year: new Date().getFullYear() };
+	/** @type {{ id: number, type: string } | null} */
+	let ws = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
+		ws = Ws.workspace;
+		if (!ws || ws.type !== 'household') return;
 		const yearSelect = document.querySelector('[data-bc-year-picker]');
 		if (yearSelect) {
 			const yNow = new Date().getFullYear();
@@ -39,6 +39,7 @@
 		const months = document.querySelector('[data-bc-month-cards]');
 		grid?.setAttribute('aria-busy', 'true');
 		months?.setAttribute('aria-busy', 'true');
+		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/yearly-summary', { workspaceId: ws.id, year: state.year });
 			const summary = data.summary;

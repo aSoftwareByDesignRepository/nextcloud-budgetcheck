@@ -53,16 +53,16 @@ $canManage = !empty($_['canManageWorkspace']);
 						</span>
 					</label>
 				<?php else: ?>
-					<p id="bc-ws-project-date-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.')); ?></p>
+					<hr class="bc-form-grid__divider" aria-hidden="true">
 					<label class="bc-field">
 						<span class="bc-field__label"><?php p($l->t('Project start')); ?></span>
-						<input type="date" name="projectStartDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-ws-project-date-hint">
+						<input type="date" name="projectStartDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?>>
 					</label>
 					<label class="bc-field">
 						<span class="bc-field__label"><?php p($l->t('Project end')); ?></span>
-						<input type="date" name="projectEndDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-ws-project-date-hint">
+						<input type="date" name="projectEndDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?>>
 					</label>
-					<label class="bc-field">
+					<label class="bc-field bc-field--full-width">
 						<span class="bc-field__label"><?php p($l->t('Project cap (minor units, optional)')); ?></span>
 						<input type="number" min="0" step="1" name="projectTotalCapMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
 					</label>
@@ -160,6 +160,41 @@ $canManage = !empty($_['canManageWorkspace']);
 				</table>
 			</div>
 		</section>
+
+		<?php if ($workspace['type'] === 'project'): ?>
+			<section class="bc-card bc-section" aria-labelledby="bc-booking-statuses-title">
+				<header class="bc-section__header">
+					<div>
+						<h2 id="bc-booking-statuses-title"><?php p($l->t('Booking statuses')); ?></h2>
+						<p class="bc-section__sub"><?php p($l->t('Project-only workflow states for bookings (for example Open, In progress, Paid).')); ?></p>
+					</div>
+					<?php if ($canManage): ?>
+						<button type="button" class="button primary" data-bc-action="open-create-booking-status">
+							<?php p($l->t('New status')); ?>
+						</button>
+					<?php endif; ?>
+				</header>
+				<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Booking statuses')); ?>" tabindex="0">
+					<table class="bc-table">
+						<thead>
+							<tr>
+								<th scope="col"><?php p($l->t('Name')); ?></th>
+								<th scope="col"><?php p($l->t('Order')); ?></th>
+								<th scope="col"><?php p($l->t('Status')); ?></th>
+								<?php if ($canManage): ?>
+									<th scope="col" class="bc-sr-only"><?php p($l->t('Actions')); ?></th>
+								<?php endif; ?>
+							</tr>
+						</thead>
+						<tbody data-bc-booking-status-rows>
+							<tr>
+								<td colspan="<?php p($canManage ? '4' : '3'); ?>" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		<?php endif; ?>
 
 		<?php if ($canManage): ?>
 			<section class="bc-card bc-section" aria-labelledby="bc-members-title">

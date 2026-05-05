@@ -9,10 +9,10 @@
 	const Ws = window.BudgetCheckWorkspace;
 	const INTERNAL_UNCATEGORIZED_GROUP = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
 
-	if (!Ws.workspace) return;
-	const ws = Ws.workspace;
-	const isHousehold = ws.type === 'household';
-	const decimals = typeof ws.currencyDecimals === 'number' ? ws.currencyDecimals : (ws.currencyCode === 'JPY' ? 0 : 2);
+	/** @type {{ id: number, type: string, currencyCode: string, currencyDecimals?: number } | null} */
+	let ws = null;
+	let isHousehold = false;
+	let decimals = 2;
 
 	const state = {
 		yearMonth: Dates.currentYearMonth(),
@@ -26,6 +26,10 @@
 	let periodPicker = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
+		ws = Ws.workspace;
+		if (!ws) return;
+		isHousehold = ws.type === 'household';
+		decimals = typeof ws.currencyDecimals === 'number' ? ws.currencyDecimals : (ws.currencyCode === 'JPY' ? 0 : 2);
 		const box = document.querySelector('[data-bc-household-period]');
 		const Period = window.BudgetCheckHouseholdPeriod;
 		if (box && Period && typeof Period.wire === 'function') {
@@ -65,6 +69,7 @@
 	}
 
 	async function loadCategories() {
+		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id });
 			state.categories = (data.categories || []).filter((c) => c.isActive);
@@ -74,6 +79,7 @@
 	}
 
 	async function loadBudgets() {
+		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth });
 			state.budgets = data.budgets || [];
@@ -91,7 +97,7 @@
 
 	async function loadSummary() {
 		state.summary = null;
-		if (!isHousehold) return;
+		if (!isHousehold || !ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
 			state.summary = data.summary || null;
@@ -101,7 +107,7 @@
 	}
 
 	async function loadSavings() {
-		if (!isHousehold) return;
+		if (!isHousehold || !ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/savings-target', { workspaceId: ws.id, yearMonth: state.yearMonth });
 			renderSavings(data.savingsTarget || null);
@@ -126,6 +132,7 @@
 	}
 
 	function renderRows() {
+		if (!ws) return;
 		const tbody = document.querySelector('[data-bc-budget-rows]');
 		const window_ = document.querySelector('[data-bc-budget-window]');
 		if (window_) window_.textContent = Dates.formatYearMonth(state.yearMonth, Ws.htmlLang);
@@ -186,6 +193,7 @@
 	}
 
 	async function saveBudgets() {
+		if (!ws) return;
 		const rows = [];
 		try {
 			state.dirty.forEach((value, categoryId) => {
@@ -236,6 +244,7 @@
 	}
 
 	async function saveSavingsTarget(form) {
+		if (!ws) return;
 		const mode = form.querySelector('input[name="targetMode"]:checked')?.value || 'percentage';
 		const payload = { workspaceId: ws.id, yearMonth: state.yearMonth, targetMode: mode };
 		const percentRaw = form.querySelector('input[name="targetPercent"]').value.trim();

@@ -47,11 +47,12 @@ class TransactionService
 		private ITimeFactory $timeFactory,
 		private AuditLogService $audit,
 		private CategoryService $categories,
+		private BookingStatusService $bookingStatuses,
 	) {
 	}
 
 	/**
-	 * @param array{from?:?string, to?:?string, categoryId?:int|null, q?:?string, isSpecial?:bool|null, uncategorized?:bool, includeDeleted?:bool, limit?:int, offset?:int} $filters
+	 * @param array{from?:?string, to?:?string, categoryId?:int|null, statusId?:int|null, q?:?string, isSpecial?:bool|null, uncategorized?:bool, includeDeleted?:bool, limit?:int, offset?:int} $filters
 	 */
 	public function listForWorkspace(int $workspaceId, string $userId, array $filters, array $workspace): array
 	{
@@ -83,6 +84,9 @@ class TransactionService
 			}
 		} elseif (!empty($filters['categoryId'])) {
 			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter((int)$filters['categoryId'], \PDO::PARAM_INT)));
+		}
+		if (!empty($filters['statusId'])) {
+			$qb->andWhere($qb->expr()->eq('booking_status_id', $qb->createNamedParameter((int)$filters['statusId'], \PDO::PARAM_INT)));
 		}
 		if (isset($filters['isSpecial']) && $filters['isSpecial'] !== null) {
 			$qb->andWhere($qb->expr()->eq('is_special', $qb->createNamedParameter((bool)$filters['isSpecial'], \PDO::PARAM_BOOL)));
@@ -142,6 +146,9 @@ class TransactionService
 			}
 		} elseif (!empty($filters['categoryId'])) {
 			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter((int)$filters['categoryId'], \PDO::PARAM_INT)));
+		}
+		if (!empty($filters['statusId'])) {
+			$qb->andWhere($qb->expr()->eq('booking_status_id', $qb->createNamedParameter((int)$filters['statusId'], \PDO::PARAM_INT)));
 		}
 		if (isset($filters['isSpecial']) && $filters['isSpecial'] !== null) {
 			$qb->andWhere($qb->expr()->eq('is_special', $qb->createNamedParameter((bool)$filters['isSpecial'], \PDO::PARAM_BOOL)));
@@ -252,7 +259,7 @@ class TransactionService
 		return [$from, $to];
 	}
 
-	public function create(int $workspaceId, string $userId, array $payload, array $workspace, array $category): array
+	public function create(int $workspaceId, string $userId, array $payload, array $workspace, array $category, ?array $bookingStatus = null): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
 		$direction = $this->normaliseDirection((string)($payload['direction'] ?? ''));
@@ -265,6 +272,7 @@ class TransactionService
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
 		$isSpecial = !empty($payload['isSpecial']) || ($category['isSpecial'] ?? false);
 		$externalRef = $this->normaliseExternalRef($payload['externalRef'] ?? null);
+		$bookingStatusId = $this->resolveBookingStatusId($workspace, $bookingStatus);
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
@@ -289,6 +297,7 @@ class TransactionService
 				'notes' => $qb->createNamedParameter($notes),
 				'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
 				'external_ref' => $qb->createNamedParameter($externalRef),
+				'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'version' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
 				'created_by' => $qb->createNamedParameter($userId),
 				'updated_by' => $qb->createNamedParameter($userId),
@@ -306,7 +315,7 @@ class TransactionService
 		return $this->loadHydrated($id, $workspace['currencyCode']);
 	}
 
-	public function update(int $transactionId, string $userId, array $payload, array $workspace, ?array $category = null): array
+	public function update(int $transactionId, string $userId, array $payload, array $workspace, ?array $category = null, ?array $bookingStatus = null): array
 	{
 		$existing = $this->loadRow($transactionId);
 		if ($existing === null || (int)$existing['workspace_id'] !== $workspace['id']) {
@@ -384,6 +393,14 @@ class TransactionService
 			if ($externalRef !== ($existing['external_ref'] ?? null)) {
 				$updates['external_ref'] = $externalRef;
 				$logChanges['externalRef'] = $externalRef;
+			}
+		}
+		if (array_key_exists('bookingStatusId', $payload)) {
+			$statusId = $this->resolveBookingStatusId($workspace, $bookingStatus);
+			$current = $existing['booking_status_id'] === null ? null : (int)$existing['booking_status_id'];
+			if ($statusId !== $current) {
+				$updates['booking_status_id'] = $statusId;
+				$logChanges['bookingStatusId'] = $statusId;
 			}
 		}
 
@@ -533,6 +550,7 @@ class TransactionService
 			'notes' => $row['notes'] !== null ? (string)$row['notes'] : null,
 			'isSpecial' => (bool)$row['is_special'],
 			'externalRef' => $row['external_ref'] !== null ? (string)$row['external_ref'] : null,
+			'bookingStatusId' => $row['booking_status_id'] === null ? null : (int)$row['booking_status_id'],
 			'version' => (int)$row['version'],
 			'createdBy' => (string)$row['created_by'],
 			'updatedBy' => (string)$row['updated_by'],
@@ -570,6 +588,17 @@ class TransactionService
 		if (!($category['isActive'] ?? true)) {
 			throw new \InvalidArgumentException('Category is deactivated.');
 		}
+	}
+
+	private function resolveBookingStatusId(array $workspace, ?array $bookingStatus): ?int
+	{
+		if ($bookingStatus === null) {
+			return null;
+		}
+		if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_PROJECT) {
+			throw new \InvalidArgumentException('Booking statuses are available only in project workspaces.');
+		}
+		return (int)$bookingStatus['id'];
 	}
 
 	/**

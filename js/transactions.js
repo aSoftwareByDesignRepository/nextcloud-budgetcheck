@@ -16,10 +16,16 @@
 
 	const PAGE_SIZE = 50;
 	const state = {
-		filters: { from: '', to: '', categoryId: '', q: '', isSpecial: false, uncategorized: false },
+		filters: { from: '', to: '', categoryId: '', statusId: '', q: '', isSpecial: false, uncategorized: false },
 		offset: 0,
 		categories: [],
+		statuses: [],
 	};
+
+	function tableColumnCount() {
+		const base = Ws.canContribute ? 7 : 6;
+		return Ws.workspace && Ws.workspace.type === 'project' ? base + 1 : base;
+	}
 
 	document.addEventListener('DOMContentLoaded', () => {
 		if (!Ws.workspace) return;
@@ -27,6 +33,7 @@
 		wireFilterForm();
 		wireCreateButton();
 		loadCategoriesIntoSelect();
+		loadStatusesIntoSelect();
 		loadAndRender();
 	});
 
@@ -52,6 +59,8 @@
 		form.querySelector('[data-bc-filter="isSpecial"]').checked = !!state.filters.isSpecial;
 		const uncat = form.querySelector('[data-bc-filter="uncategorized"]');
 		if (uncat) uncat.checked = !!state.filters.uncategorized;
+		const status = form.querySelector('[data-bc-filter="statusId"]');
+		if (status) status.value = state.filters.statusId || '';
 	}
 
 	function wireFilterForm() {
@@ -70,7 +79,7 @@
 		});
 		form.addEventListener('reset', () => {
 			window.setTimeout(() => {
-				state.filters = { from: '', to: '', categoryId: '', q: '', isSpecial: false, uncategorized: false };
+				state.filters = { from: '', to: '', categoryId: '', statusId: '', q: '', isSpecial: false, uncategorized: false };
 				state.offset = 0;
 				loadAndRender();
 			}, 0);
@@ -94,6 +103,8 @@
 		state.filters.from = fromIso;
 		state.filters.to = toIso;
 		state.filters.categoryId = form.querySelector('[data-bc-filter="categoryId"]').value || '';
+		const statusEl = form.querySelector('[data-bc-filter="statusId"]');
+		state.filters.statusId = statusEl ? (statusEl.value || '') : '';
 		state.filters.q = form.querySelector('[data-bc-filter="q"]').value.trim();
 		state.filters.isSpecial = form.querySelector('[data-bc-filter="isSpecial"]').checked;
 		const uncatEl = form.querySelector('[data-bc-filter="uncategorized"]');
@@ -117,11 +128,26 @@
 		}
 	}
 
+	async function loadStatusesIntoSelect() {
+		if (!Ws.workspace || Ws.workspace.type !== 'project') return;
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: Ws.workspace.id });
+			state.statuses = data.statuses || [];
+			const select = document.querySelector('[data-bc-status-select]');
+			if (!select) return;
+			state.statuses.forEach((status) => {
+				select.appendChild(C.createElement('option', { value: String(status.id), text: status.name }));
+			});
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
 	async function loadAndRender() {
 		const tbody = document.querySelector('[data-bc-tx-rows]');
 		if (!tbody) return;
 		tbody.replaceChildren(C.createElement('tr', null, [
-			C.createElement('td', { attrs: { colspan: '7' }, class: 'bc-loading', text: t('budgetcheck', 'Loading…') }),
+			C.createElement('td', { attrs: { colspan: String(tableColumnCount()) }, class: 'bc-loading', text: t('budgetcheck', 'Loading…') }),
 		]));
 		try {
 			const params = {
@@ -132,6 +158,7 @@
 			if (state.filters.from) params.from = state.filters.from;
 			if (state.filters.to) params.to = state.filters.to;
 			if (state.filters.categoryId) params.categoryId = state.filters.categoryId;
+			if (state.filters.statusId) params.statusId = state.filters.statusId;
 			if (state.filters.q) params.q = state.filters.q;
 			if (state.filters.isSpecial) params.isSpecial = '1';
 			if (state.filters.uncategorized) params.uncategorized = '1';
@@ -141,7 +168,7 @@
 		} catch (err) {
 			Msg.handleApiError(err);
 			tbody.replaceChildren(C.createElement('tr', null, [
-				C.createElement('td', { attrs: { colspan: '7' }, class: 'bc-loading', text: t('budgetcheck', 'Could not load transactions.') }),
+				C.createElement('td', { attrs: { colspan: String(tableColumnCount()) }, class: 'bc-loading', text: t('budgetcheck', 'Could not load transactions.') }),
 			]));
 		}
 	}
@@ -150,7 +177,7 @@
 		tbody.replaceChildren();
 		if (items.length === 0) {
 			tbody.appendChild(C.createElement('tr', null, [
-				C.createElement('td', { attrs: { colspan: '7' }, class: 'bc-loading', text: t('budgetcheck', 'No transactions match these filters.') }),
+				C.createElement('td', { attrs: { colspan: String(tableColumnCount()) }, class: 'bc-loading', text: t('budgetcheck', 'No transactions match these filters.') }),
 			]));
 			return;
 		}
@@ -165,6 +192,7 @@
 		else if (tx.entryAmountBasis === 'net') tags.push(t('budgetcheck', 'Net'));
 		else if (tx.entryAmountBasis && tx.entryAmountBasis !== 'simple') tags.push(String(tx.entryAmountBasis));
 		const directionLabel = tx.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense');
+		const bookingStatus = state.statuses.find((status) => status.id === tx.bookingStatusId);
 		const tr = C.createElement('tr');
 		tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang) }));
 		tr.appendChild(C.createElement('td', { text: tx.title }));
@@ -173,6 +201,9 @@
 		amountTd.appendChild(C.createElement('span', { class: 'bc-tx-amount__value', text: (tx.direction === 'income' ? '+' : '−') + ' ' + Money.formatEnvelope(tx.amount, Ws.htmlLang) }));
 		tr.appendChild(amountTd);
 		tr.appendChild(C.createElement('td', { text: directionLabel }));
+		if (Ws.workspace && Ws.workspace.type === 'project') {
+			tr.appendChild(C.createElement('td', { text: bookingStatus ? bookingStatus.name : '—' }));
+		}
 		tr.appendChild(C.createElement('td', { text: tags.join(', ') }));
 		if (Ws.canContribute) {
 			const actionsTd = C.createElement('td');
@@ -238,13 +269,12 @@
 					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
 				]);
 				directionSelect.value = tx ? tx.direction : 'expense';
-				wrapField(form, t('budgetcheck', 'Direction'), directionSelect);
+				wrapField(form, t('budgetcheck', 'Direction'), directionSelect, t('budgetcheck', 'Expense means money leaving the workspace; income means money arriving. The category list updates when you change this.'));
 
 				const titleInput = C.createElement('input', { name: 'title', type: 'text', class: 'bc-input', maxlength: 180, required: true });
 				titleInput.value = tx ? tx.title : '';
-				wrapField(form, t('budgetcheck', 'Title'), titleInput);
+				wrapField(form, t('budgetcheck', 'Title'), titleInput, t('budgetcheck', 'Short title shown in lists and reports (for example office supplies or client payment).'));
 
-				const dateDh = 'bc-tx-booking-' + Math.random().toString(36).slice(2);
 				const dateInput = C.createElement('input', {
 					name: 'bookingDate',
 					type: 'date',
@@ -252,21 +282,15 @@
 					autocomplete: 'off',
 					required: true,
 					value: tx ? String(tx.bookingDate) : Dates.isoDate(new Date()),
-					attrs: { 'aria-describedby': dateDh, lang: Ws.htmlLang },
+					attrs: { lang: Ws.htmlLang },
 				});
-				const dateHint = C.createElement('span', { id: dateDh, class: 'bc-field__hint', text: dateHintText });
-				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
-					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Date') }),
-					dateInput,
-					dateHint,
-				]));
+				wrapField(form, t('budgetcheck', 'Date'), dateInput, dateHintText, 'bc-field--full-width');
 
 				const amountInput = C.createElement('input', {
 					name: 'amount', type: 'text', inputmode: 'decimal', class: 'bc-input', required: true,
-					attrs: { 'aria-label': t('budgetcheck', 'Amount') },
 				});
 				amountInput.value = tx ? String(tx.amount.minor / Math.pow(10, activeDecimals())).replace('.', ',') : '';
-				wrapField(form, t('budgetcheck', 'Amount'), amountInput);
+				wrapField(form, t('budgetcheck', 'Amount'), amountInput, t('budgetcheck', 'Amount in this workspace’s currency. Use your usual decimal separator (dot or comma).'));
 
 				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
 				const filterCategories = () => {
@@ -282,7 +306,20 @@
 				};
 				filterCategories();
 				directionSelect.addEventListener('change', filterCategories);
-				wrapField(form, t('budgetcheck', 'Category'), catSelect);
+				wrapField(form, t('budgetcheck', 'Category'), catSelect, t('budgetcheck', 'Choose the category that best describes this booking. Only categories for the direction you selected are listed.'));
+
+				let bookingStatusSelect = null;
+				if (Ws.workspace && Ws.workspace.type === 'project') {
+					bookingStatusSelect = C.createElement('select', { name: 'bookingStatusId', class: 'bc-input' });
+					bookingStatusSelect.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'No status') }));
+					state.statuses.filter((status) => status.isActive).forEach((status) => {
+						bookingStatusSelect.appendChild(C.createElement('option', { value: String(status.id), text: status.name }));
+					});
+					if (tx && tx.bookingStatusId) {
+						bookingStatusSelect.value = String(tx.bookingStatusId);
+					}
+					wrapField(form, t('budgetcheck', 'Booking status'), bookingStatusSelect, t('budgetcheck', 'In project workspaces you can tag a booking with a status (for example in progress or paid). Leave empty if you do not need a workflow step.'), 'bc-field--full-width');
+				}
 
 				const specialOuter = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
 				specialOuter.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Special') }));
@@ -292,11 +329,14 @@
 				specialRow.appendChild(specialInput);
 				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special (large/unusual entry)') }));
 				specialOuter.appendChild(specialRow);
+				const specialHintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
+				specialOuter.appendChild(C.createElement('span', { id: specialHintId, class: 'bc-field__hint', text: t('budgetcheck', 'Use for unusually large or one-off entries so they are easy to find in summaries and filters.') }));
+				specialInput.setAttribute('aria-describedby', specialHintId);
 				form.appendChild(specialOuter);
 
 				const notesArea = C.createElement('textarea', { name: 'notes', class: 'bc-input', maxlength: 4000, rows: 3 });
 				notesArea.value = tx && tx.notes ? tx.notes : '';
-				wrapField(form, t('budgetcheck', 'Notes'), notesArea);
+				wrapField(form, t('budgetcheck', 'Notes'), notesArea, t('budgetcheck', 'Optional detail for people who can view this booking—references, links, or context.'), 'bc-field--full-width');
 
 				form._collect = () => ({
 					workspaceId: Ws.workspace.id,
@@ -305,6 +345,7 @@
 					bookingDate: dateInput.value.trim(),
 					amount: amountInput.value,
 					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
+					bookingStatusId: bookingStatusSelect && bookingStatusSelect.value ? Number.parseInt(bookingStatusSelect.value, 10) : null,
 					isSpecial: specialInput.checked,
 					notes: notesArea.value.trim(),
 					version: tx ? tx.version : undefined,
@@ -361,11 +402,23 @@
 		}
 	}
 
-	function wrapField(form, label, control) {
-		const wrap = C.createElement('label', { class: 'bc-field' }, [
-			C.createElement('span', { class: 'bc-field__label', text: label }),
+	function wrapField(form, labelText, control, hintText, labelExtraClass) {
+		const labelClasses = ['bc-field'];
+		if (labelExtraClass) {
+			String(labelExtraClass).split(/\s+/).filter(Boolean).forEach((c) => labelClasses.push(c));
+		}
+		const parts = [
+			C.createElement('span', { class: 'bc-field__label', text: labelText }),
 			control,
-		]);
-		form.appendChild(wrap);
+		];
+		if (hintText) {
+			const hintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
+			parts.push(C.createElement('span', { id: hintId, class: 'bc-field__hint', text: hintText }));
+			if (control && typeof control.setAttribute === 'function') {
+				const cur = control.getAttribute('aria-describedby');
+				control.setAttribute('aria-describedby', cur ? (cur + ' ' + hintId) : hintId);
+			}
+		}
+		form.appendChild(C.createElement('label', { class: labelClasses.join(' ') }, parts));
 	}
 })();

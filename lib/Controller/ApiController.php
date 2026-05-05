@@ -15,6 +15,7 @@ use OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
+use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
@@ -68,6 +69,7 @@ class ApiController extends Controller
 		private TransactionService $transactions,
 		private RecurringRuleService $recurring,
 		private BudgetService $budgets,
+		private BookingStatusService $bookingStatuses,
 		private SavingsTargetService $savings,
 		private SummaryService $summaries,
 		private SnapshotService $snapshots,
@@ -201,6 +203,50 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listBookingStatuses(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$includeInactive = $this->boolParam('includeInactive');
+			return ['statuses' => $this->bookingStatuses->listForWorkspace($workspaceId, $userId, $includeInactive)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function createBookingStatus(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$this->rateLimit->assertAllowed($userId, 'booking_status_write', 40, 300);
+			$workspaceId = (int)($this->payload()['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			return ['status' => $this->bookingStatuses->create($workspaceId, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function updateBookingStatus(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'booking_status_write', 40, 300);
+			return ['status' => $this->bookingStatuses->update($id, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function deactivateBookingStatus(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'booking_status_write', 40, 300);
+			return ['status' => $this->bookingStatuses->deactivate($id, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
 	public function addMember(int $id): JSONResponse
 	{
 		$id = $this->validateId($id);
@@ -307,6 +353,7 @@ class ApiController extends Controller
 				'q' => $this->request->getParam('q'),
 				'isSpecial' => $this->boolParamOrNull('isSpecial'),
 				'uncategorized' => $this->boolParam('uncategorized'),
+				'statusId' => $this->intParamOrNull('statusId'),
 				'limit' => (int)$this->request->getParam('limit', 100),
 				'offset' => (int)$this->request->getParam('offset', 0),
 			];
@@ -326,7 +373,8 @@ class ApiController extends Controller
 			$this->rateLimit->assertAllowed($userId, 'transaction_write', 240, 300);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
-			return ['transaction' => $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category)];
+			$bookingStatus = $this->resolveBookingStatus(($payload['bookingStatusId'] ?? null), $workspaceId, $workspace);
+			return ['transaction' => $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus)];
 		});
 	}
 
@@ -347,7 +395,10 @@ class ApiController extends Controller
 			if (isset($payload['categoryId'])) {
 				$category = $this->resolveCategory((int)$payload['categoryId'], $workspaceId);
 			}
-			return ['transaction' => $this->transactions->update($id, $userId, $payload, $workspace, $category)];
+			$bookingStatus = array_key_exists('bookingStatusId', $payload)
+				? $this->resolveBookingStatus($payload['bookingStatusId'], $workspaceId, $workspace)
+				: null;
+			return ['transaction' => $this->transactions->update($id, $userId, $payload, $workspace, $category, $bookingStatus)];
 		});
 	}
 
@@ -765,6 +816,24 @@ class ApiController extends Controller
 			throw new AccessDeniedException();
 		}
 		return $category;
+	}
+
+	private function resolveBookingStatus(mixed $statusId, int $workspaceId, array $workspace): ?array
+	{
+		if ($statusId === null || $statusId === '' || (is_int($statusId) && $statusId === 0) || (is_string($statusId) && trim($statusId) === '0')) {
+			return null;
+		}
+		if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_PROJECT) {
+			throw new \InvalidArgumentException('Booking statuses are available only in project workspaces.');
+		}
+		if (!is_int($statusId) && !ctype_digit((string)$statusId)) {
+			throw new \InvalidArgumentException('bookingStatusId must be an integer.');
+		}
+		$status = $this->bookingStatuses->loadActiveForWorkspace((int)$statusId, $workspaceId);
+		if ($status === null) {
+			throw new AccessDeniedException();
+		}
+		return $status;
 	}
 
 	private function ownerWorkspaceForTransaction(int $transactionId): int
