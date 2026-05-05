@@ -48,7 +48,7 @@ class WorkspaceService
 	/**
 	 * @return list<array<string,mixed>>
 	 */
-	public function listForUser(string $userId): array
+	public function listForUser(string $userId, bool $includeInactive = false): array
 	{
 		$ids = $this->access->workspacesForUser($userId);
 		if ($ids === []) {
@@ -58,9 +58,12 @@ class WorkspaceService
 		$qb->select('*')
 			->from('bc_workspaces')
 			->where($qb->expr()->in('id', $qb->createNamedParameter($ids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
-			->andWhere($qb->expr()->eq('is_active', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
-			->orderBy('type', 'ASC')
+			->orderBy('is_active', 'DESC')
+			->addOrderBy('type', 'ASC')
 			->addOrderBy('name', 'ASC');
+		if (!$includeInactive) {
+			$qb->andWhere($qb->expr()->eq('is_active', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)));
+		}
 		$result = $qb->executeQuery();
 		$out = [];
 		while ($row = $result->fetch()) {

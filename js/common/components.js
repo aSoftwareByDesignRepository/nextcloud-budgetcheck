@@ -27,7 +27,17 @@
 					return;
 				}
 				if (key === 'attrs') {
-					Object.entries(value).forEach(([ak, av]) => el.setAttribute(ak, String(av)));
+					Object.entries(value).forEach(([ak, av]) => {
+						if (av === null || av === undefined || av === false) {
+							el.removeAttribute(ak);
+							return;
+						}
+						if (av === true) {
+							el.setAttribute(ak, '');
+							return;
+						}
+						el.setAttribute(ak, String(av));
+					});
 					return;
 				}
 				if (key === 'text') {

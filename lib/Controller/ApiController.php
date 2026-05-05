@@ -92,9 +92,18 @@ class ApiController extends Controller
 	public function listWorkspaces(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {
+			$includeInactive = $this->boolParam('includeInactive');
+			$workspaces = $this->workspaces->listForUser($userId, $includeInactive);
+			$workspaceIds = array_map(static fn (array $w): int => (int)$w['id'], $workspaces);
+			$favoriteWorkspaceIds = array_values(array_map('intval', array_intersect(
+				$this->access->favoriteWorkspaceIds($userId),
+				$workspaceIds
+			)));
+			$this->access->saveFavoriteWorkspaceIds($userId, $favoriteWorkspaceIds);
 			return [
-				'workspaces' => $this->workspaces->listForUser($userId),
+				'workspaces' => $workspaces,
 				'lastUsedWorkspaceId' => $this->access->lastUsedWorkspace($userId),
+				'favoriteWorkspaceIds' => $favoriteWorkspaceIds,
 				'capabilities' => [
 					'canCreateWorkspace' => $this->access->isAppAdmin($userId),
 					'currencies' => $this->money->supportedCurrencyOptions(),
@@ -103,6 +112,43 @@ class ApiController extends Controller
 					'defaultTimezone' => $this->access->getDefaultTimezone(),
 				],
 			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getWorkspaceFavorites(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$activeIds = array_map(static fn (array $w): int => (int)$w['id'], $this->workspaces->listForUser($userId));
+			$favorites = array_values(array_map('intval', array_intersect(
+				$this->access->favoriteWorkspaceIds($userId),
+				$activeIds
+			)));
+			$this->access->saveFavoriteWorkspaceIds($userId, $favorites);
+			return ['favoriteWorkspaceIds' => $favorites];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function saveWorkspaceFavorites(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$this->rateLimit->assertAllowed($userId, 'workspace_favorites_write', 90, 300);
+			$raw = $this->payload()['workspaceIds'] ?? null;
+			if (!is_array($raw)) {
+				throw new \InvalidArgumentException('workspaceIds must be an array.');
+			}
+			$activeIds = array_map(static fn (array $w): int => (int)$w['id'], $this->workspaces->listForUser($userId));
+			$clean = [];
+			foreach ($raw as $id) {
+				if ((is_int($id) || (is_string($id) && ctype_digit($id))) && (int)$id > 0) {
+					$clean[] = (int)$id;
+				}
+			}
+			$clean = array_values(array_unique(array_intersect($clean, $activeIds)));
+			$this->access->saveFavoriteWorkspaceIds($userId, $clean);
+			return ['favoriteWorkspaceIds' => $clean];
 		});
 	}
 

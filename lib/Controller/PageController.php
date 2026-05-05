@@ -157,6 +157,20 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	public function workspaceOverview(): TemplateResponse
+	{
+		$ctx = $this->resolveWorkspace();
+		return $this->page(
+			'workspace-overview',
+			$this->l10n->t('Workspace overview'),
+			$this->l10n->t('Browse all workspaces, filter quickly, and choose quick access entries for the sidebar.'),
+			$ctx,
+			'workspace-overview'
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function settings(): TemplateResponse|RedirectResponse
 	{
 		$ctx = $this->resolveWorkspace();
@@ -210,6 +224,12 @@ class PageController extends Controller
 	{
 		$userId = $this->access->currentUserId();
 		$workspaces = $this->workspaces->listForUser($userId);
+		$favoriteWorkspaceIds = $this->access->favoriteWorkspaceIds($userId);
+		$favoriteWorkspaceIds = array_values(array_map('intval', array_intersect(
+			$favoriteWorkspaceIds,
+			array_map(static fn (array $w): int => (int)$w['id'], $workspaces)
+		)));
+		$this->access->saveFavoriteWorkspaceIds($userId, $favoriteWorkspaceIds);
 		$selected = null;
 
 		$rawId = $this->request->getParam('workspaceId');
@@ -217,7 +237,11 @@ class PageController extends Controller
 		if ($wid > 0) {
 			try {
 				$selected = $this->workspaces->getForUser($wid, $userId);
-				$this->access->rememberLastUsedWorkspace($userId, (int)$selected['id']);
+				if (!empty($selected['isActive'])) {
+					$this->access->rememberLastUsedWorkspace($userId, (int)$selected['id']);
+				} else {
+					$selected = null;
+				}
 			} catch (\Throwable) {
 				$selected = null;
 			}
@@ -227,6 +251,10 @@ class PageController extends Controller
 			if ($lastUsed !== null) {
 				try {
 					$selected = $this->workspaces->getForUser($lastUsed, $userId);
+					if (empty($selected['isActive'])) {
+						$this->access->forgetLastUsedWorkspace($userId, $lastUsed);
+						$selected = null;
+					}
 				} catch (\Throwable) {
 					$this->access->forgetLastUsedWorkspace($userId, $lastUsed);
 				}
@@ -236,7 +264,7 @@ class PageController extends Controller
 			$selected = $workspaces[0];
 			$this->access->rememberLastUsedWorkspace($userId, (int)$selected['id']);
 		}
-		return ['workspace' => $selected, 'workspaces' => $workspaces];
+		return ['workspace' => $selected, 'workspaces' => $workspaces, 'favoriteWorkspaceIds' => $favoriteWorkspaceIds];
 	}
 
 	/**
@@ -259,6 +287,7 @@ class PageController extends Controller
 			'pageHelp' => $help,
 			'workspace' => $selected,
 			'workspaces' => $ctx['workspaces'],
+			'favoriteWorkspaceIds' => $ctx['favoriteWorkspaceIds'] ?? [],
 			'canManageWorkspace' => $canManage,
 			'canContribute' => $canContribute,
 			'canAdminApp' => $canAdminApp,
@@ -273,6 +302,7 @@ class PageController extends Controller
 				'monthly'      => $this->urlGenerator->linkToRoute('budgetcheck.page.monthly'),
 				'period'       => $this->urlGenerator->linkToRoute('budgetcheck.page.period'),
 				'yearly'       => $this->urlGenerator->linkToRoute('budgetcheck.page.yearly'),
+				'workspaceOverview' => $this->urlGenerator->linkToRoute('budgetcheck.page.workspaceOverview'),
 				'settings'     => $this->urlGenerator->linkToRoute('budgetcheck.page.settings'),
 				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
@@ -330,6 +360,7 @@ class PageController extends Controller
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],
+			['id' => 'workspace-overview', 'label' => $this->l10n->t('Workspace overview'), 'icon' => 'users', 'route' => 'budgetcheck.page.workspaceOverview', 'show' => true, 'hint' => $this->l10n->t('Find and pin workspaces quickly')],
 			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null && $canManageWorkspace, 'hint' => $this->l10n->t('Members, categories, tax, and workspace details.')],
 			['id' => 'app-settings', 'label' => $this->l10n->t('App settings'),   'icon' => 'shield-check',   'route' => 'budgetcheck.page.appSettings',  'show' => $canAdminApp, 'hint' => $this->l10n->t('Directory access, app administrators, and defaults for new workspaces.')],
 		];

@@ -51,6 +51,7 @@ $pageIcons = [
 	'monthly' => 'calendar-days',
 	'period' => 'calendar-range',
 	'yearly' => 'calendar-clock',
+	'workspace-overview' => 'users',
 	'settings' => 'settings',
 	'app-settings' => 'shield-check',
 ];

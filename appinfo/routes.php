@@ -13,6 +13,7 @@ return [
 		['name' => 'page#monthly',      'url' => '/monthly',      'verb' => 'GET'],
 		['name' => 'page#period',       'url' => '/period',       'verb' => 'GET'],
 		['name' => 'page#yearly',       'url' => '/yearly',       'verb' => 'GET'],
+		['name' => 'page#workspaceOverview', 'url' => '/workspaces', 'verb' => 'GET'],
 		['name' => 'page#settings',     'url' => '/settings',     'verb' => 'GET'],
 		['name' => 'page#appSettings',  'url' => '/app-settings', 'verb' => 'GET'],
 
@@ -22,6 +23,8 @@ return [
 		['name' => 'api#getWorkspace',       'url' => '/api/workspaces/{id}',              'verb' => 'GET'],
 		['name' => 'api#updateWorkspace',    'url' => '/api/workspaces/{id}',              'verb' => 'PUT'],
 		['name' => 'api#updateTaxMode',      'url' => '/api/workspaces/{id}/tax-mode',     'verb' => 'PUT'],
+		['name' => 'api#getWorkspaceFavorites', 'url' => '/api/workspace-favorites', 'verb' => 'GET'],
+		['name' => 'api#saveWorkspaceFavorites', 'url' => '/api/workspace-favorites', 'verb' => 'PUT'],
 		['name' => 'api#listMembers',        'url' => '/api/workspaces/{id}/members',      'verb' => 'GET'],
 		['name' => 'api#addMember',          'url' => '/api/workspaces/{id}/members',      'verb' => 'POST'],
 		['name' => 'api#updateMember',       'url' => '/api/workspace-members/{id}',       'verb' => 'PUT'],

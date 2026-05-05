@@ -50,6 +50,7 @@ class AccessControlService
 	public const KEY_DEFAULT_TIMEZONE = 'default_timezone';
 	public const KEY_DEFAULT_CURRENCY = 'default_currency';
 	public const KEY_LAST_USED_WORKSPACE = 'budgetcheck_last_workspace';
+	public const KEY_FAVORITE_WORKSPACES = 'budgetcheck_favorite_workspaces';
 
 	public const KEY_ACCESS_RESTRICTION = 'access_restriction_enabled';
 	public const KEY_ACCESS_ALLOWED_USER_IDS = 'access_allowed_user_ids';
@@ -272,6 +273,59 @@ class AccessControlService
 		if ($this->lastUsedWorkspace($userId) === $workspaceId) {
 			$this->config->deleteUserValue($userId, Application::APP_ID, self::KEY_LAST_USED_WORKSPACE);
 		}
+	}
+
+	/**
+	 * @return list<int>
+	 */
+	public function favoriteWorkspaceIds(string $userId): array
+	{
+		if ($userId === '') {
+			return [];
+		}
+		$raw = (string)$this->config->getUserValue($userId, Application::APP_ID, self::KEY_FAVORITE_WORKSPACES, '[]');
+		try {
+			$decoded = json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			return [];
+		}
+		if (!is_array($decoded)) {
+			return [];
+		}
+		$out = [];
+		foreach ($decoded as $id) {
+			if (is_int($id) && $id > 0) {
+				$out[] = $id;
+				continue;
+			}
+			if (is_string($id) && ctype_digit($id)) {
+				$out[] = (int)$id;
+			}
+		}
+		return array_values(array_unique($out));
+	}
+
+	/**
+	 * @param list<int> $workspaceIds
+	 */
+	public function saveFavoriteWorkspaceIds(string $userId, array $workspaceIds): void
+	{
+		if ($userId === '') {
+			return;
+		}
+		$clean = [];
+		foreach ($workspaceIds as $id) {
+			if ($id > 0) {
+				$clean[] = $id;
+			}
+		}
+		$clean = array_values(array_unique($clean));
+		$this->config->setUserValue(
+			$userId,
+			Application::APP_ID,
+			self::KEY_FAVORITE_WORKSPACES,
+			json_encode($clean, JSON_THROW_ON_ERROR)
+		);
 	}
 
 	/**

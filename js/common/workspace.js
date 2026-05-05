@@ -107,6 +107,7 @@
 		if (D && typeof D.applyLocaleToTemporalInputs === 'function' && appRoot) {
 			D.applyLocaleToTemporalInputs(appRoot, ctx.htmlLang);
 		}
+
 	});
 
 	window.BudgetCheckWorkspace = ctx;

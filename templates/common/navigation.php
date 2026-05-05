@@ -15,16 +15,23 @@ use OCA\BudgetCheck\Service\IconCatalog;
 $nav = $_['navigation'] ?? [];
 $workspace = $_['workspace'] ?? null;
 $workspaces = $_['workspaces'] ?? [];
+$favoriteWorkspaceIds = array_map('intval', (array)($_['favoriteWorkspaceIds'] ?? []));
 $urls = $_['urls'] ?? [];
 $canAdminApp = !empty($_['canAdminApp']);
-
-$grouped = ['household' => [], 'project' => []];
-foreach ($workspaces as $w) {
-	$type = (string)($w['type'] ?? 'household');
-	if (!isset($grouped[$type])) {
-		$grouped[$type] = [];
+$overviewUrl = (string)($urls['workspaceOverview'] ?? '#');
+$overviewActive = false;
+foreach ($nav as $item) {
+	if (($item['id'] ?? '') === 'workspace-overview') {
+		$overviewActive = !empty($item['active']);
+		break;
 	}
-	$grouped[$type][] = $w;
+}
+
+$favorites = [];
+foreach ($workspaces as $w) {
+	if (in_array((int)($w['id'] ?? 0), $favoriteWorkspaceIds, true)) {
+		$favorites[] = $w;
+	}
 }
 $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 ?>
@@ -49,36 +56,61 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 				</button>
 			<?php endif; ?>
 		</header>
-		<?php foreach (['household' => $l->t('Household'), 'project' => $l->t('Project')] as $type => $label): ?>
-			<?php if (empty($grouped[$type])): continue; endif; ?>
-			<div class="bc-switcher__group">
-				<p class="bc-switcher__group-title" id="bc-switcher-<?php p($type); ?>"><?php p($label); ?></p>
-				<ul class="bc-switcher__list" aria-labelledby="bc-switcher-<?php p($type); ?>">
-					<?php foreach ($grouped[$type] as $w):
-						$id = (int)$w['id'];
-						$active = $id === $activeId;
-						$url = (string)($urls['dashboard'] ?? '#') . '?workspaceId=' . $id;
-						?>
-						<li>
-							<a class="bc-switcher__link <?php p($active ? 'is-active' : ''); ?>" href="<?php p($url); ?>" <?php if ($active): ?>aria-current="true"<?php endif; ?>>
-								<span class="bc-switcher__icon" aria-hidden="true">
-									<?php print_unescaped(IconCatalog::render($type === 'household' ? 'home' : 'briefcase')); ?>
-								</span>
-								<span class="bc-switcher__label">
-									<span class="bc-switcher__name"><?php p((string)$w['name']); ?></span>
-									<span class="bc-switcher__meta">
-										<?php p((string)$w['currencyCode']); ?>
-										<?php if (!empty($w['role'])): ?>
-											· <?php p((string)$w['role']); ?>
-										<?php endif; ?>
+		<div class="bc-switcher__group bc-switcher__group--overview">
+			<ul class="bc-nav__list bc-switcher__overview-nav" aria-label="<?php p($l->t('Workspace tools')); ?>">
+				<li class="bc-nav__item <?php p($overviewActive ? 'is-active active' : ''); ?>">
+					<a class="bc-nav__link" href="<?php p($overviewUrl); ?>" <?php if ($overviewActive): ?>aria-current="page"<?php endif; ?>>
+						<span class="bc-nav__icon" aria-hidden="true">
+							<?php print_unescaped(IconCatalog::render('search')); ?>
+						</span>
+						<span class="bc-nav__label">
+							<span class="bc-nav__name"><?php p($l->t('Workspace overview')); ?></span>
+						</span>
+					</a>
+				</li>
+			</ul>
+		</div>
+		<div data-bc-quickaccess-slot>
+			<?php if (!empty($favorites)): ?>
+				<div class="bc-switcher__group">
+					<p class="bc-switcher__group-title" id="bc-switcher-favorites"><?php p($l->t('Quick access')); ?></p>
+					<ul class="bc-switcher__list" aria-labelledby="bc-switcher-favorites">
+						<?php foreach ($favorites as $w):
+							$id = (int)$w['id'];
+							$active = $id === $activeId;
+							$url = (string)($urls['dashboard'] ?? '#') . '?workspaceId=' . $id;
+							$type = (string)($w['type'] ?? 'household');
+							?>
+							<li>
+								<a class="bc-switcher__link <?php p($active ? 'is-active' : ''); ?>"
+									href="<?php p($url); ?>"
+									data-bc-workspace-id="<?php p((string)$id); ?>"
+									data-bc-workspace-type="<?php p($type); ?>"
+									<?php if ($active): ?>aria-current="true"<?php endif; ?>>
+									<span class="bc-switcher__icon" aria-hidden="true">
+										<?php print_unescaped(IconCatalog::render($type === 'household' ? 'home' : 'briefcase')); ?>
 									</span>
-								</span>
-							</a>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-			</div>
-		<?php endforeach; ?>
+									<span class="bc-switcher__label">
+										<span class="bc-switcher__name"><?php p((string)$w['name']); ?></span>
+										<span class="bc-switcher__meta">
+											<?php p((string)$w['currencyCode']); ?>
+											<?php if (!empty($w['role'])): ?>
+												· <?php p((string)$w['role']); ?>
+											<?php endif; ?>
+										</span>
+									</span>
+								</a>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
+			<?php if (!empty($workspaces) && empty($favorites)): ?>
+				<p class="bc-switcher__empty">
+					<?php p($l->t('No quick access workspaces yet.')); ?>
+				</p>
+			<?php endif; ?>
+		</div>
 		<?php if (empty($workspaces)): ?>
 			<p class="bc-switcher__empty"><?php p($l->t('You are not a member of any workspace yet.')); ?></p>
 			<?php if ($canAdminApp): ?>
