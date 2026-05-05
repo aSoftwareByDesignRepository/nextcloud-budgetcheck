@@ -1,17 +1,17 @@
 <?php
+
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 
 $workspace = $_['workspace'] ?? null;
 $canManage = !empty($_['canManageWorkspace']);
-$canAdminApp = !empty($_['canAdminApp']);
 ?>
 <?php include __DIR__ . '/common/page-start.php'; ?>
 
-<?php if ($workspace === null && !$canAdminApp): ?>
+<?php if ($workspace === null): ?>
 	<section class="bc-card bc-empty">
 		<h2><?php p($l->t('Pick a workspace')); ?></h2>
-		<p><?php p($l->t('Select a workspace from the sidebar to view its settings.')); ?></p>
+		<p><?php p($l->t('Select a workspace from the sidebar to open workspace settings.')); ?></p>
 	</section>
 <?php else: ?>
 	<?php if ($workspace !== null): ?>
@@ -153,7 +153,9 @@ $canAdminApp = !empty($_['canAdminApp']);
 						</tr>
 					</thead>
 					<tbody data-bc-category-rows>
-						<tr><td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
+						<tr>
+							<td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+						</tr>
 					</tbody>
 				</table>
 			</div>
@@ -166,10 +168,32 @@ $canAdminApp = !empty($_['canAdminApp']);
 						<h2 id="bc-members-title"><?php p($l->t('Members')); ?></h2>
 						<p class="bc-section__sub"><?php p($l->t('Manager, contributor, or viewer per workspace.')); ?></p>
 					</div>
-					<button type="button" class="button primary" data-bc-action="open-add-member">
-						<?php p($l->t('Add member')); ?>
-					</button>
 				</header>
+				<div class="bc-member-invite" data-bc-member-invite aria-labelledby="bc-member-invite-title">
+					<h3 id="bc-member-invite-title" class="bc-member-invite__title"><?php p($l->t('Invite a member')); ?></h3>
+					<p id="bc-member-invite-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Type at least two characters to search.')); ?></p>
+					<div class="bc-member-invite__grid">
+						<div class="bc-entity-picker bc-member-invite__search">
+							<label for="bc-member-invite-q" class="bc-sr-only"><?php p($l->t('Search directory for a user to add')); ?></label>
+							<input id="bc-member-invite-q" type="search" class="bc-input bc-entity-picker__q" autocomplete="off" maxlength="120" aria-describedby="bc-member-invite-hint" placeholder="<?php p($l->t('Search directory for a user to add')); ?>">
+							<div id="bc-member-invite-suggest" class="bc-entity-picker__suggest" hidden aria-live="polite"></div>
+						</div>
+						<label class="bc-field bc-member-invite__role">
+							<span class="bc-field__label"><?php p($l->t('Role')); ?></span>
+							<select id="bc-member-invite-role" class="bc-input" data-bc-member-invite-role>
+								<option value="viewer"><?php p($l->t('Viewer')); ?></option>
+								<option value="contributor"><?php p($l->t('Contributor')); ?></option>
+								<option value="manager"><?php p($l->t('Manager')); ?></option>
+							</select>
+						</label>
+						<button type="button" class="button primary bc-member-invite__submit" data-bc-action="member-invite-submit">
+							<?php p($l->t('Add to workspace')); ?>
+						</button>
+					</div>
+					<p class="bc-field__hint" data-bc-member-selected-wrap hidden role="status" aria-live="polite">
+						<span data-bc-member-selected></span>
+					</p>
+				</div>
 				<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Members')); ?>" tabindex="0">
 					<table class="bc-table bc-members-table">
 						<thead>
@@ -181,7 +205,9 @@ $canAdminApp = !empty($_['canAdminApp']);
 							</tr>
 						</thead>
 						<tbody data-bc-member-rows>
-							<tr><td colspan="4" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
+							<tr>
+								<td colspan="4" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
@@ -211,7 +237,9 @@ $canAdminApp = !empty($_['canAdminApp']);
 							</tr>
 						</thead>
 						<tbody data-bc-recurring-rows>
-							<tr><td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
+							<tr>
+								<td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
@@ -252,36 +280,6 @@ $canAdminApp = !empty($_['canAdminApp']);
 					<button type="button" class="button" data-bc-dismiss-bridge><?php p($l->t('Hide this panel permanently')); ?></button>
 				</div>
 			</details>
-		</section>
-	<?php endif; ?>
-
-	<?php if ($canAdminApp): ?>
-		<section class="bc-card bc-section" aria-labelledby="bc-app-policy-title">
-			<header class="bc-section__header">
-				<div>
-					<h2 id="bc-app-policy-title"><?php p($l->t('App policy (admins only)')); ?></h2>
-					<p class="bc-section__sub"><?php p($l->t('App administrators and global defaults.')); ?></p>
-				</div>
-			</header>
-			<form class="bc-form-grid" data-bc-app-policy-form>
-				<div class="bc-field bc-field--full-width">
-					<span class="bc-field__label" id="bc-app-admin-label"><?php p($l->t('App administrators')); ?></span>
-					<ul class="bc-chip-list" data-bc-app-admin-list aria-labelledby="bc-app-admin-label"></ul>
-					<button type="button" class="button" data-bc-action="add-app-admin"><?php p($l->t('Add administrator')); ?></button>
-					<p class="bc-field__hint"><?php p($l->t('Only real Nextcloud user accounts can be selected. Unknown logins are rejected when you save.')); ?></p>
-				</div>
-				<label class="bc-field">
-					<span class="bc-field__label"><?php p($l->t('Default timezone')); ?></span>
-					<select name="defaultTimezone" class="bc-input" data-bc-default-timezone-select required></select>
-				</label>
-				<label class="bc-field">
-					<span class="bc-field__label"><?php p($l->t('Default currency')); ?></span>
-					<select name="defaultCurrency" class="bc-input" data-bc-default-currency-select required></select>
-				</label>
-				<div class="bc-form-actions">
-					<button type="submit" class="button primary"><?php p($l->t('Save app policy')); ?></button>
-				</div>
-			</form>
 		</section>
 	<?php endif; ?>
 <?php endif; ?>

@@ -30,6 +30,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserManager;
@@ -75,6 +76,7 @@ class ApiController extends Controller
 		private MoneyService $money,
 		private TimezoneCatalog $timezoneCatalog,
 		private IUserManager $userManager,
+		private IGroupManager $groupManager,
 		private LoggerInterface $logger,
 		private IL10N $l10n,
 	) {
@@ -636,6 +638,31 @@ class ApiController extends Controller
 				}
 			}
 			return ['users' => array_values($users)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function searchGroups(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			if (!$this->access->isAppAdmin($userId)) {
+				throw new AccessDeniedException();
+			}
+			$this->rateLimit->assertAllowed($userId, 'group_search', 60, 60);
+			$q = trim((string)$this->request->getParam('q', ''));
+			if (mb_strlen($q) < 2) {
+				return ['groups' => []];
+			}
+			$groups = $this->groupManager->search($q, 25, 0);
+			$out = [];
+			foreach ($groups as $group) {
+				$out[] = [
+					'id' => $group->getGID(),
+					'displayName' => $group->getDisplayName(),
+				];
+			}
+			return ['groups' => $out];
 		});
 	}
 

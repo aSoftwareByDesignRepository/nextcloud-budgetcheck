@@ -14,6 +14,7 @@ return [
 		['name' => 'page#period',       'url' => '/period',       'verb' => 'GET'],
 		['name' => 'page#yearly',       'url' => '/yearly',       'verb' => 'GET'],
 		['name' => 'page#settings',     'url' => '/settings',     'verb' => 'GET'],
+		['name' => 'page#appSettings',  'url' => '/app-settings', 'verb' => 'GET'],
 
 		// JSON workspace + member routes
 		['name' => 'api#listWorkspaces',     'url' => '/api/workspaces',                   'verb' => 'GET'],
@@ -60,6 +61,7 @@ return [
 
 		// Admin directory lookup for member assignment (manager+ scoped)
 		['name' => 'api#searchUsers',        'url' => '/api/admin/users',                   'verb' => 'GET'],
+		['name' => 'api#searchGroups',       'url' => '/api/admin/groups',                  'verb' => 'GET'],
 
 		// App-wide policy (admins): app admin uids, default tz/currency
 		['name' => 'api#getAppPolicy',       'url' => '/api/admin/policy',                  'verb' => 'GET'],

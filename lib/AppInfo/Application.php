@@ -38,8 +38,9 @@ use OCP\User\Events\UserDeletedEvent;
  *   {@see \OCA\BudgetCheck\Controller\PageController::page()} so every in-app
  *   view loads globals before the page module (path-based boot detection is
  *   unreliable across servers and custom_apps URL layouts).
- * - Adds the Files-style sidebar navigation entry only for users that are members
- *   of at least one workspace (or are app admins). UI hiding is convenience only;
+ * - Adds the Files-style sidebar navigation entry only for users that pass
+ *   {@see AccessControlService::canUseApp} (workspace member, app admin, or system admin;
+ *   plus optional directory restriction). UI hiding is convenience only;
  *   server enforcement lives in the access middleware and per-route service checks.
  */
 class Application extends App implements IBootstrap
@@ -63,6 +64,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(\OCP\IUserManager::class),
 				$c->query(MoneyService::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
 

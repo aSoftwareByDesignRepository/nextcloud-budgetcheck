@@ -52,6 +52,7 @@ $pageIcons = [
 	'period' => 'calendar-range',
 	'yearly' => 'calendar-clock',
 	'settings' => 'settings',
+	'app-settings' => 'shield-check',
 ];
 $headerIconName = $pageIcons[$pageId] ?? 'layout-grid';
 

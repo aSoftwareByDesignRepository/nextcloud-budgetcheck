@@ -157,16 +157,42 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function settings(): TemplateResponse
+	public function settings(): TemplateResponse|RedirectResponse
 	{
 		$ctx = $this->resolveWorkspace();
+		$selected = $ctx['workspace'];
+		$canManage = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
+		if (!$canManage) {
+			$params = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
+
+			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard', $params));
+		}
 		$userId = $this->access->currentUserId();
 		$ctx['canAdminApp'] = $this->access->isAppAdmin($userId);
-		$ctx['appPolicy'] = $this->access->isAppAdmin($userId) ? $this->access->getAppPolicy() : null;
-		return $this->page('settings', $this->l10n->t('Settings'),
-			$this->l10n->t('Workspace policy, members, categories, savings, tax mode, and app-wide defaults.'),
+
+		return $this->page('settings', $this->l10n->t('Workspace settings'),
+			$this->l10n->t('Manage this workspace: details, tax mode, categories, members, and recurring rules.'),
 			$ctx,
 			'settings'
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function appSettings(): TemplateResponse|RedirectResponse
+	{
+		$userId = $this->access->currentUserId();
+		if (!$this->access->isAppAdmin($userId)) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
+		}
+		$ctx = $this->resolveWorkspace();
+		$ctx['canAdminApp'] = true;
+		$ctx['appPolicy'] = $this->access->getAppPolicy();
+
+		return $this->page('app-settings', $this->l10n->t('App settings'),
+			$this->l10n->t('BudgetCheck-wide policy: who may open the app, delegated administrators, and defaults used when creating workspaces.'),
+			$ctx,
+			'app-settings'
 		);
 	}
 
@@ -225,7 +251,7 @@ class PageController extends Controller
 		$canManage = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
 		$canContribute = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER, AccessControlService::ROLE_CONTRIBUTOR], true);
 		$canAdminApp = $this->access->isAppAdmin($userId);
-		$navigation = $this->buildNavigation($template, $selected, $canAdminApp);
+		$navigation = $this->buildNavigation($template, $selected, $canAdminApp, $canManage);
 
 		$response = new TemplateResponse($this->appName, $template, [
 			'pageId' => $template,
@@ -248,6 +274,7 @@ class PageController extends Controller
 				'period'       => $this->urlGenerator->linkToRoute('budgetcheck.page.period'),
 				'yearly'       => $this->urlGenerator->linkToRoute('budgetcheck.page.yearly'),
 				'settings'     => $this->urlGenerator->linkToRoute('budgetcheck.page.settings'),
+				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
@@ -276,6 +303,9 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
 		Util::addScript(Application::APP_ID, 'common/workspace');
+		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
+			Util::addScript(Application::APP_ID, 'common/entity-picker');
+		}
 		Util::addScript(Application::APP_ID, $pageScript);
 	}
 
@@ -287,7 +317,7 @@ class PageController extends Controller
 	 * @param array<string,mixed>|null $workspace
 	 * @return list<array{id:string,label:string,url:string,icon:string,active:bool,hint:string}>
 	 */
-	private function buildNavigation(string $current, ?array $workspace, bool $canAdminApp): array
+	private function buildNavigation(string $current, ?array $workspace, bool $canAdminApp, bool $canManageWorkspace): array
 	{
 		$workspaceType = $workspace['type'] ?? null;
 		$workspaceId = $workspace !== null ? (int)$workspace['id'] : null;
@@ -300,7 +330,8 @@ class PageController extends Controller
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],
-			['id' => 'settings',     'label' => $this->l10n->t('Settings'),       'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null || $canAdminApp,  'hint' => $this->l10n->t('Workspace policy and members')],
+			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null && $canManageWorkspace, 'hint' => $this->l10n->t('Members, categories, tax, and workspace details.')],
+			['id' => 'app-settings', 'label' => $this->l10n->t('App settings'),   'icon' => 'shield-check',   'route' => 'budgetcheck.page.appSettings',  'show' => $canAdminApp, 'hint' => $this->l10n->t('Directory access, app administrators, and defaults for new workspaces.')],
 		];
 
 		$out = [];

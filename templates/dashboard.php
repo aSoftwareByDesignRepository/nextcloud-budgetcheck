@@ -28,7 +28,11 @@ $canContribute = !empty($_['canContribute']);
 			<li class="bc-quickstart__item" data-step="categories">
 				<strong><?php p($l->t('Add categories')); ?></strong>
 				<p><?php p($l->t('Categories pin transactions to budgets. Start with rent, groceries, and salary.')); ?></p>
-				<a class="button" href="#" data-bc-link="settings"><?php p($l->t('Open settings')); ?></a>
+				<?php if ($canManage): ?>
+					<a class="button" href="#" data-bc-link="settings"><?php p($l->t('Open workspace settings')); ?></a>
+				<?php else: ?>
+					<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('Ask a workspace manager to add categories in workspace settings.')); ?></p>
+				<?php endif; ?>
 			</li>
 			<li class="bc-quickstart__item" data-step="transactions">
 				<strong><?php p($l->t('Log a transaction')); ?></strong>

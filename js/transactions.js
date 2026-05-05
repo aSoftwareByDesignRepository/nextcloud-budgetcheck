@@ -8,9 +8,11 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 
-	if (!Ws.workspace) return;
-	const ws = Ws.workspace;
-	const moneyDecimals = typeof ws.currencyDecimals === 'number' ? ws.currencyDecimals : (ws.currencyCode === 'JPY' ? 0 : 2);
+	function activeDecimals() {
+		const w = Ws.workspace;
+		if (!w) return 2;
+		return typeof w.currencyDecimals === 'number' ? w.currencyDecimals : (w.currencyCode === 'JPY' ? 0 : 2);
+	}
 
 	const PAGE_SIZE = 50;
 	const state = {
@@ -20,6 +22,7 @@
 	};
 
 	document.addEventListener('DOMContentLoaded', () => {
+		if (!Ws.workspace) return;
 		hydrateInitialFilters();
 		wireFilterForm();
 		wireCreateButton();
@@ -99,7 +102,7 @@
 
 	async function loadCategoriesIntoSelect() {
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id });
+			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id });
 			state.categories = data.categories || [];
 			const select = document.querySelector('[data-bc-category-select]');
 			if (!select) return;
@@ -122,7 +125,7 @@
 		]));
 		try {
 			const params = {
-				workspaceId: ws.id,
+				workspaceId: Ws.workspace.id,
 				limit: PAGE_SIZE,
 				offset: state.offset,
 			};
@@ -262,7 +265,7 @@
 					name: 'amount', type: 'text', inputmode: 'decimal', class: 'bc-input', required: true,
 					attrs: { 'aria-label': t('budgetcheck', 'Amount') },
 				});
-				amountInput.value = tx ? String(tx.amount.minor / Math.pow(10, moneyDecimals)).replace('.', ',') : '';
+				amountInput.value = tx ? String(tx.amount.minor / Math.pow(10, activeDecimals())).replace('.', ',') : '';
 				wrapField(form, t('budgetcheck', 'Amount'), amountInput);
 
 				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
@@ -296,7 +299,7 @@
 				wrapField(form, t('budgetcheck', 'Notes'), notesArea);
 
 				form._collect = () => ({
-					workspaceId: ws.id,
+					workspaceId: Ws.workspace.id,
 					title: titleInput.value.trim(),
 					direction: directionSelect.value,
 					bookingDate: dateInput.value.trim(),
@@ -308,8 +311,8 @@
 				});
 				return form;
 			},
-			onSubmit: async ({ close }) => {
-				const form = document.querySelector('.bc-modal__form');
+			onSubmit: async ({ close, body }) => {
+				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
 				if (!Dates.isIsoCalendarDay(String(payload.bookingDate || '').trim())) {
@@ -318,7 +321,7 @@
 				}
 				payload.bookingDate = String(payload.bookingDate).trim();
 				try {
-					Money.parseHuman(payload.amount, moneyDecimals);
+					Money.parseHuman(payload.amount, activeDecimals());
 				} catch (e) {
 					Msg.announce(e.message, 'error');
 					return false;

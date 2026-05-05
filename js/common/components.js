@@ -96,6 +96,12 @@
 		const userBody = opts.render({ close: (result) => instance.close(result) });
 		if (userBody) bodyContainer.appendChild(userBody);
 
+		const submitContext = () => ({
+			close: (r) => instance.close(r),
+			body: userBody || null,
+			dialog,
+		});
+
 		const appLang = document.getElementById('app-content')?.getAttribute('lang');
 		if (appLang) {
 			dialog.setAttribute('lang', appLang);
@@ -122,7 +128,7 @@
 					}
 					try {
 						primaryBtn.disabled = true;
-						const result = await opts.onSubmit({ close: (r) => instance.close(r) });
+						const result = await opts.onSubmit(submitContext());
 						if (result !== false) instance.close(true);
 					} catch (err) {
 						window.BudgetCheckMessaging.handleApiError(err, { reloadOnConflict: false });

@@ -7,8 +7,8 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
+	const EntityPicker = window.BudgetCheckEntityPicker;
 
-	const ws = Ws.workspace;
 	let capabilities = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
@@ -17,8 +17,7 @@
 
 	async function bootstrap() {
 		const needsCaps = document.querySelector('[data-bc-timezone-select]')
-			|| document.querySelector('[data-bc-currency-select]')
-			|| document.querySelector('[data-bc-app-policy-form]');
+			|| document.querySelector('[data-bc-currency-select]');
 		if (needsCaps) {
 			try {
 				const data = await Api.get('/apps/budgetcheck/api/workspaces');
@@ -37,12 +36,11 @@
 		if (Ws.canManage) {
 			loadCategories();
 			loadMembers();
+			initMemberInvite();
 			loadRecurring();
-		} else if (ws) {
+		} else if (Ws.workspace) {
 			loadCategories();
 		}
-		await initAppPolicyUi();
-		wireAppPolicy();
 		wireHelpPanels();
 	}
 
@@ -83,7 +81,7 @@
 	}
 
 	function populateTimezoneOptions() {
-		fillTimezoneSelect(document.querySelector('[data-bc-timezone-select]'), ws?.timezone);
+		fillTimezoneSelect(document.querySelector('[data-bc-timezone-select]'), Ws.workspace?.timezone);
 	}
 
 	function fillCurrencySelect(selectEl, selectedCode) {
@@ -101,45 +99,45 @@
 
 	function populateWorkspaceCurrencySelect() {
 		const sel = document.querySelector('[data-bc-currency-select]');
-		if (!sel || !ws) return;
-		fillCurrencySelect(sel, ws.currencyCode);
+		if (!sel || !Ws.workspace) return;
+		fillCurrencySelect(sel, Ws.workspace.currencyCode);
 	}
 
 	function hydrateWorkspaceForm() {
-		if (!ws) return;
+		if (!Ws.workspace) return;
 		const form = document.querySelector('[data-bc-workspace-form]');
 		if (!form) return;
-		setVal(form, 'name', ws.name);
+		setVal(form, 'name', Ws.workspace.name);
 		populateWorkspaceCurrencySelect();
-		setVal(form, 'overspendThresholdMinor', ws.overspendThresholdMinor !== null ? String(ws.overspendThresholdMinor) : '');
-		if (ws.type === 'household') {
-			const pyFromWs = typeof ws.primaryPlanningYear === 'number' ? ws.primaryPlanningYear : null;
-			const pyFromCreated = Number.parseInt(String(ws.createdAt || '').slice(0, 4), 10);
+		setVal(form, 'overspendThresholdMinor', Ws.workspace.overspendThresholdMinor !== null ? String(Ws.workspace.overspendThresholdMinor) : '');
+		if (Ws.workspace.type === 'household') {
+			const pyFromWs = typeof Ws.workspace.primaryPlanningYear === 'number' ? Ws.workspace.primaryPlanningYear : null;
+			const pyFromCreated = Number.parseInt(String(Ws.workspace.createdAt || '').slice(0, 4), 10);
 			const py = pyFromWs !== null && pyFromWs >= 1900 && pyFromWs <= 9999
 				? pyFromWs
 				: (Number.isFinite(pyFromCreated) && pyFromCreated >= 1900 ? pyFromCreated : new Date().getFullYear());
 			setVal(form, 'primaryPlanningYear', String(py));
 			const cb = form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]');
-			if (cb) cb.checked = !!ws.autoCopyBudgetsFromPreviousMonth;
+			if (cb) cb.checked = !!Ws.workspace.autoCopyBudgetsFromPreviousMonth;
 		} else {
-			setVal(form, 'projectStartDate', ws.projectStartDate ? String(ws.projectStartDate) : '');
-			setVal(form, 'projectEndDate', ws.projectEndDate ? String(ws.projectEndDate) : '');
-			setVal(form, 'projectTotalCapMinor', ws.projectTotalCapMinor !== null ? String(ws.projectTotalCapMinor) : '');
+			setVal(form, 'projectStartDate', Ws.workspace.projectStartDate ? String(Ws.workspace.projectStartDate) : '');
+			setVal(form, 'projectEndDate', Ws.workspace.projectEndDate ? String(Ws.workspace.projectEndDate) : '');
+			setVal(form, 'projectTotalCapMinor', Ws.workspace.projectTotalCapMinor !== null ? String(Ws.workspace.projectTotalCapMinor) : '');
 		}
 	}
 
 	function hydrateTaxForm() {
-		if (!ws) return;
+		if (!Ws.workspace) return;
 		const form = document.querySelector('[data-bc-tax-form]');
 		if (!form) return;
 		const enabled = form.querySelector('input[name="taxModeEnabled"]');
-		if (enabled) enabled.checked = !!ws.taxModeEnabled;
-		setVal(form, 'taxBudgetBasis', ws.taxBudgetBasis || 'gross');
+		if (enabled) enabled.checked = !!Ws.workspace.taxModeEnabled;
+		setVal(form, 'taxBudgetBasis', Ws.workspace.taxBudgetBasis || 'gross');
 		const presetSelect = form.querySelector('[data-bc-vat-preset]');
 		const customWrap = form.querySelector('[data-bc-vat-custom-wrap]');
 		const customInput = form.querySelector('[data-bc-vat-custom]');
 		if (!presetSelect || !customWrap || !customInput) return;
-		const bp = ws.defaultVatRateBp;
+		const bp = Ws.workspace.defaultVatRateBp;
 		const fixed = Array.from(presetSelect.options).map((o) => o.value).filter((v) => v !== 'custom');
 		if (bp === null || bp === undefined) {
 			presetSelect.value = '0';
@@ -169,7 +167,7 @@
 
 	function wireWorkspaceForm() {
 		const form = document.querySelector('[data-bc-workspace-form]');
-		if (!form || !ws) return;
+		if (!form || !Ws.workspace) return;
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			if (!Ws.canManage) return;
@@ -179,7 +177,7 @@
 				timezone: getVal(form, 'timezone'),
 				overspendThresholdMinor: getVal(form, 'overspendThresholdMinor').trim() || null,
 			};
-			if (ws.type === 'household') {
+			if (Ws.workspace.type === 'household') {
 				const pyRaw = getVal(form, 'primaryPlanningYear').trim();
 				const py = Number.parseInt(pyRaw, 10);
 				if (!Number.isFinite(py) || py < 1900 || py > 9999) {
@@ -204,7 +202,7 @@
 				payload.overspendThresholdMinor = Number.parseInt(payload.overspendThresholdMinor, 10);
 			}
 			try {
-				await Api.put('/apps/budgetcheck/api/workspaces/' + ws.id, payload);
+				await Api.put('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id, payload);
 				Msg.announce(t('budgetcheck', 'Workspace saved.'), 'success');
 				window.setTimeout(() => window.location.reload(), 600);
 			} catch (err) {
@@ -215,7 +213,7 @@
 
 	function wireTaxForm() {
 		const form = document.querySelector('[data-bc-tax-form]');
-		if (!form || !ws) return;
+		if (!form || !Ws.workspace) return;
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			if (!Ws.canManage) return;
@@ -233,7 +231,7 @@
 				defaultVatRateBp,
 			};
 			try {
-				await Api.put('/apps/budgetcheck/api/workspaces/' + ws.id + '/tax-mode', payload);
+				await Api.put('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/tax-mode', payload);
 				Msg.announce(t('budgetcheck', 'Tax settings saved.'), 'success');
 				window.setTimeout(() => window.location.reload(), 600);
 			} catch (err) {
@@ -285,7 +283,7 @@
 		const tbody = document.querySelector('[data-bc-category-rows]');
 		if (!tbody) return;
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id, includeInactive: '1' });
+			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id, includeInactive: '1' });
 			tbody.replaceChildren();
 			(data.categories || []).forEach((c) => tbody.appendChild(renderCategoryRow(c)));
 			if ((data.categories || []).length === 0) {
@@ -328,7 +326,7 @@
 		const isEdit = !!cat;
 		let groupKeys = [];
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id, includeInactive: '1' });
+			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id, includeInactive: '1' });
 			groupKeys = data.groupKeys || [];
 		} catch (err) {
 			Msg.handleApiError(err);
@@ -404,7 +402,7 @@
 						groupKey = choice;
 					}
 					return {
-						workspaceId: ws.id,
+						workspaceId: Ws.workspace.id,
 						name: name.value.trim(),
 						type: typeSelect.value,
 						groupKey,
@@ -414,8 +412,8 @@
 				};
 				return form;
 			},
-			onSubmit: async ({ close }) => {
-				const form = document.querySelector('.bc-modal__form');
+			onSubmit: async ({ close, body }) => {
+				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
 				try {
@@ -456,21 +454,19 @@
 	// ------ Members ------
 	async function loadMembers() {
 		const tbody = document.querySelector('[data-bc-member-rows]');
-		if (!tbody || !ws) return;
+		if (!tbody || !Ws.workspace) return;
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/workspaces/' + ws.id + '/members');
+			const data = await Api.get('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members');
 			tbody.replaceChildren();
 			(data.members || []).forEach((m) => tbody.appendChild(renderMemberRow(m)));
 		} catch (err) {
 			Msg.handleApiError(err);
 		}
-		document.querySelectorAll('[data-bc-action="open-add-member"]').forEach((btn) => {
-			btn.addEventListener('click', () => openAddMemberModal());
-		});
 	}
 
 	function renderMemberRow(member) {
 		const tr = C.createElement('tr');
+		tr.dataset.bcUserId = member.userId;
 		tr.appendChild(C.createElement('td', { text: member.displayName + ' (' + member.userId + ')' }));
 		const roleSelect = C.createElement('select', { class: 'bc-input' }, [
 			C.createElement('option', { value: 'manager', text: t('budgetcheck', 'Manager') }),
@@ -517,75 +513,89 @@
 		return tr;
 	}
 
-	function openAddMemberModal() {
-		C.openModal({
-			title: t('budgetcheck', 'Add member'),
-			primaryLabel: t('budgetcheck', 'Add'),
-			render: () => {
-				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
-				const search = C.createElement('input', { type: 'search', name: 'q', class: 'bc-input', autocomplete: 'off', attrs: { 'aria-label': t('budgetcheck', 'Find user') } });
-				wrap(form, t('budgetcheck', 'Find user'), search);
-				const roleSelect = C.createElement('select', { name: 'role', class: 'bc-input' }, [
-					C.createElement('option', { value: 'viewer', text: t('budgetcheck', 'Viewer') }),
-					C.createElement('option', { value: 'contributor', text: t('budgetcheck', 'Contributor') }),
-					C.createElement('option', { value: 'manager', text: t('budgetcheck', 'Manager') }),
-				]);
-				wrap(form, t('budgetcheck', 'Role'), roleSelect);
-				const list = C.createElement('div', { class: 'bc-user-search-results', attrs: { role: 'listbox', 'aria-label': t('budgetcheck', 'Search results') } });
-				form.appendChild(list);
-				let pickedUserId = '';
-				let timer = null;
-				search.addEventListener('input', () => {
-					if (timer) window.clearTimeout(timer);
-					timer = window.setTimeout(async () => {
-						const q = search.value.trim();
-						list.replaceChildren();
-						if (q.length < 2) return;
-						try {
-							const data = await Api.get('/apps/budgetcheck/api/admin/users', { q });
-							(data.users || []).forEach((u) => {
-								const btn = C.createElement('button', { type: 'button', class: 'button', text: u.displayName + ' (' + u.id + ')' });
-								btn.addEventListener('click', () => {
-									pickedUserId = u.id;
-									search.value = u.id;
-									list.replaceChildren();
-								});
-								list.appendChild(btn);
-							});
-						} catch (err) {
-							Msg.handleApiError(err);
-						}
-					}, 250);
-				});
-				form._collect = () => ({ userId: pickedUserId || search.value.trim(), role: roleSelect.value });
-				return form;
-			},
-			onSubmit: async ({ close }) => {
-				const form = document.querySelector('.bc-modal__form');
-				const payload = form && form._collect ? form._collect() : null;
-				if (!payload || !payload.userId) {
-					Msg.announce(t('budgetcheck', 'Pick a user.'), 'warning');
-					return false;
-				}
+	function currentMemberUserIds() {
+		const ids = new Set();
+		document.querySelectorAll('[data-bc-member-rows] tr[data-bc-user-id]').forEach((tr) => {
+			const id = tr.getAttribute('data-bc-user-id');
+			if (id) ids.add(id);
+		});
+		return ids;
+	}
+
+	function initMemberInvite() {
+		const root = document.querySelector('[data-bc-member-invite]');
+		if (!root || !Ws.workspace || !EntityPicker || root.dataset.bcInviteWired === '1') {
+			return;
+		}
+		root.dataset.bcInviteWired = '1';
+		const q = document.getElementById('bc-member-invite-q');
+		const suggest = document.getElementById('bc-member-invite-suggest');
+		const roleSel = document.getElementById('bc-member-invite-role');
+		const btn = root.querySelector('[data-bc-action="member-invite-submit"]');
+		const selectedWrap = root.querySelector('[data-bc-member-selected-wrap]');
+		const selectedEl = root.querySelector('[data-bc-member-selected]');
+		if (!q || !suggest || !roleSel || !btn) return;
+		let picked = null;
+		const pickerStrings = {
+			noResults: t('budgetcheck', 'No matching accounts.'),
+			searchErrorNetwork: t('budgetcheck', 'Search could not load (network).'),
+			searchErrorServer: t('budgetcheck', 'Search could not load.'),
+		};
+		EntityPicker.bindCombobox({
+			input: q,
+			suggest,
+			minLen: 2,
+			strings: pickerStrings,
+			isTaken: (id) => currentMemberUserIds().has(id),
+			fetchItems: async (query) => {
 				try {
-					await Api.post('/apps/budgetcheck/api/workspaces/' + ws.id + '/members', payload);
-					Msg.announce(t('budgetcheck', 'Member added.'), 'success');
-					loadMembers();
-					close(true);
+					const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
+					const items = (data.users || []).filter((u) => u && u.enabled !== false);
+					return { items, error: null };
 				} catch (err) {
-					Msg.handleApiError(err, { reloadOnConflict: false });
-					return false;
+					const status = err && err.status;
+					if (status === 0) return { items: [], error: 'network' };
+					return { items: [], error: 'server' };
 				}
 			},
+			onPick: (item) => {
+				picked = { id: item.id, displayName: item.displayName || item.id };
+				if (selectedEl) selectedEl.textContent = picked.displayName + ' (' + picked.id + ')';
+				if (selectedWrap) selectedWrap.hidden = false;
+			},
+		});
+		btn.addEventListener('click', async () => {
+			if (!picked) {
+				Msg.announce(t('budgetcheck', 'Pick a user.'), 'warning');
+				q.focus();
+				return;
+			}
+			btn.disabled = true;
+			try {
+				await Api.post('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members', {
+					userId: picked.id,
+					role: roleSel.value,
+				});
+				Msg.announce(t('budgetcheck', 'Member added.'), 'success');
+				picked = null;
+				q.value = '';
+				if (selectedEl) selectedEl.textContent = '';
+				if (selectedWrap) selectedWrap.hidden = true;
+				loadMembers();
+			} catch (err) {
+				Msg.handleApiError(err, { reloadOnConflict: false });
+			} finally {
+				btn.disabled = false;
+			}
 		});
 	}
 
 	// ------ Recurring rules ------
 	async function loadRecurring() {
 		const tbody = document.querySelector('[data-bc-recurring-rows]');
-		if (!tbody || !ws) return;
+		if (!tbody || !Ws.workspace) return;
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/recurring-rules', { workspaceId: ws.id });
+			const data = await Api.get('/apps/budgetcheck/api/recurring-rules', { workspaceId: Ws.workspace.id });
 			tbody.replaceChildren();
 			(data.rules || []).forEach((r) => tbody.appendChild(renderRecurringRow(r)));
 			if ((data.rules || []).length === 0) {
@@ -627,8 +637,8 @@
 
 	async function openRecurringModal(rule) {
 		const isEdit = !!rule;
-		const cats = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id });
-		const decimals = typeof ws.currencyDecimals === 'number' ? ws.currencyDecimals : (ws.currencyCode === 'JPY' ? 0 : 2);
+		const cats = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id });
+		const decimals = typeof Ws.workspace.currencyDecimals === 'number' ? Ws.workspace.currencyDecimals : (Ws.workspace.currencyCode === 'JPY' ? 0 : 2);
 		C.openModal({
 			title: isEdit ? t('budgetcheck', 'Edit rule') : t('budgetcheck', 'New recurring rule'),
 			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
@@ -699,7 +709,7 @@
 				]));
 
 				form._collect = () => ({
-					workspaceId: ws.id,
+					workspaceId: Ws.workspace.id,
 					title: titleInput.value.trim(),
 					direction: directionSelect.value,
 					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
@@ -711,8 +721,8 @@
 				});
 				return form;
 			},
-			onSubmit: async ({ close }) => {
-				const form = document.querySelector('.bc-modal__form');
+			onSubmit: async ({ close, body }) => {
+				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
 				const endRaw = String(payload.endDate || '').trim();
@@ -771,140 +781,6 @@
 		} catch (err) {
 			Msg.handleApiError(err);
 		}
-	}
-
-	// ------ App policy ------
-	async function initAppPolicyUi() {
-		const form = document.querySelector('[data-bc-app-policy-form]');
-		if (!form || !Ws.canAdmin) return;
-		if (!capabilities?.timezones || !capabilities?.currencies) {
-			try {
-				const data = await Api.get('/apps/budgetcheck/api/workspaces');
-				capabilities = data.capabilities || {};
-			} catch (err) {
-				Msg.handleApiError(err);
-				return;
-			}
-		}
-		let policy = { appAdminUserIds: [], defaultTimezone: 'Europe/Berlin', defaultCurrency: 'EUR' };
-		try {
-			const res = await Api.get('/apps/budgetcheck/api/admin/policy');
-			policy = res.policy || policy;
-		} catch (err) {
-			Msg.handleApiError(err);
-			return;
-		}
-		form._bcAppAdminIds = [...(policy.appAdminUserIds || [])];
-		fillTimezoneSelect(form.querySelector('[data-bc-default-timezone-select]'), policy.defaultTimezone);
-		fillCurrencySelect(form.querySelector('[data-bc-default-currency-select]'), policy.defaultCurrency);
-		renderAppAdminChips(form);
-		const addBtn = form.querySelector('[data-bc-action="add-app-admin"]');
-		if (addBtn && !addBtn.dataset.bcWired) {
-			addBtn.dataset.bcWired = '1';
-			addBtn.addEventListener('click', () => { void openAddAppAdminForPolicy(form); });
-		}
-	}
-
-	function renderAppAdminChips(form) {
-		const ul = form.querySelector('[data-bc-app-admin-list]');
-		if (!ul) return;
-		ul.replaceChildren();
-		(form._bcAppAdminIds || []).forEach((uid) => {
-			const li = C.createElement('li', { class: 'bc-chip' });
-			li.appendChild(C.createElement('span', { class: 'bc-chip__text', text: uid }));
-			const rm = C.createElement('button', {
-				type: 'button',
-				class: 'bc-chip__remove',
-				text: '×',
-				attrs: { 'aria-label': t('budgetcheck', 'Remove') + ' ' + uid },
-			});
-			rm.addEventListener('click', () => {
-				form._bcAppAdminIds = (form._bcAppAdminIds || []).filter((x) => x !== uid);
-				renderAppAdminChips(form);
-			});
-			li.appendChild(rm);
-			ul.appendChild(li);
-		});
-	}
-
-	function openAddAppAdminForPolicy(form) {
-		C.openModal({
-			title: t('budgetcheck', 'Add app administrator'),
-			primaryLabel: t('budgetcheck', 'Add'),
-			render: () => {
-				const bodyForm = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
-				const hint = C.createElement('p', { class: 'bc-field__hint bc-field__hint--block', text: t('budgetcheck', 'Type at least two characters to search by user ID or display name.') });
-				bodyForm.appendChild(hint);
-				const search = C.createElement('input', { type: 'search', name: 'q', class: 'bc-input', autocomplete: 'off', attrs: { 'aria-label': t('budgetcheck', 'Find user') } });
-				wrap(bodyForm, t('budgetcheck', 'Find user'), search);
-				const list = C.createElement('div', { class: 'bc-user-search-results', attrs: { role: 'listbox', 'aria-label': t('budgetcheck', 'Search results') } });
-				bodyForm.appendChild(list);
-				let timer = null;
-				search.addEventListener('input', () => {
-					if (timer) window.clearTimeout(timer);
-					timer = window.setTimeout(async () => {
-						const q = search.value.trim();
-						list.replaceChildren();
-						if (q.length < 2) return;
-						try {
-							const data = await Api.get('/apps/budgetcheck/api/admin/users', { q });
-							(data.users || []).forEach((u) => {
-								const btn = C.createElement('button', {
-									type: 'button',
-									class: 'button bc-user-search-hit',
-									text: u.displayName + ' (' + u.id + ')',
-								});
-								btn.addEventListener('click', () => {
-									search.value = u.id;
-									list.replaceChildren();
-								});
-								list.appendChild(btn);
-							});
-						} catch (err) {
-							Msg.handleApiError(err);
-						}
-					}, 250);
-				});
-				bodyForm._picked = () => search.value.trim();
-				return bodyForm;
-			},
-			onSubmit: async ({ close }) => {
-				const bodyForm = document.querySelector('.bc-modal__form');
-				const uid = bodyForm && bodyForm._picked ? bodyForm._picked() : '';
-				if (!uid) {
-					Msg.announce(t('budgetcheck', 'Pick a user.'), 'warning');
-					return false;
-				}
-				if ((form._bcAppAdminIds || []).includes(uid)) {
-					Msg.announce(t('budgetcheck', 'That user is already an administrator.'), 'warning');
-					return false;
-				}
-				form._bcAppAdminIds = [...(form._bcAppAdminIds || []), uid];
-				renderAppAdminChips(form);
-				close(true);
-			},
-		});
-	}
-
-	function wireAppPolicy() {
-		const form = document.querySelector('[data-bc-app-policy-form]');
-		if (!form) return;
-		if (form.dataset.bcSubmitWired) return;
-		form.dataset.bcSubmitWired = '1';
-		form.addEventListener('submit', async (e) => {
-			e.preventDefault();
-			const payload = {
-				appAdminUserIds: form._bcAppAdminIds || [],
-				defaultTimezone: getVal(form, 'defaultTimezone'),
-				defaultCurrency: getVal(form, 'defaultCurrency').trim().toUpperCase(),
-			};
-			try {
-				await Api.post('/apps/budgetcheck/api/admin/policy', payload);
-				Msg.announce(t('budgetcheck', 'App policy saved.'), 'success');
-			} catch (err) {
-				Msg.handleApiError(err);
-			}
-		});
 	}
 
 	function setVal(form, name, value) {

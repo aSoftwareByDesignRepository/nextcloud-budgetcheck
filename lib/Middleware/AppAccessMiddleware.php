@@ -18,10 +18,10 @@ use OCP\L10N\IFactory;
 use Psr\Log\LoggerInterface;
 
 /**
- * Refuses to enter any BudgetCheck controller for users that have no membership
- * in any workspace and are not app admins. Per-route role checks (manager,
- * contributor, viewer) and per-workspace membership are performed inside the
- * services, after this middleware has confirmed app-level access.
+ * Refuses to enter any BudgetCheck controller when {@see AccessControlService::canUseApp}
+ * is false (directory restriction, missing workspace membership, or both).
+ * Nextcloud and delegated app administrators pass without a workspace so they
+ * can manage policy. Per-route role checks run inside services after this gate.
  */
 class AppAccessMiddleware extends Middleware
 {
@@ -48,15 +48,18 @@ class AppAccessMiddleware extends Middleware
 			// users to login; we should not over-step it here.
 			return;
 		}
-		if ($this->accessControl->canUseApp($user->getUID())) {
+		$uid = $user->getUID();
+		if ($this->accessControl->canUseApp($uid)) {
 			return;
 		}
 
+		$reason = $this->accessControl->denialReasonWhenCannotUseApp($uid);
 		$this->logger->warning('budgetcheck app access denied', [
-			'userId' => $user->getUID(),
+			'userId' => $uid,
 			'path' => $this->request->getPathInfo(),
+			'reason' => $reason,
 		]);
-		throw new AppAccessDeniedException('app_access_denied');
+		throw new AppAccessDeniedException('app_access_denied', 0, null, $reason);
 	}
 
 	public function afterException($controller, $methodName, \Exception $exception)
@@ -65,10 +68,16 @@ class AppAccessMiddleware extends Middleware
 			throw $exception;
 		}
 
-		$path = (string) $this->request->getPathInfo();
-		$isApi = str_contains($path, '/api/') || $this->request->getMethod() !== 'GET';
-		$wantsJson = str_contains((string) $this->request->getHeader('Accept'), 'application/json')
-			|| str_starts_with((string) $this->request->getHeader('Content-Type'), 'application/json');
+		$path = (string) ($this->request->getPathInfo() ?? '');
+		$isApi = str_contains($path, '/api/')
+			|| str_contains($path, '/ocs/')
+			|| $this->request->getMethod() !== 'GET';
+		$accept = strtolower((string) $this->request->getHeader('Accept'));
+		$contentType = strtolower((string) $this->request->getHeader('Content-Type'));
+		$xRequestedWith = strtolower((string) $this->request->getHeader('X-Requested-With'));
+		$wantsJson = str_contains($accept, 'application/json')
+			|| str_contains($contentType, 'application/json')
+			|| $xRequestedWith === 'xmlhttprequest';
 
 		if ($isApi || $wantsJson) {
 			return new JSONResponse([
@@ -79,8 +88,12 @@ class AppAccessMiddleware extends Middleware
 		}
 
 		$l = $this->l10nFactory->get(Application::APP_ID);
+		$reason = $exception->getDenialReason();
+		$message = $reason === AccessControlService::DENIAL_RESTRICTION
+			? $l->t('You do not have access to BudgetCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access.')
+			: $l->t('You do not have access to BudgetCheck. Ask an app administrator to add you to a workspace.');
 		$response = new TemplateResponse(Application::APP_ID, 'access-denied', [
-			'message' => $l->t('You do not have access to BudgetCheck. Ask an app administrator to add you to a workspace.'),
+			'message' => $message,
 			'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
 		]);
 		$response->setStatus(Http::STATUS_FORBIDDEN);

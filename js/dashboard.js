@@ -8,19 +8,19 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 
-	if (!Ws.workspace) {
-		document.addEventListener('DOMContentLoaded', () => {
-			wireWorkspaceCreator();
-		});
-		return;
-	}
-
-	const ws = Ws.workspace;
-	const isHousehold = ws.type === 'household';
 	const dashState = { yearMonth: Dates.currentYearMonth() };
+	/** Set on DOMContentLoaded after #app-content exists (see lazy workspace.js). */
+	let ws = null;
+	let isHousehold = false;
 	let dashPeriodPicker = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
+		ws = Ws.workspace;
+		if (!ws) {
+			wireWorkspaceCreator();
+			return;
+		}
+		isHousehold = ws.type === 'household';
 		const summarySection = document.querySelector('[data-bc-summary]');
 		const box = summarySection?.querySelector('[data-bc-household-period]');
 		const Period = window.BudgetCheckHouseholdPeriod;
@@ -283,8 +283,8 @@
 				};
 				return form;
 			},
-			onSubmit: async ({ close }) => {
-				const form = document.querySelector('.bc-modal__form');
+			onSubmit: async ({ close, body }) => {
+				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
 				if (payload.type === 'project') {

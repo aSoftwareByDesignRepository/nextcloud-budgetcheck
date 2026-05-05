@@ -42,13 +42,14 @@ final class AdminSettings implements ISettings
 
 		$parameters = [
 			'l' => $l,
+			'policy' => $policy,
 			'appAdminUserIds' => $policy['appAdminUserIds'],
 			'appAdminUserIdsCsv' => implode(', ', $policy['appAdminUserIds']),
 			'defaultTimezone' => $policy['defaultTimezone'],
 			'defaultCurrency' => $policy['defaultCurrency'],
 			'timezoneGroups' => $this->timezones->grouped(),
 			'saveUrl' => $this->urlGenerator->linkToRoute('budgetcheck.api.saveAppPolicy'),
-			'appUrl' => $this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'),
+			'appUrl' => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
 		];
 
 		return new TemplateResponse(Application::APP_ID, 'admin-settings', $parameters, 'blank');
