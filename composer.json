@@ -13,7 +13,7 @@
 		"php": ">=8.2"
 	},
 	"require-dev": {
-		"nextcloud/ocp": "^32",
+		"nextcloud/ocp": "^32.0 || ^33.0",
 		"phpunit/phpunit": "^9.6"
 	},
 	"autoload": {

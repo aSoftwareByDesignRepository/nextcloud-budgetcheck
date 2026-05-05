@@ -15,6 +15,7 @@
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues</bugs>
 	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck.git</repository>
 	<dependencies>
+		<!-- Major version: 33.0.3 and all 33.x patch releases satisfy max-version="33". -->
 		<nextcloud min-version="32" max-version="33"/>
 	</dependencies>
 	<keywords>

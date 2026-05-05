@@ -15,7 +15,7 @@ use OCP\EventDispatcher\Event;
  * This event is fired before a PROPFIND request is sent to remote WebDAV storage
  * Used to extend the list of properties to request additional data from the remote server
  *
- * @since 32.0.7
+ * @since 33.0.0
  */
 class BeforeRemotePropfindEvent extends Event {
 	public function __construct(
@@ -26,7 +26,7 @@ class BeforeRemotePropfindEvent extends Event {
 
 	/**
 	 * @return array<string>
-	 * @since 32.0.7
+	 * @since 33.0.0
 	 */
 	public function getProperties(): array {
 		return $this->properties;
@@ -34,7 +34,7 @@ class BeforeRemotePropfindEvent extends Event {
 
 	/**
 	 * @param array<string> $properties
-	 * @since 32.0.7
+	 * @since 33.0.0
 	 */
 	public function addProperties(array $properties): void {
 		array_push($this->properties, ...$properties);

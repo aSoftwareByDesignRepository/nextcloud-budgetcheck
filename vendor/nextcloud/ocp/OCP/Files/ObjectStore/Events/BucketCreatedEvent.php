@@ -12,9 +12,9 @@ use OCP\AppFramework\Attribute\Consumable;
 use OCP\EventDispatcher\Event;
 
 /**
- * @since 29.0.16
+ * @since 33.0.0
  */
-#[Consumable(since: '29.0.16')]
+#[Consumable(since: '33.0.0')]
 class BucketCreatedEvent extends Event {
 
 	public function __construct(

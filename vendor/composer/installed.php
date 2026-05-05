@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'software-by-design/nextcloud-budgetcheck',
-        'pretty_version' => 'dev-master',
-        'version' => 'dev-master',
-        'reference' => 'e1e3f977d4fb1a8a4f8786d0d0336b9c3f655f32',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '38174aeb71c35595d62f47f075ae5afb124a8f57',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -29,9 +29,9 @@
             'dev_requirement' => true,
         ),
         'nextcloud/ocp' => array(
-            'pretty_version' => 'v32.0.9',
-            'version' => '32.0.9.0',
-            'reference' => '78e3e2d8dece0cf49a760cee2d2d0fc239c95ebc',
+            'pretty_version' => 'v33.0.3',
+            'version' => '33.0.3.0',
+            'reference' => 'cc85b9dcf0236ff8c3acbe9a62dfd511c6ee5ea6',
             'type' => 'library',
             'install_path' => __DIR__ . '/../nextcloud/ocp',
             'aliases' => array(),
@@ -299,9 +299,9 @@
             'dev_requirement' => true,
         ),
         'software-by-design/nextcloud-budgetcheck' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
-            'reference' => 'e1e3f977d4fb1a8a4f8786d0d0336b9c3f655f32',
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '38174aeb71c35595d62f47f075ae5afb124a8f57',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
