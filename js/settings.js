@@ -177,10 +177,29 @@
 	function wireVatPresetUi() {
 		const form = document.querySelector('[data-bc-tax-form]');
 		if (!form) return;
+		const enabled = form.querySelector('input[name="taxModeEnabled"]');
+		const basis = form.querySelector('select[name="taxBudgetBasis"]');
 		const presetSelect = form.querySelector('[data-bc-vat-preset]');
 		const customWrap = form.querySelector('[data-bc-vat-custom-wrap]');
+		const summary = form.querySelector('[data-bc-tax-preview-summary]');
 		if (!presetSelect || !customWrap) return;
-		const sync = () => { customWrap.hidden = presetSelect.value !== 'custom'; };
+		const sync = () => {
+			const taxOn = !!enabled?.checked;
+			if (basis) basis.disabled = !taxOn || !Ws.canManage;
+			presetSelect.disabled = !taxOn || !Ws.canManage;
+			customWrap.hidden = !taxOn || presetSelect.value !== 'custom';
+			const customInput = customWrap.querySelector('[data-bc-vat-custom]');
+			if (customInput) customInput.disabled = customWrap.hidden || !Ws.canManage;
+			if (summary) {
+				const basisValue = String(basis?.value || 'gross');
+				const modeLabel = basisValue === 'net' ? t('budgetcheck', 'Net') : t('budgetcheck', 'Gross');
+				summary.textContent = taxOn
+					? t('budgetcheck', 'Budget and cap calculations currently use: {basis}.').replace('{basis}', modeLabel)
+					: t('budgetcheck', 'Tax mode is disabled. Budgets and cap use plain entry amounts.');
+			}
+		};
+		enabled?.addEventListener('change', sync);
+		basis?.addEventListener('change', sync);
 		presetSelect.addEventListener('change', sync);
 		sync();
 	}
@@ -661,10 +680,40 @@
 		const suggest = document.getElementById('bc-member-invite-suggest');
 		const roleSel = document.getElementById('bc-member-invite-role');
 		const btn = root.querySelector('[data-bc-action="member-invite-submit"]');
+		const clearBtn = root.querySelector('[data-bc-action="member-invite-clear"]');
 		const selectedWrap = root.querySelector('[data-bc-member-selected-wrap]');
 		const selectedEl = root.querySelector('[data-bc-member-selected]');
+		const selectedRoleEl = root.querySelector('[data-bc-member-selected-role]');
 		if (!q || !suggest || !roleSel || !btn) return;
 		let picked = null;
+		const roleLabel = (role) => {
+			switch (String(role || 'viewer')) {
+				case 'manager': return t('budgetcheck', 'Manager');
+				case 'contributor': return t('budgetcheck', 'Contributor');
+				default: return t('budgetcheck', 'Viewer');
+			}
+		};
+		const syncInviteButtonLabel = () => {
+			btn.textContent = picked
+				? t('budgetcheck', 'Add selected user as {role}').replace('{role}', roleLabel(roleSel.value))
+				: t('budgetcheck', 'Add to workspace');
+		};
+		const setPicked = (next) => {
+			picked = next;
+			if (selectedEl) {
+				selectedEl.textContent = next ? (next.displayName + ' (' + next.id + ')') : '';
+			}
+			if (selectedRoleEl) {
+				selectedRoleEl.textContent = next
+					? t('budgetcheck', 'Will be added as: {role}').replace('{role}', roleLabel(roleSel.value))
+					: '';
+			}
+			if (selectedWrap) {
+				selectedWrap.hidden = !next;
+			}
+			btn.disabled = !next;
+			syncInviteButtonLabel();
+		};
 		const pickerStrings = {
 			noResults: t('budgetcheck', 'No matching accounts.'),
 			searchErrorNetwork: t('budgetcheck', 'Search could not load (network).'),
@@ -688,14 +737,38 @@
 				}
 			},
 			onPick: (item) => {
-				picked = { id: item.id, displayName: item.displayName || item.id };
-				if (selectedEl) selectedEl.textContent = picked.displayName + ' (' + picked.id + ')';
-				if (selectedWrap) selectedWrap.hidden = false;
+				setPicked({ id: item.id, displayName: item.displayName || item.id });
 			},
+		});
+		setPicked(null);
+		roleSel.addEventListener('change', () => {
+			if (picked && selectedRoleEl) {
+				selectedRoleEl.textContent = t('budgetcheck', 'Will be added as: {role}').replace('{role}', roleLabel(roleSel.value));
+			}
+			syncInviteButtonLabel();
+		});
+		q.addEventListener('input', () => {
+			// If user edits search text after selecting someone, require a fresh
+			// explicit selection to prevent adding a stale identity by mistake.
+			if (picked) {
+				setPicked(null);
+			}
+		});
+		clearBtn?.addEventListener('click', () => {
+			setPicked(null);
+			q.value = '';
+			q.focus();
 		});
 		btn.addEventListener('click', async () => {
 			if (!picked) {
 				Msg.announce(t('budgetcheck', 'Pick a user.'), 'warning');
+				q.focus();
+				return;
+			}
+			if (currentMemberUserIds().has(picked.id)) {
+				Msg.announce(t('budgetcheck', 'That user is already in the list.'), 'warning');
+				setPicked(null);
+				q.value = '';
 				q.focus();
 				return;
 			}
@@ -706,15 +779,16 @@
 					role: roleSel.value,
 				});
 				Msg.announce(t('budgetcheck', 'Member added.'), 'success');
-				picked = null;
+				setPicked(null);
+				roleSel.value = 'viewer';
 				q.value = '';
-				if (selectedEl) selectedEl.textContent = '';
-				if (selectedWrap) selectedWrap.hidden = true;
 				loadMembers();
 			} catch (err) {
 				Msg.handleApiError(err, { reloadOnConflict: false });
 			} finally {
-				btn.disabled = false;
+				if (!picked) {
+					btn.disabled = true;
+				}
 			}
 		});
 	}

@@ -95,10 +95,23 @@
 	function renderTxListItem(tx) {
 		const directionLabel = tx.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense');
 		const amount = Money.formatEnvelope(tx.amount, Ws.htmlLang);
+		const metaParts = [Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang), directionLabel];
+		if (tx.entryAmountBasis === 'gross') metaParts.push(t('budgetcheck', 'Gross'));
+		if (tx.entryAmountBasis === 'net') metaParts.push(t('budgetcheck', 'Net'));
+		if (Number.isInteger(tx.vatRateBp)) metaParts.push(t('budgetcheck', 'VAT {rate}%').replace('{rate}', (tx.vatRateBp / 100).toString()));
 		return C.createElement('li', { class: 'bc-tx-list__item' }, [
 			C.createElement('div', null, [
 				C.createElement('div', { class: 'bc-tx-list__title', text: tx.title }),
-				C.createElement('div', { class: 'bc-tx-list__meta', text: `${Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang)} · ${directionLabel}` }),
+				C.createElement('div', { class: 'bc-tx-list__meta', text: metaParts.join(' · ') }),
+				(tx.entryAmountBasis && tx.entryAmountBasis !== 'simple' && tx.net && tx.vat && tx.gross)
+					? C.createElement('div', {
+						class: 'bc-tx-list__meta',
+						text: t('budgetcheck', 'Net {net} · VAT {vat} · Gross {gross}')
+							.replace('{net}', Money.formatEnvelope(tx.net, Ws.htmlLang))
+							.replace('{vat}', Money.formatEnvelope(tx.vat, Ws.htmlLang))
+							.replace('{gross}', Money.formatEnvelope(tx.gross, Ws.htmlLang)),
+					})
+					: null,
 			]),
 			C.createElement('div', {
 				class: 'bc-tx-list__amount ' + (tx.direction === 'income' ? 'bc-tx-amount--income' : 'bc-tx-amount--expense'),
@@ -114,6 +127,15 @@
 		tiles.push(makeTile(t('budgetcheck', 'Income'), totals.income));
 		tiles.push(makeTile(t('budgetcheck', 'Expenses'), totals.expense));
 		tiles.push(makeTile(t('budgetcheck', 'Net result'), totals.netResult, { primary: true }));
+		if (totals.tax && totals.taxBasis) {
+			tiles.push(makeTile(t('budgetcheck', 'Tax net total'), totals.tax.net));
+			tiles.push(makeTile(t('budgetcheck', 'Tax VAT total'), totals.tax.vat));
+			tiles.push(makeTile(
+				t('budgetcheck', 'Tax gross total'),
+				totals.tax.gross,
+				{ hint: t('budgetcheck', 'Budget basis: {basis}').replace('{basis}', totals.taxBasis === 'net' ? t('budgetcheck', 'Net') : t('budgetcheck', 'Gross')) }
+			));
+		}
 		if (isHousehold) {
 			tiles.push(makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget));
 			tiles.push(makeTile(t('budgetcheck', 'Available after savings'), totals.availableAfterSavings, { hint: t('budgetcheck', 'After income − expenses − savings target') }));

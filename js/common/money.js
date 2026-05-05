@@ -75,5 +75,27 @@
 		return minor;
 	}
 
-	window.BudgetCheckMoney = { formatEnvelope, parseHuman };
+	function formatMinor(minor, currency, locale, decimalsOverride) {
+		const code = String(currency || 'EUR').toUpperCase();
+		const decimals = Number.isInteger(decimalsOverride)
+			? decimalsOverride
+			: (code === 'JPY' ? 0 : 2);
+		return formatEnvelope({ minor, currency: code, decimals }, locale);
+	}
+
+	function convertTaxPreview(amountMinor, vatRateBp, basis) {
+		const amount = Number(amountMinor || 0);
+		const rate = Number(vatRateBp || 0);
+		if (basis === 'net') {
+			const vat = Math.round((amount * rate) / 10000);
+			return { net: amount, vat, gross: amount + vat };
+		}
+		if (basis === 'gross') {
+			const net = Math.round((amount * 10000) / (10000 + rate));
+			return { net, vat: amount - net, gross: amount };
+		}
+		return { net: amount, vat: 0, gross: amount };
+	}
+
+	window.BudgetCheckMoney = { formatEnvelope, parseHuman, formatMinor, convertTaxPreview };
 })();

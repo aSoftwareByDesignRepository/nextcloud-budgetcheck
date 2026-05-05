@@ -91,6 +91,18 @@
 				C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
 			]));
 		});
+		if (totals.tax && totals.taxBasis) {
+			[
+				[t('budgetcheck', 'Tax net total'), totals.tax.net],
+				[t('budgetcheck', 'Tax VAT total'), totals.tax.vat],
+				[t('budgetcheck', 'Tax gross total'), totals.tax.gross],
+			].forEach(([label, env]) => {
+				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
+					C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
+					C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
+				]));
+			});
+		}
 	}
 
 	function renderWarnings(section, list, warnings) {

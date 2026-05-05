@@ -89,6 +89,7 @@ $canManage = !empty($_['canManageWorkspace']);
 						<input type="checkbox" name="taxModeEnabled" value="1" <?php p($canManage ? '' : 'disabled'); ?>>
 						<span class="bc-boolean-control__text"><?php p($l->t('Enable tax mode for this workspace')); ?></span>
 					</span>
+					<span class="bc-field__hint"><?php p($l->t('When disabled, new entries are stored without net/VAT/gross split. Existing tax split values are removed automatically when you save disabled mode.')); ?></span>
 				</label>
 				<label class="bc-field">
 					<span class="bc-field__label"><?php p($l->t('Budget basis')); ?></span>
@@ -96,6 +97,7 @@ $canManage = !empty($_['canManageWorkspace']);
 						<option value="gross"><?php p($l->t('Gross')); ?></option>
 						<option value="net"><?php p($l->t('Net')); ?></option>
 					</select>
+					<span class="bc-field__hint"><?php p($l->t('This decides which value counts against budgets and project cap when a booking has tax split (net or gross entry).')); ?></span>
 				</label>
 				<label class="bc-field">
 					<span class="bc-field__label"><?php p($l->t('Default VAT rate')); ?></span>
@@ -112,11 +114,15 @@ $canManage = !empty($_['canManageWorkspace']);
 						<option value="2500"><?php p($l->t('25%%')); ?></option>
 						<option value="custom"><?php p($l->t('Custom…')); ?></option>
 					</select>
+					<span class="bc-field__hint"><?php p($l->t('Used as default in transaction dialogs when tax entry basis is net or gross.')); ?></span>
 				</label>
 				<label class="bc-field" data-bc-vat-custom-wrap hidden>
 					<span class="bc-field__label"><?php p($l->t('Custom VAT (basis points)')); ?></span>
 					<input type="number" min="0" max="5000" step="1" name="defaultVatRateBp" class="bc-input" data-bc-vat-custom <?php p($canManage ? '' : 'disabled'); ?>>
 				</label>
+				<p class="bc-tax-help bc-field__hint bc-field__hint--block" data-bc-tax-preview-summary>
+					<?php p($l->t('If Budget basis is Net, budgets and project cap use net values. If Budget basis is Gross, they use gross values.')); ?>
+				</p>
 				<?php if ($canManage): ?>
 					<div class="bc-form-actions">
 						<button type="submit" class="button primary"><?php p($l->t('Save tax settings')); ?></button>
@@ -206,7 +212,7 @@ $canManage = !empty($_['canManageWorkspace']);
 				</header>
 				<div class="bc-member-invite" data-bc-member-invite aria-labelledby="bc-member-invite-title">
 					<h3 id="bc-member-invite-title" class="bc-member-invite__title"><?php p($l->t('Invite a member')); ?></h3>
-					<p id="bc-member-invite-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Type at least two characters to search.')); ?></p>
+					<p id="bc-member-invite-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Type at least two characters to search. Add users one by one, choosing a role for the selected user each time.')); ?></p>
 					<div class="bc-member-invite__grid">
 						<div class="bc-entity-picker bc-member-invite__search">
 							<label for="bc-member-invite-q" class="bc-sr-only"><?php p($l->t('Search directory for a user to add')); ?></label>
@@ -214,7 +220,7 @@ $canManage = !empty($_['canManageWorkspace']);
 							<div id="bc-member-invite-suggest" class="bc-entity-picker__suggest" hidden aria-live="polite"></div>
 						</div>
 						<label class="bc-field bc-member-invite__role">
-							<span class="bc-field__label"><?php p($l->t('Role')); ?></span>
+							<span class="bc-field__label"><?php p($l->t('Role for selected user')); ?></span>
 							<select id="bc-member-invite-role" class="bc-input" data-bc-member-invite-role>
 								<option value="viewer"><?php p($l->t('Viewer')); ?></option>
 								<option value="contributor"><?php p($l->t('Contributor')); ?></option>
@@ -225,9 +231,16 @@ $canManage = !empty($_['canManageWorkspace']);
 							<?php p($l->t('Add to workspace')); ?>
 						</button>
 					</div>
-					<p class="bc-field__hint" data-bc-member-selected-wrap hidden role="status" aria-live="polite">
-						<span data-bc-member-selected></span>
-					</p>
+					<div class="bc-member-picked" data-bc-member-selected-wrap hidden role="status" aria-live="polite">
+						<p class="bc-member-picked__label"><?php p($l->t('Selected user')); ?></p>
+						<div class="bc-member-picked__row">
+							<div>
+								<p class="bc-member-picked__value" data-bc-member-selected></p>
+								<p class="bc-member-picked__meta" data-bc-member-selected-role></p>
+							</div>
+							<button type="button" class="button bc-member-picked__clear" data-bc-action="member-invite-clear"><?php p($l->t('Clear selection')); ?></button>
+						</div>
+					</div>
 				</div>
 				<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Members')); ?>" tabindex="0">
 					<table class="bc-table bc-members-table">

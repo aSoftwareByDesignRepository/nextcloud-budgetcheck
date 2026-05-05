@@ -582,6 +582,42 @@
 	min-height: 44px;
 	white-space: nowrap;
 }
+.bc-member-picked {
+	margin-top: var(--bc-space-3);
+	padding: var(--bc-space-3);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-card);
+}
+.bc-member-picked__label {
+	margin: 0 0 var(--bc-space-1);
+	font-size: var(--bc-fs-xs);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--bc-muted);
+}
+.bc-member-picked__row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--bc-space-2);
+	flex-wrap: wrap;
+}
+.bc-member-picked__value {
+	margin: 0;
+	font-size: var(--bc-fs-md);
+	font-weight: 600;
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-member-picked__meta {
+	margin: 4px 0 0;
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+}
+.bc-member-picked__clear {
+	min-height: 44px;
+}
 
 /* Empty / hint cards */
 .bc-empty p, .bc-empty h2 { margin: 0 0 var(--bc-space-3); }
@@ -1049,6 +1085,13 @@
 	line-height: var(--bc-line-tight);
 	color: var(--color-main-text, #1d1d1d);
 	border-inline-start: 3px solid transparent;
+}
+.bc-tx-amount__meta {
+	margin-top: 4px;
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+	line-height: 1.35;
+	white-space: normal;
 }
 .bc-table td.bc-tx-amount--income .bc-tx-amount__value {
 	background: var(--bc-amount-income-surface);
