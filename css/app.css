@@ -1891,8 +1891,26 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 .bc-tx-filterbar__search-input {
 	width: 100%;
 	min-height: 44px;
-	padding-inline-start: calc(var(--bc-space-3) + 18px + var(--bc-space-2));
+	/* Reserve stable room for custom leading icon in every browser. */
+	padding-inline-start: calc(var(--bc-space-4) + 18px + var(--bc-space-3));
 	padding-inline-end: calc(var(--bc-space-3) + 28px);
+	/* Fallback for engines with incomplete logical padding support. */
+	padding-left: calc(var(--bc-space-4) + 18px + var(--bc-space-3));
+	padding-right: calc(var(--bc-space-3) + 28px);
+	appearance: none;
+	-webkit-appearance: none;
+}
+#app-content.bc-app .bc-tx-filterbar__search .bc-tx-filterbar__search-input {
+	/* Override NC/browser search defaults that can reinsert icon + reset padding. */
+	background-image: none !important;
+	padding-left: calc(var(--bc-space-4) + 18px + var(--bc-space-3)) !important;
+	padding-right: calc(var(--bc-space-3) + 28px) !important;
+	text-indent: 0;
+}
+.bc-tx-filterbar__search-input::-webkit-search-decoration,
+.bc-tx-filterbar__search-input::-webkit-search-results-button,
+.bc-tx-filterbar__search-input::-webkit-search-results-decoration {
+	display: none;
 }
 .bc-tx-filterbar__search-input::-webkit-search-cancel-button { display: none; }
 .bc-tx-filterbar__search-clear {

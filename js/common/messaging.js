@@ -72,7 +72,7 @@
 			announce(t('budgetcheck', 'This action does not apply to this workspace type.'), 'warning');
 			return;
 		}
-		announce(message, 'error');
+		announce(t('budgetcheck', message), 'error');
 	}
 
 	window.BudgetCheckMessaging = { announce, handleApiError };

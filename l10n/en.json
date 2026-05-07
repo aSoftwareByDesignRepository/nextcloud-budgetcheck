@@ -383,6 +383,8 @@
 		"Rule created.": "Rule created.",
 		"Rule deleted.": "Rule deleted.",
 		"Rule updated.": "Rule updated.",
+		"Rule has reached its end date.": "Rule has reached its end date.",
+		"Rule has no end date.": "Rule has no end date.",
 		"Save": "Save",
 		"Save app policy": "Save app policy",
 		"Save changes": "Save changes",
