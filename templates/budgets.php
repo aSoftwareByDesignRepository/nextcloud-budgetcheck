@@ -46,13 +46,8 @@ $canManage = !empty($_['canManageWorkspace']);
 		<header class="bc-section__header">
 			<div>
 				<h2 id="bc-budget-table-title"><?php p($l->t('Category budgets')); ?></h2>
-				<p class="bc-section__sub"><?php p($l->t('Plan a target amount per category. Leave at 0 to skip.')); ?></p>
+				<p class="bc-section__sub"><?php p($l->t('Plan a target amount per category. Workspace defaults are prefilled; this page overrides one month.')); ?></p>
 			</div>
-			<?php if ($canManage): ?>
-				<button type="button" class="button primary" data-bc-action="save-budgets" disabled>
-					<?php p($l->t('Save changes')); ?>
-				</button>
-			<?php endif; ?>
 		</header>
 		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Budgets')); ?>" tabindex="0">
 			<table class="bc-table bc-budget-table">
@@ -70,6 +65,13 @@ $canManage = !empty($_['canManageWorkspace']);
 				</tbody>
 			</table>
 		</div>
+		<?php if ($canManage): ?>
+			<div class="bc-form-actions">
+				<button type="button" class="button primary" data-bc-action="save-budgets" disabled>
+					<?php p($l->t('Save changes')); ?>
+				</button>
+			</div>
+		<?php endif; ?>
 	</section>
 
 	<?php if ($workspace['type'] === 'household'): ?>
@@ -110,6 +112,7 @@ $canManage = !empty($_['canManageWorkspace']);
 						</label>
 					</div>
 				</div>
+				<p class="bc-field__hint bc-field__hint--block" data-bc-savings-source hidden></p>
 				<?php if ($canManage): ?>
 					<div class="bc-form-actions">
 						<button type="submit" class="button primary"><?php p($l->t('Save savings target')); ?></button>

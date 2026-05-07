@@ -7,6 +7,7 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
+	const INTERNAL_UNCATEGORIZED_GROUP = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
 
 	const state = { yearMonth: Dates.currentYearMonth(), summary: null };
 	let periodPicker = null;
@@ -38,8 +39,10 @@
 		}
 		const closeBtn = document.querySelector('[data-bc-action="close-month"]');
 		const reopenBtn = document.querySelector('[data-bc-action="reopen-month"]');
+		const budgetOverridesBtn = document.querySelector('[data-bc-action="open-month-budget-overrides"]');
 		if (closeBtn) closeBtn.addEventListener('click', () => closeMonth());
 		if (reopenBtn) reopenBtn.addEventListener('click', () => reopenMonth());
+		if (budgetOverridesBtn) budgetOverridesBtn.addEventListener('click', () => openBudgetOverridesModal());
 		load();
 	});
 
@@ -50,7 +53,11 @@
 		const warningsSection = document.querySelector('[data-bc-warnings]');
 		const warningsList = document.querySelector('[data-bc-warnings-list]');
 		const tbody = document.querySelector('[data-bc-month-budget-rows]');
+		const activityGrid = document.querySelector('[data-bc-month-activity-grid]');
+		const txRows = document.querySelector('[data-bc-month-transactions-rows]');
+		const txLink = document.querySelector('[data-bc-month-transactions-link]');
 		grid?.setAttribute('aria-busy', 'true');
+		activityGrid?.setAttribute('aria-busy', 'true');
 		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
@@ -67,11 +74,19 @@
 			C.renderMonthlyLedgerHelp(ledgerEl, state.summary, state.yearMonth, Ws.htmlLang);
 			renderWarnings(warningsSection, warningsList, state.summary.warnings || []);
 			renderConsumption(tbody, state.summary.budget || {});
+			renderActivity(activityGrid, state.summary.activity || null);
+			renderMonthTransactions(txRows, state.summary.monthTransactions || []);
+			if (txLink && ws) {
+				txLink.href = '/index.php/apps/budgetcheck/transactions?workspaceId='
+					+ encodeURIComponent(String(ws.id))
+					+ '&yearMonth=' + encodeURIComponent(String(state.yearMonth));
+			}
 			updateActionButtons(state.summary.isClosed);
 		} catch (err) {
 			Msg.handleApiError(err);
 		} finally {
 			grid?.setAttribute('aria-busy', 'false');
+			activityGrid?.setAttribute('aria-busy', 'false');
 		}
 	}
 
@@ -91,6 +106,26 @@
 				C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
 			]));
 		});
+		const budget = summary.budget || null;
+		if (budget) {
+			const saldoMinor = Number.parseInt(String(budget.remaining?.minor ?? 0), 10) || 0;
+			const unspentEnv = saldoMinor > 0
+				? budget.remaining
+				: { minor: 0, currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 };
+			const overspentEnv = saldoMinor < 0
+				? { minor: Math.abs(saldoMinor), currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 }
+				: { minor: 0, currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 };
+			[
+				[t('budgetcheck', 'Budget saldo'), budget.remaining, true],
+				[t('budgetcheck', 'Not spent (under budget)'), unspentEnv],
+				[t('budgetcheck', 'Overspent (over budget)'), overspentEnv],
+			].forEach(([label, env, primary]) => {
+				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
+					C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
+					C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
+				]));
+			});
+		}
 		if (totals.tax && totals.taxBasis) {
 			[
 				[t('budgetcheck', 'Tax net total'), totals.tax.net],
@@ -136,15 +171,256 @@
 		}
 		rows.forEach((row) => {
 			const tr = C.createElement('tr');
-			tr.appendChild(C.createElement('td', { text: row.name }));
-			tr.appendChild(C.createElement('td', { class: 'bc-table__col--num', text: Money.formatEnvelope(row.planned, Ws.htmlLang) }));
-			tr.appendChild(C.createElement('td', { class: 'bc-table__col--num', text: Money.formatEnvelope(row.actual, Ws.htmlLang) }));
-			const remainingMinor = (row.planned?.minor || 0) - (row.actual?.minor || 0);
+			const hasBudget = !!row.hasBudget && !!row.planned;
+			const actualMinor = Number.parseInt(String(row.actual?.minor ?? 0), 10) || 0;
+			const plannedMinor = hasBudget ? (Number.parseInt(String(row.planned?.minor ?? 0), 10) || 0) : null;
+			const remainingMinor = hasBudget && row.remaining
+				? (Number.parseInt(String(row.remaining.minor ?? 0), 10) || 0)
+				: null;
+			const direction = String(row.direction || '');
+			const categoryLink = C.createElement('a', {
+				href: monthlyCategoryLink(row.categoryId),
+				text: row.name,
+				attrs: { title: t('budgetcheck', 'Open in transactions view') },
+			});
+			tr.appendChild(C.createElement('td', null, [categoryLink]));
 			tr.appendChild(C.createElement('td', {
-				class: 'bc-table__col--num' + (remainingMinor < 0 ? ' bc-tx-amount--expense' : ''),
-				text: Money.formatEnvelope(row.remaining || { minor: remainingMinor, currency: ws.currencyCode, decimals: 2 }, Ws.htmlLang),
+				class: 'bc-table__col--num',
+				text: hasBudget ? Money.formatEnvelope(row.planned, Ws.htmlLang) : t('budgetcheck', 'No target set'),
+			}));
+			let actualClass = 'bc-table__col--num';
+			if (direction === 'income' && actualMinor > 0) {
+				actualClass += ' bc-tx-amount--income';
+			} else if (direction === 'expense' && actualMinor > 0) {
+				actualClass += ' bc-tx-amount--expense';
+			}
+			tr.appendChild(C.createElement('td', { class: actualClass, text: Money.formatEnvelope(row.actual, Ws.htmlLang) }));
+			tr.appendChild(C.createElement('td', {
+				class: 'bc-table__col--num'
+					+ (remainingMinor !== null && remainingMinor < 0 ? ' bc-tx-amount--expense' : '')
+					+ (remainingMinor !== null && remainingMinor > 0 ? ' bc-tx-amount--income' : ''),
+				text: remainingMinor === null
+					? '—'
+					: Money.formatEnvelope(
+						row.remaining || { minor: remainingMinor, currency: ws.currencyCode, decimals: ws.currencyDecimals || 2 },
+						Ws.htmlLang
+					),
 			}));
 			tbody.appendChild(tr);
+		});
+	}
+
+	function monthlyCategoryLink(categoryId) {
+		const wsId = ws ? String(ws.id) : '';
+		const ym = String(state.yearMonth || '');
+		return '/index.php/apps/budgetcheck/transactions?workspaceId='
+			+ encodeURIComponent(wsId)
+			+ '&yearMonth=' + encodeURIComponent(ym)
+			+ '&categoryId=' + encodeURIComponent(String(categoryId || ''));
+	}
+
+	function renderActivity(grid, activity) {
+		if (!grid) return;
+		grid.replaceChildren();
+		if (!activity) {
+			grid.appendChild(C.createElement('p', { class: 'bc-loading', text: t('budgetcheck', 'No data available.') }));
+			return;
+		}
+		const first = activity.firstDate ? Dates.formatDisplayDate(activity.firstDate, Ws.htmlLang) : '—';
+		const last = activity.lastDate ? Dates.formatDisplayDate(activity.lastDate, Ws.htmlLang) : '—';
+		[
+			[t('budgetcheck', 'Total bookings'), String(activity.count || 0), true],
+			[t('budgetcheck', 'Income bookings'), String(activity.incomeCount || 0)],
+			[t('budgetcheck', 'Expense bookings'), String(activity.expenseCount || 0)],
+			[t('budgetcheck', 'Special bookings'), String(activity.specialCount || 0)],
+			[t('budgetcheck', 'First booking'), first],
+			[t('budgetcheck', 'Last booking'), last],
+		].forEach(([label, value, primary]) => {
+			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
+				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
+				C.createElement('div', { class: 'bc-summary-tile__value', text: value }),
+			]));
+		});
+	}
+
+	function renderMonthTransactions(tbody, rows) {
+		if (!tbody) return;
+		tbody.replaceChildren();
+		if (!rows.length) {
+			tbody.appendChild(C.createElement('tr', null, [
+				C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'No transactions this month.') }),
+			]));
+			return;
+		}
+		rows.forEach((row) => {
+			const tr = C.createElement('tr');
+			tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(row.date, Ws.htmlLang) }));
+			tr.appendChild(C.createElement('td', { text: row.title || ('#' + row.id) }));
+			tr.appendChild(C.createElement('td', { text: row.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
+			const amountClass = 'bc-table__col--num ' + (row.direction === 'income' ? 'bc-tx-amount--income' : 'bc-tx-amount--expense');
+			tr.appendChild(C.createElement('td', { class: amountClass, text: Money.formatEnvelope(row.amount, Ws.htmlLang) }));
+			tr.appendChild(C.createElement('td', { text: row.isSpecial ? t('budgetcheck', 'Special') : '—' }));
+			tbody.appendChild(tr);
+		});
+	}
+
+	function activeDecimals() {
+		if (!ws) return 2;
+		return typeof ws.currencyDecimals === 'number' ? ws.currencyDecimals : (ws.currencyCode === 'JPY' ? 0 : 2);
+	}
+
+	async function openBudgetOverridesModal() {
+		if (!ws || !Ws.canManage) return;
+		let categories = [];
+		let budgets = [];
+		let defaults = [];
+		try {
+			const data = await Promise.all([
+				Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id }),
+				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth }),
+				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: ws.id }),
+			]);
+			categories = (data[0]?.categories || []).filter(
+				(cat) => cat.isActive && cat.type === 'expense' && cat.groupKey !== INTERNAL_UNCATEGORIZED_GROUP,
+			);
+			budgets = data[1]?.budgets || [];
+			defaults = data[2]?.defaults || [];
+		} catch (err) {
+			Msg.handleApiError(err);
+			return;
+		}
+
+		const monthPlannedByCategory = new Map();
+		budgets.forEach((row) => {
+			if (row && Number.isInteger(row.categoryId) && row.planned) {
+				monthPlannedByCategory.set(row.categoryId, row.planned);
+			}
+		});
+		const defaultPlannedByCategory = new Map();
+		defaults.forEach((row) => {
+			if (row && Number.isInteger(row.categoryId) && row.planned) {
+				defaultPlannedByCategory.set(row.categoryId, row.planned);
+			}
+		});
+		const actualByCategory = new Map();
+		const budgetRows = state.summary?.budget?.byCategory || [];
+		budgetRows.forEach((row) => {
+			if (row && Number.isInteger(row.categoryId) && row.actual) {
+				actualByCategory.set(row.categoryId, row.actual);
+			}
+		});
+		const dirty = new Map();
+		const decimals = activeDecimals();
+
+		C.openModal({
+			title: t('budgetcheck', 'Monthly budget overrides'),
+			primaryLabel: t('budgetcheck', 'Save changes'),
+			dialogClass: 'bc-modal__dialog--wide',
+			render: () => {
+				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form bc-modal__form--budget-overrides' });
+				form.appendChild(C.createElement('p', {
+					class: 'bc-field__hint bc-field__hint--block',
+					text: t('budgetcheck', 'Set only exceptions for this month. Leave blank to use workspace defaults.'),
+				}));
+				const scroll = C.createElement('div', { class: 'bc-table-scroll', attrs: { role: 'region', tabindex: '0', 'aria-label': t('budgetcheck', 'Monthly overrides') } });
+				const table = C.createElement('table', { class: 'bc-table bc-budget-table' });
+				table.appendChild(C.createElement('thead', null, [
+					C.createElement('tr', null, [
+						C.createElement('th', { attrs: { scope: 'col' }, text: t('budgetcheck', 'Category') }),
+						C.createElement('th', { attrs: { scope: 'col' }, class: 'bc-table__col--num', text: t('budgetcheck', 'Default') }),
+						C.createElement('th', { attrs: { scope: 'col' }, class: 'bc-table__col--num', text: t('budgetcheck', 'Override') }),
+						C.createElement('th', { attrs: { scope: 'col' }, class: 'bc-table__col--num', text: t('budgetcheck', 'Actual') }),
+						C.createElement('th', { attrs: { scope: 'col' }, text: t('budgetcheck', 'Action') }),
+					]),
+				]));
+				const tbody = C.createElement('tbody');
+				if (!categories.length) {
+					tbody.appendChild(C.createElement('tr', null, [
+						C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'No expense categories available.') }),
+					]));
+				} else {
+					categories.forEach((cat) => {
+						const defaultEnv = defaultPlannedByCategory.get(cat.id) || null;
+						const plannedEnv = monthPlannedByCategory.get(cat.id) || null;
+						const actualEnv = actualByCategory.get(cat.id) || { minor: 0, currency: ws.currencyCode, decimals };
+						const tr = C.createElement('tr');
+						tr.appendChild(C.createElement('td', { text: cat.name }));
+						tr.appendChild(C.createElement('td', {
+							class: 'bc-table__col--num',
+							text: defaultEnv ? Money.formatEnvelope(defaultEnv, Ws.htmlLang) : '—',
+						}));
+						const input = C.createElement('input', {
+							type: 'text',
+							inputmode: 'decimal',
+							class: 'bc-input',
+							value: plannedEnv ? (plannedEnv.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',') : '',
+							attrs: { 'aria-label': t('budgetcheck', 'Override amount for {category}').replace('{category}', cat.name) },
+						});
+						input.addEventListener('input', () => {
+							dirty.set(cat.id, input.value);
+						});
+						tr.appendChild(C.createElement('td', { class: 'bc-table__col--num' }, [input]));
+						tr.appendChild(C.createElement('td', {
+							class: 'bc-table__col--num',
+							text: Money.formatEnvelope(actualEnv, Ws.htmlLang),
+						}));
+						const resetBtn = C.createElement('button', {
+							type: 'button',
+							class: 'button',
+							text: t('budgetcheck', 'Use workspace baseline'),
+						});
+						resetBtn.addEventListener('click', () => {
+							input.value = '';
+							dirty.set(cat.id, '');
+							Msg.announce(
+								t('budgetcheck', 'Monthly exception cleared for {category}.')
+									.replace('{category}', cat.name),
+								'success',
+							);
+						});
+						tr.appendChild(C.createElement('td', null, [resetBtn]));
+						tbody.appendChild(tr);
+					});
+				}
+				table.appendChild(tbody);
+				scroll.appendChild(table);
+				form.appendChild(scroll);
+				form._collect = () => {
+					const rows = [];
+					dirty.forEach((raw, categoryId) => {
+						const value = String(raw || '').trim();
+						if (value === '') {
+							rows.push({ categoryId, plannedMinor: 0 });
+						} else {
+							rows.push({ categoryId, plannedMinor: Money.parseHuman(value, decimals) });
+						}
+					});
+					return rows;
+				};
+				return form;
+			},
+			onSubmit: async ({ close, body }) => {
+				const form = body;
+				const rows = form && form._collect ? form._collect() : [];
+				if (!rows.length) {
+					Msg.announce(t('budgetcheck', 'No changes to save.'), 'success');
+					close(true);
+					return true;
+				}
+				try {
+					await Api.post('/apps/budgetcheck/api/budgets/bulk-upsert', {
+						workspaceId: ws.id,
+						yearMonth: state.yearMonth,
+						rows,
+					});
+					Msg.announce(t('budgetcheck', 'Monthly overrides saved.'), 'success');
+					await load();
+					close(true);
+				} catch (err) {
+					Msg.handleApiError(err);
+					return false;
+				}
+			},
 		});
 	}
 

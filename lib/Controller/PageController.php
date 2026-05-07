@@ -326,6 +326,9 @@ class PageController extends Controller
 	 */
 	private function registerFrontEndAssets(string $pageScript): void {
 		Util::addStyle(Application::APP_ID, 'app');
+		if ($pageScript === 'transactions') {
+			Util::addStyle(Application::APP_ID, 'transactions-v106');
+		}
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
 		Util::addScript(Application::APP_ID, 'common/dates');
@@ -333,11 +336,11 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
-		Util::addScript(Application::APP_ID, 'common/workspace');
+		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
 			Util::addScript(Application::APP_ID, 'common/entity-picker');
 		}
-		Util::addScript(Application::APP_ID, $pageScript);
+		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'transactions-v106' : $pageScript);
 	}
 
 	/**
@@ -357,7 +360,7 @@ class PageController extends Controller
 		$items = [
 			['id' => 'dashboard',    'label' => $this->l10n->t('Dashboard'),      'icon' => 'layout-grid',    'route' => 'budgetcheck.page.dashboard',    'show' => true,                                 'hint' => $this->l10n->t('Quick overview')],
 			['id' => 'transactions', 'label' => $this->l10n->t('Transactions'),   'icon' => 'list',           'route' => 'budgetcheck.page.transactions', 'show' => $workspace !== null,                  'hint' => $this->l10n->t('Income and expenses')],
-			['id' => 'budgets',      'label' => $this->l10n->t('Budgets'),        'icon' => 'wallet',         'route' => 'budgetcheck.page.budgets',      'show' => $workspace !== null,                  'hint' => $this->l10n->t('Monthly planning')],
+			['id' => 'budgets',      'label' => $this->l10n->t('Budgets'),        'icon' => 'wallet',         'route' => 'budgetcheck.page.budgets',      'show' => false,                                 'hint' => $this->l10n->t('Monthly planning')],
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],

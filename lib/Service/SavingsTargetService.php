@@ -40,7 +40,7 @@ class SavingsTargetService
 		$ym = $this->validateYearMonth($yearMonth);
 		$row = $this->loadRow($workspaceId, $ym);
 		if ($row === null) {
-			return null;
+			return $this->loadWorkspaceDefault($workspaceId, $ym, $currencyCode);
 		}
 		return $this->hydrate($row, $currencyCode);
 	}
@@ -158,6 +158,37 @@ class SavingsTargetService
 			'target' => $absolute === null ? null : $this->money->envelope($absolute, $currencyCode),
 			'updatedBy' => (string)$row['updated_by'],
 			'updatedAt' => (string)$row['updated_at'],
+		];
+	}
+
+	private function loadWorkspaceDefault(int $workspaceId, string $yearMonth, string $currencyCode): ?array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('default_savings_target_mode', 'default_savings_target_percent_bp', 'default_savings_target_minor')
+			->from('bc_workspaces')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		if ($row === false) {
+			return null;
+		}
+		$mode = $row['default_savings_target_mode'] ?? null;
+		if ($mode === null || $mode === '') {
+			return null;
+		}
+		$minor = $row['default_savings_target_minor'] === null ? null : (int)$row['default_savings_target_minor'];
+		return [
+			'id' => null,
+			'workspaceId' => $workspaceId,
+			'yearMonth' => $yearMonth,
+			'targetMode' => (string)$mode,
+			'targetPercentBp' => $row['default_savings_target_percent_bp'] === null ? null : (int)$row['default_savings_target_percent_bp'],
+			'targetMinor' => $minor,
+			'target' => $minor === null ? null : $this->money->envelope($minor, $currencyCode),
+			'updatedBy' => null,
+			'updatedAt' => null,
+			'inheritedFromWorkspaceDefault' => true,
 		];
 	}
 

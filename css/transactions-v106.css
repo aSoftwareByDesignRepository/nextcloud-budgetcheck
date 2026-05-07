@@ -1,3 +1,4 @@
+/* Self-contained BudgetCheck transactions stylesheet. */
 /*
  * BudgetCheck design system.
  *
@@ -1526,9 +1527,6 @@
 	overflow: auto;
 	padding: var(--bc-space-5);
 }
-.bc-modal__dialog--wide {
-	max-width: min(1080px, 96vw);
-}
 .bc-modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--bc-space-3); }
 .bc-modal__close {
 	display: inline-flex;
@@ -1547,28 +1545,6 @@
 	font: inherit;
 }
 .bc-modal__close:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent); }
-
-/* Budget override modal: use available width, prevent clipped table columns */
-.bc-modal__form--budget-overrides {
-	width: 100%;
-	min-width: 0;
-	grid-template-columns: 1fr;
-}
-.bc-modal__form--budget-overrides .bc-table-scroll {
-	grid-column: 1 / -1;
-	width: 100%;
-	max-width: 100%;
-}
-.bc-modal__form--budget-overrides .bc-table-scroll table {
-	width: 100%;
-	min-width: 0;
-}
-.bc-modal__form--budget-overrides .bc-input {
-	width: 100%;
-}
-.bc-modal__form--budget-overrides .bc-table-scroll {
-	margin-bottom: var(--bc-space-4);
-}
 
 /* Toasts */
 .bc-toasts {

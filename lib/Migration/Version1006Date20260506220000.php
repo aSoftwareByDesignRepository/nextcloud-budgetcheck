@@ -39,6 +39,7 @@ class Version1006Date20260506220000 extends SimpleMigrationStep
 		'bc_transactions',
 		'bc_recurring_rules',
 		'bc_budgets',
+		'bc_budget_defaults',
 		'bc_savings_targets',
 		'bc_monthly_snapshots',
 		'bc_audit_log',

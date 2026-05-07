@@ -78,6 +78,7 @@
 			primaryLabel: t('budgetcheck', 'Save'),
 			cancelLabel: t('budgetcheck', 'Cancel'),
 			danger: false,
+			dialogClass: '',
 			onSubmit: null,
 			onCancel: null,
 		}, options || {});
@@ -89,7 +90,7 @@
 
 		const labelId = 'bc-modal-title-' + Math.random().toString(36).slice(2);
 		const dialog = createElement('div', {
-			class: 'bc-modal__dialog',
+			class: ('bc-modal__dialog ' + String(opts.dialogClass || '')).trim(),
 			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
 		});
 		const header = createElement('div', { class: 'bc-modal__header' }, [

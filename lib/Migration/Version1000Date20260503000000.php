@@ -47,6 +47,9 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			$t->addColumn('project_start_date', 'date', ['notnull' => false]);
 			$t->addColumn('project_end_date', 'date', ['notnull' => false]);
 			$t->addColumn('default_vat_rate_bp', 'integer', ['notnull' => false]);
+			$t->addColumn('default_savings_target_mode', 'string', ['length' => 16, 'notnull' => false]);
+			$t->addColumn('default_savings_target_percent_bp', 'integer', ['notnull' => false]);
+			$t->addColumn('default_savings_target_minor', 'bigint', ['notnull' => false]);
 			$t->addColumn('created_by', 'string', ['length' => 64, 'notnull' => true]);
 			$t->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
@@ -156,6 +159,19 @@ class Version1000Date20260503000000 extends SimpleMigrationStep
 			// covering index for fast lookup either way.
 			$t->addIndex(['workspace_id', 'year_month'], 'bc_bud_ws_ym_idx');
 			$t->addIndex(['workspace_id', 'category_id'], 'bc_bud_ws_cat_idx');
+		}
+
+		if (!$schema->hasTable('bc_budget_defaults')) {
+			$t = $schema->createTable('bc_budget_defaults');
+			$t->addColumn('id', 'bigint', ['autoincrement' => true, 'notnull' => true]);
+			$t->addColumn('workspace_id', 'bigint', ['notnull' => true]);
+			$t->addColumn('category_id', 'bigint', ['notnull' => true]);
+			$t->addColumn('planned_minor', 'bigint', ['notnull' => true]);
+			$t->addColumn('updated_by', 'string', ['length' => 64, 'notnull' => true]);
+			$t->addColumn('updated_at', 'datetime', ['notnull' => true]);
+			$t->setPrimaryKey(['id'], 'bc_buddef_pk');
+			$t->addUniqueIndex(['workspace_id', 'category_id'], 'bc_buddef_ws_cat_uidx');
+			$t->addIndex(['workspace_id'], 'bc_buddef_ws_idx');
 		}
 
 		if (!$schema->hasTable('bc_savings_targets')) {

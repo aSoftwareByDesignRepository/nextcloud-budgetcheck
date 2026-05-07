@@ -350,6 +350,7 @@ class ApiController extends Controller
 				'from' => $this->request->getParam('from'),
 				'to' => $this->request->getParam('to'),
 				'categoryId' => $this->intParamOrNull('categoryId'),
+				'groupKey' => $this->request->getParam('groupKey'),
 				'q' => $this->request->getParam('q'),
 				'isSpecial' => $this->boolParamOrNull('isSpecial'),
 				'uncategorized' => $this->boolParam('uncategorized'),
@@ -483,11 +484,20 @@ class ApiController extends Controller
 	{
 		$id = $this->validateId($id);
 		return $this->safe(function (string $userId) use ($id): array {
+			$payload = $this->payload();
 			$workspaceId = $this->ownerWorkspaceForRecurringRule($id);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'recurring_generate', 60, 300);
 			$ruleRow = $this->recurring->loadHydrated($id, $workspace['currencyCode']);
 			$category = $this->resolveCategory((int)$ruleRow['categoryId'], $workspaceId);
+			$mode = strtolower(trim((string)($payload['mode'] ?? 'next')));
+			if ($mode === 'full_period') {
+				$endDate = isset($ruleRow['endDate']) ? (string)$ruleRow['endDate'] : '';
+				if ($endDate === '') {
+					throw new \InvalidArgumentException('Rule has no end date.');
+				}
+				return ['generated' => $this->recurring->generate($id, $userId, $workspace, $this->transactions, $category, ['through' => $endDate])];
+			}
 			return ['transaction' => $this->recurring->generate($id, $userId, $workspace, $this->transactions, $category)];
 		});
 	}
@@ -519,6 +529,36 @@ class ApiController extends Controller
 				];
 			}
 			return $out;
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listBudgetDefaults(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			return ['defaults' => $this->budgets->listDefaults($workspaceId, $userId, $workspace['currencyCode'])];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function bulkUpsertBudgetDefaults(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$rows = $payload['rows'] ?? [];
+			if (!is_array($rows)) {
+				throw new \InvalidArgumentException('rows must be an array.');
+			}
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'budget_write', 60, 300);
+			return ['defaults' => $this->budgets->bulkUpsertDefaults($workspaceId, $userId, $rows, $workspace)];
 		});
 	}
 

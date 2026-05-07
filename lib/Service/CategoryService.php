@@ -368,8 +368,8 @@ class CategoryService
 		if (mb_strlen($value) > 64) {
 			throw new \InvalidArgumentException('groupKey must be 64 characters or fewer.');
 		}
-		if (!preg_match('/^[a-z0-9_\-]+$/i', $value)) {
-			throw new \InvalidArgumentException('groupKey may only contain letters, digits, underscore and hyphen.');
+		if (!preg_match('/^[a-z0-9_\- ]+$/i', $value)) {
+			throw new \InvalidArgumentException('groupKey may only contain letters, digits, spaces, underscore and hyphen.');
 		}
 		return $value;
 	}

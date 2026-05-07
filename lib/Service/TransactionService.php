@@ -52,7 +52,7 @@ class TransactionService
 	}
 
 	/**
-	 * @param array{from?:?string, to?:?string, categoryId?:int|null, statusId?:int|null, q?:?string, isSpecial?:bool|null, uncategorized?:bool, includeDeleted?:bool, limit?:int, offset?:int} $filters
+	 * @param array{from?:?string, to?:?string, categoryId?:int|null, groupKey?:?string, statusId?:int|null, q?:?string, isSpecial?:bool|null, uncategorized?:bool, includeDeleted?:bool, limit?:int, offset?:int} $filters
 	 */
 	public function listForWorkspace(int $workspaceId, string $userId, array $filters, array $workspace): array
 	{
@@ -63,41 +63,7 @@ class TransactionService
 		$qb->select('*')
 			->from('bc_transactions')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
-		if (empty($filters['includeDeleted'])) {
-			$qb->andWhere($qb->expr()->isNull('deleted_at'));
-		}
-		[$from, $to] = $this->resolveDateWindow($workspace, $filters);
-		if ($from !== null) {
-			$qb->andWhere($qb->expr()->gte('booking_date', $qb->createNamedParameter($from)));
-		}
-		if ($to !== null) {
-			$qb->andWhere($qb->expr()->lte('booking_date', $qb->createNamedParameter($to)));
-		}
-		$uncategorizedOnly = !empty($filters['uncategorized']);
-		if ($uncategorizedOnly) {
-			$uncatId = $this->categories->internalUncategorizedCategoryId($workspaceId);
-			if ($uncatId === null) {
-				$qb->andWhere($qb->expr()->eq('id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
-			} else {
-				$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($uncatId, \PDO::PARAM_INT)));
-				$qb->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter(self::DIRECTION_EXPENSE)));
-			}
-		} elseif (!empty($filters['categoryId'])) {
-			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter((int)$filters['categoryId'], \PDO::PARAM_INT)));
-		}
-		if (!empty($filters['statusId'])) {
-			$qb->andWhere($qb->expr()->eq('booking_status_id', $qb->createNamedParameter((int)$filters['statusId'], \PDO::PARAM_INT)));
-		}
-		if (isset($filters['isSpecial']) && $filters['isSpecial'] !== null) {
-			$qb->andWhere($qb->expr()->eq('is_special', $qb->createNamedParameter((bool)$filters['isSpecial'], \PDO::PARAM_BOOL)));
-		}
-		if (!empty($filters['q'])) {
-			$needle = '%' . $this->db->escapeLikeParameter(trim((string)$filters['q'])) . '%';
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->iLike('title', $qb->createNamedParameter($needle)),
-				$qb->expr()->iLike('notes', $qb->createNamedParameter($needle))
-			));
-		}
+		$window = $this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
 		$qb->orderBy('booking_date', 'DESC')
 			->addOrderBy('id', 'DESC')
 			->setMaxResults($limit)
@@ -115,7 +81,8 @@ class TransactionService
 			'total' => $total,
 			'limit' => $limit,
 			'offset' => $offset,
-			'window' => ['from' => $from, 'to' => $to],
+			'window' => ['from' => $window['from'], 'to' => $window['to']],
+			'analytics' => $this->analyticsForWorkspace($workspaceId, $filters, $workspace),
 		];
 	}
 
@@ -125,6 +92,134 @@ class TransactionService
 		$qb->select($qb->func()->count('*', 'count'))
 			->from('bc_transactions')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0);
+	}
+
+	private function analyticsForWorkspace(int $workspaceId, array $filters, array $workspace): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('booking_date', 'direction', 'amount_minor', 'category_id')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$window = $this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
+		$result = $qb->executeQuery();
+		$rows = [];
+		$categoryIds = [];
+		while ($row = $result->fetch()) {
+			$rows[] = $row;
+			$categoryIds[(int)$row['category_id']] = true;
+		}
+		$result->closeCursor();
+		$meta = $this->categoryMetaByIds($workspaceId, array_keys($categoryIds));
+		$income = 0;
+		$expense = 0;
+		$byGroup = [];
+		$byCategory = [];
+		$byMonth = [];
+		foreach ($rows as $row) {
+			$minor = (int)$row['amount_minor'];
+			$dir = (string)$row['direction'];
+			$cid = (int)$row['category_id'];
+			$month = substr((string)$row['booking_date'], 0, 7);
+			if ($dir === self::DIRECTION_INCOME) {
+				$income += $minor;
+			} else {
+				$expense += $minor;
+			}
+			$catMeta = $meta[$cid] ?? ['name' => '#' . $cid, 'groupKey' => null];
+			$groupKey = $catMeta['groupKey'];
+			$groupBucket = $groupKey === null || $groupKey === '' ? '__none__' : $groupKey;
+			if (!isset($byGroup[$groupBucket])) {
+				$byGroup[$groupBucket] = ['groupKey' => $groupKey, 'income' => 0, 'expense' => 0, 'count' => 0];
+			}
+			$byGroup[$groupBucket]['count']++;
+			if ($dir === self::DIRECTION_INCOME) {
+				$byGroup[$groupBucket]['income'] += $minor;
+			} else {
+				$byGroup[$groupBucket]['expense'] += $minor;
+			}
+			if (!isset($byCategory[$cid])) {
+				$byCategory[$cid] = [
+					'categoryId' => $cid,
+					'name' => $catMeta['name'],
+					'groupKey' => $groupKey,
+					'income' => 0,
+					'expense' => 0,
+					'count' => 0,
+				];
+			}
+			$byCategory[$cid]['count']++;
+			if ($dir === self::DIRECTION_INCOME) {
+				$byCategory[$cid]['income'] += $minor;
+			} else {
+				$byCategory[$cid]['expense'] += $minor;
+			}
+			if (!isset($byMonth[$month])) {
+				$byMonth[$month] = ['yearMonth' => $month, 'income' => 0, 'expense' => 0, 'count' => 0];
+			}
+			$byMonth[$month]['count']++;
+			if ($dir === self::DIRECTION_INCOME) {
+				$byMonth[$month]['income'] += $minor;
+			} else {
+				$byMonth[$month]['expense'] += $minor;
+			}
+		}
+		$toEnv = fn (int $minor): array => $this->money->envelope($minor, $workspace['currencyCode']);
+		$groupRows = array_values(array_map(function (array $row) use ($toEnv): array {
+			$net = $row['income'] - $row['expense'];
+			return [
+				'groupKey' => $row['groupKey'],
+				'income' => $toEnv($row['income']),
+				'expense' => $toEnv($row['expense']),
+				'net' => $toEnv($net),
+				'count' => $row['count'],
+			];
+		}, $byGroup));
+		usort($groupRows, static fn (array $a, array $b): int => ($b['count'] <=> $a['count']));
+		$categoryRows = array_values(array_map(function (array $row) use ($toEnv): array {
+			$net = $row['income'] - $row['expense'];
+			return [
+				'categoryId' => $row['categoryId'],
+				'name' => $row['name'],
+				'groupKey' => $row['groupKey'],
+				'income' => $toEnv($row['income']),
+				'expense' => $toEnv($row['expense']),
+				'net' => $toEnv($net),
+				'count' => $row['count'],
+			];
+		}, $byCategory));
+		usort($categoryRows, static fn (array $a, array $b): int => ($b['count'] <=> $a['count']));
+		$monthRows = array_values(array_map(function (array $row) use ($toEnv): array {
+			$net = $row['income'] - $row['expense'];
+			return [
+				'yearMonth' => $row['yearMonth'],
+				'income' => $toEnv($row['income']),
+				'expense' => $toEnv($row['expense']),
+				'net' => $toEnv($net),
+				'count' => $row['count'],
+			];
+		}, $byMonth));
+		usort($monthRows, static fn (array $a, array $b): int => strcmp($a['yearMonth'], $b['yearMonth']));
+		return [
+			'window' => ['from' => $window['from'], 'to' => $window['to']],
+			'totals' => [
+				'income' => $toEnv($income),
+				'expense' => $toEnv($expense),
+				'net' => $toEnv($income - $expense),
+				'count' => count($rows),
+			],
+			'byGroup' => $groupRows,
+			'byCategory' => $categoryRows,
+			'byMonth' => $monthRows,
+		];
+	}
+
+	private function applyFiltersToTransactionQuery(\OCP\DB\QueryBuilder\IQueryBuilder $qb, int $workspaceId, array $filters, array $workspace): array
+	{
 		if (empty($filters['includeDeleted'])) {
 			$qb->andWhere($qb->expr()->isNull('deleted_at'));
 		}
@@ -147,6 +242,15 @@ class TransactionService
 		} elseif (!empty($filters['categoryId'])) {
 			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter((int)$filters['categoryId'], \PDO::PARAM_INT)));
 		}
+		$groupKey = isset($filters['groupKey']) ? trim((string)$filters['groupKey']) : '';
+		if ($groupKey !== '') {
+			$groupCategoryIds = $this->categoryIdsForGroupFilter($workspaceId, $groupKey);
+			if ($groupCategoryIds === []) {
+				$qb->andWhere($qb->expr()->eq('id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
+			} else {
+				$qb->andWhere($qb->expr()->in('category_id', $qb->createNamedParameter($groupCategoryIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+			}
+		}
 		if (!empty($filters['statusId'])) {
 			$qb->andWhere($qb->expr()->eq('booking_status_id', $qb->createNamedParameter((int)$filters['statusId'], \PDO::PARAM_INT)));
 		}
@@ -160,10 +264,56 @@ class TransactionService
 				$qb->expr()->iLike('notes', $qb->createNamedParameter($needle))
 			));
 		}
+		return ['from' => $from, 'to' => $to];
+	}
+
+	/**
+	 * @param list<int> $ids
+	 * @return array<int,array{name:string,groupKey:?string}>
+	 */
+	private function categoryMetaByIds(int $workspaceId, array $ids): array
+	{
+		if ($ids === []) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'name', 'group_key')
+			->from('bc_categories')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->in('id', $qb->createNamedParameter($ids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
-		$row = $result->fetch();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$out[(int)$row['id']] = [
+				'name' => (string)$row['name'],
+				'groupKey' => $row['group_key'] !== null ? (string)$row['group_key'] : null,
+			];
+		}
 		$result->closeCursor();
-		return (int)($row['count'] ?? 0);
+		return $out;
+	}
+
+	/**
+	 * @return list<int>
+	 */
+	private function categoryIdsForGroupFilter(int $workspaceId, string $groupKey): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('bc_categories')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		if ($groupKey === '__none__') {
+			$qb->andWhere($qb->expr()->isNull('group_key'));
+		} else {
+			$qb->andWhere($qb->expr()->eq('group_key', $qb->createNamedParameter($groupKey)));
+		}
+		$result = $qb->executeQuery();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$out[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		return $out;
 	}
 
 	/**

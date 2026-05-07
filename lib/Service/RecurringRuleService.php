@@ -27,6 +27,7 @@ class RecurringRuleService
 	private const FREQUENCIES = [self::FREQ_MONTHLY, self::FREQ_QUARTERLY, self::FREQ_YEARLY, self::FREQ_CUSTOM];
 
 	private const MAX_PREVIEW = 36;
+	private const MAX_GENERATE_BATCH = 600;
 
 	public function __construct(
 		private IDBConnection $db,
@@ -174,6 +175,18 @@ class RecurringRuleService
 		if ($updates === []) {
 			return $this->loadHydrated($ruleId, $workspace['currencyCode']);
 		}
+		$effectiveStart = (string)($updates['start_date'] ?? $row['start_date']);
+		$effectiveEnd = array_key_exists('end_date', $updates) ? $updates['end_date'] : $row['end_date'];
+		$effectiveNextDue = (string)($updates['next_due_date'] ?? $row['next_due_date']);
+		if ($effectiveEnd !== null && $effectiveEnd < $effectiveStart) {
+			throw new \InvalidArgumentException('endDate must not be before startDate.');
+		}
+		if ($effectiveNextDue < $effectiveStart) {
+			throw new \InvalidArgumentException('nextDueDate must not be before startDate.');
+		}
+		if ($effectiveEnd !== null && $effectiveNextDue > $effectiveEnd) {
+			throw new \InvalidArgumentException('nextDueDate must not be after endDate.');
+		}
 		$updates['updated_at'] = $this->utcNow();
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_recurring_rules');
@@ -247,7 +260,7 @@ class RecurringRuleService
 	 * Materialise the **next due** occurrence as a real transaction and advance
 	 * `next_due_date`. Returns the newly created transaction id.
 	 */
-	public function generate(int $ruleId, string $userId, array $workspace, TransactionService $tx, array $category): array
+	public function generate(int $ruleId, string $userId, array $workspace, TransactionService $tx, array $category, array $options = []): array
 	{
 		$row = $this->loadRow($ruleId);
 		if ($row === null || (int)$row['workspace_id'] !== (int)$workspace['id']) {
@@ -262,23 +275,71 @@ class RecurringRuleService
 		if ($ruleEnd !== null && $next > $ruleEnd) {
 			throw new \InvalidArgumentException('Rule has reached its end date.');
 		}
-		$created = $tx->create((int)$workspace['id'], $userId, [
-			'categoryId' => (int)$row['category_id'],
-			'direction' => (string)$row['direction'],
-			'bookingDate' => $next->format('Y-m-d'),
-			'amountMinor' => (int)$row['amount_minor'],
-			'title' => (string)$row['title'],
-			'isSpecial' => false,
-		], $workspace, $category);
-		$advanced = $this->advance($next, (string)$row['frequency'], (int)$row['interval_count']);
+
+		$throughRaw = trim((string)($options['through'] ?? ''));
+		$through = $throughRaw !== '' ? $this->parseIsoDate($throughRaw, 'through') : null;
+		if ($through !== null && $through < $next) {
+			throw new \InvalidArgumentException('through must be on or after next due date.');
+		}
+		if ($ruleEnd !== null && $through !== null && $through > $ruleEnd) {
+			$through = $ruleEnd;
+		}
+
+		$createdIds = [];
+		$firstCreated = null;
+		$generatedCount = 0;
+		$generatedFrom = null;
+		$generatedTo = null;
+		$finalNext = $next;
+		$loopEnd = $through ?? $next;
+		while ($finalNext <= $loopEnd) {
+			if ($generatedCount >= self::MAX_GENERATE_BATCH) {
+				throw new \InvalidArgumentException('Too many occurrences in one generate call. Shorten the period and try again.');
+			}
+			$created = $tx->create((int)$workspace['id'], $userId, [
+				'categoryId' => (int)$row['category_id'],
+				'direction' => (string)$row['direction'],
+				'bookingDate' => $finalNext->format('Y-m-d'),
+				'amountMinor' => (int)$row['amount_minor'],
+				'title' => (string)$row['title'],
+				'isSpecial' => false,
+			], $workspace, $category);
+			$createdIds[] = (int)$created['id'];
+			$firstCreated ??= $created;
+			$generatedCount++;
+			$generatedFrom ??= $finalNext;
+			$generatedTo = $finalNext;
+			$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+			if ($ruleEnd !== null && $finalNext > $ruleEnd) {
+				break;
+			}
+		}
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_recurring_rules')
-			->set('next_due_date', $qb->createNamedParameter($advanced->format('Y-m-d')))
+			->set('next_due_date', $qb->createNamedParameter($finalNext->format('Y-m-d')))
 			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($ruleId, \PDO::PARAM_INT)));
 		$qb->executeStatement();
-		$this->audit->record($userId, 'recurring_rule_generated', 'recurring_rule', (string)$ruleId, ['transactionId' => $created['id']], (int)$workspace['id']);
-		return $created;
+
+		$details = [
+			'count' => $generatedCount,
+			'transactionIds' => $createdIds,
+			'nextDueDate' => $finalNext->format('Y-m-d'),
+		];
+		if ($generatedFrom !== null) {
+			$details['fromDate'] = $generatedFrom->format('Y-m-d');
+		}
+		if ($generatedTo !== null) {
+			$details['toDate'] = $generatedTo->format('Y-m-d');
+		}
+		$this->audit->record($userId, 'recurring_rule_generated', 'recurring_rule', (string)$ruleId, $details, (int)$workspace['id']);
+
+		if ($through === null) {
+			return $firstCreated ?? ['id' => $createdIds[0]];
+		}
+
+		return $details;
 	}
 
 	private function advance(\DateTimeImmutable $current, string $frequency, int $interval): \DateTimeImmutable

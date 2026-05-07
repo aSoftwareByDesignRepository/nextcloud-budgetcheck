@@ -102,6 +102,8 @@ class SummaryService
 		// category id — but we keep the warning hook in the engine for future
 		// soft-deleted-category states.
 		$warnings = $this->warnings->household($monthlyForWarnings, $consumption);
+		$activity = $this->monthlyActivity($rows);
+		$monthTransactions = $this->monthlyTransactions($rows, $workspace['currencyCode']);
 
 		return [
 			'workspace' => $workspace,
@@ -111,6 +113,8 @@ class SummaryService
 				'transactionCount' => count($rows),
 				'hasIncomeOrExpense' => $figures['totalIncomeMinor'] > 0 || $figures['totalExpenseMinor'] > 0,
 			],
+			'activity' => $activity,
+			'monthTransactions' => $monthTransactions,
 			'isClosed' => $snapshot !== null,
 			'snapshot' => $snapshot,
 			'totals' => [
@@ -136,9 +140,15 @@ class SummaryService
 				'byCategory' => array_values(array_map(fn ($row) => [
 					'categoryId' => $row['categoryId'],
 					'name' => $row['name'],
-					'planned' => $this->money->envelope($row['plannedMinor'], $workspace['currencyCode']),
+					'direction' => $row['direction'],
+					'hasBudget' => $row['plannedMinor'] !== null,
+					'planned' => $row['plannedMinor'] !== null
+						? $this->money->envelope($row['plannedMinor'], $workspace['currencyCode'])
+						: null,
 					'actual' => $this->money->envelope($row['actualMinor'], $workspace['currencyCode']),
-					'remaining' => $this->money->envelope($row['plannedMinor'] - $row['actualMinor'], $workspace['currencyCode']),
+					'remaining' => $row['plannedMinor'] !== null
+						? $this->money->envelope($row['plannedMinor'] - $row['actualMinor'], $workspace['currencyCode'])
+						: null,
 				], $consumption)),
 			],
 			'specials' => array_map(fn ($row) => [
@@ -257,6 +267,10 @@ class SummaryService
 		$totalExpense = 0;
 		$savingsAchievedTotal = 0;
 		$savingsTargetTotal = 0;
+		$budgetPlannedTotal = 0;
+		$budgetActualTotal = 0;
+		$budgetUnspentTotal = 0;
+		$budgetOverspentTotal = 0;
 		$overBudgetMonths = 0;
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
 		for ($month = 1; $month <= 12; $month++) {
@@ -269,6 +283,18 @@ class SummaryService
 			$availableAfterSavingsMinor = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'] - $savingsTargetMinor;
 			$plannedMap = $this->budgets->plannedMapForMonth($workspaceId, $ym);
 			$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds);
+			$plannedTotalMinor = 0;
+			foreach ($plannedMap as $cid => $plannedAmt) {
+				$cid = (int)$cid;
+				if ($cid > 0 && in_array($cid, $uncatIds, true)) {
+					continue;
+				}
+				$plannedTotalMinor += (int)$plannedAmt;
+			}
+			$budgetActualMinor = (int)$figures['budgetedActualMinor'];
+			$budgetRemainingMinor = $plannedTotalMinor - $budgetActualMinor;
+			$budgetUnspentMinor = $budgetRemainingMinor > 0 ? $budgetRemainingMinor : 0;
+			$budgetOverspentMinor = $budgetRemainingMinor < 0 ? abs($budgetRemainingMinor) : 0;
 			$overBudget = false;
 			foreach ($consumption as $row) {
 				if ($row['plannedMinor'] > 0 && $row['actualMinor'] > $row['plannedMinor']) {
@@ -282,6 +308,10 @@ class SummaryService
 			$totalIncome += $figures['totalIncomeMinor'];
 			$totalExpense += $figures['totalExpenseMinor'];
 			$savingsTargetTotal += $savingsTargetMinor;
+			$budgetPlannedTotal += $plannedTotalMinor;
+			$budgetActualTotal += $budgetActualMinor;
+			$budgetUnspentTotal += $budgetUnspentMinor;
+			$budgetOverspentTotal += $budgetOverspentMinor;
 			$cashAfterExpenses = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'];
 			$savingsAchievedTotal += min($savingsTargetMinor, max(0, $cashAfterExpenses));
 			$months[] = [
@@ -291,6 +321,13 @@ class SummaryService
 				'netResult' => $this->money->envelope($figures['netResultMinor'], $workspace['currencyCode']),
 				'savingsTarget' => $this->money->envelope($savingsTargetMinor, $workspace['currencyCode']),
 				'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $workspace['currencyCode']),
+				'budget' => [
+					'plannedTotal' => $this->money->envelope($plannedTotalMinor, $workspace['currencyCode']),
+					'actualTotal' => $this->money->envelope($budgetActualMinor, $workspace['currencyCode']),
+					'saldo' => $this->money->envelope($budgetRemainingMinor, $workspace['currencyCode']),
+					'unspent' => $this->money->envelope($budgetUnspentMinor, $workspace['currencyCode']),
+					'overspent' => $this->money->envelope($budgetOverspentMinor, $workspace['currencyCode']),
+				],
 				'overBudget' => $overBudget,
 				'isClosed' => $this->loadSnapshot($workspaceId, $ym) !== null,
 			];
@@ -306,6 +343,11 @@ class SummaryService
 				'savingsTarget' => $this->money->envelope($savingsTargetTotal, $workspace['currencyCode']),
 				'savingsAchieved' => $this->money->envelope($savingsAchievedTotal, $workspace['currencyCode']),
 				'savingsAchievementRatio' => $achievementRatio,
+				'budgetPlanned' => $this->money->envelope($budgetPlannedTotal, $workspace['currencyCode']),
+				'budgetActual' => $this->money->envelope($budgetActualTotal, $workspace['currencyCode']),
+				'budgetSaldo' => $this->money->envelope($budgetPlannedTotal - $budgetActualTotal, $workspace['currencyCode']),
+				'budgetUnspent' => $this->money->envelope($budgetUnspentTotal, $workspace['currencyCode']),
+				'budgetOverspent' => $this->money->envelope($budgetOverspentTotal, $workspace['currencyCode']),
 				'overBudgetMonths' => $overBudgetMonths,
 			],
 			'months' => $months,
@@ -415,12 +457,22 @@ class SummaryService
 
 	/**
 	 * @param list<int> $uncategorizedCategoryIds excluded from planned-vs-actual rows (§9)
-	 * @return list<array{categoryId:int, name:string, plannedMinor:int, actualMinor:int}>
+	 * @return list<array{categoryId:int, name:string, direction:string, plannedMinor:?int, actualMinor:int}>
 	 */
 	private function categoryConsumption(array $workspace, array $rows, array $plannedMap, array $uncategorizedCategoryIds = []): array
 	{
-		// Build a categoryId -> name map for any row that references one.
+		// Build a category id set from active categories, planned budgets, and
+		// rows with actual activity so the monthly table stays complete.
 		$categoryIds = [];
+		$workspaceCategories = $this->workspaceCategoryMeta((int)$workspace['id']);
+		foreach ($workspaceCategories as $cid => $metaRow) {
+			if (in_array($cid, $uncategorizedCategoryIds, true)) {
+				continue;
+			}
+			if ((bool)($metaRow['isActive'] ?? false)) {
+				$categoryIds[$cid] = true;
+			}
+		}
 		foreach ($rows as $row) {
 			$cid = (int)$row['category_id'];
 			if (in_array($cid, $uncategorizedCategoryIds, true)) {
@@ -434,17 +486,16 @@ class SummaryService
 				$categoryIds[$cid] = true;
 			}
 		}
-		$names = $this->categoryNamesById(array_keys($categoryIds));
+		$meta = $this->categoryMetaById(array_keys($categoryIds), (int)$workspace['id']);
 
-		// Compute actual per category. Only expense rows count toward category
-		// budget consumption — the reference workbook plans expenses, not income.
+		// Compute actual per category. The monthly "category consumption" table is
+		// now a full category activity table, so both income and expense rows are
+		// aggregated. The warnings engine still only evaluates rows with a positive
+		// planned amount, so income-only rows with no budget do not trigger alerts.
 		$actuals = [];
 		$basis = $workspace['taxBudgetBasis'] ?? 'gross';
 		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
 		foreach ($rows as $row) {
-			if ((string)$row['direction'] !== TransactionService::DIRECTION_EXPENSE) {
-				continue;
-			}
 			$cid = (int)$row['category_id'];
 			if (in_array($cid, $uncategorizedCategoryIds, true)) {
 				continue;
@@ -465,10 +516,14 @@ class SummaryService
 			if ($cid <= 0) {
 				continue;
 			}
+			$plannedRaw = array_key_exists($cid, $plannedMap) ? (int)$plannedMap[$cid] : null;
+			$category = $meta[$cid] ?? null;
+			$direction = is_array($category) ? (string)($category['type'] ?? '') : '';
 			$out[] = [
 				'categoryId' => $cid,
-				'name' => $names[$cid] ?? '#' . $cid,
-				'plannedMinor' => (int)($plannedMap[$cid] ?? 0),
+				'name' => is_array($category) ? (string)($category['name'] ?? ('#' . $cid)) : ('#' . $cid),
+				'direction' => $direction,
+				'plannedMinor' => $plannedRaw,
 				'actualMinor' => (int)($actuals[$cid] ?? 0),
 			];
 		}
@@ -480,23 +535,113 @@ class SummaryService
 
 	/**
 	 * @param list<int> $ids
-	 * @return array<int,string>
+	 * @return array<int,array{name:string,type:string,isActive:bool}>
 	 */
-	private function categoryNamesById(array $ids): array
+	private function categoryMetaById(array $ids, int $workspaceId): array
 	{
 		if ($ids === []) {
 			return [];
 		}
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('id', 'name')
+		$qb->select('id', 'name', 'type', 'is_active')
 			->from('bc_categories')
-			->where($qb->expr()->in('id', $qb->createNamedParameter($ids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->in('id', $qb->createNamedParameter($ids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
 		$out = [];
 		while ($row = $result->fetch()) {
-			$out[(int)$row['id']] = (string)$row['name'];
+			$out[(int)$row['id']] = [
+				'name' => (string)$row['name'],
+				'type' => (string)$row['type'],
+				'isActive' => (bool)$row['is_active'],
+			];
 		}
 		$result->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * @return array<int,array{name:string,type:string,isActive:bool}>
+	 */
+	private function workspaceCategoryMeta(int $workspaceId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'name', 'type', 'is_active')
+			->from('bc_categories')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$out[(int)$row['id']] = [
+				'name' => (string)$row['name'],
+				'type' => (string)$row['type'],
+				'isActive' => (bool)$row['is_active'],
+			];
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * @return array{count:int,incomeCount:int,expenseCount:int,specialCount:int,firstDate:?string,lastDate:?string}
+	 */
+	private function monthlyActivity(array $rows): array
+	{
+		$incomeCount = 0;
+		$expenseCount = 0;
+		$specialCount = 0;
+		$firstDate = null;
+		$lastDate = null;
+		foreach ($rows as $row) {
+			$date = (string)$row['booking_date'];
+			if ($firstDate === null || strcmp($date, $firstDate) < 0) {
+				$firstDate = $date;
+			}
+			if ($lastDate === null || strcmp($date, $lastDate) > 0) {
+				$lastDate = $date;
+			}
+			if ((string)$row['direction'] === TransactionService::DIRECTION_INCOME) {
+				$incomeCount++;
+			} else {
+				$expenseCount++;
+			}
+			if ((bool)$row['is_special']) {
+				$specialCount++;
+			}
+		}
+		return [
+			'count' => count($rows),
+			'incomeCount' => $incomeCount,
+			'expenseCount' => $expenseCount,
+			'specialCount' => $specialCount,
+			'firstDate' => $firstDate,
+			'lastDate' => $lastDate,
+		];
+	}
+
+	/**
+	 * @return list<array{id:int,date:string,title:string,direction:string,isSpecial:bool,amount:array{minor:int,currency:string,decimals:int}}|mixed>
+	 */
+	private function monthlyTransactions(array $rows, string $currencyCode): array
+	{
+		usort($rows, static function (array $a, array $b): int {
+			$cmp = strcmp((string)$b['booking_date'], (string)$a['booking_date']);
+			if ($cmp !== 0) {
+				return $cmp;
+			}
+			return ((int)$b['id']) <=> ((int)$a['id']);
+		});
+		$out = [];
+		foreach ($rows as $row) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'date' => (string)$row['booking_date'],
+				'title' => (string)$row['title'],
+				'direction' => (string)$row['direction'],
+				'isSpecial' => (bool)$row['is_special'],
+				'amount' => $this->money->envelope((int)$row['amount_minor'], $currencyCode),
+			];
+		}
 		return $out;
 	}
 

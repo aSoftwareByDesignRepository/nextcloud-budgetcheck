@@ -18,6 +18,7 @@
 		yearMonth: Dates.currentYearMonth(),
 		categories: [],
 		budgets: [],
+		budgetDefaults: [],
 		summary: null,
 		projectLedger: null,
 		dirty: new Map(),
@@ -81,8 +82,12 @@
 	async function loadBudgets() {
 		if (!ws) return;
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			const [data, defaults] = await Promise.all([
+				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth }),
+				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: ws.id }),
+			]);
 			state.budgets = data.budgets || [];
+			state.budgetDefaults = defaults.defaults || [];
 			state.projectLedger = null;
 			if (!isHousehold && data.ledgerYearMonthSpan) {
 				state.projectLedger = {
@@ -147,6 +152,11 @@
 		}
 		const plannedMap = new Map();
 		state.budgets.forEach((b) => { if (b.categoryId) plannedMap.set(b.categoryId, b.planned); });
+		state.budgetDefaults.forEach((b) => {
+			if (b.categoryId && !plannedMap.has(b.categoryId)) {
+				plannedMap.set(b.categoryId, b.planned);
+			}
+		});
 
 		if (expenseCats.length === 0) {
 			tbody.appendChild(C.createElement('tr', null, [
@@ -234,12 +244,20 @@
 	function renderSavings(target) {
 		const form = document.querySelector('[data-bc-savings-form]');
 		if (!form) return;
+		const sourceHint = form.querySelector('[data-bc-savings-source]');
 		const mode = (target && target.targetMode) || 'percentage';
 		form.querySelectorAll('input[name="targetMode"]').forEach((r) => { r.checked = r.value === mode; });
 		const percentInput = form.querySelector('input[name="targetPercent"]');
 		if (percentInput) percentInput.value = target && target.targetPercentBp !== null && target.targetPercentBp !== undefined ? String(Math.round(target.targetPercentBp / 100)) : '';
 		const absoluteInput = form.querySelector('input[name="targetAmount"]');
 		if (absoluteInput) absoluteInput.value = target && target.targetMinor ? (target.targetMinor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',') : '';
+		if (sourceHint) {
+			const inherited = !!(target && target.inheritedFromWorkspaceDefault);
+			sourceHint.hidden = !inherited;
+			if (inherited) {
+				sourceHint.textContent = t('budgetcheck', 'This month currently uses the workspace default savings target. Saving here creates a month-specific override.');
+			}
+		}
 		updateSavingsModeFields(form);
 	}
 

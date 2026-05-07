@@ -10,6 +10,9 @@
 	const EntityPicker = window.BudgetCheckEntityPicker;
 
 	let capabilities = null;
+	const budgetDefaultsState = {
+		dirty: new Map(),
+	};
 
 	document.addEventListener('DOMContentLoaded', () => {
 		bootstrap();
@@ -35,6 +38,7 @@
 		wireVatPresetUi();
 		if (Ws.canManage) {
 			loadCategories();
+			loadBudgetDefaults();
 			loadMembers();
 			initMemberInvite();
 			loadRecurring();
@@ -45,6 +49,109 @@
 			loadBookingStatuses();
 		}
 		wireHelpPanels();
+	}
+
+	function workspaceBudgetDecimals() {
+		return typeof Ws.workspace?.currencyDecimals === 'number'
+			? Ws.workspace.currencyDecimals
+			: (Ws.workspace?.currencyCode === 'JPY' ? 0 : 2);
+	}
+
+	async function loadBudgetDefaults() {
+		if (!Ws.workspace || Ws.workspace.type !== 'household') return;
+		const tbody = document.querySelector('[data-bc-budget-default-rows]');
+		if (!tbody) return;
+		try {
+			const [catData, defaultsData] = await Promise.all([
+				Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id }),
+				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: Ws.workspace.id }),
+			]);
+			const defaultsMap = new Map();
+			(defaultsData.defaults || []).forEach((row) => {
+				if (row && row.categoryId) defaultsMap.set(Number(row.categoryId), row);
+			});
+			const categories = (catData.categories || []).filter((c) => c.isActive && c.type === 'expense');
+			tbody.replaceChildren();
+			if (categories.length === 0) {
+				tbody.appendChild(C.createElement('tr', null, [
+					C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-loading', text: t('budgetcheck', 'Add a few expense categories first.') }),
+				]));
+				return;
+			}
+			categories.forEach((cat) => {
+				const tr = C.createElement('tr');
+				tr.appendChild(C.createElement('td', { text: cat.name }));
+				tr.appendChild(C.createElement('td', { text: t('budgetcheck', 'Expense') }));
+				const td = C.createElement('td', { class: 'bc-table__col--num' });
+				const input = C.createElement('input', {
+					type: 'text',
+					inputmode: 'decimal',
+					class: 'bc-input',
+					attrs: { 'aria-label': t('budgetcheck', 'Default amount') + ' ' + cat.name },
+				});
+				const env = defaultsMap.get(Number(cat.id))?.planned || null;
+				const decimals = workspaceBudgetDecimals();
+				input.value = env && typeof env.minor === 'number'
+					? (env.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',')
+					: '';
+				input.addEventListener('input', () => {
+					budgetDefaultsState.dirty.set(Number(cat.id), input.value);
+					toggleBudgetDefaultsSave(true);
+				});
+				td.appendChild(input);
+				tr.appendChild(td);
+				tbody.appendChild(tr);
+			});
+			wireBudgetDefaultsSave();
+			toggleBudgetDefaultsSave(false);
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	function toggleBudgetDefaultsSave(enabled) {
+		document.querySelectorAll('[data-bc-action="save-budget-defaults"]').forEach((btn) => {
+			btn.disabled = !enabled;
+		});
+	}
+
+	function wireBudgetDefaultsSave() {
+		document.querySelectorAll('[data-bc-action="save-budget-defaults"]').forEach((btn) => {
+			if (btn.dataset.bcBudgetDefaultsWired === '1') return;
+			btn.dataset.bcBudgetDefaultsWired = '1';
+			btn.addEventListener('click', async () => {
+				if (!Ws.workspace || Ws.workspace.type !== 'household') return;
+				const rows = [];
+				const decimals = workspaceBudgetDecimals();
+				try {
+					budgetDefaultsState.dirty.forEach((value, categoryId) => {
+						const raw = String(value || '').trim();
+						if (raw === '') {
+							rows.push({ categoryId, plannedMinor: 0 });
+						} else {
+							rows.push({ categoryId, plannedMinor: Money.parseHuman(raw, decimals) });
+						}
+					});
+				} catch (err) {
+					Msg.announce(err.message || t('budgetcheck', 'Amount is not a valid number.'), 'error');
+					return;
+				}
+				if (rows.length === 0) {
+					return;
+				}
+				try {
+					await Api.post('/apps/budgetcheck/api/budget-defaults/bulk-upsert', {
+						workspaceId: Ws.workspace.id,
+						rows,
+					});
+					Msg.announce(t('budgetcheck', 'Default budgets saved.'), 'success');
+					budgetDefaultsState.dirty.clear();
+					await loadBudgetDefaults();
+				} catch (err) {
+					Msg.handleApiError(err);
+				}
+			});
+		});
 	}
 
 	function wireHelpPanels() {
@@ -122,6 +229,7 @@
 			setVal(form, 'primaryPlanningYear', String(py));
 			const cb = form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]');
 			if (cb) cb.checked = !!Ws.workspace.autoCopyBudgetsFromPreviousMonth;
+			hydrateDefaultSavingsUi(form);
 		} else {
 			setVal(form, 'projectStartDate', Ws.workspace.projectStartDate ? String(Ws.workspace.projectStartDate) : '');
 			setVal(form, 'projectEndDate', Ws.workspace.projectEndDate ? String(Ws.workspace.projectEndDate) : '');
@@ -133,6 +241,39 @@
 					: ''
 			);
 		}
+	}
+
+	function hydrateDefaultSavingsUi(form) {
+		const mode = String(Ws.workspace?.defaultSavingsTargetMode || '');
+		const percentBp = Ws.workspace?.defaultSavingsTargetPercentBp;
+		const minor = Ws.workspace?.defaultSavingsTargetMinor;
+		const radios = form.querySelectorAll('input[name="defaultSavingsTargetMode"]');
+		radios.forEach((radio) => { radio.checked = radio.value === mode; });
+		if (!Array.from(radios).some((radio) => radio.checked)) {
+			const none = form.querySelector('input[name="defaultSavingsTargetMode"][value=""]');
+			if (none) none.checked = true;
+		}
+		const percentInput = form.querySelector('input[name="defaultSavingsTargetPercent"]');
+		if (percentInput) {
+			percentInput.value = typeof percentBp === 'number' ? String(Math.round(percentBp / 100)) : '';
+		}
+		const amountInput = form.querySelector('input[name="defaultSavingsTargetAmount"]');
+		if (amountInput) {
+			amountInput.value = typeof minor === 'number'
+				? formatMinorForInput(minor, workspaceCurrencyDecimals()).replace('.', ',')
+				: '';
+		}
+		syncDefaultSavingsUi(form);
+	}
+
+	function syncDefaultSavingsUi(form) {
+		const mode = String(form.querySelector('input[name="defaultSavingsTargetMode"]:checked')?.value || '');
+		const percentWrap = form.querySelector('[data-bc-default-savings-percent-wrap]');
+		const amountWrap = form.querySelector('[data-bc-default-savings-amount-wrap]');
+		const showPercent = mode === 'percentage' || mode === 'hybrid';
+		const showAmount = mode === 'absolute' || mode === 'hybrid';
+		if (percentWrap) percentWrap.hidden = !showPercent;
+		if (amountWrap) amountWrap.hidden = !showAmount;
 	}
 
 	function workspaceCurrencyDecimals() {
@@ -225,6 +366,39 @@
 				}
 				payload.primaryPlanningYear = py;
 				payload.autoCopyBudgetsFromPreviousMonth = !!form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]')?.checked;
+				const defaultMode = String(form.querySelector('input[name="defaultSavingsTargetMode"]:checked')?.value || '');
+				payload.defaultSavingsTargetMode = defaultMode;
+				if (defaultMode === '') {
+					payload.defaultSavingsTargetPercentBp = null;
+					payload.defaultSavingsTargetMinor = null;
+				} else {
+					if (defaultMode === 'percentage' || defaultMode === 'hybrid') {
+						const percentRaw = getVal(form, 'defaultSavingsTargetPercent').trim();
+						const pct = Number.parseInt(percentRaw, 10);
+						if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+							Msg.announce(t('budgetcheck', 'Percentage must be between 0 and 100.'), 'error');
+							return;
+						}
+						payload.defaultSavingsTargetPercentBp = pct * 100;
+					} else {
+						payload.defaultSavingsTargetPercentBp = null;
+					}
+					if (defaultMode === 'absolute' || defaultMode === 'hybrid') {
+						const amountRaw = getVal(form, 'defaultSavingsTargetAmount').trim();
+						if (amountRaw === '') {
+							Msg.announce(t('budgetcheck', 'Enter an amount.'), 'error');
+							return;
+						}
+						try {
+							payload.defaultSavingsTargetMinor = Money.parseHuman(amountRaw, workspaceCurrencyDecimals());
+						} catch (err) {
+							Msg.announce(err.message || t('budgetcheck', 'Amount is not a valid number.'), 'error');
+							return;
+						}
+					} else {
+						payload.defaultSavingsTargetMinor = null;
+					}
+				}
 			} else {
 				const startRaw = getVal(form, 'projectStartDate').trim();
 				const endRaw = getVal(form, 'projectEndDate').trim();
@@ -257,6 +431,10 @@
 				Msg.handleApiError(err);
 			}
 		});
+		form.querySelectorAll('input[name="defaultSavingsTargetMode"]').forEach((radio) => {
+			radio.addEventListener('change', () => syncDefaultSavingsUi(form));
+		});
+		syncDefaultSavingsUi(form);
 	}
 
 	function wireTaxForm() {
@@ -824,16 +1002,23 @@
 		}));
 		tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang) }));
 		tr.appendChild(C.createElement('td', { text: rule.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
-		const actions = C.createElement('td');
+		const actions = C.createElement('td', { class: 'bc-recurring-actions-cell' });
+		const actionsGroup = C.createElement('div', { class: 'bc-recurring-actions', attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions') } });
 		const gen = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Generate next') });
 		gen.addEventListener('click', () => generateRecurring(rule));
-		actions.appendChild(gen);
+		actionsGroup.appendChild(gen);
+		if (rule.endDate) {
+			const genFull = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Generate full period') });
+			genFull.addEventListener('click', () => generateRecurring(rule, { fullPeriod: true }));
+			actionsGroup.appendChild(genFull);
+		}
 		const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
 		edit.addEventListener('click', () => openRecurringModal(rule));
-		actions.appendChild(edit);
+		actionsGroup.appendChild(edit);
 		const del = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Delete') });
 		del.addEventListener('click', () => deleteRecurring(rule));
-		actions.appendChild(del);
+		actionsGroup.appendChild(del);
+		actions.appendChild(actionsGroup);
 		tr.appendChild(actions);
 		return tr;
 	}
@@ -883,8 +1068,37 @@
 				]);
 				freqSelect.value = rule ? rule.frequency : 'monthly';
 				wrap(form, t('budgetcheck', 'Repeat'), freqSelect, t('budgetcheck', 'Choose how often this rule should create a suggestion.'));
-				const intervalInput = C.createElement('input', { type: 'number', name: 'intervalCount', min: 1, max: 36, class: 'bc-input', value: rule ? String(rule.intervalCount) : '1' });
-				wrap(form, t('budgetcheck', 'Every how many months'), intervalInput, t('budgetcheck', 'Used when Repeat is set to custom months.'));
+				const intervalSelect = C.createElement('select', { name: 'intervalCount', class: 'bc-input' }, [
+					C.createElement('option', { value: '2', text: t('budgetcheck', 'Every 2 months') }),
+					C.createElement('option', { value: '3', text: t('budgetcheck', 'Every 3 months') }),
+					C.createElement('option', { value: '4', text: t('budgetcheck', 'Every 4 months') }),
+					C.createElement('option', { value: '6', text: t('budgetcheck', 'Every 6 months') }),
+					C.createElement('option', { value: '12', text: t('budgetcheck', 'Every 12 months') }),
+					C.createElement('option', { value: '24', text: t('budgetcheck', 'Every 24 months') }),
+					C.createElement('option', { value: '36', text: t('budgetcheck', 'Every 36 months') }),
+				]);
+				const existingInterval = rule && rule.intervalCount > 1 ? String(rule.intervalCount) : '2';
+				const hasExistingOption = Array.from(intervalSelect.options).some((opt) => opt.value === existingInterval);
+				if (!hasExistingOption) {
+					intervalSelect.appendChild(C.createElement('option', {
+						value: existingInterval,
+						text: t('budgetcheck', 'Every {count} months').replace('{count}', existingInterval),
+					}));
+				}
+				intervalSelect.value = existingInterval;
+				const intervalWrap = C.createElement('label', { class: 'bc-field bc-field--full-width bc-recurring-interval-wrap' }, [
+					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom interval') }),
+					intervalSelect,
+					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Only used when Repeat is set to custom months.') }),
+				]);
+				form.appendChild(intervalWrap);
+				const syncIntervalUi = () => {
+					const custom = freqSelect.value === 'custom_interval';
+					intervalWrap.hidden = !custom;
+					intervalSelect.disabled = !custom;
+				};
+				freqSelect.addEventListener('change', syncIntervalUi);
+				syncIntervalUi();
 				const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 				const startDh = 'bc-rec-dh-s-' + Math.random().toString(36).slice(2);
 				const startInput = C.createElement('input', {
@@ -912,6 +1126,66 @@
 					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Leave empty if this rule should continue indefinitely.') }),
 					endHint,
 				]));
+				let realignToggle = null;
+				let realignDateInput = null;
+				let realignDateWrap = null;
+				let realignPreview = null;
+				if (isEdit) {
+					realignToggle = C.createElement('input', {
+						type: 'checkbox',
+						name: 'realignNextDue',
+						value: '1',
+					});
+					realignDateInput = C.createElement('input', {
+						type: 'date',
+						name: 'realignFromDate',
+						class: 'bc-input',
+						autocomplete: 'off',
+						value: rule ? String(rule.startDate) : Dates.isoDate(new Date()),
+						attrs: { lang: Ws.htmlLang },
+					});
+					realignDateWrap = C.createElement('label', { class: 'bc-field', hidden: true }, [
+						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Realign from date') }),
+						realignDateInput,
+						C.createElement('span', {
+							class: 'bc-field__hint',
+							text: t('budgetcheck', 'When enabled, the next due date is reset to this date when you save.'),
+						}),
+					]);
+					realignPreview = C.createElement('span', { class: 'bc-field__hint' });
+					const realignControl = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' }, [
+						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Schedule alignment') }),
+						C.createElement('span', { class: 'bc-boolean-control' }, [
+							realignToggle,
+							C.createElement('span', {
+								class: 'bc-boolean-control__text',
+								text: t('budgetcheck', 'Reset upcoming due date to the new schedule'),
+							}),
+						]),
+						realignPreview,
+					]);
+					form.appendChild(realignControl);
+					form.appendChild(realignDateWrap);
+					const syncRealignUi = () => {
+						const enabled = !!realignToggle.checked;
+						realignDateWrap.hidden = !enabled;
+						if (!enabled) {
+							realignPreview.textContent = t('budgetcheck', 'Current next due date stays at {date}.')
+								.replace('{date}', Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang));
+							return;
+						}
+						const raw = (realignDateInput.value || '').trim();
+						if (!Dates.isIsoCalendarDay(raw)) {
+							realignPreview.textContent = t('budgetcheck', 'Select a valid realign date.');
+							return;
+						}
+						realignPreview.textContent = t('budgetcheck', 'After saving, next due date will be {date}.')
+							.replace('{date}', Dates.formatDisplayDate(raw, Ws.htmlLang));
+					};
+					realignToggle.addEventListener('change', syncRealignUi);
+					realignDateInput.addEventListener('input', syncRealignUi);
+					syncRealignUi();
+				}
 
 				form._collect = () => ({
 					workspaceId: Ws.workspace.id,
@@ -920,9 +1194,11 @@
 					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
 					amount: amountInput.value,
 					frequency: freqSelect.value,
-					intervalCount: Number.parseInt(intervalInput.value, 10) || 1,
+					intervalCount: freqSelect.value === 'custom_interval' ? (Number.parseInt(intervalSelect.value, 10) || 2) : 1,
 					startDate: startInput.value.trim(),
 					endDate: endInput.value.trim(),
+					realignNextDue: !!(realignToggle && realignToggle.checked),
+					realignFromDate: realignDateInput ? realignDateInput.value.trim() : '',
 				});
 				return form;
 			},
@@ -937,12 +1213,34 @@
 				}
 				payload.startDate = String(payload.startDate).trim();
 				payload.endDate = endRaw;
+				if (payload.endDate !== '' && payload.endDate < payload.startDate) {
+					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
+					return false;
+				}
 				try {
 					Money.parseHuman(payload.amount, decimals);
 				} catch (e) {
 					Msg.announce(e.message, 'error');
 					return false;
 				}
+				if (isEdit && payload.realignNextDue) {
+					const realignRaw = String(payload.realignFromDate || '').trim();
+					if (!Dates.isIsoCalendarDay(realignRaw)) {
+						Msg.announce(t('budgetcheck', 'Select a valid realign date.'), 'error');
+						return false;
+					}
+					if (realignRaw < payload.startDate) {
+						Msg.announce(t('budgetcheck', 'Realign date must not be before start date.'), 'error');
+						return false;
+					}
+					if (payload.endDate !== '' && realignRaw > payload.endDate) {
+						Msg.announce(t('budgetcheck', 'Realign date must not be after end date.'), 'error');
+						return false;
+					}
+					payload.nextDueDate = realignRaw;
+				}
+				delete payload.realignNextDue;
+				delete payload.realignFromDate;
 				try {
 					if (isEdit) {
 						await Api.put('/apps/budgetcheck/api/recurring-rules/' + rule.id, payload);
@@ -978,10 +1276,22 @@
 		}
 	}
 
-	async function generateRecurring(rule) {
+	async function generateRecurring(rule, options = {}) {
 		try {
-			await Api.post('/apps/budgetcheck/api/recurring-rules/' + rule.id + '/generate');
-			Msg.announce(t('budgetcheck', 'Transaction generated.'), 'success');
+			const fullPeriod = !!options.fullPeriod;
+			const response = await Api.post(
+				'/apps/budgetcheck/api/recurring-rules/' + rule.id + '/generate',
+				fullPeriod ? { mode: 'full_period' } : {}
+			);
+			if (fullPeriod) {
+				const count = Number.parseInt(String(response?.generated?.count || 0), 10) || 0;
+				const message = count === 1
+					? t('budgetcheck', '1 transaction generated for the full period.')
+					: t('budgetcheck', '{count} transactions generated for the full period.').replace('{count}', String(count));
+				Msg.announce(message, 'success');
+			} else {
+				Msg.announce(t('budgetcheck', 'Transaction generated.'), 'success');
+			}
 			loadRecurring();
 		} catch (err) {
 			Msg.handleApiError(err);

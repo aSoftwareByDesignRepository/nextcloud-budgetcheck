@@ -52,6 +52,36 @@ $canManage = !empty($_['canManageWorkspace']);
 							<span class="bc-boolean-control__text"><?php p($l->t('Copy last month\'s budget when opening a new month')); ?></span>
 						</span>
 					</label>
+					<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width">
+						<legend class="bc-fieldset__legend"><?php p($l->t('Default savings target for new months')); ?></legend>
+						<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('If set, months without an explicit savings target inherit this default automatically.')); ?></p>
+						<label class="bc-field bc-field--radio">
+							<input type="radio" name="defaultSavingsTargetMode" value="">
+							<span><?php p($l->t('No target set')); ?></span>
+						</label>
+						<label class="bc-field bc-field--radio">
+							<input type="radio" name="defaultSavingsTargetMode" value="percentage">
+							<span><?php p($l->t('Percentage of income')); ?></span>
+						</label>
+						<label class="bc-field bc-field--radio">
+							<input type="radio" name="defaultSavingsTargetMode" value="absolute">
+							<span><?php p($l->t('Absolute amount')); ?></span>
+						</label>
+						<label class="bc-field bc-field--radio">
+							<input type="radio" name="defaultSavingsTargetMode" value="hybrid">
+							<span><?php p($l->t('Hybrid (max of both)')); ?></span>
+						</label>
+						<div class="bc-form-grid">
+							<label class="bc-field" data-bc-default-savings-percent-wrap hidden>
+								<span class="bc-field__label"><?php p($l->t('Percentage (0–100)')); ?></span>
+								<input type="number" min="0" max="100" step="1" name="defaultSavingsTargetPercent" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
+							</label>
+							<label class="bc-field" data-bc-default-savings-amount-wrap hidden>
+								<span class="bc-field__label"><?php p($l->t('Amount (per month)')); ?></span>
+								<input type="text" inputmode="decimal" name="defaultSavingsTargetAmount" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
+							</label>
+						</div>
+					</fieldset>
 				<?php else: ?>
 					<hr class="bc-form-grid__divider" aria-hidden="true">
 					<label class="bc-field">
@@ -166,6 +196,36 @@ $canManage = !empty($_['canManageWorkspace']);
 				</table>
 			</div>
 		</section>
+
+		<?php if ($workspace['type'] === 'household' && $canManage): ?>
+			<section class="bc-card bc-section" aria-labelledby="bc-budget-defaults-title">
+				<header class="bc-section__header">
+					<div>
+						<h2 id="bc-budget-defaults-title"><?php p($l->t('Default category budgets')); ?></h2>
+						<p class="bc-section__sub"><?php p($l->t('Used as baseline for months. You can still override single months in planning.')); ?></p>
+					</div>
+					<button type="button" class="button primary" data-bc-action="save-budget-defaults" disabled>
+						<?php p($l->t('Save changes')); ?>
+					</button>
+				</header>
+				<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Default category budgets')); ?>" tabindex="0">
+					<table class="bc-table">
+						<thead>
+							<tr>
+								<th scope="col"><?php p($l->t('Category')); ?></th>
+								<th scope="col"><?php p($l->t('Direction')); ?></th>
+								<th scope="col" class="bc-table__col--num"><?php p($l->t('Default amount')); ?></th>
+							</tr>
+						</thead>
+						<tbody data-bc-budget-default-rows>
+							<tr>
+								<td colspan="3" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		<?php endif; ?>
 
 		<?php if ($workspace['type'] === 'project'): ?>
 			<section class="bc-card bc-section" aria-labelledby="bc-booking-statuses-title">

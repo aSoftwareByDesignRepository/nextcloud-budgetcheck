@@ -51,6 +51,18 @@ $canManage = !empty($_['canManageWorkspace']);
 		</div>
 	</section>
 
+	<section class="bc-card bc-section" aria-labelledby="bc-month-activity-title">
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-month-activity-title"><?php p($l->t('Monthly activity')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Quick stats for all bookings in this month.')); ?></p>
+			</div>
+		</header>
+		<div class="bc-summary-grid" data-bc-month-activity-grid aria-busy="true">
+			<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>
+		</div>
+	</section>
+
 	<section class="bc-card bc-section" aria-labelledby="bc-month-warnings-title" data-bc-warnings hidden>
 		<header class="bc-section__header">
 			<div>
@@ -66,6 +78,13 @@ $canManage = !empty($_['canManageWorkspace']);
 				<h2 id="bc-month-budget-title"><?php p($l->t('Category consumption')); ?></h2>
 				<p class="bc-section__sub"><?php p($l->t('How each category is performing against its plan this month.')); ?></p>
 			</div>
+			<?php if ($canManage): ?>
+				<div class="bc-section__controls">
+					<button type="button" class="button primary" data-bc-action="open-month-budget-overrides">
+						<?php p($l->t('Edit monthly overrides')); ?>
+					</button>
+				</div>
+			<?php endif; ?>
 		</header>
 		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Category consumption')); ?>" tabindex="0">
 			<table class="bc-table bc-budget-table">
@@ -79,6 +98,34 @@ $canManage = !empty($_['canManageWorkspace']);
 				</thead>
 				<tbody data-bc-month-budget-rows>
 					<tr><td colspan="4" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="bc-card bc-section" aria-labelledby="bc-month-transactions-title">
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-month-transactions-title"><?php p($l->t('Transactions this month')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Complete list of bookings for this month.')); ?></p>
+			</div>
+			<div class="bc-section__controls">
+				<a class="button" data-bc-month-transactions-link href="#"><?php p($l->t('Open in transactions view')); ?></a>
+			</div>
+		</header>
+		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Transactions this month')); ?>" tabindex="0">
+			<table class="bc-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php p($l->t('Date')); ?></th>
+						<th scope="col"><?php p($l->t('Title')); ?></th>
+						<th scope="col"><?php p($l->t('Direction')); ?></th>
+						<th scope="col" class="bc-table__col--num"><?php p($l->t('Amount')); ?></th>
+						<th scope="col"><?php p($l->t('Tags')); ?></th>
+					</tr>
+				</thead>
+				<tbody data-bc-month-transactions-rows>
+					<tr><td colspan="5" class="bc-loading"><?php p($l->t('Loading…')); ?></td></tr>
 				</tbody>
 			</table>
 		</div>

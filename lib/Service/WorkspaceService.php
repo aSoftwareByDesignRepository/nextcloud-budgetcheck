@@ -39,6 +39,7 @@ class WorkspaceService
 	private const LEGACY_COL_AUTO_COPY_PREV_MONTH = 'auto_copy_budgets_from_previous_month';
 
 	private const TAX_BUDGET_BASES = ['net', 'gross'];
+	private const SAVINGS_TARGET_MODES = ['percentage', 'absolute', 'hybrid'];
 
 	public function __construct(
 		private IDBConnection $db,
@@ -116,6 +117,7 @@ class WorkspaceService
 		$fiscalStart = $this->normaliseFiscalStartMonth((int)($payload['fiscalYearStartMonth'] ?? 1), $type);
 		$autoCopy = !empty($payload['autoCopyBudgetsFromPreviousMonth']);
 		$overspendThreshold = $this->normaliseNullableMinor($payload['overspendThresholdMinor'] ?? null);
+		[$defaultSavingsMode, $defaultSavingsPercentBp, $defaultSavingsMinor] = $this->normaliseSavingsDefaults($payload, $type, $currency);
 
 		[$projectStart, $projectEnd, $projectCap, $defaultVatRate] = $this->extractProjectFields($payload, $type);
 		$primaryPlanningYear = null;
@@ -153,6 +155,9 @@ class WorkspaceService
 					'project_start_date' => $qb->createNamedParameter($projectStart),
 					'project_end_date' => $qb->createNamedParameter($projectEnd),
 					'default_vat_rate_bp' => $qb->createNamedParameter($defaultVatRate, $defaultVatRate === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'default_savings_target_mode' => $qb->createNamedParameter($defaultSavingsMode, $defaultSavingsMode === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR),
+					'default_savings_target_percent_bp' => $qb->createNamedParameter($defaultSavingsPercentBp, $defaultSavingsPercentBp === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'default_savings_target_minor' => $qb->createNamedParameter($defaultSavingsMinor, $defaultSavingsMinor === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'primary_planning_year' => $qb->createNamedParameter(
 						$primaryPlanningYear,
 						$primaryPlanningYear === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT
@@ -259,6 +264,39 @@ class WorkspaceService
 				$logChanges['primaryPlanningYear'] = $py;
 			}
 		}
+		if ($workspace['type'] === self::TYPE_HOUSEHOLD && (
+			array_key_exists('defaultSavingsTargetMode', $payload)
+			|| array_key_exists('defaultSavingsTargetPercentBp', $payload)
+			|| array_key_exists('defaultSavingsTargetMinor', $payload)
+		)) {
+			$modeRaw = array_key_exists('defaultSavingsTargetMode', $payload)
+				? $payload['defaultSavingsTargetMode']
+				: $workspace['defaultSavingsTargetMode'];
+			$percentRaw = array_key_exists('defaultSavingsTargetPercentBp', $payload)
+				? $payload['defaultSavingsTargetPercentBp']
+				: $workspace['defaultSavingsTargetPercentBp'];
+			$minorRaw = array_key_exists('defaultSavingsTargetMinor', $payload)
+				? $payload['defaultSavingsTargetMinor']
+				: $workspace['defaultSavingsTargetMinor'];
+			$defaults = $this->normaliseSavingsDefaults([
+				'defaultSavingsTargetMode' => $modeRaw,
+				'defaultSavingsTargetPercentBp' => $percentRaw,
+				'defaultSavingsTargetMinor' => $minorRaw,
+			], self::TYPE_HOUSEHOLD, $workspace['currencyCode']);
+			[$mode, $percentBp, $minor] = $defaults;
+			if ($mode !== $workspace['defaultSavingsTargetMode']) {
+				$updates['default_savings_target_mode'] = $mode;
+				$logChanges['defaultSavingsTargetMode'] = $mode;
+			}
+			if ($percentBp !== $workspace['defaultSavingsTargetPercentBp']) {
+				$updates['default_savings_target_percent_bp'] = $percentBp;
+				$logChanges['defaultSavingsTargetPercentBp'] = $percentBp;
+			}
+			if ($minor !== $workspace['defaultSavingsTargetMinor']) {
+				$updates['default_savings_target_minor'] = $minor;
+				$logChanges['defaultSavingsTargetMinor'] = $minor;
+			}
+		}
 		if ($workspace['type'] === self::TYPE_PROJECT) {
 			$startProvided = array_key_exists('projectStartDate', $payload);
 			$endProvided = array_key_exists('projectEndDate', $payload);
@@ -281,6 +319,11 @@ class WorkspaceService
 				if ($cap !== $workspace['projectTotalCapMinor']) {
 					$updates['project_total_cap_minor'] = $cap;
 					$logChanges['projectTotalCapMinor'] = $cap;
+				}
+			}
+			foreach (['defaultSavingsTargetMode', 'defaultSavingsTargetPercentBp', 'defaultSavingsTargetMinor'] as $forbidden) {
+				if (array_key_exists($forbidden, $payload) && $payload[$forbidden] !== null && $payload[$forbidden] !== '') {
+					throw new \InvalidArgumentException('Project workspaces do not accept default savings target fields.');
 				}
 			}
 		} else {
@@ -541,6 +584,15 @@ class WorkspaceService
 			'projectStartDate' => $row['project_start_date'] !== null ? (string)$row['project_start_date'] : null,
 			'projectEndDate' => $row['project_end_date'] !== null ? (string)$row['project_end_date'] : null,
 			'defaultVatRateBp' => $row['default_vat_rate_bp'] === null ? null : (int)$row['default_vat_rate_bp'],
+			'defaultSavingsTargetMode' => isset($row['default_savings_target_mode']) && $row['default_savings_target_mode'] !== null
+				? (string)$row['default_savings_target_mode']
+				: null,
+			'defaultSavingsTargetPercentBp' => isset($row['default_savings_target_percent_bp']) && $row['default_savings_target_percent_bp'] !== null
+				? (int)$row['default_savings_target_percent_bp']
+				: null,
+			'defaultSavingsTargetMinor' => isset($row['default_savings_target_minor']) && $row['default_savings_target_minor'] !== null
+				? (int)$row['default_savings_target_minor']
+				: null,
 			'createdBy' => (string)$row['created_by'],
 			'createdAt' => (string)$row['created_at'],
 			'updatedAt' => (string)$row['updated_at'],
@@ -712,6 +764,63 @@ class WorkspaceService
 			throw new \InvalidArgumentException('Threshold must be a non-negative integer (minor units).');
 		}
 		return $int;
+	}
+
+	/**
+	 * @return array{0:?string,1:?int,2:?int}
+	 */
+	private function normaliseSavingsDefaults(array $payload, string $type, string $currencyCode): array
+	{
+		if ($type !== self::TYPE_HOUSEHOLD) {
+			return [null, null, null];
+		}
+		$modeRaw = $payload['defaultSavingsTargetMode'] ?? null;
+		$percentRaw = $payload['defaultSavingsTargetPercentBp'] ?? null;
+		$minorRaw = $payload['defaultSavingsTargetMinor'] ?? null;
+		if ($modeRaw === null || $modeRaw === '') {
+			return [null, null, null];
+		}
+		$mode = strtolower(trim((string)$modeRaw));
+		if (!in_array($mode, self::SAVINGS_TARGET_MODES, true)) {
+			throw new \InvalidArgumentException('defaultSavingsTargetMode must be one of: ' . implode(', ', self::SAVINGS_TARGET_MODES) . '.');
+		}
+		$percent = null;
+		if ($percentRaw !== null && $percentRaw !== '') {
+			if (!is_int($percentRaw) && !ctype_digit((string)$percentRaw)) {
+				throw new \InvalidArgumentException('defaultSavingsTargetPercentBp must be an integer.');
+			}
+			$percent = (int)$percentRaw;
+			if ($percent < 0 || $percent > 10000) {
+				throw new \InvalidArgumentException('defaultSavingsTargetPercentBp must be between 0 and 10000.');
+			}
+		}
+		$minor = null;
+		if ($minorRaw !== null && $minorRaw !== '') {
+			if (is_int($minorRaw)) {
+				$minor = $minorRaw;
+			} else {
+				$minor = $this->money->parseHumanAmount($minorRaw, $this->money->decimalsFor($currencyCode));
+			}
+			if ($minor < 0) {
+				throw new \InvalidArgumentException('defaultSavingsTargetMinor must be zero or positive.');
+			}
+		}
+		if ($mode === 'percentage') {
+			if ($percent === null) {
+				throw new \InvalidArgumentException('defaultSavingsTargetPercentBp is required for percentage mode.');
+			}
+			$minor = null;
+		} elseif ($mode === 'absolute') {
+			if ($minor === null) {
+				throw new \InvalidArgumentException('defaultSavingsTargetMinor is required for absolute mode.');
+			}
+			$percent = null;
+		} else {
+			if ($percent === null || $minor === null) {
+				throw new \InvalidArgumentException('default savings hybrid mode requires both percent and amount.');
+			}
+		}
+		return [$mode, $percent, $minor];
 	}
 
 	/**

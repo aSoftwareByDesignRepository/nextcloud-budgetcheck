@@ -20,6 +20,8 @@ use OCP\IL10N;
  */
 class BudgetService
 {
+	private ?bool $budgetDefaultsTableExists = null;
+
 	public function __construct(
 		private IDBConnection $db,
 		private AccessControlService $access,
@@ -48,6 +50,29 @@ class BudgetService
 		$out = [];
 		while ($row = $result->fetch()) {
 			$out[] = $this->hydrate($row, $currencyCode);
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * @return list<array<string,mixed>>
+	 */
+	public function listDefaults(int $workspaceId, string $userId, string $currencyCode): array
+	{
+		$this->access->ensureMembership($workspaceId, $userId);
+		if (!$this->budgetDefaultsTableAvailable()) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_budget_defaults')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->orderBy('category_id', 'ASC');
+		$result = $qb->executeQuery();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$out[] = $this->hydrateDefault($row, $currencyCode);
 		}
 		$result->closeCursor();
 		return $out;
@@ -152,6 +177,7 @@ class BudgetService
 	public function plannedMapForMonth(int $workspaceId, string $yearMonth): array
 	{
 		$ym = $this->validateYearMonth($yearMonth);
+		$defaults = $this->plannedDefaultsMap($workspaceId);
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('category_id', 'planned_minor')
 			->from('bc_budgets')
@@ -164,7 +190,84 @@ class BudgetService
 			$out[$key] = (int)$row['planned_minor'];
 		}
 		$result->closeCursor();
-		return $out;
+		return $out + $defaults;
+	}
+
+	/**
+	 * @param list<array{categoryId:int, plannedMinor:int|string}> $rows
+	 * @return list<array<string,mixed>>
+	 */
+	public function bulkUpsertDefaults(int $workspaceId, string $userId, array $rows, array $workspace): array
+	{
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		if (!$this->budgetDefaultsTableAvailable()) {
+			// Older installs can miss this table until migrations run; keep API stable.
+			return [];
+		}
+		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
+		$now = $this->utcNow();
+		$uncatId = $this->categories->internalUncategorizedCategoryId($workspaceId);
+		$normalised = [];
+		foreach ($rows as $row) {
+			$categoryId = (int)($row['categoryId'] ?? 0);
+			if ($categoryId < 1) {
+				throw new \InvalidArgumentException('categoryId must be a positive integer.');
+			}
+			if ($uncatId !== null && $categoryId === $uncatId) {
+				throw new \InvalidArgumentException($this->l10n->t('Budgets cannot be assigned to the system Uncategorized category.'));
+			}
+			if (!$this->categoryBelongsToWorkspace($categoryId, $workspaceId)) {
+				throw new AccessDeniedException();
+			}
+			$plannedRaw = $row['plannedMinor'] ?? ($row['planned'] ?? 0);
+			$plannedMinor = is_int($plannedRaw) ? $plannedRaw : $this->money->parseHumanAmount($plannedRaw, $decimals);
+			if ($plannedMinor < 0) {
+				throw new \InvalidArgumentException('plannedMinor must be zero or positive.');
+			}
+			$normalised[$categoryId] = $plannedMinor;
+		}
+		$this->db->beginTransaction();
+		try {
+			foreach ($normalised as $categoryId => $plannedMinor) {
+				$existing = $this->loadExistingDefault($workspaceId, $categoryId);
+				if ($existing === null) {
+					if ($plannedMinor === 0) {
+						continue;
+					}
+					$qb = $this->db->getQueryBuilder();
+					$qb->insert('bc_budget_defaults')
+						->values([
+							'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+							'category_id' => $qb->createNamedParameter($categoryId, \PDO::PARAM_INT),
+							'planned_minor' => $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT),
+							'updated_by' => $qb->createNamedParameter($userId),
+							'updated_at' => $qb->createNamedParameter($now),
+						]);
+					$qb->executeStatement();
+				} elseif ($plannedMinor === 0) {
+					$qb = $this->db->getQueryBuilder();
+					$qb->delete('bc_budget_defaults')
+						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+					$qb->executeStatement();
+				} elseif ((int)$existing['planned_minor'] !== $plannedMinor) {
+					$qb = $this->db->getQueryBuilder();
+					$qb->update('bc_budget_defaults')
+						->set('planned_minor', $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT))
+						->set('updated_by', $qb->createNamedParameter($userId))
+						->set('updated_at', $qb->createNamedParameter($now))
+						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+					$qb->executeStatement();
+				}
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
+		$this->audit->record($userId, 'budget_defaults_upserted', 'budget_default', (string)$workspaceId, ['count' => count($normalised)], $workspaceId);
+		return $this->listDefaults($workspaceId, $userId, $workspace['currencyCode']);
 	}
 
 	private function loadExisting(int $workspaceId, string $yearMonth, ?int $categoryId): ?array
@@ -179,6 +282,22 @@ class BudgetService
 		} else {
 			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
 		}
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? null : $row;
+	}
+
+	private function loadExistingDefault(int $workspaceId, int $categoryId): ?array
+	{
+		if (!$this->budgetDefaultsTableAvailable()) {
+			return null;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_budget_defaults')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
@@ -209,6 +328,75 @@ class BudgetService
 			'updatedBy' => (string)$row['updated_by'],
 			'updatedAt' => (string)$row['updated_at'],
 		];
+	}
+
+	private function hydrateDefault(array $row, string $currencyCode): array
+	{
+		return [
+			'id' => (int)$row['id'],
+			'workspaceId' => (int)$row['workspace_id'],
+			'categoryId' => (int)$row['category_id'],
+			'planned' => $this->money->envelope((int)$row['planned_minor'], $currencyCode),
+			'updatedBy' => (string)$row['updated_by'],
+			'updatedAt' => (string)$row['updated_at'],
+		];
+	}
+
+	/**
+	 * @return array<int,int>
+	 */
+	private function plannedDefaultsMap(int $workspaceId): array
+	{
+		if (!$this->budgetDefaultsTableAvailable()) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('category_id', 'planned_minor')
+			->from('bc_budget_defaults')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$out[(int)$row['category_id']] = (int)$row['planned_minor'];
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	private function budgetDefaultsTableAvailable(): bool
+	{
+		if ($this->budgetDefaultsTableExists !== null) {
+			return $this->budgetDefaultsTableExists;
+		}
+
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('id')
+				->from('bc_budget_defaults')
+				->setMaxResults(1);
+			$result = $qb->executeQuery();
+			$result->closeCursor();
+			$this->budgetDefaultsTableExists = true;
+			return true;
+		} catch (\Throwable $e) {
+			if ($this->isMissingBudgetDefaultsTableError($e)) {
+				$this->budgetDefaultsTableExists = false;
+				return false;
+			}
+			throw $e;
+		}
+	}
+
+	private function isMissingBudgetDefaultsTableError(\Throwable $e): bool
+	{
+		$message = strtolower($e->getMessage());
+		if (!str_contains($message, 'bc_budget_defaults')) {
+			return false;
+		}
+		return str_contains($message, "doesn't exist")
+			|| str_contains($message, 'base table or view not found')
+			|| str_contains($message, 'sqlstate[42s02]')
+			|| str_contains($message, '1146');
 	}
 
 	private function validateYearMonth(string $value): string

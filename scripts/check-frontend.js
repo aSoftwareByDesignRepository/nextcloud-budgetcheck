@@ -22,6 +22,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const JS_DIR = path.join(ROOT, 'js');
+const EN_JSON = path.join(ROOT, 'l10n', 'en.json');
 
 /** Patterns we must never see in production frontend code. */
 const FORBIDDEN_PATTERNS = [
@@ -121,8 +122,69 @@ function listJsFiles(dir) {
 	return out;
 }
 
+function listPhpFiles(dir) {
+	const out = [];
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		const full = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			out.push(...listPhpFiles(full));
+			continue;
+		}
+		if (entry.name.endsWith('.php')) {
+			out.push(full);
+		}
+	}
+	return out;
+}
+
+function unescapeJsString(value) {
+	return value
+		.replace(/\\\\/g, '\\')
+		.replace(/\\'/g, "'")
+		.replace(/\\"/g, '"');
+}
+
+function checkTranslationCoverage() {
+	const en = JSON.parse(fs.readFileSync(EN_JSON, 'utf8'));
+	const knownKeys = new Set(Object.keys(en.translations || {}));
+	const keyToFiles = new Map();
+	const jsPattern = /\bt\(\s*['"]budgetcheck['"]\s*,\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]/g;
+	const phpPattern = /->t\(\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]/g;
+	const phpFiles = [
+		...listPhpFiles(path.join(ROOT, 'lib')),
+		...listPhpFiles(path.join(ROOT, 'templates')),
+	];
+	for (const file of listJsFiles(JS_DIR)) {
+		const text = fs.readFileSync(file, 'utf8');
+		for (const match of text.matchAll(jsPattern)) {
+			const key = unescapeJsString(match[1]);
+			if (!keyToFiles.has(key)) keyToFiles.set(key, new Set());
+			keyToFiles.get(key).add(file);
+		}
+	}
+	for (const file of phpFiles) {
+		const text = fs.readFileSync(file, 'utf8');
+		for (const match of text.matchAll(phpPattern)) {
+			const key = unescapeJsString(match[1]);
+			if (!keyToFiles.has(key)) keyToFiles.set(key, new Set());
+			keyToFiles.get(key).add(file);
+		}
+	}
+	for (const [key, files] of keyToFiles.entries()) {
+		if (knownKeys.has(key)) continue;
+		const relFiles = Array.from(files).map((f) => path.relative(ROOT, f)).join(', ');
+		errors.push({
+			file: EN_JSON,
+			line: 1,
+			content: key,
+			message: `Missing translation key in l10n/en.json (used in: ${relFiles})`,
+		});
+	}
+}
+
 walk(JS_DIR);
 checkRawFetchUsage();
+checkTranslationCoverage();
 
 if (errors.length > 0) {
 	for (const err of errors) {

@@ -56,6 +56,8 @@ return [
 		// Budgets and savings
 		['name' => 'api#listBudgets',        'url' => '/api/budgets',                       'verb' => 'GET'],
 		['name' => 'api#bulkUpsertBudgets',  'url' => '/api/budgets/bulk-upsert',           'verb' => 'POST'],
+		['name' => 'api#listBudgetDefaults', 'url' => '/api/budget-defaults',               'verb' => 'GET'],
+		['name' => 'api#bulkUpsertBudgetDefaults', 'url' => '/api/budget-defaults/bulk-upsert', 'verb' => 'POST'],
 		['name' => 'api#getSavingsTarget',   'url' => '/api/savings-target',                'verb' => 'GET'],
 		['name' => 'api#saveSavingsTarget',  'url' => '/api/savings-target',                'verb' => 'POST'],
 

@@ -65,6 +65,9 @@
 			[t('budgetcheck', 'Net result'), totals.netResult, true],
 			[t('budgetcheck', 'Savings target'), totals.savingsTarget],
 			[t('budgetcheck', 'Savings achieved'), totals.savingsAchieved],
+			[t('budgetcheck', 'Budget saldo'), totals.budgetSaldo, true],
+			[t('budgetcheck', 'Not spent (under budget)'), totals.budgetUnspent],
+			[t('budgetcheck', 'Overspent (over budget)'), totals.budgetOverspent],
 		];
 		tiles.forEach(([label, env, primary]) => {
 			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
@@ -101,6 +104,11 @@
 					text: t('budgetcheck', 'In: {income} · Out: {expense}')
 						.replace('{income}', Money.formatEnvelope(m.income, Ws.htmlLang))
 						.replace('{expense}', Money.formatEnvelope(m.expense, Ws.htmlLang)),
+				}),
+				C.createElement('span', {
+					class: 'bc-month-card__meta',
+					text: t('budgetcheck', 'Budget saldo: {saldo}')
+						.replace('{saldo}', Money.formatEnvelope(m.budget?.saldo, Ws.htmlLang)),
 				}),
 				m.isClosed
 					? C.createElement('span', { class: 'bc-month-card__meta', text: t('budgetcheck', 'Closed') })
