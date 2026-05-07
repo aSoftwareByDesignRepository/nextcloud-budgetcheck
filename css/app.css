@@ -1576,7 +1576,8 @@
 	display: grid;
 	place-items: center;
 	background: color-mix(in srgb, var(--color-main-text, #000) 60%, transparent);
-	z-index: 1100;
+	/* Keep dialogs above Nextcloud app/navigation chrome. */
+	z-index: 10000;
 }
 .bc-modal__dialog {
 	background: var(--bc-bg-card);
