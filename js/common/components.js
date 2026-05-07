@@ -77,6 +77,7 @@
 			render: () => createElement('div'),
 			primaryLabel: t('budgetcheck', 'Save'),
 			cancelLabel: t('budgetcheck', 'Cancel'),
+			showCancel: true,
 			danger: false,
 			dialogClass: '',
 			onSubmit: null,
@@ -121,12 +122,16 @@
 			window.BudgetCheckDates.applyLocaleToTemporalInputs(dialog);
 		}
 
-		const cancelBtn = createElement('button', {
-			type: 'button',
-			class: 'button',
-			text: opts.cancelLabel,
-			on: { click: () => instance.close(false) },
-		});
+		const actionChildren = [];
+		if (opts.showCancel) {
+			const cancelBtn = createElement('button', {
+				type: 'button',
+				class: 'button',
+				text: opts.cancelLabel,
+				on: { click: () => instance.close(false) },
+			});
+			actionChildren.push(cancelBtn);
+		}
 		const primaryBtn = createElement('button', {
 			type: 'button',
 			class: opts.danger ? 'button danger primary' : 'button primary',
@@ -149,7 +154,8 @@
 				},
 			},
 		});
-		const actions = createElement('div', { class: 'bc-modal__actions bc-form-actions' }, [cancelBtn, primaryBtn]);
+		actionChildren.push(primaryBtn);
+		const actions = createElement('div', { class: 'bc-modal__actions bc-form-actions' }, actionChildren);
 		dialog.appendChild(header);
 		dialog.appendChild(bodyContainer);
 		dialog.appendChild(actions);

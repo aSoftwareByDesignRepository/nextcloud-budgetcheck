@@ -34,6 +34,18 @@ $workspace = $_['workspace'] ?? null;
 				<h2 id="bc-year-totals-title"><?php p($l->t('Annual totals')); ?></h2>
 				<p class="bc-section__sub" data-bc-summary-period></p>
 			</div>
+			<div class="bc-section__controls bc-section__controls--stack bc-section__controls--yearly-help">
+				<button
+					type="button"
+					class="button"
+					data-bc-yearly-summary-help
+					aria-describedby="bc-year-totals-help-hint">
+					<?php p($l->t('How to read this')); ?>
+				</button>
+				<p id="bc-year-totals-help-hint" class="bc-section__control-hint">
+					<?php p($l->t('Open a plain-language explanation of each value and what it means for this year.')); ?>
+				</p>
+			</div>
 		</header>
 		<div class="bc-summary-grid" data-bc-summary-grid aria-busy="true">
 			<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>

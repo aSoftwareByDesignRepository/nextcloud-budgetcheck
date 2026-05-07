@@ -11,10 +11,13 @@
 	const state = { year: new Date().getFullYear() };
 	/** @type {{ id: number, type: string } | null} */
 	let ws = null;
+	/** @type {any | null} */
+	let lastSummary = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		ws = Ws.workspace;
 		if (!ws || ws.type !== 'household') return;
+		const helpBtn = document.querySelector('[data-bc-yearly-summary-help]');
 		const yearSelect = document.querySelector('[data-bc-year-picker]');
 		if (yearSelect) {
 			const yNow = new Date().getFullYear();
@@ -30,6 +33,9 @@
 				}
 			});
 		}
+		if (helpBtn) {
+			helpBtn.addEventListener('click', () => openSummaryHelpModal());
+		}
 		load();
 	});
 
@@ -42,7 +48,8 @@
 		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/yearly-summary', { workspaceId: ws.id, year: state.year });
-			const summary = data.summary;
+			const summary = normalizeSummary(data && data.summary ? data.summary : null);
+			lastSummary = summary;
 			renderTotals(grid, summary);
 			if (period) period.textContent = String(summary.year);
 			renderMonths(months, summary);
@@ -58,7 +65,7 @@
 		if (!grid) return;
 		grid.replaceChildren();
 		const totals = summary.totals || {};
-		const ratio = totals.savingsAchievementRatio;
+		const ratio = normalizeRatio(totals.savingsAchievementRatio);
 		const tiles = [
 			[t('budgetcheck', 'Income'), totals.income],
 			[t('budgetcheck', 'Expenses'), totals.expense],
@@ -72,14 +79,14 @@
 		tiles.forEach(([label, env, primary]) => {
 			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
 				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-				C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
+				C.createElement('div', { class: 'bc-summary-tile__value', text: formatEnv(env) }),
 			]));
 		});
 		grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
 			C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Savings achievement') }),
 			C.createElement('div', {
 				class: 'bc-summary-tile__value bc-summary-tile__value--small',
-				text: ratio === null || ratio === undefined ? t('budgetcheck', 'No target set') : Math.round(ratio * 100) + '%',
+				text: ratio === null ? t('budgetcheck', 'No target set') : Math.round(ratio * 100) + '%',
 			}),
 		]));
 		grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
@@ -116,5 +123,132 @@
 			]);
 			container.appendChild(C.createElement('li', null, [card]));
 		});
+	}
+
+	function openSummaryHelpModal() {
+		const summary = lastSummary || normalizeSummary(null);
+		const totals = summary.totals || {};
+		const ratio = normalizeRatio(totals.savingsAchievementRatio);
+		const ratioText = ratio === null
+			? t('budgetcheck', 'No target set')
+			: Math.round(ratio * 100) + '%';
+		const rows = [
+			{
+				label: t('budgetcheck', 'Income'),
+				value: formatEnv(totals.income),
+				desc: t('budgetcheck', 'Total money received in this year.'),
+			},
+			{
+				label: t('budgetcheck', 'Expenses'),
+				value: formatEnv(totals.expense),
+				desc: t('budgetcheck', 'Total money spent in this year.'),
+			},
+			{
+				label: t('budgetcheck', 'Net result'),
+				value: formatEnv(totals.netResult),
+				desc: t('budgetcheck', 'Income minus expenses across the full year.'),
+			},
+			{
+				label: t('budgetcheck', 'Savings target'),
+				value: formatEnv(totals.savingsTarget),
+				desc: t('budgetcheck', 'The total amount you planned to set aside this year.'),
+			},
+			{
+				label: t('budgetcheck', 'Savings achieved'),
+				value: formatEnv(totals.savingsAchieved),
+				desc: t('budgetcheck', 'The total amount you actually set aside this year.'),
+			},
+			{
+				label: t('budgetcheck', 'Savings achievement'),
+				value: ratioText,
+				desc: t('budgetcheck', 'How much of your yearly savings target was achieved.'),
+			},
+			{
+				label: t('budgetcheck', 'Budget saldo'),
+				value: formatEnv(totals.budgetSaldo),
+				desc: t('budgetcheck', 'Total budget result. Negative means over budget, positive means under budget.'),
+			},
+			{
+				label: t('budgetcheck', 'Not spent (under budget)'),
+				value: formatEnv(totals.budgetUnspent),
+				desc: t('budgetcheck', 'How much planned budget remained unused.'),
+			},
+			{
+				label: t('budgetcheck', 'Overspent (over budget)'),
+				value: formatEnv(totals.budgetOverspent),
+				desc: t('budgetcheck', 'How much spending exceeded planned budgets.'),
+			},
+			{
+				label: t('budgetcheck', 'Months over budget'),
+				value: String(Number.parseInt(String(totals.overBudgetMonths || 0), 10) || 0),
+				desc: t('budgetcheck', 'How many months in this year ended over budget.'),
+			},
+		];
+		C.openModal({
+			title: t('budgetcheck', 'Annual totals explained'),
+			primaryLabel: t('budgetcheck', 'Close'),
+			showCancel: false,
+			render: () => C.createElement('div', { class: 'bc-yearly-help' }, [
+				C.createElement('p', {
+					class: 'bc-yearly-help__intro',
+					text: t('budgetcheck', 'Quick reference for the values shown on this page.'),
+				}),
+				C.createElement('dl', { class: 'bc-yearly-help__list' }, rows.map((row) => C.createElement('div', { class: 'bc-yearly-help__row' }, [
+					C.createElement('dt', { class: 'bc-yearly-help__term', text: row.label }),
+					C.createElement('dd', { class: 'bc-yearly-help__def' }, [
+						C.createElement('div', { class: 'bc-yearly-help__value', text: row.value }),
+						C.createElement('div', { class: 'bc-yearly-help__desc', text: row.desc }),
+					]),
+				]))),
+			]),
+			onSubmit: () => true,
+		});
+	}
+
+	function normalizeSummary(summary) {
+		const base = summary && typeof summary === 'object' ? summary : {};
+		const totals = base.totals && typeof base.totals === 'object' ? base.totals : {};
+		const months = Array.isArray(base.months) ? base.months : [];
+		return {
+			year: Number.parseInt(String(base.year || state.year), 10) || state.year,
+			totals: {
+				income: normalizeEnv(totals.income),
+				expense: normalizeEnv(totals.expense),
+				netResult: normalizeEnv(totals.netResult),
+				savingsTarget: normalizeEnv(totals.savingsTarget),
+				savingsAchieved: normalizeEnv(totals.savingsAchieved),
+				budgetSaldo: normalizeEnv(totals.budgetSaldo),
+				budgetUnspent: normalizeEnv(totals.budgetUnspent),
+				budgetOverspent: normalizeEnv(totals.budgetOverspent),
+				savingsAchievementRatio: normalizeRatio(totals.savingsAchievementRatio),
+				overBudgetMonths: Number.parseInt(String(totals.overBudgetMonths || 0), 10) || 0,
+			},
+			months,
+		};
+	}
+
+	function normalizeEnv(env) {
+		if (!env || typeof env !== 'object') return null;
+		const minor = Number.parseInt(String(env.minor), 10);
+		if (!Number.isFinite(minor)) return null;
+		const currency = String(env.currency || ws?.currencyCode || '').trim();
+		if (!currency) return null;
+		const decimals = Number.parseInt(String(env.decimals), 10);
+		return {
+			minor,
+			currency,
+			decimals: Number.isFinite(decimals) && decimals >= 0 && decimals <= 8 ? decimals : 2,
+		};
+	}
+
+	function normalizeRatio(value) {
+		if (value === null || value === undefined) return null;
+		const num = Number(value);
+		if (!Number.isFinite(num)) return null;
+		return Math.max(0, Math.min(10, num));
+	}
+
+	function formatEnv(env) {
+		return env ? Money.formatEnvelope(env, Ws.htmlLang) : '—';
 	}
 })();

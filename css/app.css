@@ -1489,6 +1489,68 @@
 .bc-month-card--over { border-color: var(--color-error, #cc4646); }
 .bc-month-card--closed { background: var(--bc-tint-info); }
 
+/* Yearly summary help */
+.bc-yearly-help {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+}
+.bc-yearly-help__intro {
+	margin: 0;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+}
+.bc-yearly-help__list {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+}
+.bc-yearly-help__row {
+	display: grid;
+	grid-template-columns: minmax(10rem, 18rem) minmax(0, 1fr);
+	gap: var(--bc-space-2) var(--bc-space-4);
+	align-items: start;
+}
+.bc-yearly-help__term {
+	margin: 0;
+	font-weight: 700;
+	color: var(--color-main-text, #1d1d1d);
+	line-height: var(--bc-line-base);
+	overflow-wrap: anywhere;
+}
+.bc-yearly-help__def {
+	margin: 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	padding-bottom: var(--bc-space-2);
+	border-bottom: 1px solid var(--bc-border);
+}
+.bc-yearly-help__value {
+	font-weight: 700;
+	font-variant-numeric: var(--bc-tab-num);
+}
+.bc-yearly-help__desc {
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+	line-height: var(--bc-line-base);
+	overflow-wrap: anywhere;
+}
+
+.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help {
+	justify-self: end;
+	align-items: flex-end;
+	max-width: min(44ch, 100%);
+}
+.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help .bc-section__control-hint {
+	text-align: end;
+}
+.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help .button {
+	align-self: end;
+}
+
 /* Cap meter */
 .bc-cap__bar {
 	width: 100%;
@@ -1704,6 +1766,19 @@
 	.bc-section__header > .button,
 	.bc-section__header > .bc-hint-dismiss {
 		justify-self: start;
+	}
+	.bc-yearly-help__row {
+		grid-template-columns: 1fr;
+	}
+	.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help {
+		justify-self: stretch;
+		align-items: stretch;
+	}
+	.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help .bc-section__control-hint {
+		text-align: start;
+	}
+	.bc-section__header > .bc-section__controls.bc-section__controls--yearly-help .button {
+		align-self: start;
 	}
 }
 @media (max-width: 480px) {
