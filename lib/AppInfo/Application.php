@@ -11,6 +11,7 @@ use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
+use OCA\BudgetCheck\Service\HouseholdYearlyExportService;
 use OCA\BudgetCheck\Service\LocaleFormatService;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
@@ -199,6 +200,14 @@ class Application extends App implements IBootstrap
 				$c->query(WarningEngine::class),
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(TransactionService::class),
+			);
+		});
+		$context->registerService(HouseholdYearlyExportService::class, function ($c): HouseholdYearlyExportService {
+			return new HouseholdYearlyExportService(
+				$c->query(WorkspaceService::class),
+				$c->query(SummaryService::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\IDBConnection::class),
 			);
 		});
 

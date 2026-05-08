@@ -61,6 +61,27 @@ $workspace = $_['workspace'] ?? null;
 		</header>
 		<ul class="bc-month-grid" data-bc-month-cards aria-busy="true"></ul>
 	</section>
+
+	<section class="bc-card bc-section" aria-labelledby="bc-year-export-title">
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-year-export-title"><?php p($l->t('Export')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Download the selected year as an Excel workbook.')); ?></p>
+			</div>
+			<div class="bc-section__controls bc-section__controls--stack">
+				<button
+					type="button"
+					class="button primary"
+					data-bc-yearly-export
+					aria-describedby="bc-year-export-hint">
+					<?php p($l->t('Export yearly workbook (Excel)')); ?>
+				</button>
+				<p id="bc-year-export-hint" class="bc-section__control-hint">
+					<?php p($l->t('Downloads one overview sheet and one monthly booking sheet for each month in this year.')); ?>
+				</p>
+			</div>
+		</header>
+	</section>
 <?php endif; ?>
 
 <?php include __DIR__ . '/common/page-end.php'; ?>

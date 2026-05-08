@@ -54,6 +54,27 @@ $workspace = $_['workspace'] ?? null;
 		</header>
 		<ul class="bc-tx-list" data-bc-specials-list></ul>
 	</section>
+
+	<section class="bc-card bc-section" aria-labelledby="bc-period-export-title">
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-period-export-title"><?php p($l->t('Export')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Download the project period as an Excel workbook.')); ?></p>
+			</div>
+			<div class="bc-section__controls bc-section__controls--stack">
+				<button
+					type="button"
+					class="button primary"
+					data-bc-period-export
+					aria-describedby="bc-period-export-hint">
+					<?php p($l->t('Export project workbook (Excel)')); ?>
+				</button>
+				<p id="bc-period-export-hint" class="bc-section__control-hint">
+					<?php p($l->t('Downloads project overview, monthly totals, and the full booking list for the configured project window.')); ?>
+				</p>
+			</div>
+		</header>
+	</section>
 <?php endif; ?>
 
 <?php include __DIR__ . '/common/page-end.php'; ?>

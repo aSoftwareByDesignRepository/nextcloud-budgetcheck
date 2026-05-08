@@ -11,6 +11,10 @@
 	document.addEventListener('DOMContentLoaded', () => {
 		const ws = Ws.workspace;
 		if (!ws || ws.type !== 'project') return;
+		const exportBtn = document.querySelector('[data-bc-period-export]');
+		if (exportBtn) {
+			exportBtn.addEventListener('click', () => exportWorkbook(ws, exportBtn));
+		}
 		void load(ws);
 	});
 
@@ -150,5 +154,56 @@
 			return Dates.formatDisplayDate(summary.window.from, Ws.htmlLang) + ' – ' + Dates.formatDisplayDate(summary.window.to, Ws.htmlLang);
 		}
 		return '';
+	}
+
+	async function exportWorkbook(ws, button) {
+		if (!ws) return;
+		if (button) {
+			button.disabled = true;
+			button.setAttribute('aria-busy', 'true');
+		}
+		try {
+			const url = '/apps/budgetcheck/export/project-period'
+				+ '?workspaceId=' + encodeURIComponent(String(ws.id));
+			const response = await fetch(url, {
+				method: 'GET',
+				credentials: 'same-origin',
+				headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+			});
+			if (!response.ok) {
+				const message = await response.text().catch(() => '');
+				const err = new Error(message || t('budgetcheck', 'Export failed. Please retry.'));
+				err.status = response.status;
+				throw err;
+			}
+			const blob = await response.blob();
+			const name = extractFilename(response) || 'budgetcheck_project_export.xlsx';
+			const objectUrl = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = objectUrl;
+			a.download = name;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			window.URL.revokeObjectURL(objectUrl);
+			Msg.announce(t('budgetcheck', 'Export started.'), 'success');
+		} catch (err) {
+			Msg.handleApiError(err);
+		} finally {
+			if (button) {
+				button.disabled = false;
+				button.removeAttribute('aria-busy');
+			}
+		}
+	}
+
+	function extractFilename(response) {
+		const cd = response.headers.get('content-disposition') || '';
+		const utf8Match = cd.match(/filename\*=UTF-8''([^;]+)/i);
+		if (utf8Match && utf8Match[1]) {
+			return decodeURIComponent(utf8Match[1]);
+		}
+		const asciiMatch = cd.match(/filename="([^"]+)"/i);
+		return asciiMatch && asciiMatch[1] ? asciiMatch[1] : null;
 	}
 })();

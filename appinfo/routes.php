@@ -16,6 +16,8 @@ return [
 		['name' => 'page#workspaceOverview', 'url' => '/workspaces', 'verb' => 'GET'],
 		['name' => 'page#settings',     'url' => '/settings',     'verb' => 'GET'],
 		['name' => 'page#appSettings',  'url' => '/app-settings', 'verb' => 'GET'],
+		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
+		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
 
 		// JSON workspace + member routes
 		['name' => 'api#listWorkspaces',     'url' => '/api/workspaces',                   'verb' => 'GET'],
