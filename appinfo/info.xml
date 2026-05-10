@@ -1,42 +1,98 @@
 <?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2025-2026 Alexander Mäule <info@software-by-design.de>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>budgetcheck</id>
 	<name>BudgetCheck</name>
+	<name lang="de">BudgetCheck</name>
 	<summary>Scoped household and project finance with auditable monthly close, budgets, and savings targets</summary>
-	<description>
-		BudgetCheck is a scoped finance app for Nextcloud. Each workspace is either a household (recurring monthly rhythm with budgets, savings targets and yearly overview) or a bounded project (project window, period overview, optional cap warning). Every workspace owns its ledger, categories, members and tax settings. The server is the source of truth for every calculation; money is stored in minor units and never as floating-point. Monthly close produces an immutable snapshot with a verifiable calc hash; controlled reopen restores editing. Optional tax-aware mode supports net or gross entry with deterministic VAT conversion. The interface is workspace-scoped — household and project totals never blend — and built to WCAG 2.1 AA with full keyboard support and responsive layouts down to 320 pixels.
-	</description>
+	<summary lang="de">Haushalts- und Projektfinanzen mit nachvollziehbarem Monatsabschluss, Budgets und Sparzielen</summary>
+	<description><![CDATA[
+# BudgetCheck
+
+Scoped finance for Nextcloud. Each **workspace** is either a **household** (recurring monthly rhythm with budgets, savings targets, and yearly overview) or a **bounded project** (project window, period overview, optional cap warning).
+
+Every workspace has its own ledger, categories, members, and tax settings. The **server is the source of truth** for all calculations; amounts are stored in **minor units**, never as floating-point. **Monthly close** produces an immutable snapshot with a verifiable calculation hash; controlled reopen restores editing. Optional **tax-aware** mode supports net or gross entry with deterministic VAT conversion.
+
+The UI is **workspace-scoped** (household and project totals never mix), targets **WCAG 2.1 AA**, full keyboard use, and responsive layouts from **320px** width.
+
+## Requirements
+
+- Nextcloud 32–33
+- PHP 8.2–8.4
+- MySQL or PostgreSQL
+	]]></description>
+	<description lang="de"><![CDATA[
+# BudgetCheck
+
+Finanzverwaltung in Nextcloud im **Workspace-Modell**: Jeder Workspace ist entweder ein **Haushalt** (monatlicher Rhythmus mit Budgets, Sparzielen und Jahresüberblick) oder ein **abgegrenztes Projekt** (Projektfenster, Periodenüberblick, optionale Obergrenzen-Hinweise).
+
+Jeder Workspace besitzt eigenes Ledger, Kategorien, Mitglieder und Steuereinstellungen. Der **Server ist die alleinige Recheninstanz**; Beträge liegen in **kleinsten Währungseinheiten**, nie als Fließkomma. Der **Monatsabschluss** erzeugt einen unveränderlichen Snapshot mit prüfbarem Rechen-Hash; ein kontrolliertes **Wiederöffnen** ermöglicht erneute Bearbeitung. Optionaler **Steuer-Modus** für Netto- oder Bruttoerfassung mit deterministischer USt-Umrechnung.
+
+Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich nicht), orientiert sich an **WCAG 2.1 AA**, vollständiger Tastaturbedienung und responsiven Layouts ab **320px** Breite.
+
+## Voraussetzungen
+
+- Nextcloud 32–33
+- PHP 8.2–8.4
+- MySQL oder PostgreSQL
+	]]></description>
 	<version>1.0.8</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://software-by-design.de">Alexander Mäule</author>
 	<namespace>BudgetCheck</namespace>
 	<category>organization</category>
+	<category>tools</category>
 	<website>https://software-by-design.de</website>
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues</bugs>
 	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck.git</repository>
+	<donation type="other" title="Software by Design">https://software-by-design.de/</donation>
 	<dependencies>
-		<!-- Major version: 33.0.3 and all 33.x patch releases satisfy max-version="33". -->
 		<nextcloud min-version="32" max-version="33"/>
+		<php min-version="8.2" max-version="8.4"/>
 	</dependencies>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-01.png">
+		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-01.png
+	</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-02.png">
+		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-02.png
+	</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-03.png">
+		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-03.png
+	</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-04.png">
+		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-04.png
+	</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-05.png">
+		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-05.png
+	</screenshot>
+	<navigations>
+		<navigation>
+			<name>BudgetCheck</name>
+			<route>budgetcheck.page.index</route>
+			<icon>app.svg</icon>
+			<order>11</order>
+		</navigation>
+	</navigations>
 	<keywords>
 		<keyword>budget</keyword>
+		<keyword>budgeting</keyword>
 		<keyword>finance</keyword>
 		<keyword>household</keyword>
 		<keyword>project</keyword>
 		<keyword>ledger</keyword>
 		<keyword>savings</keyword>
+		<keyword>Haushaltsbuch</keyword>
+		<keyword>monthly close</keyword>
+		<keyword>audit</keyword>
+		<keyword>VAT</keyword>
+		<keyword>tax</keyword>
+		<keyword>accessibility</keyword>
+		<keyword>self-hosted</keyword>
 	</keywords>
 	<settings>
 		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
 	</settings>
-	<release>
-		<databases>
-			<database>mysql</database>
-			<database>pgsql</database>
-		</databases>
-		<php min-version="8.2" max-version="8.5"/>
-		<platforms>
-			<platform>linux</platform>
-		</platforms>
-	</release>
 </info>

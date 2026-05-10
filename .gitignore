@@ -1,3 +1,42 @@
-.phpunit.result.cache
+# Dependencies
+/vendor/
 node_modules/
-vendor/
+
+# PHPUnit / frontend checks
+.phpunit.result.cache
+test-results/
+
+# Test coverage
+tests/coverage/
+tests/results.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Never commit signing or TLS material
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+*.cer
+*.csr
+.nextcloud/
+
+# Nextcloud local dev paths (if ever copied into the tree)
+data/
+config/config.php
+
+# Build / release artifacts
+build/
+appinfo/signature.json
