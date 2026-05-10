@@ -6,7 +6,7 @@
 	<description>
 		BudgetCheck is a scoped finance app for Nextcloud. Each workspace is either a household (recurring monthly rhythm with budgets, savings targets and yearly overview) or a bounded project (project window, period overview, optional cap warning). Every workspace owns its ledger, categories, members and tax settings. The server is the source of truth for every calculation; money is stored in minor units and never as floating-point. Monthly close produces an immutable snapshot with a verifiable calc hash; controlled reopen restores editing. Optional tax-aware mode supports net or gross entry with deterministic VAT conversion. The interface is workspace-scoped — household and project totals never blend — and built to WCAG 2.1 AA with full keyboard support and responsive layouts down to 320 pixels.
 	</description>
-	<version>1.0.6</version>
+	<version>1.0.8</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://software-by-design.de">Alexander Mäule</author>
 	<namespace>BudgetCheck</namespace>
