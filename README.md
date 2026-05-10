@@ -38,7 +38,7 @@ npm run db:naming-check
 
 From this app directory with monorepo `occ` and Nextcloud signing certificates: `make release-signed`, then follow `ready2publish/APPSTORE-RELEASE.md` in the monorepo (preflight, checksums, App Store signature, GitHub release).
 
-Default Git branch for store screenshot URLs is **`main`**. Replace files under `screenshots/` with real UI captures before a public launch.
+Default Git branch for store screenshot URLs is **`main`**. Images use `budgetcheck-screenshot-NN.png`; keep them aligned with `appinfo/info.xml` before each release.
 
 ## Security
 

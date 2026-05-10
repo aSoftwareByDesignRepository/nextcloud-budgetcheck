@@ -1,9 +1,9 @@
 # Store screenshots
 
-Files are named `budgetcheck-screenshot-NN.png` and referenced from `appinfo/info.xml`. Public URLs use the repo default branch **`main`**:
+Files are named `budgetcheck-screenshot-NN.png` (two-digit index) and referenced from `appinfo/info.xml`. Public URLs use branch **`main`**:
 
 `https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/…`
 
-**01–05** are currently minimal placeholder PNGs so links resolve after push. Replace them with real UI captures (demo data only) before a public App Store launch.
+**01–11** are ordered by capture time (oldest first). When adding or reordering, update the `<screenshot>` blocks in `info.xml` and keep indices contiguous.
 
-When adding or renumbering shots, keep `info.xml` `<screenshot>` blocks in sync.
+Use demo data only — no real personal or financial identifiers.
