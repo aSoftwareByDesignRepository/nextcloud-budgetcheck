@@ -48,11 +48,6 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 	<website>https://nextcloud.software-by-design.de</website>
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues</bugs>
 	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck.git</repository>
-	<donation type="other" title="Software by Design">https://nextcloud.software-by-design.de/</donation>
-	<dependencies>
-		<nextcloud min-version="32" max-version="33"/>
-		<php min-version="8.2" max-version="8.4"/>
-	</dependencies>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-01.png">
 		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-01.png
 	</screenshot>
@@ -83,9 +78,14 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-10.png">
 		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-10.png
 	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-11.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-11.png
-	</screenshot>
+	<donation type="other" title="Software by Design">https://nextcloud.software-by-design.de/</donation>
+	<dependencies>
+		<nextcloud min-version="32" max-version="33"/>
+		<php min-version="8.2" max-version="8.4"/>
+	</dependencies>
+	<settings>
+		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
+	</settings>
 	<navigations>
 		<navigation>
 			<name>BudgetCheck</name>
@@ -94,23 +94,4 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 			<order>11</order>
 		</navigation>
 	</navigations>
-	<keywords>
-		<keyword>budget</keyword>
-		<keyword>budgeting</keyword>
-		<keyword>finance</keyword>
-		<keyword>household</keyword>
-		<keyword>project</keyword>
-		<keyword>ledger</keyword>
-		<keyword>savings</keyword>
-		<keyword>Haushaltsbuch</keyword>
-		<keyword>monthly close</keyword>
-		<keyword>audit</keyword>
-		<keyword>VAT</keyword>
-		<keyword>tax</keyword>
-		<keyword>accessibility</keyword>
-		<keyword>self-hosted</keyword>
-	</keywords>
-	<settings>
-		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
-	</settings>
 </info>
