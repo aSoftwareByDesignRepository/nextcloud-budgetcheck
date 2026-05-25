@@ -5,70 +5,118 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Service;
 
 /**
- * Curated list of IANA timezones grouped for the Settings/Workspace UI.
+ * Single source of truth for IANA timezone identifiers in BudgetCheck.
  *
- * The full PHP-supplied list runs to ~430 entries. That is overwhelming for the
- * primary use case (a household or small project picking the timezone they
- * actually live in). This catalog surfaces ~50 frequently used zones and lets
- * the API still validate against the full {@see \DateTimeZone::listIdentifiers()}
- * list when an integration sends an exotic identifier.
+ * The UI loads {@see grouped()} and {@see pinned()} via workspace capabilities so
+ * users can search the full PHP timezone database without a hardcoded subset.
+ * {@see isValid()} uses the same list as workspace persistence.
  */
 class TimezoneCatalog
 {
-	/** @var array<string, list<string>> */
-	private const GROUPS = [
-		'Europe' => [
-			'Europe/Berlin', 'Europe/Vienna', 'Europe/Zurich', 'Europe/London',
-			'Europe/Paris', 'Europe/Madrid', 'Europe/Rome', 'Europe/Amsterdam',
-			'Europe/Brussels', 'Europe/Copenhagen', 'Europe/Dublin', 'Europe/Helsinki',
-			'Europe/Lisbon', 'Europe/Luxembourg', 'Europe/Oslo', 'Europe/Prague',
-			'Europe/Stockholm', 'Europe/Warsaw', 'Europe/Athens', 'Europe/Bucharest',
-			'Europe/Budapest', 'Europe/Sofia',
-		],
-		'Americas' => [
-			'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-			'America/Toronto', 'America/Vancouver', 'America/Mexico_City', 'America/Sao_Paulo',
-			'America/Argentina/Buenos_Aires', 'America/Bogota', 'America/Halifax', 'America/Anchorage',
-		],
-		'Asia / Pacific' => [
-			'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore',
-			'Asia/Seoul', 'Asia/Kolkata', 'Asia/Dubai', 'Asia/Jerusalem',
-			'Asia/Bangkok', 'Asia/Manila', 'Asia/Riyadh',
-			'Australia/Sydney', 'Australia/Melbourne', 'Australia/Perth',
-			'Pacific/Auckland', 'Pacific/Honolulu',
-		],
-		'Africa' => [
-			'Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Nairobi',
-			'Africa/Casablanca', 'Africa/Algiers',
-		],
-		'Universal' => [
-			'UTC',
-		],
+	/**
+	 * @var list<string>
+	 */
+	private const PINNED = [
+		'UTC',
+		'Europe/Berlin',
+		'Europe/London',
+		'Europe/Paris',
+		'Europe/Moscow',
+		'America/New_York',
+		'America/Chicago',
+		'America/Los_Angeles',
+		'Asia/Dubai',
+		'Asia/Kolkata',
+		'Asia/Singapore',
+		'Asia/Tashkent',
+		'Asia/Tokyo',
+		'Asia/Yekaterinburg',
+		'Australia/Sydney',
 	];
 
+	/** @var list<string>|null */
+	private ?array $allCache = null;
+
+	/** @var list<array{label:string, items:list<string>}>|null */
+	private ?array $groupedCache = null;
+
 	/**
-	 * Return groups in the shape the frontend expects: an ordered list of
-	 * `{label, items}` records. JSON-encoded this becomes an array of objects
-	 * which the JS modules iterate without ambiguity (a PHP associative array
-	 * would JSON-encode to `{}` and break `Array.prototype.forEach`).
-	 *
-	 * @return list<array{label:string, items:list<string>}>
+	 * @return list<string>
 	 */
-	public function grouped(): array
+	public function all(): array
 	{
+		if ($this->allCache === null) {
+			$this->allCache = \DateTimeZone::listIdentifiers();
+		}
+		return $this->allCache;
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public function pinned(): array
+	{
+		$valid = array_fill_keys($this->all(), true);
 		$out = [];
-		foreach (self::GROUPS as $label => $items) {
-			$out[] = ['label' => $label, 'items' => array_values($items)];
+		foreach (self::PINNED as $tz) {
+			if (isset($valid[$tz])) {
+				$out[] = $tz;
+			}
 		}
 		return $out;
 	}
 
 	/**
-	 * @return array<string, list<string>>
+	 * @return list<array{label:string, items:list<string>}>
 	 */
-	public function groupedMap(): array
+	public function grouped(): array
 	{
-		return self::GROUPS;
+		if ($this->groupedCache !== null) {
+			return $this->groupedCache;
+		}
+		/** @var array<string, list<string>> $map */
+		$map = [];
+		foreach ($this->all() as $identifier) {
+			$label = $this->regionLabel($identifier);
+			$map[$label][] = $identifier;
+		}
+		ksort($map, SORT_STRING);
+		$out = [];
+		foreach ($map as $label => $items) {
+			sort($items, SORT_STRING);
+			$out[] = ['label' => $label, 'items' => $items];
+		}
+		$this->groupedCache = $out;
+		return $out;
+	}
+
+	/**
+	 * @return array{pinned:list<string>, groups:list<array{label:string, items:list<string>}>}
+	 */
+	public function forApi(): array
+	{
+		return [
+			'pinned' => $this->pinned(),
+			'groups' => $this->grouped(),
+		];
+	}
+
+	public function isValid(string $timezone): bool
+	{
+		$trimmed = trim($timezone);
+		if ($trimmed === '') {
+			return false;
+		}
+		return in_array($trimmed, $this->all(), true);
+	}
+
+	public function normalizeOrThrow(string $timezone): string
+	{
+		$trimmed = trim($timezone);
+		if (!$this->isValid($trimmed)) {
+			throw new \InvalidArgumentException('Invalid timezone. Use an IANA identifier.');
+		}
+		return $trimmed;
 	}
 
 	/**
@@ -77,16 +125,23 @@ class TimezoneCatalog
 	public function flat(): array
 	{
 		$out = [];
-		foreach (self::GROUPS as $items) {
-			foreach ($items as $tz) {
+		foreach ($this->grouped() as $group) {
+			foreach ($group['items'] as $tz) {
 				$out[] = $tz;
 			}
 		}
 		return $out;
 	}
 
-	public function isValid(string $timezone): bool
+	private function regionLabel(string $identifier): string
 	{
-		return in_array(trim($timezone), \DateTimeZone::listIdentifiers(), true);
+		if ($identifier === 'UTC') {
+			return 'UTC';
+		}
+		$slash = strpos($identifier, '/');
+		if ($slash === false) {
+			return 'Other';
+		}
+		return substr($identifier, 0, $slash);
 	}
 }

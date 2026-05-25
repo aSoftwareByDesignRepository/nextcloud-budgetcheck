@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -47,6 +48,7 @@ class WorkspaceService
 		private ITimeFactory $timeFactory,
 		private AuditLogService $audit,
 		private TimezoneCatalog $timezones,
+		private CurrencyCatalog $currencies,
 		private IUserManager $userManager,
 		private CategoryService $categories,
 		private MoneyService $money,
@@ -88,6 +90,14 @@ class WorkspaceService
 	 * `access_denied` for non-members so non-existent and non-permitted IDs
 	 * look identical to the client.
 	 */
+	/**
+	 * Whether the workspace currency may still be changed (no ledger rows yet).
+	 */
+	public function currencyChangeAllowed(int $workspaceId): bool
+	{
+		return $this->countTransactions($workspaceId) === 0;
+	}
+
 	public function getForUser(int $workspaceId, string $userId): array
 	{
 		if ($workspaceId < 1) {
@@ -156,7 +166,7 @@ class WorkspaceService
 					'project_end_date' => $qb->createNamedParameter($projectEnd),
 					'default_vat_rate_bp' => $qb->createNamedParameter($defaultVatRate, $defaultVatRate === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'default_savings_target_mode' => $qb->createNamedParameter($defaultSavingsMode, $defaultSavingsMode === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR),
-					'default_savings_target_percent_bp' => $qb->createNamedParameter($defaultSavingsPercentBp, $defaultSavingsPercentBp === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP => $qb->createNamedParameter($defaultSavingsPercentBp, $defaultSavingsPercentBp === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'default_savings_target_minor' => $qb->createNamedParameter($defaultSavingsMinor, $defaultSavingsMinor === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'primary_planning_year' => $qb->createNamedParameter(
 						$primaryPlanningYear,
@@ -289,7 +299,7 @@ class WorkspaceService
 				$logChanges['defaultSavingsTargetMode'] = $mode;
 			}
 			if ($percentBp !== $workspace['defaultSavingsTargetPercentBp']) {
-				$updates['default_savings_target_percent_bp'] = $percentBp;
+				$updates[BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP] = $percentBp;
 				$logChanges['defaultSavingsTargetPercentBp'] = $percentBp;
 			}
 			if ($minor !== $workspace['defaultSavingsTargetMinor']) {
@@ -587,9 +597,11 @@ class WorkspaceService
 			'defaultSavingsTargetMode' => isset($row['default_savings_target_mode']) && $row['default_savings_target_mode'] !== null
 				? (string)$row['default_savings_target_mode']
 				: null,
-			'defaultSavingsTargetPercentBp' => isset($row['default_savings_target_percent_bp']) && $row['default_savings_target_percent_bp'] !== null
-				? (int)$row['default_savings_target_percent_bp']
-				: null,
+			'defaultSavingsTargetPercentBp' => $this->optionalIntDbColumn(
+				$row,
+				BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP,
+				BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP_LEGACY,
+			),
 			'defaultSavingsTargetMinor' => isset($row['default_savings_target_minor']) && $row['default_savings_target_minor'] !== null
 				? (int)$row['default_savings_target_minor']
 				: null,
@@ -669,6 +681,19 @@ class WorkspaceService
 	//  Validation helpers
 	// ------------------------------------------------------------------
 
+	/**
+	 * @param array<string,mixed> $row
+	 */
+	private function optionalIntDbColumn(array $row, string $column, string $legacyColumn): ?int
+	{
+		foreach ([$column, $legacyColumn] as $key) {
+			if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+				return (int)$row[$key];
+			}
+		}
+		return null;
+	}
+
 	private function normaliseType(string $type): string
 	{
 		$type = strtolower(trim($type));
@@ -692,23 +717,12 @@ class WorkspaceService
 
 	private function normaliseCurrency(string $currency): string
 	{
-		$currency = strtoupper(trim($currency));
-		if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-			throw new \InvalidArgumentException('Currency must be a 3-letter ISO 4217 code.');
-		}
-		if (!$this->money->isSupportedCurrency($currency)) {
-			throw new \InvalidArgumentException('Currency is not supported. Pick a value from the workspace currency list.');
-		}
-		return $currency;
+		return $this->currencies->normalizeOrThrow($currency);
 	}
 
 	private function normaliseTimezone(string $timezone): string
 	{
-		$timezone = trim($timezone);
-		if (!$this->timezones->isValid($timezone)) {
-			throw new \InvalidArgumentException('Invalid timezone. Use an IANA identifier.');
-		}
-		return $timezone;
+		return $this->timezones->normalizeOrThrow($timezone);
 	}
 
 	/**

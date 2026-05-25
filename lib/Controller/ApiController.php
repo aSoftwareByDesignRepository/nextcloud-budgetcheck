@@ -17,6 +17,7 @@ use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
+use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
@@ -76,6 +77,7 @@ class ApiController extends Controller
 		private AuditLogService $audit,
 		private RateLimitService $rateLimit,
 		private MoneyService $money,
+		private CurrencyCatalog $currencyCatalog,
 		private TimezoneCatalog $timezoneCatalog,
 		private IUserManager $userManager,
 		private IGroupManager $groupManager,
@@ -108,8 +110,8 @@ class ApiController extends Controller
 				'favoriteWorkspaceIds' => $favoriteWorkspaceIds,
 				'capabilities' => [
 					'canCreateWorkspace' => $this->access->isAppAdmin($userId),
-					'currencies' => $this->money->supportedCurrencyOptions(),
-					'timezones' => $this->timezoneCatalog->grouped(),
+					'currencyCatalog' => $this->currencyCatalog->forApi(),
+					'timezoneCatalog' => $this->timezoneCatalog->forApi(),
 					'defaultCurrency' => $this->access->getDefaultCurrency(),
 					'defaultTimezone' => $this->access->getDefaultTimezone(),
 				],

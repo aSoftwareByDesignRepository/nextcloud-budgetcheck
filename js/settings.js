@@ -8,8 +8,11 @@
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
 	const EntityPicker = window.BudgetCheckEntityPicker;
+	const CatalogPickers = window.BudgetCheckCatalogPickers;
 
 	let capabilities = null;
+	let workspaceTimezonePicker = null;
+	let workspaceCurrencyPicker = null;
 	const budgetDefaultsState = {
 		dirty: new Map(),
 	};
@@ -19,8 +22,8 @@
 	});
 
 	async function bootstrap() {
-		const needsCaps = document.querySelector('[data-bc-timezone-select]')
-			|| document.querySelector('[data-bc-currency-select]');
+		const needsCaps = document.querySelector('[data-bc-timezone-picker]')
+			|| document.querySelector('[data-bc-currency-picker]');
 		if (needsCaps) {
 			try {
 				const data = await Api.get('/apps/budgetcheck/api/workspaces');
@@ -29,8 +32,7 @@
 				Msg.handleApiError(err);
 			}
 		}
-		populateTimezoneOptions();
-		populateWorkspaceCurrencySelect();
+		await initWorkspaceCatalogPickers();
 		hydrateWorkspaceForm();
 		hydrateTaxForm();
 		wireWorkspaceForm();
@@ -177,40 +179,35 @@
 		});
 	}
 
-	function fillTimezoneSelect(selectEl, selectedTz) {
-		if (!selectEl || !capabilities || !capabilities.timezones) return;
-		selectEl.replaceChildren();
-		capabilities.timezones.forEach((g) => {
-			const og = C.createElement('optgroup', { attrs: { label: g.label } });
-			(g.items || []).forEach((tz) => og.appendChild(C.createElement('option', { value: tz, text: tz })));
-			selectEl.appendChild(og);
-		});
-		if (selectedTz) {
-			selectEl.value = selectedTz;
+	async function initWorkspaceCatalogPickers() {
+		if (!CatalogPickers || !capabilities) {
+			return;
+		}
+		const tzRoot = document.querySelector('[data-bc-timezone-picker]');
+		const curRoot = document.querySelector('[data-bc-currency-picker]');
+		if (tzRoot && capabilities.timezoneCatalog) {
+			workspaceTimezonePicker = CatalogPickers.attachTimezone(
+				tzRoot,
+				capabilities.timezoneCatalog,
+				{ defaultTimezone: Ws.workspace?.timezone || capabilities.defaultTimezone },
+			);
+		}
+		if (curRoot && capabilities.currencyCatalog) {
+			workspaceCurrencyPicker = CatalogPickers.attachCurrency(
+				curRoot,
+				capabilities.currencyCatalog,
+				{ defaultCurrency: Ws.workspace?.currencyCode || capabilities.defaultCurrency },
+			);
 		}
 	}
 
-	function populateTimezoneOptions() {
-		fillTimezoneSelect(document.querySelector('[data-bc-timezone-select]'), Ws.workspace?.timezone);
-	}
-
-	function fillCurrencySelect(selectEl, selectedCode) {
-		if (!selectEl || !capabilities || !capabilities.currencies) return;
-		selectEl.replaceChildren();
-		(capabilities.currencies || []).forEach((entry) => {
-			const code = typeof entry === 'string' ? entry : (entry && entry.code);
-			if (!code) return;
-			selectEl.appendChild(C.createElement('option', { value: code, text: code }));
-		});
-		if (selectedCode) {
-			selectEl.value = String(selectedCode).toUpperCase();
+	function syncWorkspaceCatalogPickersFromWorkspace() {
+		if (workspaceTimezonePicker && Ws.workspace?.timezone) {
+			workspaceTimezonePicker.setValue(Ws.workspace.timezone);
 		}
-	}
-
-	function populateWorkspaceCurrencySelect() {
-		const sel = document.querySelector('[data-bc-currency-select]');
-		if (!sel || !Ws.workspace) return;
-		fillCurrencySelect(sel, Ws.workspace.currencyCode);
+		if (workspaceCurrencyPicker && Ws.workspace?.currencyCode) {
+			workspaceCurrencyPicker.setValue(Ws.workspace.currencyCode);
+		}
 	}
 
 	function hydrateWorkspaceForm() {
@@ -218,7 +215,7 @@
 		const form = document.querySelector('[data-bc-workspace-form]');
 		if (!form) return;
 		setVal(form, 'name', Ws.workspace.name);
-		populateWorkspaceCurrencySelect();
+		syncWorkspaceCatalogPickersFromWorkspace();
 		setVal(form, 'overspendThresholdMinor', Ws.workspace.overspendThresholdMinor !== null ? String(Ws.workspace.overspendThresholdMinor) : '');
 		if (Ws.workspace.type === 'household') {
 			const pyFromWs = typeof Ws.workspace.primaryPlanningYear === 'number' ? Ws.workspace.primaryPlanningYear : null;
@@ -351,10 +348,26 @@
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			if (!Ws.canManage) return;
+			const currencyCode = workspaceCurrencyPicker
+				? workspaceCurrencyPicker.getValue()
+				: getVal(form, 'currencyCode').trim().toUpperCase();
+			const timezone = workspaceTimezonePicker
+				? workspaceTimezonePicker.getValue()
+				: getVal(form, 'timezone').trim();
+			if (currencyCode === '') {
+				Msg.announce(t('budgetcheck', 'Please choose a currency.'), 'error');
+				document.getElementById('bc-ws-currency-input')?.focus();
+				return;
+			}
+			if (timezone === '') {
+				Msg.announce(t('budgetcheck', 'Please choose a timezone.'), 'error');
+				document.getElementById('bc-ws-timezone-input')?.focus();
+				return;
+			}
 			const payload = {
 				name: getVal(form, 'name').trim(),
-				currencyCode: getVal(form, 'currencyCode').trim().toUpperCase(),
-				timezone: getVal(form, 'timezone'),
+				currencyCode,
+				timezone,
 				overspendThresholdMinor: getVal(form, 'overspendThresholdMinor').trim() || null,
 			};
 			if (Ws.workspace.type === 'household') {
@@ -428,6 +441,11 @@
 				Msg.announce(t('budgetcheck', 'Workspace saved.'), 'success');
 				window.setTimeout(() => window.location.reload(), 600);
 			} catch (err) {
+				const msg = String(err?.message || err?.payload?.message || '');
+				if (msg.includes('Currency cannot be changed')) {
+					Msg.announce(t('budgetcheck', 'Currency cannot be changed once this workspace has transactions.'), 'error');
+					return;
+				}
 				Msg.handleApiError(err);
 			}
 		});

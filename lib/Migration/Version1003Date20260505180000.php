@@ -28,8 +28,8 @@ class Version1003Date20260505180000 extends SimpleMigrationStep
 			$table->addColumn('workspace_id', 'bigint', ['notnull' => true]);
 			$table->addColumn('name', 'string', ['length' => 80, 'notnull' => true]);
 			$table->addColumn('sort_order', 'integer', ['notnull' => true, 'default' => 100]);
-			$table->addColumn('is_done', 'boolean', ['notnull' => true, 'default' => false]);
-			$table->addColumn('is_active', 'boolean', ['notnull' => true, 'default' => true]);
+			$table->addColumn('is_done', 'boolean', ['notnull' => false, 'default' => false]);
+			$table->addColumn('is_active', 'boolean', ['notnull' => false, 'default' => true]);
 			$table->addColumn('created_at', 'datetime', ['notnull' => true]);
 			$table->addColumn('updated_at', 'datetime', ['notnull' => true]);
 			$table->setPrimaryKey(['id'], 'bc_bs_pk');

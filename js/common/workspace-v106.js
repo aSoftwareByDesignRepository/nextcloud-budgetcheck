@@ -130,7 +130,8 @@
 		const C = window.BudgetCheckComponents;
 		const Money = window.BudgetCheckMoney;
 		const Dates = window.BudgetCheckDates;
-		if (!Api || !Msg || !C || !Money || !Dates) {
+		const CatalogPickers = window.BudgetCheckCatalogPickers;
+		if (!Api || !Msg || !C || !Money || !Dates || !CatalogPickers) {
 			return;
 		}
 
@@ -176,24 +177,32 @@
 				]);
 				form.appendChild(planYearField);
 
-				const currencySelect = C.createElement('select', { name: 'currencyCode', class: 'bc-input', required: true });
-				(capabilities.currencies || []).forEach((entry) => {
-					const code = typeof entry === 'string' ? entry : (entry && entry.code);
-					if (!code) return;
-					currencySelect.appendChild(C.createElement('option', { value: code, text: code }));
-				});
 				const defCur = String(capabilities.defaultCurrency || 'EUR').toUpperCase();
-				if (Array.from(currencySelect.options).some((o) => o.value === defCur)) {
-					currencySelect.value = defCur;
-				}
-				wrap(form, t('budgetcheck', 'Currency'), currencySelect);
-				const tzSelect = C.createElement('select', { name: 'timezone', class: 'bc-input' });
-				(capabilities.timezones || []).forEach((g) => {
-					const og = C.createElement('optgroup', { attrs: { label: g.label } });
-					(g.items || []).forEach((tz) => og.appendChild(C.createElement('option', { value: tz, text: tz, selected: tz === (capabilities.defaultTimezone || 'UTC') })));
-					tzSelect.appendChild(og);
+				const defTz = String(capabilities.defaultTimezone || 'Europe/Berlin');
+				const curShell = CatalogPickers.createPickerShell('currency', {
+					idPrefix: 'bc-new-ws-currency',
+					name: 'currencyCode',
+					label: t('budgetcheck', 'Currency'),
+					defaultValue: defCur,
 				});
-				wrap(form, t('budgetcheck', 'Timezone'), tzSelect);
+				const tzShell = CatalogPickers.createPickerShell('timezone', {
+					idPrefix: 'bc-new-ws-timezone',
+					name: 'timezone',
+					label: t('budgetcheck', 'Timezone'),
+					defaultValue: defTz,
+				});
+				form.appendChild(curShell.field);
+				form.appendChild(tzShell.field);
+				const modalCurrencyPicker = CatalogPickers.attachCurrency(
+					curShell.root,
+					capabilities.currencyCatalog || { pinned: [], groups: [] },
+					{ defaultCurrency: defCur },
+				);
+				const modalTimezonePicker = CatalogPickers.attachTimezone(
+					tzShell.root,
+					capabilities.timezoneCatalog || { pinned: [], groups: [] },
+					{ defaultTimezone: defTz },
+				);
 
 				const defaultEnd = new Date();
 				defaultEnd.setMonth(defaultEnd.getMonth() + 1);
@@ -214,8 +223,8 @@
 					const payload = {
 						name: nameInput.value.trim(),
 						type: typeSelect.value,
-						currencyCode: (currencySelect.value || '').toUpperCase().trim(),
-						timezone: tzSelect.value,
+						currencyCode: (modalCurrencyPicker ? modalCurrencyPicker.getValue() : '').toUpperCase().trim(),
+						timezone: modalTimezonePicker ? modalTimezonePicker.getValue() : '',
 					};
 					if (isProject) {
 						payload.projectStartDate = startInput.value;
@@ -232,6 +241,14 @@
 				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
+				if (!payload.currencyCode) {
+					Msg.announce(t('budgetcheck', 'Please choose a currency.'), 'error');
+					return false;
+				}
+				if (!payload.timezone) {
+					Msg.announce(t('budgetcheck', 'Please choose a timezone.'), 'error');
+					return false;
+				}
 				if (payload.type === 'project') {
 					const s = String(payload.projectStartDate || '').trim();
 					const e = String(payload.projectEndDate || '').trim();

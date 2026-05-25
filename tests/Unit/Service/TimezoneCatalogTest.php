@@ -14,10 +14,8 @@ final class TimezoneCatalogTest extends TestCase
 		$cat = new TimezoneCatalog();
 		$grouped = $cat->grouped();
 		$this->assertNotEmpty($grouped);
-		// Critical for the JS layer: must be a list (numerically indexed) with
-		// {label, items}, not an associative map. Otherwise json_encode emits
-		// `{}` and Array.prototype.forEach silently skips everything.
 		$this->assertSame(0, array_key_first($grouped));
+		$flatCount = 0;
 		foreach ($grouped as $row) {
 			$this->assertIsArray($row);
 			$this->assertArrayHasKey('label', $row);
@@ -27,26 +25,35 @@ final class TimezoneCatalogTest extends TestCase
 			$this->assertNotEmpty($row['items']);
 			foreach ($row['items'] as $tz) {
 				$this->assertIsString($tz);
-				$this->assertContains($tz, \DateTimeZone::listIdentifiers(), 'TimezoneCatalog must only emit valid IANA identifiers.');
+				$this->assertTrue($cat->isValid($tz));
+				$flatCount++;
 			}
+		}
+		$this->assertSame(count($cat->all()), $flatCount);
+	}
+
+	public function testPinnedIncludesMoscowYekaterinburgTashkent(): void
+	{
+		$cat = new TimezoneCatalog();
+		$pinned = $cat->pinned();
+		foreach (['Europe/Moscow', 'Asia/Yekaterinburg', 'Asia/Tashkent'] as $required) {
+			$this->assertContains($required, $pinned);
+			$this->assertTrue($cat->isValid($required));
 		}
 	}
 
-	public function testFlatContainsEverything(): void
+	public function testIsValidAcceptsAnyIanaZone(): void
 	{
 		$cat = new TimezoneCatalog();
-		$flat = $cat->flat();
-		$this->assertContains('UTC', $flat);
-		$this->assertContains('Europe/Berlin', $flat);
-	}
-
-	public function testIsValidAcceptsKnownAndAnyIanaZone(): void
-	{
-		$cat = new TimezoneCatalog();
-		$this->assertTrue($cat->isValid('Europe/Berlin'));
-		$this->assertTrue($cat->isValid('UTC'));
-		// Pacific/Tarawa is not in our curated list but is a valid IANA id.
 		$this->assertTrue($cat->isValid('Pacific/Tarawa'));
 		$this->assertFalse($cat->isValid('Mars/Olympus_Mons'));
+	}
+
+	public function testNormalizeOrThrow(): void
+	{
+		$cat = new TimezoneCatalog();
+		$this->assertSame('Europe/Berlin', $cat->normalizeOrThrow('  Europe/Berlin  '));
+		$this->expectException(\InvalidArgumentException::class);
+		$cat->normalizeOrThrow('Not/A/Zone');
 	}
 }

@@ -183,6 +183,9 @@ class PageController extends Controller
 		}
 		$userId = $this->access->currentUserId();
 		$ctx['canAdminApp'] = $this->access->isAppAdmin($userId);
+		if ($selected !== null) {
+			$ctx['currencyChangeAllowed'] = $this->workspaces->currencyChangeAllowed((int) $selected['id']);
+		}
 
 		return $this->page('settings', $this->l10n->t('Workspace settings'),
 			$this->l10n->t('Manage this workspace: details, tax mode, categories, members, and recurring rules.'),
@@ -337,6 +340,7 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
 		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
+		Util::addScript(Application::APP_ID, 'common/catalog-pickers');
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
 			Util::addScript(Application::APP_ID, 'common/entity-picker');
 		}

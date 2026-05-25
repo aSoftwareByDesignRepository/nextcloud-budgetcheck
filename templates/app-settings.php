@@ -67,14 +67,34 @@ $canAdminApp = !empty($_['canAdminApp']);
 					<div id="bc-policy-admins-suggest" class="bc-entity-picker__suggest" hidden aria-live="polite"></div>
 				</div>
 			</fieldset>
-			<label class="bc-field">
-				<span class="bc-field__label"><?php p($l->t('Default timezone')); ?></span>
-				<select name="defaultTimezone" class="bc-input" data-bc-default-timezone-select required></select>
-			</label>
-			<label class="bc-field">
-				<span class="bc-field__label"><?php p($l->t('Default currency')); ?></span>
-				<select name="defaultCurrency" class="bc-input" data-bc-default-currency-select required></select>
-			</label>
+			<fieldset class="bc-fieldset bc-fieldset--defaults">
+				<legend class="bc-fieldset__legend"><?php p($l->t('Defaults for new workspaces')); ?></legend>
+				<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('These values pre-fill the form when an app administrator creates a workspace. They do not change existing workspaces.')); ?></p>
+			<div class="bc-field bc-field--catalog">
+				<span class="bc-field__label" id="bc-policy-timezone-label"><?php p($l->t('Default timezone')); ?></span>
+				<?php
+				$pickerId = 'bc-policy-timezone';
+				$pickerName = 'defaultTimezone';
+				$pickerDefault = 'Europe/Berlin';
+				$pickerDisabled = false;
+				$pickerDescribedBy = 'bc-policy-timezone-hint';
+				include __DIR__ . '/common/bc-timezone-picker.php';
+				?>
+				<p id="bc-policy-timezone-hint" class="bc-field__hint"><?php p($l->t('Pre-selected when someone creates a new workspace.')); ?></p>
+			</div>
+			<div class="bc-field bc-field--catalog">
+				<span class="bc-field__label" id="bc-policy-currency-label"><?php p($l->t('Default currency')); ?></span>
+				<?php
+				$pickerId = 'bc-policy-currency';
+				$pickerName = 'defaultCurrency';
+				$pickerDefault = 'EUR';
+				$pickerDisabled = false;
+				$pickerDescribedBy = 'bc-policy-currency-hint';
+				include __DIR__ . '/common/bc-currency-picker.php';
+				?>
+				<p id="bc-policy-currency-hint" class="bc-field__hint"><?php p($l->t('Pre-selected when someone creates a new workspace.')); ?></p>
+			</div>
+			</fieldset>
 			<div class="bc-form-actions">
 				<button type="submit" class="button primary"><?php p($l->t('Save app policy')); ?></button>
 			</div>

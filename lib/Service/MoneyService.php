@@ -34,35 +34,15 @@ class MoneyService
 	public const MAX_VAT_RATE_BP = 5000; // 50% — covers every realistic VAT rate
 	public const MIN_VAT_RATE_BP = 0;
 
-	/**
-	 * ISO 4217 codes we explicitly support for workspace + policy pickers.
-	 * Minor units must match {@see parseHumanAmount()} and the client money helper.
-	 */
-	private const SUPPORTED_CURRENCY_DECIMALS = [
-		'EUR' => 2,
-		'USD' => 2,
-		'GBP' => 2,
-		'CHF' => 2,
-		'PLN' => 2,
-		'CZK' => 2,
-		'SEK' => 2,
-		'NOK' => 2,
-		'DKK' => 2,
-		'JPY' => 0,
-		'AUD' => 2,
-		'CAD' => 2,
-		'NZD' => 2,
-		'HUF' => 2,
-		'RON' => 2,
-		'BGN' => 2,
-		'TRY' => 2,
-		'INR' => 2,
-		'CNY' => 2,
-		'BRL' => 2,
-		'MXN' => 2,
-		'ILS' => 2,
-		'ZAR' => 2,
-	];
+	public function __construct(
+		private ?CurrencyCatalog $currencyCatalog = null,
+	) {
+	}
+
+	private function currencies(): CurrencyCatalog
+	{
+		return $this->currencyCatalog ?? new CurrencyCatalog();
+	}
 
 	/**
 	 * Parse a free-form positive amount into minor units. Returns the integer
@@ -168,13 +148,12 @@ class MoneyService
 
 	public function decimalsFor(string $currencyCode): int
 	{
-		$code = strtoupper(trim($currencyCode));
-		return self::SUPPORTED_CURRENCY_DECIMALS[$code] ?? 2;
+		return $this->currencies()->decimalsFor($currencyCode);
 	}
 
 	public function isSupportedCurrency(string $currencyCode): bool
 	{
-		return isset(self::SUPPORTED_CURRENCY_DECIMALS[strtoupper(trim($currencyCode))]);
+		return $this->currencies()->isSupported($currencyCode);
 	}
 
 	/**
@@ -182,7 +161,7 @@ class MoneyService
 	 */
 	public function supportedCurrencies(): array
 	{
-		return array_keys(self::SUPPORTED_CURRENCY_DECIMALS);
+		return $this->currencies()->codes();
 	}
 
 	/**
@@ -192,12 +171,7 @@ class MoneyService
 	 */
 	public function supportedCurrencyOptions(): array
 	{
-		$out = [];
-		foreach (self::SUPPORTED_CURRENCY_DECIMALS as $code => $decimals) {
-			$out[] = ['code' => $code, 'decimals' => $decimals];
-		}
-		usort($out, static fn (array $a, array $b): int => strcmp($a['code'], $b['code']));
-		return $out;
+		return $this->currencies()->options();
 	}
 
 	/**

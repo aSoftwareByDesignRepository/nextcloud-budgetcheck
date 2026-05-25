@@ -5,6 +5,9 @@
 
 $workspace = $_['workspace'] ?? null;
 $canManage = !empty($_['canManageWorkspace']);
+$currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
+	? (bool) $_['currencyChangeAllowed']
+	: true;
 ?>
 <?php include __DIR__ . '/common/page-start.php'; ?>
 
@@ -19,7 +22,7 @@ $canManage = !empty($_['canManageWorkspace']);
 			<header class="bc-section__header">
 				<div>
 					<h2 id="bc-ws-meta-title"><?php p($l->t('Workspace details')); ?></h2>
-					<p class="bc-section__sub"><?php p($l->t('Name, currency, timezone, and project window.')); ?></p>
+					<p class="bc-section__sub"><?php p($l->t('Each workspace has its own currency and timezone. They apply to all months and transactions in this workspace.')); ?></p>
 				</div>
 			</header>
 			<form class="bc-form-grid" data-bc-workspace-form>
@@ -27,14 +30,36 @@ $canManage = !empty($_['canManageWorkspace']);
 					<span class="bc-field__label"><?php p($l->t('Name')); ?></span>
 					<input type="text" name="name" class="bc-input" maxlength="120" required <?php p($canManage ? '' : 'disabled'); ?>>
 				</label>
-				<label class="bc-field">
-					<span class="bc-field__label"><?php p($l->t('Currency')); ?></span>
-					<select name="currencyCode" class="bc-input" data-bc-currency-select required <?php p($canManage ? '' : 'disabled'); ?>></select>
-				</label>
-				<label class="bc-field">
-					<span class="bc-field__label"><?php p($l->t('Timezone')); ?></span>
-					<select name="timezone" class="bc-input" data-bc-timezone-select <?php p($canManage ? '' : 'disabled'); ?>></select>
-				</label>
+				<div class="bc-field bc-field--catalog">
+					<span class="bc-field__label" id="bc-ws-currency-label"><?php p($l->t('Currency')); ?></span>
+					<?php
+					$pickerId = 'bc-ws-currency';
+					$pickerName = 'currencyCode';
+					$pickerDefault = (string) ($workspace['currencyCode'] ?? 'EUR');
+					$pickerDisabled = !$canManage || !$currencyChangeAllowed;
+					$pickerDescribedBy = 'bc-ws-currency-hint';
+					include __DIR__ . '/common/bc-currency-picker.php';
+					?>
+					<p id="bc-ws-currency-hint" class="bc-field__hint"><?php
+						if ($currencyChangeAllowed) {
+							p($l->t('ISO 4217 code for this workspace. Choose before the first transaction — it cannot be changed later.'));
+						} else {
+							p($l->t('Locked because this workspace already has transactions. Currency was set when the first entry was recorded.'));
+						}
+					?></p>
+				</div>
+				<div class="bc-field bc-field--catalog">
+					<span class="bc-field__label" id="bc-ws-timezone-label"><?php p($l->t('Timezone')); ?></span>
+					<?php
+					$pickerId = 'bc-ws-timezone';
+					$pickerName = 'timezone';
+					$pickerDefault = (string) ($workspace['timezone'] ?? 'Europe/Berlin');
+					$pickerDisabled = !$canManage;
+					$pickerDescribedBy = 'bc-ws-timezone-hint';
+					include __DIR__ . '/common/bc-timezone-picker.php';
+					?>
+					<p id="bc-ws-timezone-hint" class="bc-field__hint"><?php p($l->t('IANA timezone for calendar months and due dates in this workspace.')); ?></p>
+				</div>
 				<label class="bc-field">
 					<span class="bc-field__label"><?php p($l->t('Large-expense threshold (minor units)')); ?></span>
 					<input type="number" min="0" step="1" name="overspendThresholdMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>

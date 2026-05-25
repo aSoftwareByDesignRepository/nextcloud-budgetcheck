@@ -13,6 +13,7 @@ use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\HouseholdYearlyExportService;
 use OCA\BudgetCheck\Service\LocaleFormatService;
+use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
@@ -83,8 +84,11 @@ class Application extends App implements IBootstrap
 		$context->registerMiddleware(AppAccessMiddleware::class);
 
 		// --- Utility services -----------------------------------------------
-		$context->registerService(MoneyService::class, fn () => new MoneyService());
+		$context->registerService(CurrencyCatalog::class, fn () => new CurrencyCatalog());
 		$context->registerService(TimezoneCatalog::class, fn () => new TimezoneCatalog());
+		$context->registerService(MoneyService::class, function ($c): MoneyService {
+			return new MoneyService($c->query(CurrencyCatalog::class));
+		});
 
 		$context->registerService(LocaleFormatService::class, function ($c): LocaleFormatService {
 			return new LocaleFormatService(
@@ -119,6 +123,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(AuditLogService::class),
 				$c->query(TimezoneCatalog::class),
+				$c->query(CurrencyCatalog::class),
 				$c->query(\OCP\IUserManager::class),
 				$c->query(CategoryService::class),
 				$c->query(MoneyService::class),
@@ -235,7 +240,6 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\L10N\IFactory::class),
 				$c->query(\OCP\IURLGenerator::class),
 				$c->query(AccessControlService::class),
-				$c->query(TimezoneCatalog::class),
 			);
 		});
 

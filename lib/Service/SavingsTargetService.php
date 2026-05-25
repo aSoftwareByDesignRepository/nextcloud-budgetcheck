@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\BudgetCheck\Service;
 
+use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 
@@ -164,7 +165,11 @@ class SavingsTargetService
 	private function loadWorkspaceDefault(int $workspaceId, string $yearMonth, string $currencyCode): ?array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('default_savings_target_mode', 'default_savings_target_percent_bp', 'default_savings_target_minor')
+		$qb->select(
+			'default_savings_target_mode',
+			BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP,
+			'default_savings_target_minor',
+		)
 			->from('bc_workspaces')
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$result = $qb->executeQuery();
@@ -183,7 +188,7 @@ class SavingsTargetService
 			'workspaceId' => $workspaceId,
 			'yearMonth' => $yearMonth,
 			'targetMode' => (string)$mode,
-			'targetPercentBp' => $row['default_savings_target_percent_bp'] === null ? null : (int)$row['default_savings_target_percent_bp'],
+			'targetPercentBp' => $this->optionalWorkspacePercentBp($row),
 			'targetMinor' => $minor,
 			'target' => $minor === null ? null : $this->money->envelope($minor, $currencyCode),
 			'updatedBy' => null,
@@ -246,5 +251,21 @@ class SavingsTargetService
 	private function utcNow(): string
 	{
 		return $this->timeFactory->getDateTime('now', new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+	}
+
+	/**
+	 * @param array<string,mixed> $row
+	 */
+	private function optionalWorkspacePercentBp(array $row): ?int
+	{
+		foreach ([
+			BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP,
+			BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP_LEGACY,
+		] as $key) {
+			if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+				return (int)$row[$key];
+			}
+		}
+		return null;
 	}
 }

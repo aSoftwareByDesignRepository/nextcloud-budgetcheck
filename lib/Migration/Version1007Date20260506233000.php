@@ -32,8 +32,9 @@ class Version1007Date20260506233000 extends SimpleMigrationStep
 				'notnull' => false,
 			]);
 		}
-		if (!$table->hasColumn('default_savings_target_percent_bp')) {
-			$table->addColumn('default_savings_target_percent_bp', 'integer', [
+		if (!$table->hasColumn(BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP)
+			&& !$table->hasColumn(BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP_LEGACY)) {
+			$table->addColumn(BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP, 'integer', [
 				'notnull' => false,
 			]);
 		}

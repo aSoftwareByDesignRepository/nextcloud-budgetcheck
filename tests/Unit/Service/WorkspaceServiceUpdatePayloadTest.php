@@ -8,6 +8,7 @@ use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\MoneyService;
+use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -30,6 +31,7 @@ final class WorkspaceServiceUpdatePayloadTest extends TestCase
 				$this->createMock(ITimeFactory::class),
 				$this->createMock(AuditLogService::class),
 				$this->createMock(TimezoneCatalog::class),
+				$this->createMock(CurrencyCatalog::class),
 				$this->createMock(IUserManager::class),
 				$this->createMock(CategoryService::class),
 				$this->createMock(MoneyService::class),
@@ -69,6 +71,7 @@ final class WorkspaceServiceUpdatePayloadTest extends TestCase
 				$this->createMock(ITimeFactory::class),
 				$this->createMock(AuditLogService::class),
 				$this->createMock(TimezoneCatalog::class),
+				$this->createMock(CurrencyCatalog::class),
 				$this->createMock(IUserManager::class),
 				$this->createMock(CategoryService::class),
 				$this->createMock(MoneyService::class),

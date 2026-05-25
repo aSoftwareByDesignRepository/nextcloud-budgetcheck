@@ -19,6 +19,10 @@ composer install --no-dev
 
 Enable the app (Apps → BudgetCheck) or `php occ app:enable budgetcheck`.
 
+## Uninstall
+
+Removing the app from **Apps → Remove** runs the uninstall repair step: all `bc_*` tables, migration rows, and app config are dropped automatically (no foreign keys, no manual MySQL steps). Re-installing afterwards runs migrations from a clean state.
+
 ## Development
 
 ```bash

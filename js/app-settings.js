@@ -5,8 +5,11 @@
 	const Msg = window.BudgetCheckMessaging;
 	const C = window.BudgetCheckComponents;
 	const EntityPicker = window.BudgetCheckEntityPicker;
+	const CatalogPickers = window.BudgetCheckCatalogPickers;
 
 	let capabilities = null;
+	let policyTimezonePicker = null;
+	let policyCurrencyPicker = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		void bootstrap();
@@ -26,36 +29,38 @@
 		wireAppPolicy();
 	}
 
-	function fillTimezoneSelect(selectEl, selectedTz) {
-		if (!selectEl || !capabilities || !capabilities.timezones) return;
-		selectEl.replaceChildren();
-		capabilities.timezones.forEach((g) => {
-			const og = C.createElement('optgroup', { attrs: { label: g.label } });
-			(g.items || []).forEach((tz) => og.appendChild(C.createElement('option', { value: tz, text: tz })));
-			selectEl.appendChild(og);
-		});
-		if (selectedTz) {
-			selectEl.value = selectedTz;
+	function initPolicyCatalogPickers(policy) {
+		if (!CatalogPickers || !capabilities) {
+			return;
 		}
-	}
-
-	function fillCurrencySelect(selectEl, selectedCode) {
-		if (!selectEl || !capabilities || !capabilities.currencies) return;
-		selectEl.replaceChildren();
-		(capabilities.currencies || []).forEach((entry) => {
-			const code = typeof entry === 'string' ? entry : (entry && entry.code);
-			if (!code) return;
-			selectEl.appendChild(C.createElement('option', { value: code, text: code }));
-		});
-		if (selectedCode) {
-			selectEl.value = String(selectedCode).toUpperCase();
+		const tzRoot = document.querySelector('[data-bc-timezone-picker]');
+		const curRoot = document.querySelector('[data-bc-currency-picker]');
+		if (tzRoot && capabilities.timezoneCatalog) {
+			policyTimezonePicker = CatalogPickers.attachTimezone(
+				tzRoot,
+				capabilities.timezoneCatalog,
+				{ defaultTimezone: policy.defaultTimezone || capabilities.defaultTimezone },
+			);
+			if (policy.defaultTimezone) {
+				policyTimezonePicker?.setValue(policy.defaultTimezone);
+			}
+		}
+		if (curRoot && capabilities.currencyCatalog) {
+			policyCurrencyPicker = CatalogPickers.attachCurrency(
+				curRoot,
+				capabilities.currencyCatalog,
+				{ defaultCurrency: policy.defaultCurrency || capabilities.defaultCurrency },
+			);
+			if (policy.defaultCurrency) {
+				policyCurrencyPicker?.setValue(policy.defaultCurrency);
+			}
 		}
 	}
 
 	async function initAppPolicyUi() {
 		const form = document.querySelector('[data-bc-app-policy-form]');
 		if (!form) return;
-		if (!capabilities?.timezones || !capabilities?.currencies) {
+		if (!capabilities?.timezoneCatalog || !capabilities?.currencyCatalog) {
 			try {
 				const data = await Api.get('/apps/budgetcheck/api/workspaces');
 				capabilities = data.capabilities || {};
@@ -94,8 +99,7 @@
 		if (restrictCb) {
 			restrictCb.checked = !!policy.accessRestrictionEnabled;
 		}
-		fillTimezoneSelect(form.querySelector('[data-bc-default-timezone-select]'), policy.defaultTimezone);
-		fillCurrencySelect(form.querySelector('[data-bc-default-currency-select]'), policy.defaultCurrency);
+		initPolicyCatalogPickers(policy);
 		renderAllowedUserChips(form);
 		renderAllowedGroupChips(form);
 		renderAppAdminChips(form);
@@ -296,8 +300,12 @@
 				accessRestrictionEnabled,
 				allowedUserIds,
 				allowedGroupIds,
-				defaultTimezone: getVal(form, 'defaultTimezone'),
-				defaultCurrency: getVal(form, 'defaultCurrency').trim().toUpperCase(),
+				defaultTimezone: policyTimezonePicker
+					? policyTimezonePicker.getValue()
+					: getVal(form, 'defaultTimezone'),
+				defaultCurrency: (policyCurrencyPicker
+					? policyCurrencyPicker.getValue()
+					: getVal(form, 'defaultCurrency')).trim().toUpperCase(),
 			};
 			try {
 				await Api.post('/apps/budgetcheck/api/admin/policy', payload);

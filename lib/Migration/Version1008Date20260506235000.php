@@ -15,11 +15,8 @@ class Version1008Date20260506235000 extends SimpleMigrationStep
 	{
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
-		if ($schema->hasTable('bc_budget_defaults')) {
-			return $schema;
-		}
-
-		$t = $schema->createTable('bc_budget_defaults');
+		if (!$schema->hasTable('bc_budget_defaults')) {
+			$t = $schema->createTable('bc_budget_defaults');
 		$t->addColumn('id', 'bigint', ['autoincrement' => true, 'notnull' => true]);
 		$t->addColumn('workspace_id', 'bigint', ['notnull' => true]);
 		$t->addColumn('category_id', 'bigint', ['notnull' => true]);
@@ -29,6 +26,7 @@ class Version1008Date20260506235000 extends SimpleMigrationStep
 		$t->setPrimaryKey(['id'], 'bc_buddef_pk');
 		$t->addUniqueIndex(['workspace_id', 'category_id'], 'bc_buddef_ws_cat_uidx');
 		$t->addIndex(['workspace_id'], 'bc_buddef_ws_idx');
+		}
 
 		return $schema;
 	}

@@ -29,13 +29,16 @@ run_sql() {
 
 errors=0
 
-# Legacy long column name from before Version1005. Should be gone.
+# Legacy long column names (renamed in migrations). Should be gone.
 legacy_col=$(run_sql "
-SELECT TABLE_NAME
+SELECT TABLE_NAME, COLUMN_NAME
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA='${DB_NAME}'
   AND TABLE_NAME LIKE '${TABLE_PREFIX}${APP_PREFIX}%'
-  AND COLUMN_NAME='auto_copy_budgets_from_previous_month'")
+  AND COLUMN_NAME IN (
+    'auto_copy_budgets_from_previous_month',
+    'default_savings_target_percent_bp'
+  )")
 if [[ -n "${legacy_col}" ]]; then
 	echo "ERROR legacy column 'auto_copy_budgets_from_previous_month' still present on:" >&2
 	echo "${legacy_col}" >&2

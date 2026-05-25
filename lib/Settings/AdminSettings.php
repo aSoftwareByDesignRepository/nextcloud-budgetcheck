@@ -17,7 +17,6 @@ namespace OCA\BudgetCheck\Settings;
 
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Service\AccessControlService;
-use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IConfig;
 use OCP\IURLGenerator;
@@ -31,7 +30,6 @@ final class AdminSettings implements ISettings
 		private IFactory $l10nFactory,
 		private IURLGenerator $urlGenerator,
 		private AccessControlService $access,
-		private TimezoneCatalog $timezones,
 	) {
 	}
 
@@ -47,7 +45,6 @@ final class AdminSettings implements ISettings
 			'appAdminUserIdsCsv' => implode(', ', $policy['appAdminUserIds']),
 			'defaultTimezone' => $policy['defaultTimezone'],
 			'defaultCurrency' => $policy['defaultCurrency'],
-			'timezoneGroups' => $this->timezones->grouped(),
 			'saveUrl' => $this->urlGenerator->linkToRoute('budgetcheck.api.saveAppPolicy'),
 			'appUrl' => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
 		];

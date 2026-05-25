@@ -39,7 +39,7 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 - PHP 8.2–8.4
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.0.9</version>
+	<version>1.0.10</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>BudgetCheck</namespace>
@@ -94,4 +94,15 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 			<order>11</order>
 		</navigation>
 	</navigations>
+	<repair-steps>
+		<install>
+			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
+		</install>
+		<post-migration>
+			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
+		</post-migration>
+		<uninstall>
+			<step>OCA\BudgetCheck\Repair\UninstallDropTables</step>
+		</uninstall>
+	</repair-steps>
 </info>
