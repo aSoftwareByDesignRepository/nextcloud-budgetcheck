@@ -9,7 +9,7 @@
  *     active chips, clear-all, reset).
  *   - Fetch /api/transactions with AbortController so stale requests can never
  *     overwrite a fresh result, and a 250 ms debounce on free-text typing.
- *   - Render: KPI strip, ledger rows (responsive cards <640 px), pagination,
+ *   - Render: KPI strip, ledger rows (responsive cards below 768px / NC mobile), pagination,
  *     analytics breakdowns (group / category / month) inside a tabbed disclosure.
  *   - Surface real loading / empty / error states (not italic "Loading…" text).
  *   - Announce result changes through the polite live region.

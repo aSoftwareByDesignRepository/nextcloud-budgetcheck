@@ -616,6 +616,8 @@
 		"Households plan one calendar year at a time. You can change this later in workspace settings.": "Households plan one calendar year at a time. You can change this later in workspace settings.",
 		"Choose the calendar year for the grid below. Each month card opens that month in the monthly plan.": "Choose the calendar year for the grid below. Each month card opens that month in the monthly plan.",
 		"Export": "Export",
+		"Export failed. Please retry.": "Export failed. Please retry.",
+		"Export started.": "Export started.",
 		"Download the selected year as an Excel workbook.": "Download the selected year as an Excel workbook.",
 		"Download the project period as an Excel workbook.": "Download the project period as an Excel workbook.",
 		"Export yearly workbook (Excel)": "Export yearly workbook (Excel)",

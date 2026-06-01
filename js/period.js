@@ -163,19 +163,11 @@
 			button.setAttribute('aria-busy', 'true');
 		}
 		try {
-			const url = '/apps/budgetcheck/export/project-period'
-				+ '?workspaceId=' + encodeURIComponent(String(ws.id));
-			const response = await fetch(url, {
-				method: 'GET',
-				credentials: 'same-origin',
-				headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-			});
-			if (!response.ok) {
-				const message = await response.text().catch(() => '');
-				const err = new Error(message || t('budgetcheck', 'Export failed. Please retry.'));
-				err.status = response.status;
-				throw err;
-			}
+			const response = await Api.download(
+				'/apps/budgetcheck/export/project-period',
+				{ workspaceId: ws.id },
+				{ headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' } },
+			);
 			const blob = await response.blob();
 			const name = extractFilename(response) || 'budgetcheck_project_export.xlsx';
 			const objectUrl = window.URL.createObjectURL(blob);

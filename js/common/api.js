@@ -82,11 +82,42 @@
 		return data;
 	}
 
+	/**
+	 * GET binary responses (exports). Returns the raw Response so callers can read blobs
+	 * and Content-Disposition headers.
+	 */
+	async function download(path, params, options) {
+		const opts = options || {};
+		const headers = Object.assign({}, opts.headers || {});
+		let response;
+		try {
+			response = await fetch(buildUrl(path, params), {
+				method: 'GET',
+				credentials: 'same-origin',
+				headers,
+				signal: opts.signal,
+			});
+		} catch (e) {
+			const err = new Error(t('budgetcheck', 'Network error. Please retry.'));
+			err.status = 0;
+			err.cause = e;
+			throw err;
+		}
+		if (!response.ok) {
+			const message = await response.text().catch(() => '');
+			const err = new Error(message || t('budgetcheck', 'Request failed.'));
+			err.status = response.status;
+			throw err;
+		}
+		return response;
+	}
+
 	window.BudgetCheckApi = {
 		get: (path, params, options) => request(path, Object.assign({}, options || {}, { method: 'GET', params })),
 		post: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'POST', body })),
 		put: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'PUT', body })),
 		del: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'DELETE', body })),
+		download,
 		request,
 	};
 })();

@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.11] - 2026-06-01
+
+### Added
+
+- **`BudgetCheckApi.download()`** for Excel export routes (blob + `Content-Disposition`) so page scripts no longer call `fetch()` directly.
+
+### Changed
+
+- **Responsive layout (mobile-first):** `css/app.css` uses Nextcloud-aligned `min-width` breakpoints (480 / 640 / 768 / 1024px) for shell, headers, forms, tables, modals, and toasts; desktop (≥1024px) restores the prior layout.
+- **Transactions styles:** `css/transactions-v106.css` now contains only `.bc-tx-*` rules (shared tokens and shell stay in `app.css`); mobile card ledger below 768px with horizontal-overflow fixes for `.bc-tx-table`.
+- **Typography on mobile:** `--bc-fs-xs` is 0.875rem (14px) below 768px inside `.bc-app`.
+- **Export UX:** yearly and project-period exports use the API client; new l10n strings for export success and failure toasts.
+
+### Fixed
+
+- **Table scroll cascade:** `.bc-table-scroll table { min-width: 540px }` no longer overrides the desktop `min-width: 0` rule after the 1024px media query.
+- **Transactions on narrow viewports:** card rows no longer inherit the 540px table minimum width.
+
 ## [1.0.10] - 2026-05-25
 
 ### Added

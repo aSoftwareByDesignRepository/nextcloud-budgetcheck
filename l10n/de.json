@@ -650,6 +650,8 @@
 		"Households plan one calendar year at a time. You can change this later in workspace settings.": "Haushalte planen ein Kalenderjahr als Einheit. Du kannst den Wert später in den Arbeitsbereichseinstellungen ändern.",
 		"Choose the calendar year for the grid below. Each month card opens that month in the monthly plan.": "Wähle das Kalenderjahr für die Monatskarten unten. Jede Karte öffnet diesen Monat im Monatsplan.",
 		"Export": "Export",
+		"Export failed. Please retry.": "Export fehlgeschlagen. Bitte erneut versuchen.",
+		"Export started.": "Export gestartet.",
 		"Download the selected year as an Excel workbook.": "Lade das ausgewählte Jahr als Excel-Arbeitsmappe herunter.",
 		"Download the project period as an Excel workbook.": "Lade den Projektzeitraum als Excel-Arbeitsmappe herunter.",
 		"Export yearly workbook (Excel)": "Jahres-Arbeitsmappe (Excel) exportieren",
