@@ -53,7 +53,7 @@ final class UninstallDropTables implements IRepairStep
 
 	public function getName(): string
 	{
-		return 'Drop budgetcheck tables and install metadata on uninstall';
+		return 'Drop BudgetCheck tables and install metadata on uninstall';
 	}
 
 	public function run(IOutput $output): void
