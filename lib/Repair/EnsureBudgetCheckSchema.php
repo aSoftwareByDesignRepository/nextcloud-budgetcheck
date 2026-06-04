@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\BudgetCheck\Repair;
 
+use OC\DB\Connection;
 use OC\DB\MigrationService;
 use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCP\IDBConnection;
+use OCP\Server;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
@@ -46,7 +48,7 @@ final class EnsureBudgetCheckSchema implements IRepairStep
 
 		$migrationService = new MigrationService(
 			BudgetCheckTableCatalog::APP_ID,
-			$this->connection,
+			Server::get(Connection::class),
 		);
 		$migrationService->migrate('latest', false);
 

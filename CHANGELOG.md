@@ -1,5 +1,24 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.13] - 2026-06-04
+
+### Fixed
+
+- **`EnsureBudgetCheckSchema`:** use the core `Connection` from the server container for `MigrationService`, so install/post-migration repair runs reliably on upgrade.
+
+### Added
+
+- **Integration tests** for repair steps (`UpgradeRepairIntegrationTest`) and PHPUnit bootstrap support when tests run against a Nextcloud tree (`NEXTCLOUD_ROOT` / monorepo `lib/base.php`).
+
+### Changed
+
+- Confirm Nextcloud **33** as `max-version` in `appinfo/info.xml` (aligned with latest stable server).
+
 ## [1.0.11] - 2026-06-01
 
 ### Added

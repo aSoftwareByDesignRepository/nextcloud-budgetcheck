@@ -39,7 +39,7 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 - PHP 8.2–8.4
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.0.11</version>
+	<version>1.0.13</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>BudgetCheck</namespace>
@@ -82,6 +82,8 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 	<dependencies>
 		<nextcloud min-version="32" max-version="33"/>
 		<php min-version="8.2" max-version="8.4"/>
+		<database>mysql</database>
+		<database>pgsql</database>
 	</dependencies>
 	<settings>
 		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
