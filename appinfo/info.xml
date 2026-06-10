@@ -12,6 +12,11 @@
 	<summary lang="fr">Finances domestiques et de projet avec clôture mensuelle vérifiable, budgets et objectifs d'épargne</summary>
 	<summary lang="da">Husholdnings- og projektøkonomi med verificerbar månedlig afslutning, budgetter og sparemål</summary>
 	<summary lang="es">Finanzas domésticas y de proyecto con cierre mensual verificable, presupuestos y metas de ahorro</summary>
+	<summary lang="nl">Huishoud- en projectfinanciën met controleerbare maandafsluiting, budgetten en spaardoelen</summary>
+	<summary lang="it">Finanze domestiche e di progetto con chiusura mensile verificabile, budget e obiettivi di risparmio</summary>
+	<summary lang="pl">Finanse domowe i projektowe z weryfikowalnym zamknięciem miesiąca, budżetami i celami oszczędnościowymi</summary>
+	<summary lang="sv">Hushålls- och projektekonomi med verifierbar månadsavslutning, budgetar och sparmål</summary>
+	<summary lang="nb">Husholdnings- og prosjektøkonomi med verifiserbar månedlig avslutning, budsjetter og sparemål</summary>
 	<description><![CDATA[
 # BudgetCheck
 

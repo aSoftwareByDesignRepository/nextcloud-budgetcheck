@@ -36,7 +36,7 @@ function buildJs(lang) {
 	fs.writeFileSync(path.join(l10nDir, `${lang}.js`), lines.join('\n'));
 }
 
-for (const lang of ['de', 'en', 'fr', 'es', 'da']) {
+for (const lang of ['de', 'en', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb']) {
 	buildJs(lang);
 }
 console.log(`Wrote ${APP_ID} l10n/*.js`);
