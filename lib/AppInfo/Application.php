@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\AppInfo;
 
 use OCA\BudgetCheck\Listener\UserDeletedListener;
+use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
+use OCA\BudgetCheck\Repair\UninstallDropTables;
 use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
@@ -240,6 +242,20 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\L10N\IFactory::class),
 				$c->query(\OCP\IURLGenerator::class),
 				$c->query(AccessControlService::class),
+			);
+		});
+
+		$context->registerService(EnsureBudgetCheckSchema::class, function ($c): EnsureBudgetCheckSchema {
+			return new EnsureBudgetCheckSchema(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+			);
+		});
+
+		$context->registerService(UninstallDropTables::class, function ($c): UninstallDropTables {
+			return new UninstallDropTables(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
 			);
 		});
 
