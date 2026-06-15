@@ -13,6 +13,7 @@ use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
+use OCP\IGroupManager;
 use OCP\IUserManager;
 use PHPUnit\Framework\TestCase;
 
@@ -35,6 +36,7 @@ final class WorkspaceServiceUpdatePayloadTest extends TestCase
 				$this->createMock(IUserManager::class),
 				$this->createMock(CategoryService::class),
 				$this->createMock(MoneyService::class),
+				$this->createMock(IGroupManager::class),
 			])
 			->onlyMethods(['getForUser'])
 			->getMock();
@@ -75,6 +77,7 @@ final class WorkspaceServiceUpdatePayloadTest extends TestCase
 				$this->createMock(IUserManager::class),
 				$this->createMock(CategoryService::class),
 				$this->createMock(MoneyService::class),
+				$this->createMock(IGroupManager::class),
 			])
 			->onlyMethods(['getForUser'])
 			->getMock();

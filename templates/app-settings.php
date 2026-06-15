@@ -22,6 +22,10 @@ $canAdminApp = !empty($_['canAdminApp']);
 		<form class="bc-form-grid" data-bc-app-policy-form>
 			<fieldset class="bc-fieldset bc-app-policy-access">
 				<legend class="bc-fieldset__legend"><?php p($l->t('Directory access')); ?></legend>
+				<div class="bc-callout bc-callout--info" role="note" aria-labelledby="bc-access-gate-title">
+					<p id="bc-access-gate-title"><strong><?php p($l->t('This list controls the door, not the data.')); ?></strong></p>
+					<p class="bc-callout__hint"><?php p($l->t('Adding a user or group here only lets them open the app. To actually see or edit a ledger, they must be a member of a workspace. Add people or groups to a workspace from that workspace\'s “Members” section.')); ?></p>
+				</div>
 				<p id="bc-access-restriction-desc" class="bc-field__hint bc-field__hint--block">
 					<?php p($l->t('When restriction is on, only the users and groups listed here may open BudgetCheck. Nextcloud server administrators and BudgetCheck app administrators always keep access. Everyone else still needs a workspace to see ledgers (unless they are an app administrator).')); ?>
 				</p>
