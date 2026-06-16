@@ -1,6 +1,6 @@
 {
     "name": "budgetcheck",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "private": true,
     "scripts": {
         "db:naming-check": "bash scripts/check-db-naming.sh",
