@@ -40,9 +40,8 @@ use Psr\Log\LoggerInterface;
  * App-level directory gate (aligned with the ProjectCheck access policy pattern):
  * when {@see self::KEY_ACCESS_RESTRICTION} is enabled, only Nextcloud system administrators,
  * configured app administrators, users explicitly listed, or members of listed groups may pass
- * the gate. Workspace membership is still required for everyone except app administrators
- * (including system administrators without a workspace — they can manage org policy and create
- * workspaces).
+ * the gate. Workspace membership is enforced separately on workspace-scoped resources, so users
+ * can open the app shell after being allowed and then be onboarded into workspaces.
  */
 class AccessControlService
 {
@@ -56,9 +55,8 @@ class AccessControlService
 	public const KEY_ACCESS_ALLOWED_USER_IDS = 'access_allowed_user_ids';
 	public const KEY_ACCESS_ALLOWED_GROUP_IDS = 'access_allowed_group_ids';
 
-	/** @see AppAccessMiddleware user-facing denial copy */
+	/** @see AppAccessMiddleware audit log when {@see canUseApp} is false */
 	public const DENIAL_RESTRICTION = 'restriction';
-	public const DENIAL_NO_WORKSPACE = 'no_workspace';
 
 	public const ROLE_MANAGER = 'manager';
 	public const ROLE_CONTRIBUTOR = 'contributor';
@@ -120,8 +118,8 @@ class AccessControlService
 	/**
 	 * App-level access: Nextcloud or delegated app administrators always pass.
 	 * Otherwise, when directory restriction is enabled, the user must match the
-	 * configured allow lists. Finally, a non-admin must belong to at least one
-	 * workspace (admins may open the shell to manage policy or create workspaces).
+	 * configured allow lists. Workspace membership is checked by workspace-scoped
+	 * service methods such as {@see ensureMembership()}.
 	 */
 	public function canUseApp(string $userId): bool
 	{
@@ -134,7 +132,7 @@ class AccessControlService
 		if ($this->isAccessRestrictionEnabled() && !$this->userMatchesAccessAllowList($userId)) {
 			return false;
 		}
-		return $this->countWorkspaceMemberships($userId) > 0;
+		return true;
 	}
 
 	/**
@@ -143,12 +141,12 @@ class AccessControlService
 	public function denialReasonWhenCannotUseApp(string $userId): string
 	{
 		if ($this->isAppAdmin($userId)) {
-			return self::DENIAL_NO_WORKSPACE;
+			return self::DENIAL_RESTRICTION;
 		}
 		if ($this->isAccessRestrictionEnabled() && !$this->userMatchesAccessAllowList($userId)) {
 			return self::DENIAL_RESTRICTION;
 		}
-		return self::DENIAL_NO_WORKSPACE;
+		return self::DENIAL_RESTRICTION;
 	}
 
 	public function isAccessRestrictionEnabled(): bool
@@ -594,40 +592,6 @@ class AccessControlService
 			return [];
 		}
 		return array_values(array_unique(array_filter($value, static fn ($v): bool => is_string($v) && $v !== '')));
-	}
-
-	/**
-	 * Count workspaces the user can reach as a member, counting both individual
-	 * memberships and groups they belong to. Short-circuits as soon as an
-	 * individual membership is found so {@see canUseApp} stays cheap for the
-	 * common case.
-	 */
-	private function countWorkspaceMemberships(string $userId): int
-	{
-		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->count('*', 'count'))
-			->from('bc_workspace_members')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
-		$result = $qb->executeQuery();
-		$row = $result->fetch();
-		$result->closeCursor();
-		$count = (int)($row['count'] ?? 0);
-		if ($count > 0) {
-			return $count;
-		}
-
-		$gids = $this->userGroupIds($userId);
-		if ($gids === []) {
-			return 0;
-		}
-		$gq = $this->db->getQueryBuilder();
-		$gq->select($gq->func()->count('*', 'count'))
-			->from('bc_workspace_groups')
-			->where($gq->expr()->in('gid', $gq->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
-		$gResult = $gq->executeQuery();
-		$gRow = $gResult->fetch();
-		$gResult->closeCursor();
-		return (int)($gRow['count'] ?? 0);
 	}
 
 	/**

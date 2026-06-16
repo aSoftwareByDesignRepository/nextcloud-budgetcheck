@@ -19,9 +19,8 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Refuses to enter any BudgetCheck controller when {@see AccessControlService::canUseApp}
- * is false (directory restriction, missing workspace membership, or both).
- * Nextcloud and delegated app administrators pass without a workspace so they
- * can manage policy. Per-route role checks run inside services after this gate.
+ * is false (directory restriction gate).
+ * Workspace membership checks run in service-layer role gates for workspace-scoped routes.
  */
 class AppAccessMiddleware extends Middleware
 {
@@ -88,10 +87,7 @@ class AppAccessMiddleware extends Middleware
 		}
 
 		$l = $this->l10nFactory->get(Application::APP_ID);
-		$reason = $exception->getDenialReason();
-		$message = $reason === AccessControlService::DENIAL_RESTRICTION
-			? $l->t('You do not have access to BudgetCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access.')
-			: $l->t('You do not have access to BudgetCheck. Ask an app administrator to add you to a workspace.');
+		$message = $l->t('You do not have access to BudgetCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access.');
 		$response = new TemplateResponse(Application::APP_ID, 'access-denied', [
 			'message' => $message,
 			'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),

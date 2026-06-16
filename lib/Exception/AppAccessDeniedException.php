@@ -6,7 +6,7 @@ namespace OCA\BudgetCheck\Exception;
 
 /**
  * Thrown when a logged-in user may not enter the BudgetCheck app shell.
- * {@see self::getDenialReason()} distinguishes directory restriction vs. missing workspace membership.
+ * {@see self::getDenialReason()} is set when directory restriction blocks the user.
  */
 class AppAccessDeniedException extends \RuntimeException
 {
