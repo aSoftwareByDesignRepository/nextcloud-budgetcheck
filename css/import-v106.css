@@ -20,6 +20,22 @@
 	padding-inline-start: 1.25rem;
 }
 
+.bc-import-format-note {
+	margin-top: var(--bc-space-4);
+	padding: var(--bc-space-4);
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--bc-border);
+	background: var(--bc-bg-soft);
+}
+
+.bc-import-format-note p {
+	margin: 0;
+}
+
+.bc-import-format-note p + p {
+	margin-top: var(--bc-space-2);
+}
+
 .bc-import-defaults {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
@@ -30,9 +46,75 @@
 	.bc-import-defaults {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
-	.bc-import-defaults > .bc-field:last-child {
+	.bc-import-defaults > .bc-field:last-child,
+	.bc-import-defaults > .bc-field--checkbox {
 		grid-column: 1 / -1;
 	}
+}
+
+.bc-field--checkbox {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	padding: var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--bc-border);
+	background: var(--bc-bg-soft);
+}
+
+.bc-field--checkbox input[type="checkbox"] {
+	align-self: flex-start;
+	margin: 0;
+}
+
+.bc-import-duplicate-options {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+	grid-column: 1 / -1;
+}
+
+.bc-import-duplicate-sub {
+	margin-inline-start: var(--bc-space-4);
+	padding: var(--bc-space-3);
+	padding-inline-start: var(--bc-space-4);
+	border-inline-start: 3px solid var(--color-primary-element, #0082c9);
+	border-radius: 0 var(--bc-radius-sm) var(--bc-radius-sm) 0;
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 4%, var(--bc-bg-soft) 96%);
+}
+
+.bc-field--checkbox-sub {
+	border: none;
+	background: transparent;
+	padding: 0;
+}
+
+.bc-import-errors {
+	margin-top: var(--bc-space-3);
+	padding: var(--bc-space-4);
+	border-radius: var(--bc-radius-sm);
+	border: 1px solid var(--color-error, #e9322d);
+	background: color-mix(in srgb, var(--color-error, #e9322d) 8%, var(--bc-bg-card) 92%);
+}
+
+.bc-import-errors__title {
+	margin: 0 0 var(--bc-space-2);
+	font-size: var(--bc-fs-md);
+	font-weight: 600;
+}
+
+.bc-import-errors__list {
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	font-size: var(--bc-fs-sm);
+	line-height: var(--bc-line-base);
+}
+
+.bc-import-preview-summary {
+	margin: var(--bc-space-3) 0 0;
 }
 
 /* Styled CSV file picker (replaces native input chrome) */

@@ -9,11 +9,13 @@ use OCA\BudgetCheck\Exception\AccessDeniedException;
 class TransactionImportService
 {
 	private const MAX_ROWS_PER_IMPORT = 500;
+	private const MAX_ERRORS_RETURNED = 100;
 
 	public function __construct(
 		private CategoryService $categories,
 		private BookingStatusService $bookingStatuses,
 		private TransactionService $transactions,
+		private MoneyService $money,
 		private AuditLogService $audit,
 		private AccessControlService $access,
 		private \OCP\IDBConnection $db,
@@ -23,22 +25,29 @@ class TransactionImportService
 	/**
 	 * @param list<array<string,mixed>> $rows
 	 * @param array{expenseCategoryId?:int,incomeCategoryId?:int} $defaults
+	 * @param array{skipDuplicates?:bool} $options
 	 */
-	public function preview(int $workspaceId, string $userId, array $workspace, array $rows, array $defaults = []): array
+	public function preview(int $workspaceId, string $userId, array $workspace, array $rows, array $defaults = [], array $options = []): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
 		$normalizedRows = $this->normalizeRows($rows);
+		$importOptions = $this->normalizeImportOptions($options);
 		$ctx = $this->buildImportContext($workspaceId, $userId, $defaults);
+		$skipIndexes = $this->resolveSkipIndexes($workspaceId, $workspace, $normalizedRows, $importOptions);
 
 		$ok = 0;
+		$skipped = count($skipIndexes);
 		$errors = [];
 		foreach ($normalizedRows as $i => $row) {
+			if (isset($skipIndexes[$i])) {
+				continue;
+			}
 			try {
-				$this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $i + 1);
+				$this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $this->displayRowNumber($row, $i + 1));
 				$ok++;
 			} catch (\InvalidArgumentException|AccessDeniedException $e) {
 				$errors[] = [
-					'rowNumber' => $i + 1,
+					'rowNumber' => $this->displayRowNumber($row, $i + 1),
 					'message' => $e->getMessage(),
 				];
 			}
@@ -48,34 +57,45 @@ class TransactionImportService
 			'rows' => count($normalizedRows),
 			'valid' => $ok,
 			'invalid' => count($errors),
+			'skipped' => $skipped,
+			'skipDuplicates' => $importOptions['skipDuplicates'],
+			'skipFingerprintDuplicates' => $importOptions['skipFingerprintDuplicates'],
 		], $workspaceId);
 
 		return [
 			'totalRows' => count($normalizedRows),
 			'validRows' => $ok,
 			'invalidRows' => count($errors),
-			'errors' => array_slice($errors, 0, 100),
+			'skippedRows' => $skipped,
+			'errors' => array_slice($errors, 0, self::MAX_ERRORS_RETURNED),
 		];
 	}
 
 	/**
 	 * @param list<array<string,mixed>> $rows
 	 * @param array{expenseCategoryId?:int,incomeCategoryId?:int} $defaults
+	 * @param array{skipDuplicates?:bool} $options
 	 */
-	public function commit(int $workspaceId, string $userId, array $workspace, array $rows, array $defaults = []): array
+	public function commit(int $workspaceId, string $userId, array $workspace, array $rows, array $defaults = [], array $options = []): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
 		$normalizedRows = $this->normalizeRows($rows);
+		$importOptions = $this->normalizeImportOptions($options);
 		$ctx = $this->buildImportContext($workspaceId, $userId, $defaults);
+		$skipIndexes = $this->resolveSkipIndexes($workspaceId, $workspace, $normalizedRows, $importOptions);
 
 		$errors = [];
 		$resolved = [];
 		foreach ($normalizedRows as $i => $row) {
+			if (isset($skipIndexes[$i])) {
+				$resolved[$i] = null;
+				continue;
+			}
 			try {
-				$resolved[] = $this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $i + 1);
+				$resolved[$i] = $this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $this->displayRowNumber($row, $i + 1));
 			} catch (\InvalidArgumentException|AccessDeniedException $e) {
 				$errors[] = [
-					'rowNumber' => $i + 1,
+					'rowNumber' => $this->displayRowNumber($row, $i + 1),
 					'message' => $e->getMessage(),
 				];
 			}
@@ -83,16 +103,25 @@ class TransactionImportService
 		if ($errors !== []) {
 			return [
 				'createdCount' => 0,
+				'skippedCount' => 0,
 				'errorCount' => count($errors),
-				'errors' => array_slice($errors, 0, 100),
+				'errors' => array_slice($errors, 0, self::MAX_ERRORS_RETURNED),
 			];
 		}
 
 		$createdCount = 0;
+		$skippedCount = count($skipIndexes);
 		$this->db->beginTransaction();
 		try {
 			foreach ($normalizedRows as $i => $row) {
-				[$category, $status] = $resolved[$i];
+				if (isset($skipIndexes[$i])) {
+					continue;
+				}
+				$resolvedRow = $resolved[$i];
+				if ($resolvedRow === null) {
+					continue;
+				}
+				[$category, $status] = $resolvedRow;
 				$payload = $row;
 				$payload['categoryId'] = (int)$category['id'];
 				$this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $status);
@@ -103,6 +132,7 @@ class TransactionImportService
 			$this->db->rollBack();
 			return [
 				'createdCount' => 0,
+				'skippedCount' => 0,
 				'errorCount' => 1,
 				'errors' => [[
 					'rowNumber' => max(1, $createdCount + 1),
@@ -116,10 +146,14 @@ class TransactionImportService
 
 		$this->audit->record($userId, 'transaction_import_committed', 'workspace', (string)$workspaceId, [
 			'created' => $createdCount,
+			'skipped' => $skippedCount,
+			'skipDuplicates' => $importOptions['skipDuplicates'],
+			'skipFingerprintDuplicates' => $importOptions['skipFingerprintDuplicates'],
 		], $workspaceId);
 
 		return [
 			'createdCount' => $createdCount,
+			'skippedCount' => $skippedCount,
 			'errorCount' => 0,
 			'errors' => [],
 		];
@@ -155,10 +189,150 @@ class TransactionImportService
 				'notes' => $row['notes'] ?? null,
 				'isSpecial' => !empty($row['isSpecial']),
 				'externalRef' => $row['externalRef'] ?? null,
+				'sourceRowNumber' => max(0, (int)($row['sourceRowNumber'] ?? 0)),
 			];
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param array{skipDuplicates?:bool,skipFingerprintDuplicates?:bool} $options
+	 * @return array{skipDuplicates:bool,skipFingerprintDuplicates:bool}
+	 */
+	private function normalizeImportOptions(array $options): array
+	{
+		$skipDuplicates = !empty($options['skipDuplicates']);
+		return [
+			'skipDuplicates' => $skipDuplicates,
+			'skipFingerprintDuplicates' => $skipDuplicates && !empty($options['skipFingerprintDuplicates']),
+		];
+	}
+
+	/**
+	 * Rows to skip when duplicate skipping is enabled.
+	 *
+	 * @param list<array<string,mixed>> $rows
+	 * @param array{skipDuplicates:bool,skipFingerprintDuplicates:bool} $importOptions
+	 * @return array<int, true>
+	 */
+	private function resolveSkipIndexes(int $workspaceId, array $workspace, array $rows, array $importOptions): array
+	{
+		if (!$importOptions['skipDuplicates']) {
+			return [];
+		}
+
+		$skip = [];
+		$seenInBatch = [];
+		$refsForLookup = [];
+		foreach ($rows as $i => $row) {
+			$ref = $this->normalizeExternalRefKey($row['externalRef'] ?? null);
+			if ($ref === null) {
+				continue;
+			}
+			if (isset($seenInBatch[$ref])) {
+				$skip[$i] = true;
+				continue;
+			}
+			$seenInBatch[$ref] = true;
+			$refsForLookup[] = $ref;
+		}
+
+		if ($refsForLookup !== []) {
+			$existing = array_fill_keys(
+				$this->transactions->findExistingExternalRefs($workspaceId, $refsForLookup),
+				true,
+			);
+			foreach ($rows as $i => $row) {
+				if (isset($skip[$i])) {
+					continue;
+				}
+				$ref = $this->normalizeExternalRefKey($row['externalRef'] ?? null);
+				if ($ref !== null && isset($existing[$ref])) {
+					$skip[$i] = true;
+				}
+			}
+		}
+
+		if (!$importOptions['skipFingerprintDuplicates']) {
+			return $skip;
+		}
+
+		$decimals = $this->money->decimalsFor((string)($workspace['currencyCode'] ?? 'EUR'));
+		$batchFingerprints = [];
+		$fingerprintsForLookup = [];
+		foreach ($rows as $i => $row) {
+			if (isset($skip[$i])) {
+				continue;
+			}
+			if ($this->normalizeExternalRefKey($row['externalRef'] ?? null) !== null) {
+				continue;
+			}
+			$fingerprint = $this->fingerprintForRow($row, $decimals);
+			if ($fingerprint === null) {
+				continue;
+			}
+			if (isset($batchFingerprints[$fingerprint])) {
+				$skip[$i] = true;
+				continue;
+			}
+			$batchFingerprints[$fingerprint] = $i;
+			$fingerprintsForLookup[] = $fingerprint;
+		}
+
+		if ($fingerprintsForLookup !== []) {
+			$existingFingerprints = array_fill_keys(
+				$this->transactions->findExistingFingerprintKeys($workspaceId, $fingerprintsForLookup),
+				true,
+			);
+			foreach ($batchFingerprints as $fingerprint => $index) {
+				if (isset($existingFingerprints[$fingerprint])) {
+					$skip[$index] = true;
+				}
+			}
+		}
+
+		return $skip;
+	}
+
+	/**
+	 * @param array<string,mixed> $row
+	 */
+	private function fingerprintForRow(array $row, int $decimals): ?string
+	{
+		$direction = (string)($row['direction'] ?? '');
+		if ($direction !== CategoryService::TYPE_INCOME && $direction !== CategoryService::TYPE_EXPENSE) {
+			return null;
+		}
+		$bookingDate = trim((string)($row['bookingDate'] ?? ''));
+		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDate)) {
+			return null;
+		}
+		$title = trim((string)($row['title'] ?? ''));
+		if ($title === '') {
+			return null;
+		}
+		try {
+			$amountMinor = $this->money->parseHumanAmount($row['amount'] ?? null, $decimals);
+		} catch (\InvalidArgumentException) {
+			return null;
+		}
+		return TransactionService::importFingerprint($bookingDate, $amountMinor, $direction, $title);
+	}
+
+	private function normalizeExternalRefKey(mixed $value): ?string
+	{
+		if ($value === null) {
+			return null;
+		}
+		$trimmed = trim((string)$value);
+		return $trimmed === '' ? null : $trimmed;
+	}
+
+	private function displayRowNumber(array $row, int $fallback): int
+	{
+		$n = (int)($row['sourceRowNumber'] ?? 0);
+		return $n > 0 ? $n : $fallback;
 	}
 
 	/**
@@ -206,7 +380,7 @@ class TransactionImportService
 		$statusId = $row['bookingStatusId'];
 		if ($statusId !== null) {
 			if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_PROJECT) {
-				throw new \InvalidArgumentException('bookingStatusId is only allowed for project workspaces.');
+				throw new \InvalidArgumentException('Row ' . $rowNumber . ': booking status is only allowed for project workspaces.');
 			}
 			$status = $this->bookingStatuses->loadActiveForWorkspace((int)$statusId, $workspaceId);
 			if ($status === null) {
@@ -216,7 +390,11 @@ class TransactionImportService
 
 		$payload = $row;
 		$payload['categoryId'] = (int)$category['id'];
-		$this->transactions->validateCreatePayload($workspaceId, $userId, $payload, $workspace, $category, $status);
+		try {
+			$this->transactions->validateCreatePayload($workspaceId, $userId, $payload, $workspace, $category, $status);
+		} catch (\InvalidArgumentException $e) {
+			throw new \InvalidArgumentException('Row ' . $rowNumber . ': ' . $e->getMessage());
+		}
 		return [$category, $status];
 	}
 

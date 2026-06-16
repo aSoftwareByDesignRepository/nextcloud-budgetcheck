@@ -667,6 +667,104 @@ class TransactionService
 	}
 
 	/**
+	 * Return external references that already exist on live rows in a workspace.
+	 * Used by CSV import duplicate skipping.
+	 *
+	 * @param list<string> $refs
+	 * @return list<string>
+	 */
+	public function findExistingExternalRefs(int $workspaceId, array $refs): array
+	{
+		$clean = [];
+		foreach ($refs as $ref) {
+			$value = trim((string)$ref);
+			if ($value !== '') {
+				$clean[$value] = true;
+			}
+		}
+		if ($clean === []) {
+			return [];
+		}
+		$values = array_keys($clean);
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectDistinct('external_ref')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('deleted_at'))
+			->andWhere($qb->expr()->in('external_ref', $qb->createNamedParameter($values, \Doctrine\DBAL\Connection::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		$out = [];
+		while ($row = $result->fetch()) {
+			$ref = trim((string)($row['external_ref'] ?? ''));
+			if ($ref !== '') {
+				$out[] = $ref;
+			}
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * Stable fingerprint for import duplicate detection (date + amount + direction + title).
+	 */
+	public static function importFingerprint(string $bookingDate, int $amountMinor, string $direction, string $title): string
+	{
+		$titleKey = mb_strtolower(preg_replace('/\s+/u', ' ', trim($title)) ?? '');
+		return $bookingDate . '|' . $amountMinor . '|' . $direction . '|' . $titleKey;
+	}
+
+	/**
+	 * @param list<string> $fingerprints
+	 * @return list<string>
+	 */
+	public function findExistingFingerprintKeys(int $workspaceId, array $fingerprints): array
+	{
+		$wanted = [];
+		foreach ($fingerprints as $fingerprint) {
+			$key = trim((string)$fingerprint);
+			if ($key !== '') {
+				$wanted[$key] = true;
+			}
+		}
+		if ($wanted === []) {
+			return [];
+		}
+
+		$dates = [];
+		foreach (array_keys($wanted) as $fingerprint) {
+			$parts = explode('|', $fingerprint, 4);
+			if (count($parts) === 4 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $parts[0]) === 1) {
+				$dates[$parts[0]] = true;
+			}
+		}
+		if ($dates === []) {
+			return [];
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('booking_date', 'amount_minor', 'direction', 'title')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('deleted_at'))
+			->andWhere($qb->expr()->in('booking_date', $qb->createNamedParameter(array_keys($dates), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		$matches = [];
+		while ($row = $result->fetch()) {
+			$fingerprint = self::importFingerprint(
+				(string)$row['booking_date'],
+				(int)$row['amount_minor'],
+				(string)$row['direction'],
+				(string)$row['title'],
+			);
+			if (isset($wanted[$fingerprint])) {
+				$matches[$fingerprint] = true;
+			}
+		}
+		$result->closeCursor();
+		return array_keys($matches);
+	}
+
+	/**
 	 * Return the workspace that owns the given transaction, or null when the
 	 * row does not exist. Performs no membership check; the caller must do
 	 * that against the returned id (typically via {@see WorkspaceService::getForUser()}).

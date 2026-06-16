@@ -51,6 +51,8 @@ return [
 		['name' => 'api#createTransaction',  'url' => '/api/transactions',                 'verb' => 'POST'],
 		['name' => 'api#previewTransactionImport', 'url' => '/api/transactions/import/preview', 'verb' => 'POST'],
 		['name' => 'api#commitTransactionImport', 'url' => '/api/transactions/import/commit', 'verb' => 'POST'],
+		['name' => 'api#getImportPreferences', 'url' => '/api/workspaces/{workspaceId}/import-preferences', 'verb' => 'GET'],
+		['name' => 'api#saveImportPreferences', 'url' => '/api/workspaces/{workspaceId}/import-preferences', 'verb' => 'PUT'],
 		['name' => 'api#updateTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'PUT'],
 		['name' => 'api#deleteTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'DELETE'],
 

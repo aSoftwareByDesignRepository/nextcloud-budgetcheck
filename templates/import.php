@@ -42,6 +42,7 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 			<li><?php p($l->t('Pick a default category in the form below (expense-only bank exports: choose “Treat every row as an expense”).')); ?></li>
 			<li><?php p($l->t('If amounts are signed: negative = expense, positive = income. If all amounts are positive, use the direction option below.')); ?></li>
 			<li><?php p($l->t('Column names like “Date”, “Description”, and “Amount” are recognised automatically.')); ?></li>
+			<li><?php p($l->t('Bank “Status” columns are ignored in household workspaces — they will not block your import.')); ?></li>
 		</ul>
 	</section>
 
@@ -83,8 +84,15 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 		<p><strong><?php p($l->t('Optional:')); ?></strong> <code>direction</code>, <code>category</code>, <code>notes</code>, <code>isSpecial</code>, <code>externalRef</code><?php if ($isProject): ?>, <code>bookingStatus</code><?php endif; ?></p>
 		<p><strong><?php p($l->t('Recognised date columns:')); ?></strong> <?php p($l->t('bookingDate, date, valuta, Buchungsdatum')); ?></p>
 		<p><strong><?php p($l->t('Recognised title columns:')); ?></strong> <?php p($l->t('title, description, memo, Verwendungszweck')); ?></p>
-		<p><strong><?php p($l->t('Recognised amount columns:')); ?></strong> <?php p($l->t('amount, value, betrag (semicolon-separated files are supported)')); ?></p>
-		<p><strong><?php p($l->t('Recognised direction columns:')); ?></strong> <?php p($l->t('direction, type, Soll/Haben, debit/credit')); ?></p>
+		<p><strong><?php p($l->t('Recognised amount columns:')); ?></strong> <?php p($l->t('amount, value, betrag (comma, semicolon, or tab-separated files are supported)')); ?></p>
+		<p><strong><?php p($l->t('Recognised direction columns:')); ?></strong> <?php p($l->t('direction, Soll/Haben, debit/credit (rename a bank “type” column to “direction” if needed)')); ?></p>
+		<div class="bc-import-format-note" role="note">
+			<p><strong><?php p($l->t('Amount formats')); ?></strong></p>
+			<p><?php p($l->t('Both European (1.234,56) and English (1,234.56) number formats are accepted. Spaces as thousands separators also work. Do not put currency symbols in the amount column.')); ?></p>
+			<p><?php p($l->t('If you export from LibreOffice or Excel, comma, semicolon, or tab delimiters all work — the importer detects which you used.')); ?></p>
+			<p><?php p($l->t('Dates follow your account locale (for example dd.mm.yyyy in German). ISO dates (YYYY-MM-DD) always work.')); ?></p>
+			<p><?php p($l->t('Files are read as UTF-8 first. Older bank exports in Windows-1252 or Latin-1 are converted automatically when needed.')); ?></p>
+		</div>
 	</section>
 
 	<section class="bc-card bc-section" aria-labelledby="bc-import-run-title">
@@ -96,8 +104,9 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 		</header>
 		<form class="bc-form-grid" data-bc-import-form>
 			<fieldset class="bc-fieldset bc-field--full-width">
-				<legend class="bc-fieldset__legend"><?php p($l->t('Default categories (no category column in CSV)')); ?></legend>
-				<p class="bc-field__hint bc-field__hint--block" id="bc-import-defaults-hint"><?php p($l->t('Required when your file has no category column — typical for bank exports. Expenses use the expense default; income uses the income default.')); ?></p>
+				<legend class="bc-fieldset__legend"><?php p($l->t('Import options')); ?></legend>
+				<p class="bc-field__hint bc-field__hint--block" id="bc-import-defaults-hint"><?php p($l->t('Default categories fill in rows without a category value — typical for bank exports. Expenses use the expense default; income uses the income default.')); ?></p>
+				<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('Your import choices are saved to your account for this workspace and sync across devices.')); ?></p>
 				<div class="bc-import-defaults">
 					<label class="bc-field">
 						<span class="bc-field__label"><?php p($l->t('Default expense category')); ?></span>
@@ -115,16 +124,30 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 							<option value="income"><?php p($l->t('Treat every row as income')); ?></option>
 						</select>
 					</label>
+					<div class="bc-import-duplicate-options">
+						<label class="bc-field bc-field--checkbox">
+							<input type="checkbox" class="checkbox" data-bc-import-skip-duplicates value="1" aria-controls="bc-import-fingerprint-wrap">
+							<span class="bc-field__label"><?php p($l->t('Skip duplicate rows')); ?></span>
+							<span class="bc-field__hint"><?php p($l->t('Matches by bank reference when your file has a reference column. Enable the option below for files without references.')); ?></span>
+						</label>
+						<div class="bc-import-duplicate-sub" id="bc-import-fingerprint-wrap" data-bc-import-fingerprint-wrap hidden>
+							<label class="bc-field bc-field--checkbox bc-field--checkbox-sub">
+								<input type="checkbox" class="checkbox" data-bc-import-skip-fingerprint value="1">
+								<span class="bc-field__label"><?php p($l->t('Also skip rows that match date, amount, direction, and title')); ?></span>
+								<span class="bc-field__hint"><?php p($l->t('Use when your bank export has no reference column. Only enable if you might import the same file twice.')); ?></span>
+							</label>
+						</div>
+					</div>
 				</div>
 			</fieldset>
 			<div class="bc-field bc-field--full-width">
-				<span class="bc-field__label" id="bc-import-file-label"><?php p($l->t('CSV file')); ?></span>
+				<span class="bc-field__label" id="bc-import-file-label"><?php p($l->t('CSV or text file')); ?></span>
 				<div class="bc-file-picker" data-bc-import-file-picker>
 					<label class="bc-file-picker__surface">
 						<input
 							type="file"
 							id="bc-import-file"
-							accept=".csv,text/csv"
+							accept=".csv,.txt,text/csv,text/plain"
 							class="bc-file-picker__input"
 							data-bc-import-file
 							required
@@ -143,18 +166,24 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 						<span data-bc-import-file-name-text></span>
 					</p>
 				</div>
-				<span class="bc-field__hint" id="bc-import-file-hint"><?php p($l->t('Maximum 500 rows per import.')); ?></span>
+				<span class="bc-field__hint" id="bc-import-file-hint"><?php p($l->t('Maximum 500 rows per import. Split larger exports into several files — you can validate multiple batches in a row.')); ?></span>
 			</div>
 			<div class="bc-form-actions">
 				<button type="button" class="button" data-bc-import-validate><?php p($l->t('Validate CSV')); ?></button>
 				<button type="submit" class="button primary" data-bc-import-commit disabled><?php p($l->t('Import transactions')); ?></button>
 			</div>
 			<p class="bc-field__hint bc-field__hint--block" data-bc-import-status aria-live="polite"><?php p($l->t('No file validated yet.')); ?></p>
+			<div class="bc-import-errors" data-bc-import-errors-wrap hidden>
+				<h3 class="bc-import-errors__title" id="bc-import-errors-title" data-bc-import-errors-title><?php p($l->t('Validation errors')); ?></h3>
+				<ul class="bc-import-errors__list" data-bc-import-errors aria-labelledby="bc-import-errors-title"></ul>
+			</div>
 		</form>
+		<p class="bc-field__hint bc-import-preview-summary" data-bc-import-preview-summary hidden></p>
 		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Import preview')); ?>" tabindex="0" data-bc-import-preview-wrap hidden>
 			<table class="bc-table">
 				<thead>
 					<tr>
+						<th scope="col"><?php p($l->t('Line')); ?></th>
 						<th scope="col"><?php p($l->t('Date')); ?></th>
 						<th scope="col"><?php p($l->t('Title')); ?></th>
 						<th scope="col"><?php p($l->t('Direction')); ?></th>

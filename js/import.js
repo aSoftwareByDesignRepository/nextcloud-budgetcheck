@@ -9,24 +9,36 @@
 	const Msg = window.BudgetCheckMessaging;
 	const C = window.BudgetCheckComponents;
 	const Ws = window.BudgetCheckWorkspace;
+	const Money = window.BudgetCheckMoney;
+	const Dates = window.BudgetCheckDates;
 
 	const MAX_ROWS = 500;
+	const PREVIEW_ROWS = 20;
+	const MAX_ERRORS_UI = 25;
+	const IMPORT_PREFS_KEY_PREFIX = 'bc_import_prefs_';
 
 	const COLUMN_ALIASES = {
 		bookingDate: ['bookingdate', 'date', 'transactiondate', 'valuta', 'buchungstag', 'buchungsdatum', 'buchung'],
 		title: ['title', 'description', 'text', 'memo', 'payee', 'name', 'verwendungszweck', 'buchungstext', 'purpose'],
 		amount: ['amount', 'value', 'betrag', 'sum', 'umsatz'],
-		direction: ['direction', 'type', 'incomeexpense', 'sollhaben'],
-		category: ['category', 'kategorie', 'categoryname', 'kategorie'],
+		direction: ['direction', 'incomeexpense', 'sollhaben', 'debit', 'credit', 'buchungstyp'],
+		category: ['category', 'kategorie', 'categoryname'],
 		categoryId: ['categoryid'],
 		notes: ['notes', 'note', 'comment', 'notiz', 'remark'],
 		isSpecial: ['isspecial', 'special'],
-		externalRef: ['externalref', 'reference', 'ref', 'transactionid', 'id'],
-		bookingStatus: ['bookingstatus', 'status'],
+		externalRef: [
+			'externalref', 'reference', 'ref', 'transactionid', 'transactionnr', 'transaktionsnr',
+			'referenz', 'buchungsreferenz', 'bankreferenz', 'auftragsreferenz', 'referencenumber',
+			'referenceno', 'referencenr', 'bankreference', 'paymentreference',
+		],
+		bookingStatus: ['bookingstatus'],
 		bookingStatusId: ['bookingstatusid'],
 	};
 
 	let validatedRows = [];
+	let lockedImportDefaults = null;
+	let lockedImportOptions = null;
+	let serverImportPrefs = null;
 	let categories = [];
 	let statuses = [];
 	let categoryByName = new Map();
@@ -36,9 +48,11 @@
 		if (!Ws.workspace || !Ws.canContribute) return;
 		try {
 			await loadCatalogs();
+			await syncImportPreferencesFromServer();
 			renderCategoryReference();
 			populateDefaultCategorySelects();
 			updateDefaultPickerVisibility();
+			updateSkipFingerprintVisibility();
 			wireForm();
 			wireTemplateDownload();
 		} catch (err) {
@@ -46,10 +60,23 @@
 		}
 	});
 
+	function isProjectWorkspace() {
+		return !!(Ws.workspace && Ws.workspace.type === 'project');
+	}
+
+	function importLocale() {
+		const root = document.getElementById('app-content');
+		if (root) {
+			const locale = root.getAttribute('data-bc-locale');
+			if (locale) return locale;
+		}
+		return document.documentElement.lang || 'en';
+	}
+
 	async function loadCatalogs() {
 		const [cats, statusRes] = await Promise.all([
 			Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id }),
-			Ws.workspace.type === 'project'
+			isProjectWorkspace()
 				? Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: Ws.workspace.id })
 				: Promise.resolve({ statuses: [] }),
 		]);
@@ -93,9 +120,84 @@
 		});
 	}
 
+	function importPrefsStorageKey() {
+		const wsId = Ws.workspace && Ws.workspace.id ? Number(Ws.workspace.id) : 0;
+		return wsId > 0 ? IMPORT_PREFS_KEY_PREFIX + String(wsId) : '';
+	}
+
+	function loadImportPreferences() {
+		if (serverImportPrefs && typeof serverImportPrefs === 'object') {
+			return serverImportPrefs;
+		}
+		const key = importPrefsStorageKey();
+		if (!key) return null;
+		try {
+			const raw = window.localStorage.getItem(key);
+			if (!raw) return null;
+			const parsed = JSON.parse(raw);
+			return parsed && typeof parsed === 'object' ? parsed : null;
+		} catch (_) {
+			return null;
+		}
+	}
+
+	function saveImportPreferencesLocal(prefs) {
+		const key = importPrefsStorageKey();
+		if (!key) return;
+		try {
+			window.localStorage.setItem(key, JSON.stringify(prefs));
+		} catch (_) {
+			/* private browsing / quota */
+		}
+	}
+
+	function buildPrefsObject() {
+		const defaults = getDefaultCategories();
+		const skipDuplicates = getSkipDuplicates();
+		return {
+			expenseCategoryId: defaults.expenseId || null,
+			incomeCategoryId: defaults.incomeId || null,
+			directionMode: getDirectionMode(),
+			skipDuplicates,
+			skipFingerprintDuplicates: skipDuplicates && getSkipFingerprintDuplicates(),
+		};
+	}
+
+	async function syncImportPreferencesFromServer() {
+		if (!Ws.workspace || !Ws.workspace.id) return;
+		try {
+			const res = await Api.get('/apps/budgetcheck/api/workspaces/' + String(Ws.workspace.id) + '/import-preferences');
+			const prefs = res.preferences;
+			if (prefs && typeof prefs === 'object') {
+				serverImportPrefs = prefs;
+				saveImportPreferencesLocal(prefs);
+			}
+		} catch (_) {
+			/* offline or first visit — localStorage fallback */
+		}
+	}
+
+	function saveImportPreferences() {
+		const prefs = buildPrefsObject();
+		serverImportPrefs = prefs;
+		saveImportPreferencesLocal(prefs);
+		if (!Ws.workspace || !Ws.workspace.id) return;
+		Api.put('/apps/budgetcheck/api/workspaces/' + String(Ws.workspace.id) + '/import-preferences', prefs).catch(() => {
+			/* best-effort sync */
+		});
+	}
+
+	function categoryOptionExists(categoryId, type) {
+		if (!categoryId) return false;
+		return categories.some((cat) => Number(cat.id) === Number(categoryId) && cat.type === type);
+	}
+
 	function populateDefaultCategorySelects() {
 		const expenseSel = document.querySelector('[data-bc-import-default-expense]');
 		const incomeSel = document.querySelector('[data-bc-import-default-income]');
+		const directionSel = document.querySelector('[data-bc-import-direction-mode]');
+		const skipDup = document.querySelector('[data-bc-import-skip-duplicates]');
+		const skipFingerprint = document.querySelector('[data-bc-import-skip-fingerprint]');
 		if (!expenseSel || !incomeSel) return;
 
 		expenseSel.replaceChildren();
@@ -115,14 +217,56 @@
 				if (!firstIncome) firstIncome = String(cat.id);
 			}
 		});
-		if (firstExpense) expenseSel.value = firstExpense;
-		if (firstIncome) incomeSel.value = firstIncome;
+
+		const saved = loadImportPreferences();
+		const savedExpense = saved && saved.expenseCategoryId ? Number(saved.expenseCategoryId) : 0;
+		const savedIncome = saved && saved.incomeCategoryId ? Number(saved.incomeCategoryId) : 0;
+		expenseSel.value = categoryOptionExists(savedExpense, 'expense')
+			? String(savedExpense)
+			: (firstExpense || '');
+		incomeSel.value = categoryOptionExists(savedIncome, 'income')
+			? String(savedIncome)
+			: (firstIncome || '');
+
+		if (directionSel && saved && (saved.directionMode === 'auto' || saved.directionMode === 'expense' || saved.directionMode === 'income')) {
+			directionSel.value = saved.directionMode;
+		}
+		if (skipDup && saved && typeof saved.skipDuplicates === 'boolean') {
+			skipDup.checked = saved.skipDuplicates;
+		}
+		if (skipFingerprint && saved && typeof saved.skipFingerprintDuplicates === 'boolean') {
+			skipFingerprint.checked = saved.skipDuplicates && saved.skipFingerprintDuplicates;
+		}
+		updateSkipFingerprintVisibility();
+	}
+
+	function getSkipFingerprintDuplicates() {
+		const el = document.querySelector('[data-bc-import-skip-fingerprint]');
+		return !!(el && el.checked && !el.disabled);
+	}
+
+	function updateSkipFingerprintVisibility() {
+		const skipDup = document.querySelector('[data-bc-import-skip-duplicates]');
+		const wrap = document.querySelector('[data-bc-import-fingerprint-wrap]');
+		const fingerprint = document.querySelector('[data-bc-import-skip-fingerprint]');
+		if (!skipDup || !wrap) return;
+		const enabled = skipDup.checked;
+		wrap.hidden = !enabled;
+		if (fingerprint) {
+			fingerprint.disabled = !enabled;
+			if (!enabled) fingerprint.checked = false;
+		}
 	}
 
 	function getDirectionMode() {
 		const sel = document.querySelector('[data-bc-import-direction-mode]');
 		const v = sel ? String(sel.value || 'auto') : 'auto';
 		return v === 'expense' || v === 'income' ? v : 'auto';
+	}
+
+	function getSkipDuplicates() {
+		const el = document.querySelector('[data-bc-import-skip-duplicates]');
+		return !!(el && el.checked);
 	}
 
 	function getDefaultCategories() {
@@ -142,8 +286,27 @@
 		};
 	}
 
-	function validateDefaults(hasCategoryCol, directionMode) {
-		if (hasCategoryCol) {
+	function buildImportOptions() {
+		const skipDuplicates = getSkipDuplicates();
+		return {
+			skipDuplicates,
+			skipFingerprintDuplicates: skipDuplicates && getSkipFingerprintDuplicates(),
+		};
+	}
+
+	function rowNeedsDefaultCategory(row) {
+		if (!row._hasCategoryCol) return false;
+		return !row.categoryId && !row.category;
+	}
+
+	function hasRowsWithEmptyCategory(rows) {
+		return rows.some((row) => rowNeedsDefaultCategory(row));
+	}
+
+	function validateDefaults(rows, directionMode) {
+		const hasCategoryCol = rows.length > 0 && rows[0]._hasCategoryCol === true;
+		const needsDefaults = !hasCategoryCol || hasRowsWithEmptyCategory(rows);
+		if (!needsDefaults) {
 			return null;
 		}
 		const defaults = getDefaultCategories();
@@ -160,6 +323,9 @@
 			return null;
 		}
 		if (!defaults.expenseId || !defaults.incomeId) {
+			if (hasCategoryCol && hasRowsWithEmptyCategory(rows)) {
+				return t('budgetcheck', 'Some rows have an empty category. Choose default expense and income categories for those rows.');
+			}
 			return t('budgetcheck', 'Choose default expense and income categories (needed when amounts can be + or −).');
 		}
 		return null;
@@ -171,6 +337,39 @@
 		const incomeField = document.querySelector('[data-bc-import-default-income]')?.closest('.bc-field');
 		if (expenseField) expenseField.hidden = mode === 'income';
 		if (incomeField) incomeField.hidden = mode === 'expense';
+	}
+
+	function clearErrorsPanel() {
+		const wrap = document.querySelector('[data-bc-import-errors-wrap]');
+		const list = document.querySelector('[data-bc-import-errors]');
+		if (list) list.replaceChildren();
+		if (wrap) wrap.hidden = true;
+	}
+
+	function renderErrors(errors, totalInvalid) {
+		const wrap = document.querySelector('[data-bc-import-errors-wrap]');
+		const list = document.querySelector('[data-bc-import-errors]');
+		const title = document.querySelector('[data-bc-import-errors-title]');
+		if (!wrap || !list) return;
+		list.replaceChildren();
+		if (!errors || errors.length === 0) {
+			wrap.hidden = true;
+			return;
+		}
+		const shown = errors.slice(0, MAX_ERRORS_UI);
+		shown.forEach((err) => {
+			const li = C.createElement('li', { text: formatImportRowError(err) });
+			list.appendChild(li);
+		});
+		if (title) {
+			const extra = Number(totalInvalid || errors.length) - shown.length;
+			title.textContent = extra > 0
+				? t('budgetcheck', 'Validation errors ({shown} of {total} shown)')
+					.replace('{shown}', String(shown.length))
+					.replace('{total}', String(totalInvalid || errors.length))
+				: t('budgetcheck', 'Validation errors');
+		}
+		wrap.hidden = false;
 	}
 
 	function wireTemplateDownload() {
@@ -187,7 +386,7 @@
 	}
 
 	function downloadCsvTemplate() {
-		const isProject = Ws.workspace && Ws.workspace.type === 'project';
+		const isProject = isProjectWorkspace();
 		const headers = ['bookingDate', 'title', 'direction', 'amount', 'category', 'notes', 'externalRef'];
 		if (isProject) headers.push('bookingStatus');
 
@@ -199,8 +398,8 @@
 
 		const today = isoToday();
 		const rows = [
-			[today, t('budgetcheck', 'Example: weekly groceries'), 'expense', '42.50', expenseName, '', 'BANK-001'],
-			[today, t('budgetcheck', 'Example: salary payment'), 'income', '2500.00', incomeName, '', 'BANK-002'],
+			[today, t('budgetcheck', 'Example: weekly groceries'), 'expense', '42,50', expenseName, '', 'BANK-001'],
+			[today, t('budgetcheck', 'Example: salary payment'), 'income', '2500,00', incomeName, '', 'BANK-002'],
 		];
 		if (isProject && statusName !== '') {
 			rows[0].push(statusName);
@@ -240,7 +439,17 @@
 
 		const resetValidation = () => {
 			validatedRows = [];
+			lockedImportDefaults = null;
+			lockedImportOptions = null;
 			commitBtn.disabled = true;
+			clearErrorsPanel();
+			const previewWrap = document.querySelector('[data-bc-import-preview-wrap]');
+			const previewSummary = document.querySelector('[data-bc-import-preview-summary]');
+			if (previewWrap) previewWrap.hidden = true;
+			if (previewSummary) {
+				previewSummary.hidden = true;
+				previewSummary.textContent = '';
+			}
 		};
 
 		const wireFilePicker = () => {
@@ -282,9 +491,11 @@
 		};
 		wireFilePicker();
 
-		form.querySelectorAll('[data-bc-import-default-expense], [data-bc-import-default-income], [data-bc-import-direction-mode]').forEach((el) => {
+		form.querySelectorAll('[data-bc-import-default-expense], [data-bc-import-default-income], [data-bc-import-direction-mode], [data-bc-import-skip-duplicates], [data-bc-import-skip-fingerprint]').forEach((el) => {
 			el.addEventListener('change', () => {
 				updateDefaultPickerVisibility();
+				updateSkipFingerprintVisibility();
+				saveImportPreferences();
 				resetValidation();
 			});
 		});
@@ -298,36 +509,56 @@
 			try {
 				validateBtn.disabled = true;
 				commitBtn.disabled = true;
+				clearErrorsPanel();
 				statusEl.textContent = t('budgetcheck', 'Validating CSV…');
 				const parsed = await parseCsvFile(file);
-				const defaultsErrorAfterParse = validateDefaults(
-					parsed.length > 0 && parsed[0]._hasCategoryCol === true,
-					getDirectionMode(),
-				);
+				const directionMode = getDirectionMode();
+				const defaultsErrorAfterParse = validateDefaults(parsed, directionMode);
 				if (defaultsErrorAfterParse) {
 					throw new Error(defaultsErrorAfterParse);
 				}
-				renderPreview(parsed);
+				const importDefaults = buildImportDefaults();
+				const importOptions = buildImportOptions();
+				renderPreview(parsed, importDefaults);
 				const res = await Api.post('/apps/budgetcheck/api/transactions/import/preview', {
 					workspaceId: Ws.workspace.id,
-					defaults: buildImportDefaults(),
+					defaults: importDefaults,
+					options: importOptions,
 					rows: parsed.map(stripImportMeta),
 				});
 				const preview = res.preview || {};
 				if (Number(preview.invalidRows || 0) > 0) {
 					validatedRows = [];
-					const first = preview.errors && preview.errors[0] ? String(preview.errors[0].message || '') : t('budgetcheck', 'Validation failed.');
+					lockedImportDefaults = null;
+					lockedImportOptions = null;
+					renderErrors(preview.errors || [], Number(preview.invalidRows || 0));
+					const firstErr = preview.errors && preview.errors[0] ? preview.errors[0] : null;
+					const first = firstErr
+						? formatImportRowError(firstErr)
+						: t('budgetcheck', 'Validation failed.');
 					statusEl.textContent = t('budgetcheck', 'Validation failed: {count} invalid rows. First error: {error}')
 						.replace('{count}', String(preview.invalidRows || 0))
 						.replace('{error}', first);
 					return;
 				}
 				validatedRows = parsed.map(stripImportMeta);
+				lockedImportDefaults = { ...importDefaults };
+				lockedImportOptions = { ...importOptions };
 				commitBtn.disabled = false;
-				statusEl.textContent = t('budgetcheck', 'Validation passed. {count} rows are ready to import.')
-					.replace('{count}', String(preview.validRows || parsed.length));
+				const ready = Number(preview.validRows || parsed.length);
+				const skipped = Number(preview.skippedRows || 0);
+				if (skipped > 0) {
+					statusEl.textContent = t('budgetcheck', 'Validation passed. {count} rows ready; {skipped} duplicates will be skipped.')
+						.replace('{count}', String(ready))
+						.replace('{skipped}', String(skipped));
+				} else {
+					statusEl.textContent = t('budgetcheck', 'Validation passed. {count} rows are ready to import.')
+						.replace('{count}', String(ready));
+				}
 			} catch (err) {
 				validatedRows = [];
+				lockedImportDefaults = null;
+				lockedImportOptions = null;
 				statusEl.textContent = err.message || t('budgetcheck', 'Validation failed.');
 				if (err.status) {
 					Msg.handleApiError(err);
@@ -349,17 +580,36 @@
 				commitBtn.disabled = true;
 				const res = await Api.post('/apps/budgetcheck/api/transactions/import/commit', {
 					workspaceId: Ws.workspace.id,
-					defaults: buildImportDefaults(),
+					defaults: lockedImportDefaults || buildImportDefaults(),
+					options: lockedImportOptions || buildImportOptions(),
 					rows: validatedRows,
 				});
 				const result = res.result || {};
 				if (Number(result.errorCount || 0) > 0) {
-					const first = result.errors && result.errors[0] ? String(result.errors[0].message || '') : t('budgetcheck', 'Import failed.');
+					renderErrors(result.errors || [], Number(result.errorCount || 0));
+					const first = result.errors && result.errors[0]
+						? formatImportRowError(result.errors[0])
+						: t('budgetcheck', 'Import failed.');
 					Msg.announce(first, 'error');
 					commitBtn.disabled = false;
 					return;
 				}
-				Msg.announce(t('budgetcheck', 'Imported {count} transactions successfully.').replace('{count}', String(result.createdCount || 0)), 'success');
+				saveImportPreferences();
+				const created = Number(result.createdCount || 0);
+				const skipped = Number(result.skippedCount || 0);
+				if (skipped > 0) {
+					Msg.announce(
+						t('budgetcheck', 'Imported {created} transactions. Skipped {skipped} duplicates.')
+							.replace('{created}', String(created))
+							.replace('{skipped}', String(skipped)),
+						'success',
+					);
+				} else {
+					Msg.announce(
+						t('budgetcheck', 'Imported {count} transactions successfully.').replace('{count}', String(created)),
+						'success',
+					);
+				}
 				window.location.href = Ws.withWorkspace(Ws.urls.transactions);
 			} catch (err) {
 				commitBtn.disabled = false;
@@ -368,13 +618,20 @@
 		});
 	}
 
-	function renderPreview(rows) {
+	function previewDefaultsForRows(rows, fallbackDefaults) {
+		const expenseId = fallbackDefaults.expenseCategoryId || 0;
+		const incomeId = fallbackDefaults.incomeCategoryId || 0;
+		return { expenseId, incomeId };
+	}
+
+	function renderPreview(rows, importDefaults) {
 		const wrap = document.querySelector('[data-bc-import-preview-wrap]');
 		const tbody = document.querySelector('[data-bc-import-preview]');
+		const summary = document.querySelector('[data-bc-import-preview-summary]');
 		if (!wrap || !tbody) return;
-		const defaults = getDefaultCategories();
+		const defaults = previewDefaultsForRows(rows, importDefaults);
 		tbody.replaceChildren();
-		rows.slice(0, 20).forEach((row) => {
+		rows.slice(0, PREVIEW_ROWS).forEach((row) => {
 			let cat = null;
 			if (row.categoryId) {
 				cat = categories.find((c) => Number(c.id) === Number(row.categoryId));
@@ -385,14 +642,29 @@
 			} else {
 				cat = categories.find((c) => Number(c.id) === defaults.expenseId);
 			}
-			tbody.appendChild(C.createElement('tr', null, [
-				C.createElement('td', { text: row.bookingDate }),
-				C.createElement('td', { text: row.title }),
-				C.createElement('td', { text: row.direction }),
-				C.createElement('td', { text: row.amount }),
-				C.createElement('td', { text: cat ? cat.name : '—' }),
-			]));
+			const tr = C.createElement('tr');
+			if (row._lineNumber) {
+				tr.appendChild(C.createElement('td', { text: String(row._lineNumber) }));
+			}
+			tr.appendChild(C.createElement('td', { text: row.bookingDate }));
+			tr.appendChild(C.createElement('td', { text: row.title }));
+			tr.appendChild(C.createElement('td', { text: row.direction }));
+			tr.appendChild(C.createElement('td', { text: row.amount }));
+			tr.appendChild(C.createElement('td', { text: cat ? cat.name : '—' }));
+			tbody.appendChild(tr);
 		});
+		if (summary) {
+			if (rows.length > PREVIEW_ROWS) {
+				summary.hidden = false;
+				summary.textContent = t('budgetcheck', 'Showing the first {shown} of {total} rows.')
+					.replace('{shown}', String(PREVIEW_ROWS))
+					.replace('{total}', String(rows.length));
+			} else {
+				summary.hidden = false;
+				summary.textContent = t('budgetcheck', 'Preview of {total} rows.')
+					.replace('{total}', String(rows.length));
+			}
+		}
 		wrap.hidden = false;
 	}
 
@@ -402,24 +674,54 @@
 			reader.onerror = () => reject(new Error(t('budgetcheck', 'Could not read CSV file.')));
 			reader.onload = () => {
 				try {
-					resolve(csvToRows(String(reader.result || '')));
+					const text = decodeCsvBuffer(reader.result);
+					resolve(csvToRows(text));
 				} catch (e) {
 					reject(e);
 				}
 			};
-			reader.readAsText(file, 'utf-8');
+			reader.readAsArrayBuffer(file);
 		});
 	}
 
+	/**
+	 * Decode bank CSV bytes: UTF-8 (with BOM) first, then Windows-1252 / Latin-1 fallback.
+	 */
+	function decodeCsvBuffer(buffer) {
+		const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : new Uint8Array(buffer || []);
+		if (bytes.length === 0) {
+			return '';
+		}
+		let offset = 0;
+		if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+			offset = 3;
+		}
+		const payload = offset > 0 ? bytes.subarray(offset) : bytes;
+		try {
+			return new TextDecoder('utf-8', { fatal: true }).decode(payload);
+		} catch (_) {
+			try {
+				return new TextDecoder('windows-1252').decode(bytes);
+			} catch (_2) {
+				return new TextDecoder('iso-8859-1').decode(bytes);
+			}
+		}
+	}
+
 	function csvToRows(text) {
-		const delimiter = detectDelimiter(text);
-		const records = parseCsvRecords(text, delimiter);
+		let source = String(text || '');
+		if (source.charCodeAt(0) === 0xFEFF) {
+			source = source.slice(1);
+		}
+		const delimiter = detectDelimiter(source);
+		const records = parseCsvRecords(source, delimiter);
 		if (records.length < 2) {
 			throw new Error(t('budgetcheck', 'CSV must include a header row and at least one data row.'));
 		}
 		const header = records[0].map((h) => String(h || '').trim());
 		const col = buildColumnIndex(header);
 		const defaults = getDefaultCategories();
+		const directionMode = getDirectionMode();
 
 		if (col.bookingDate === undefined) {
 			throw new Error(t('budgetcheck', 'Missing a date column (for example “date” or “bookingDate”).'));
@@ -433,41 +735,54 @@
 
 		const hasCategoryCol = col.category !== undefined || col.categoryId !== undefined;
 		const hasDirectionCol = col.direction !== undefined;
-		const directionMode = getDirectionMode();
 
-		const defaultsError = validateDefaults(hasCategoryCol, directionMode);
-		if (defaultsError) {
-			throw new Error(defaultsError);
-		}
-
-		const dataRecords = records.slice(1).filter((r) => r.some((v) => String(v || '').trim() !== ''));
+		const dataRecords = [];
+		records.slice(1).forEach((cols, idx) => {
+			const lineNumber = idx + 2;
+			if (cols.some((v) => String(v || '').trim() !== '')) {
+				dataRecords.push({ cols, lineNumber });
+			}
+		});
 		if (dataRecords.length > MAX_ROWS) {
 			throw new Error(t('budgetcheck', 'Too many rows. Maximum is {max}.').replace('{max}', String(MAX_ROWS)));
 		}
 
-		return dataRecords.map((cols, idx) => {
-			const row = normalizeRow(col, cols, idx + 2, {
+		const parsed = dataRecords.map(({ cols, lineNumber }) => {
+			const row = normalizeRow(col, cols, lineNumber, {
 				hasCategoryCol,
 				hasDirectionCol,
 				defaults,
 				directionMode,
 			});
 			row._hasCategoryCol = hasCategoryCol;
+			row._lineNumber = lineNumber;
 			return row;
 		});
+
+		const defaultsError = validateDefaults(parsed, directionMode);
+		if (defaultsError) {
+			throw new Error(defaultsError);
+		}
+
+		return parsed;
 	}
 
 	function stripImportMeta(row) {
 		const out = { ...row };
+		if (row._lineNumber) {
+			out.sourceRowNumber = row._lineNumber;
+		}
 		delete out._hasCategoryCol;
+		delete out._lineNumber;
 		delete out._resolvedCategoryId;
 		return out;
 	}
 
 	function buildColumnIndex(header) {
 		const index = {};
+		const isProject = isProjectWorkspace();
 		header.forEach((cell, i) => {
-			const canon = resolveCanonicalColumn(cell);
+			const canon = resolveCanonicalColumn(cell, isProject);
 			if (canon && index[canon] === undefined) {
 				index[canon] = i;
 			}
@@ -475,7 +790,7 @@
 		return index;
 	}
 
-	function resolveCanonicalColumn(label) {
+	function resolveCanonicalColumn(label, isProject) {
 		const compact = normalizeKey(label).replace(/\s+/g, '');
 		if (!compact) return null;
 		const direct = {
@@ -488,11 +803,16 @@
 			notes: 'notes',
 			isspecial: 'isSpecial',
 			externalref: 'externalRef',
-			bookingstatus: 'bookingStatus',
-			bookingstatusid: 'bookingStatusId',
 		};
+		if (isProject) {
+			direct.bookingstatus = 'bookingStatus';
+			direct.bookingstatusid = 'bookingStatusId';
+		}
 		if (direct[compact]) return direct[compact];
 		for (const [canon, aliases] of Object.entries(COLUMN_ALIASES)) {
+			if (!isProject && (canon === 'bookingStatus' || canon === 'bookingStatusId')) {
+				continue;
+			}
 			if (aliases.includes(compact)) return canon;
 		}
 		return null;
@@ -510,13 +830,13 @@
 
 		if (!direction && opts.directionMode !== 'auto') {
 			direction = opts.directionMode;
-			amountRaw = normalizeAmountString(amountRaw);
+			amountRaw = validateAmountForRow(stripAmountSign(amountRaw).amount, rowNumber);
 		} else if (!direction) {
-			const signed = inferDirectionAndAmount(amountRaw);
+			const signed = inferDirectionAndAmount(amountRaw, rowNumber);
 			direction = signed.direction;
 			amountRaw = signed.amount;
 		} else {
-			amountRaw = normalizeAmountString(amountRaw);
+			amountRaw = validateAmountForRow(stripAmountSign(amountRaw).amount, rowNumber);
 		}
 
 		if (direction !== 'income' && direction !== 'expense') {
@@ -555,10 +875,12 @@
 			title,
 			direction,
 			amount: amountRaw,
-			bookingStatusId: resolveStatusId({
-				bookingStatusId: get('bookingStatusId'),
-				bookingStatus: get('bookingStatus'),
-			}, rowNumber),
+			bookingStatusId: isProjectWorkspace()
+				? resolveStatusId({
+					bookingStatusId: get('bookingStatusId'),
+					bookingStatus: get('bookingStatus'),
+				}, rowNumber)
+				: null,
 			notes: get('notes'),
 			isSpecial: ['1', 'true', 'yes'].includes(String(get('isSpecial') || '').toLowerCase()),
 			externalRef: get('externalRef'),
@@ -573,41 +895,89 @@
 
 	function normalizeDate(raw, rowNumber) {
 		const value = String(raw || '').trim();
-		if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-		const dmy = value.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-		if (dmy) {
-			const dd = dmy[1].padStart(2, '0');
-			const mm = dmy[2].padStart(2, '0');
-			return dmy[3] + '-' + mm + '-' + dd;
+		if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+			return value;
 		}
-		throw new Error(t('budgetcheck', 'Row {row}: date must be YYYY-MM-DD or DD.MM.YYYY.').replace('{row}', String(rowNumber)));
+		const parsed = Dates && typeof Dates.parseDisplayDateToIso === 'function'
+			? Dates.parseDisplayDateToIso(value, importLocale())
+			: null;
+		if (parsed) {
+			return parsed;
+		}
+		const pattern = Dates && typeof Dates.expectedFormatPattern === 'function'
+			? Dates.expectedFormatPattern(importLocale())
+			: 'dd.mm.yyyy';
+		throw new Error(
+			t('budgetcheck', 'Row {row}: date is not valid. Use {pattern} or YYYY-MM-DD.')
+				.replace('{row}', String(rowNumber))
+				.replace('{pattern}', pattern),
+		);
 	}
 
-	function inferDirectionAndAmount(raw) {
+	function currencyDecimals() {
+		const ws = Ws.workspace;
+		return ws && Number.isInteger(ws.currencyDecimals) ? ws.currencyDecimals : 2;
+	}
+
+	function stripAmountSign(raw) {
+		let amount = String(raw || '').trim();
+		if (/^\(.*\)$/.test(amount)) {
+			return { negative: true, amount: amount.slice(1, -1).trim() };
+		}
+		if (amount.startsWith('-')) {
+			return { negative: true, amount: amount.slice(1).trim() };
+		}
+		if (amount.startsWith('+')) {
+			return { negative: false, amount: amount.slice(1).trim() };
+		}
+		return { negative: false, amount };
+	}
+
+	function stripCurrencyDecorations(raw) {
+		let amount = String(raw || '').trim();
+		amount = amount.replace(/^(EUR|USD|GBP|NOK|SEK|DKK|CHF|PLN|CZK|€|\$|£|kr\.?)\s*/i, '');
+		amount = amount.replace(/\s*(EUR|USD|GBP|NOK|SEK|DKK|CHF|PLN|CZK|€|\$|£|kr\.?)$/i, '');
+		return amount.trim();
+	}
+
+	function validateAmountForRow(raw, rowNumber) {
+		const unsigned = stripCurrencyDecorations(stripAmountSign(raw).amount);
+		if (unsigned === '') {
+			throw new Error(t('budgetcheck', 'Row {row}: amount is required.').replace('{row}', String(rowNumber)));
+		}
+		try {
+			Money.parseHuman(unsigned, currencyDecimals());
+		} catch (_) {
+			throw new Error(
+				t('budgetcheck', 'Row {row}: amount is not valid. Use formats like 42,50 or 1.234,56 or 1234.56 (no currency symbol).')
+					.replace('{row}', String(rowNumber)),
+			);
+		}
+		return unsigned;
+	}
+
+	function inferDirectionAndAmount(raw, rowNumber) {
 		const trimmed = String(raw || '').trim();
 		if (trimmed === '') {
-			throw new Error(t('budgetcheck', 'Amount is required.'));
+			throw new Error(t('budgetcheck', 'Row {row}: amount is required.').replace('{row}', String(rowNumber)));
 		}
-		let negative = false;
-		let amount = trimmed;
-		if (/^\(.*\)$/.test(amount)) {
-			negative = true;
-			amount = amount.slice(1, -1).trim();
-		} else if (amount.startsWith('-')) {
-			negative = true;
-			amount = amount.slice(1).trim();
-		} else if (amount.startsWith('+')) {
-			amount = amount.slice(1).trim();
-		}
-		amount = normalizeAmountString(amount);
+		const signed = stripAmountSign(trimmed);
+		const amount = validateAmountForRow(signed.amount, rowNumber);
 		return {
-			direction: negative ? 'expense' : 'income',
+			direction: signed.negative ? 'expense' : 'income',
 			amount,
 		};
 	}
 
-	function normalizeAmountString(raw) {
-		return String(raw || '').trim().replace(/\s/g, '').replace(',', '.');
+	function formatImportRowError(err) {
+		const rowNumber = err && err.rowNumber ? Number(err.rowNumber) : 0;
+		const message = err && err.message ? String(err.message) : t('budgetcheck', 'Validation failed.');
+		if (rowNumber > 0 && !/^Row \d+:/.test(message)) {
+			return t('budgetcheck', 'Row {row}: {error}')
+				.replace('{row}', String(rowNumber))
+				.replace('{error}', message);
+		}
+		return message;
 	}
 
 	function resolveCategoryId(row, rowNumber) {
@@ -696,9 +1066,13 @@
 
 	function detectDelimiter(text) {
 		const firstLine = String(text || '').split(/\r?\n/)[0] || '';
-		const commas = (firstLine.match(/,/g) || []).length;
-		const semis = (firstLine.match(/;/g) || []).length;
-		return semis > commas ? ';' : ',';
+		const candidates = [
+			{ sep: '\t', count: (firstLine.match(/\t/g) || []).length },
+			{ sep: ';', count: (firstLine.match(/;/g) || []).length },
+			{ sep: ',', count: (firstLine.match(/,/g) || []).length },
+		];
+		candidates.sort((a, b) => b.count - a.count);
+		return candidates[0].count > 0 ? candidates[0].sep : ',';
 	}
 
 	function parseCsvRecords(text, delimiter) {

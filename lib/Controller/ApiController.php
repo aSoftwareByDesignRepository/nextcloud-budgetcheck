@@ -18,6 +18,7 @@ use OCA\BudgetCheck\Service\BudgetService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\CurrencyCatalog;
+use OCA\BudgetCheck\Service\ImportPreferencesService;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
@@ -73,6 +74,7 @@ class ApiController extends Controller
 		private BudgetService $budgets,
 		private BookingStatusService $bookingStatuses,
 		private TransactionImportService $transactionImport,
+		private ImportPreferencesService $importPreferences,
 		private SavingsTargetService $savings,
 		private SummaryService $summaries,
 		private SnapshotService $snapshots,
@@ -426,10 +428,11 @@ class ApiController extends Controller
 			if (!is_array($rows)) {
 				throw new \InvalidArgumentException('rows must be an array.');
 			}
-			$this->rateLimit->assertAllowed($userId, 'transaction_import_preview', 40, 300);
+			$this->rateLimit->assertAllowed($userId, 'transaction_import_preview', 120, 600);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$defaults = is_array($payload['defaults'] ?? null) ? $payload['defaults'] : [];
-			return ['preview' => $this->transactionImport->preview($workspaceId, $userId, $workspace, $rows, $defaults)];
+			$options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+			return ['preview' => $this->transactionImport->preview($workspaceId, $userId, $workspace, $rows, $defaults, $options)];
 		});
 	}
 
@@ -446,10 +449,33 @@ class ApiController extends Controller
 			if (!is_array($rows)) {
 				throw new \InvalidArgumentException('rows must be an array.');
 			}
-			$this->rateLimit->assertAllowed($userId, 'transaction_import_commit', 20, 300);
+			$this->rateLimit->assertAllowed($userId, 'transaction_import_commit', 60, 600);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$defaults = is_array($payload['defaults'] ?? null) ? $payload['defaults'] : [];
-			return ['result' => $this->transactionImport->commit($workspaceId, $userId, $workspace, $rows, $defaults)];
+			$options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+			return ['result' => $this->transactionImport->commit($workspaceId, $userId, $workspace, $rows, $defaults, $options)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getImportPreferences(int $workspaceId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$this->workspaces->getForUser($workspaceId, $userId);
+			return ['preferences' => $this->importPreferences->get($workspaceId, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function saveImportPreferences(int $workspaceId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'import_preferences_write', 60, 300);
+			return ['preferences' => $this->importPreferences->save($workspaceId, $userId, $this->payload())];
 		});
 	}
 
