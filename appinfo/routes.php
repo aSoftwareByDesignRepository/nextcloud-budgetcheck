@@ -35,6 +35,9 @@ return [
 		['name' => 'api#addMember',          'url' => '/api/workspaces/{id}/members',      'verb' => 'POST'],
 		['name' => 'api#updateMember',       'url' => '/api/workspace-members/{id}',       'verb' => 'PUT'],
 		['name' => 'api#removeMember',       'url' => '/api/workspace-members/{id}',       'verb' => 'DELETE'],
+		['name' => 'api#addGroupMember',     'url' => '/api/workspaces/{id}/group-members', 'verb' => 'POST'],
+		['name' => 'api#updateGroupMember',  'url' => '/api/workspace-group-members/{id}',  'verb' => 'PUT'],
+		['name' => 'api#removeGroupMember',  'url' => '/api/workspace-group-members/{id}',  'verb' => 'DELETE'],
 
 		// Categories
 		['name' => 'api#listCategories',     'url' => '/api/categories',                   'verb' => 'GET'],

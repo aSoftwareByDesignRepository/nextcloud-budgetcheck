@@ -43,6 +43,7 @@
 			loadBudgetDefaults();
 			loadMembers();
 			initMemberInvite();
+			initGroupInvite();
 			loadRecurring();
 		} else if (Ws.workspace) {
 			loadCategories();
@@ -808,19 +809,69 @@
 		}
 	}
 
+	function memberRoleLabel(role) {
+		switch (String(role || 'viewer')) {
+			case 'manager': return t('budgetcheck', 'Manager');
+			case 'contributor': return t('budgetcheck', 'Contributor');
+			default: return t('budgetcheck', 'Viewer');
+		}
+	}
+
 	function renderMemberRow(member) {
+		const isGroup = member.type === 'group';
 		const tr = C.createElement('tr');
-		tr.dataset.bcUserId = member.userId;
-		tr.appendChild(C.createElement('td', { text: member.displayName + ' (' + member.userId + ')' }));
-		const roleSelect = C.createElement('select', { class: 'bc-input' }, [
-			C.createElement('option', { value: 'manager', text: t('budgetcheck', 'Manager') }),
+		if (isGroup) {
+			tr.dataset.bcGroupId = member.groupId;
+		} else {
+			tr.dataset.bcUserId = member.userId;
+		}
+
+		// Member name (+ a small meta note for group size / missing principals)
+		const principalId = isGroup ? member.groupId : member.userId;
+		const nameTd = C.createElement('td');
+		nameTd.appendChild(C.createElement('span', {
+			class: 'bc-member-name',
+			text: (member.displayName || principalId) + ' (' + principalId + ')',
+		}));
+		if (isGroup && member.exists === false) {
+			nameTd.appendChild(C.createElement('span', { class: 'bc-badge bc-badge--warning', text: t('budgetcheck', 'Group no longer exists') }));
+		} else if (isGroup && (typeof member.memberCount === 'number')) {
+			const meta = member.memberCount === 1
+				? t('budgetcheck', '1 person')
+				: t('budgetcheck', '{count} people').replace('{count}', String(member.memberCount));
+			nameTd.appendChild(C.createElement('span', { class: 'bc-member-meta', text: meta }));
+		} else if (!isGroup && member.enabled === false) {
+			nameTd.appendChild(C.createElement('span', { class: 'bc-badge bc-badge--warning', text: t('budgetcheck', 'Disabled account') }));
+		}
+		tr.appendChild(nameTd);
+
+		// Type badge
+		const typeTd = C.createElement('td');
+		typeTd.appendChild(C.createElement('span', {
+			class: 'bc-badge ' + (isGroup ? 'bc-badge--group' : 'bc-badge--user'),
+			text: isGroup ? t('budgetcheck', 'Group') : t('budgetcheck', 'User'),
+		}));
+		tr.appendChild(typeTd);
+
+		// Role select (groups may not be managers)
+		const roleOptions = [
 			C.createElement('option', { value: 'contributor', text: t('budgetcheck', 'Contributor') }),
 			C.createElement('option', { value: 'viewer', text: t('budgetcheck', 'Viewer') }),
-		]);
+		];
+		if (!isGroup) {
+			roleOptions.unshift(C.createElement('option', { value: 'manager', text: t('budgetcheck', 'Manager') }));
+		}
+		const roleSelect = C.createElement('select', {
+			class: 'bc-input',
+			attrs: { 'aria-label': t('budgetcheck', 'Role for {name}').replace('{name}', member.displayName || principalId) },
+		}, roleOptions);
 		roleSelect.value = member.role;
+		const baseUrl = isGroup
+			? '/apps/budgetcheck/api/workspace-group-members/'
+			: '/apps/budgetcheck/api/workspace-members/';
 		roleSelect.addEventListener('change', async () => {
 			try {
-				await Api.put('/apps/budgetcheck/api/workspace-members/' + member.id, { role: roleSelect.value });
+				await Api.put(baseUrl + member.id, { role: roleSelect.value });
 				Msg.announce(t('budgetcheck', 'Role updated.'), 'success');
 				loadMembers();
 			} catch (err) {
@@ -831,22 +882,26 @@
 		const roleTd = C.createElement('td');
 		roleTd.appendChild(roleSelect);
 		tr.appendChild(roleTd);
+
 		tr.appendChild(C.createElement('td', {
 			text: Dates.formatDisplayDateTime(member.createdAt, Ws.htmlLang),
 		}));
+
 		const actions = C.createElement('td');
 		const remove = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Remove') });
 		remove.addEventListener('click', async () => {
 			const ok = await C.confirmDialog({
-				title: t('budgetcheck', 'Remove this member?'),
-				body: t('budgetcheck', 'They will lose access to this workspace.'),
+				title: isGroup ? t('budgetcheck', 'Remove this group?') : t('budgetcheck', 'Remove this member?'),
+				body: isGroup
+					? t('budgetcheck', 'Everyone reaching this workspace only through this group will lose access. People with their own role keep it.')
+					: t('budgetcheck', 'They will lose access to this workspace.'),
 				confirmLabel: t('budgetcheck', 'Remove'),
 				danger: true,
 			});
 			if (!ok) return;
 			try {
-				await Api.del('/apps/budgetcheck/api/workspace-members/' + member.id);
-				Msg.announce(t('budgetcheck', 'Member removed.'), 'success');
+				await Api.del(baseUrl + member.id);
+				Msg.announce(isGroup ? t('budgetcheck', 'Group removed.') : t('budgetcheck', 'Member removed.'), 'success');
 				loadMembers();
 			} catch (err) {
 				Msg.handleApiError(err);
@@ -866,33 +921,41 @@
 		return ids;
 	}
 
-	function initMemberInvite() {
-		const root = document.querySelector('[data-bc-member-invite]');
+	function currentMemberGroupIds() {
+		const ids = new Set();
+		document.querySelectorAll('[data-bc-member-rows] tr[data-bc-group-id]').forEach((tr) => {
+			const id = tr.getAttribute('data-bc-group-id');
+			if (id) ids.add(id);
+		});
+		return ids;
+	}
+
+	/**
+	 * Wire a directory-search invite block (used for both users and groups).
+	 * The two blocks differ only in DOM ids, the search endpoint, and the
+	 * mutation payload; the interaction model is identical so we keep one
+	 * implementation to avoid drift between them.
+	 */
+	function wireInvite(opts) {
+		const root = document.querySelector(opts.rootSelector);
 		if (!root || !Ws.workspace || !EntityPicker || root.dataset.bcInviteWired === '1') {
 			return;
 		}
 		root.dataset.bcInviteWired = '1';
-		const q = document.getElementById('bc-member-invite-q');
-		const suggest = document.getElementById('bc-member-invite-suggest');
-		const roleSel = document.getElementById('bc-member-invite-role');
-		const btn = root.querySelector('[data-bc-action="member-invite-submit"]');
-		const clearBtn = root.querySelector('[data-bc-action="member-invite-clear"]');
-		const selectedWrap = root.querySelector('[data-bc-member-selected-wrap]');
-		const selectedEl = root.querySelector('[data-bc-member-selected]');
-		const selectedRoleEl = root.querySelector('[data-bc-member-selected-role]');
+		const q = document.getElementById(opts.queryId);
+		const suggest = document.getElementById(opts.suggestId);
+		const roleSel = document.getElementById(opts.roleId);
+		const btn = root.querySelector('[data-bc-action="' + opts.submitAction + '"]');
+		const clearBtn = root.querySelector('[data-bc-action="' + opts.clearAction + '"]');
+		const selectedWrap = root.querySelector(opts.selectedWrapSelector);
+		const selectedEl = root.querySelector(opts.selectedSelector);
+		const selectedRoleEl = root.querySelector(opts.selectedRoleSelector);
 		if (!q || !suggest || !roleSel || !btn) return;
 		let picked = null;
-		const roleLabel = (role) => {
-			switch (String(role || 'viewer')) {
-				case 'manager': return t('budgetcheck', 'Manager');
-				case 'contributor': return t('budgetcheck', 'Contributor');
-				default: return t('budgetcheck', 'Viewer');
-			}
-		};
 		const syncInviteButtonLabel = () => {
 			btn.textContent = picked
-				? t('budgetcheck', 'Add selected user as {role}').replace('{role}', roleLabel(roleSel.value))
-				: t('budgetcheck', 'Add to workspace');
+				? opts.strings.addSelectedAs.replace('{role}', memberRoleLabel(roleSel.value))
+				: opts.strings.addDefault;
 		};
 		const setPicked = (next) => {
 			picked = next;
@@ -901,7 +964,7 @@
 			}
 			if (selectedRoleEl) {
 				selectedRoleEl.textContent = next
-					? t('budgetcheck', 'Will be added as: {role}').replace('{role}', roleLabel(roleSel.value))
+					? t('budgetcheck', 'Will be added as: {role}').replace('{role}', memberRoleLabel(roleSel.value))
 					: '';
 			}
 			if (selectedWrap) {
@@ -911,7 +974,7 @@
 			syncInviteButtonLabel();
 		};
 		const pickerStrings = {
-			noResults: t('budgetcheck', 'No matching accounts.'),
+			noResults: opts.strings.noResults,
 			searchErrorNetwork: t('budgetcheck', 'Search could not load (network).'),
 			searchErrorServer: t('budgetcheck', 'Search could not load.'),
 		};
@@ -920,11 +983,11 @@
 			suggest,
 			minLen: 2,
 			strings: pickerStrings,
-			isTaken: (id) => currentMemberUserIds().has(id),
+			isTaken: (id) => opts.currentIds().has(id),
 			fetchItems: async (query) => {
 				try {
-					const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
-					const items = (data.users || []).filter((u) => u && u.enabled !== false);
+					const data = await Api.get(opts.searchEndpoint, { q: query });
+					const items = (data[opts.resultKey] || []).filter((it) => it && (!opts.requireEnabled || it.enabled !== false));
 					return { items, error: null };
 				} catch (err) {
 					const status = err && err.status;
@@ -939,13 +1002,13 @@
 		setPicked(null);
 		roleSel.addEventListener('change', () => {
 			if (picked && selectedRoleEl) {
-				selectedRoleEl.textContent = t('budgetcheck', 'Will be added as: {role}').replace('{role}', roleLabel(roleSel.value));
+				selectedRoleEl.textContent = t('budgetcheck', 'Will be added as: {role}').replace('{role}', memberRoleLabel(roleSel.value));
 			}
 			syncInviteButtonLabel();
 		});
 		q.addEventListener('input', () => {
-			// If user edits search text after selecting someone, require a fresh
-			// explicit selection to prevent adding a stale identity by mistake.
+			// If the manager edits the search text after selecting someone, require
+			// a fresh explicit selection to prevent adding a stale identity.
 			if (picked) {
 				setPicked(null);
 			}
@@ -957,12 +1020,12 @@
 		});
 		btn.addEventListener('click', async () => {
 			if (!picked) {
-				Msg.announce(t('budgetcheck', 'Pick a user.'), 'warning');
+				Msg.announce(opts.strings.pickPrompt, 'warning');
 				q.focus();
 				return;
 			}
-			if (currentMemberUserIds().has(picked.id)) {
-				Msg.announce(t('budgetcheck', 'That user is already in the list.'), 'warning');
+			if (opts.currentIds().has(picked.id)) {
+				Msg.announce(opts.strings.alreadyInList, 'warning');
 				setPicked(null);
 				q.value = '';
 				q.focus();
@@ -970,11 +1033,8 @@
 			}
 			btn.disabled = true;
 			try {
-				await Api.post('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members', {
-					userId: picked.id,
-					role: roleSel.value,
-				});
-				Msg.announce(t('budgetcheck', 'Member added.'), 'success');
+				await Api.post(opts.postUrl(), Object.assign({ role: roleSel.value }, opts.payload(picked)));
+				Msg.announce(opts.strings.added, 'success');
 				setPicked(null);
 				roleSel.value = 'viewer';
 				q.value = '';
@@ -986,6 +1046,62 @@
 					btn.disabled = true;
 				}
 			}
+		});
+	}
+
+	function initMemberInvite() {
+		wireInvite({
+			rootSelector: '[data-bc-member-invite]',
+			queryId: 'bc-member-invite-q',
+			suggestId: 'bc-member-invite-suggest',
+			roleId: 'bc-member-invite-role',
+			submitAction: 'member-invite-submit',
+			clearAction: 'member-invite-clear',
+			selectedWrapSelector: '[data-bc-member-selected-wrap]',
+			selectedSelector: '[data-bc-member-selected]',
+			selectedRoleSelector: '[data-bc-member-selected-role]',
+			searchEndpoint: '/apps/budgetcheck/api/admin/users',
+			resultKey: 'users',
+			requireEnabled: true,
+			currentIds: currentMemberUserIds,
+			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members',
+			payload: (picked) => ({ userId: picked.id }),
+			strings: {
+				noResults: t('budgetcheck', 'No matching accounts.'),
+				pickPrompt: t('budgetcheck', 'Pick a user.'),
+				alreadyInList: t('budgetcheck', 'That user is already in the list.'),
+				added: t('budgetcheck', 'Member added.'),
+				addDefault: t('budgetcheck', 'Add to workspace'),
+				addSelectedAs: t('budgetcheck', 'Add selected user as {role}'),
+			},
+		});
+	}
+
+	function initGroupInvite() {
+		wireInvite({
+			rootSelector: '[data-bc-group-invite]',
+			queryId: 'bc-group-invite-q',
+			suggestId: 'bc-group-invite-suggest',
+			roleId: 'bc-group-invite-role',
+			submitAction: 'group-invite-submit',
+			clearAction: 'group-invite-clear',
+			selectedWrapSelector: '[data-bc-group-selected-wrap]',
+			selectedSelector: '[data-bc-group-selected]',
+			selectedRoleSelector: '[data-bc-group-selected-role]',
+			searchEndpoint: '/apps/budgetcheck/api/admin/groups',
+			resultKey: 'groups',
+			requireEnabled: false,
+			currentIds: currentMemberGroupIds,
+			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/group-members',
+			payload: (picked) => ({ groupId: picked.id }),
+			strings: {
+				noResults: t('budgetcheck', 'No matching groups.'),
+				pickPrompt: t('budgetcheck', 'Pick a group.'),
+				alreadyInList: t('budgetcheck', 'That group is already in the list.'),
+				added: t('budgetcheck', 'Group added.'),
+				addDefault: t('budgetcheck', 'Add group to workspace'),
+				addSelectedAs: t('budgetcheck', 'Add selected group as {role}'),
+			},
 		});
 	}
 

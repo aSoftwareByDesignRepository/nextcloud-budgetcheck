@@ -278,6 +278,36 @@ class ApiController extends Controller
 		});
 	}
 
+	#[NoAdminRequired]
+	public function addGroupMember(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'member_write', 30, 300);
+			return ['members' => $this->workspaces->addGroupMember($id, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function updateGroupMember(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'member_write', 30, 300);
+			return ['members' => $this->workspaces->updateGroupMember($id, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function removeGroupMember(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'member_write', 30, 300);
+			return ['members' => $this->workspaces->removeGroupMember($id, $userId)];
+		});
+	}
+
 	// ------------------------------------------------------------------
 	//  Categories
 	// ------------------------------------------------------------------
@@ -785,7 +815,19 @@ class ApiController extends Controller
 	public function searchGroups(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {
-			if (!$this->access->isAppAdmin($userId)) {
+			// App admins and workspace managers may search groups so managers can
+			// grant a group access to their own workspace. Mirrors searchUsers so
+			// we never reveal the directory to viewers/contributors.
+			$canSearch = $this->access->isAppAdmin($userId);
+			if (!$canSearch) {
+				foreach ($this->access->workspacesForUser($userId) as $wid) {
+					if ($this->access->role($wid, $userId) === AccessControlService::ROLE_MANAGER) {
+						$canSearch = true;
+						break;
+					}
+				}
+			}
+			if (!$canSearch) {
 				throw new AccessDeniedException();
 			}
 			$this->rateLimit->assertAllowed($userId, 'group_search', 60, 60);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\BudgetCheck\AppInfo;
 
+use OCA\BudgetCheck\Listener\GroupDeletedListener;
 use OCA\BudgetCheck\Listener\UserDeletedListener;
 use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
 use OCA\BudgetCheck\Repair\UninstallDropTables;
@@ -33,6 +34,7 @@ use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\INavigationManager;
 use OCP\L10N\IFactory;
+use OCP\Group\Events\GroupDeletedEvent;
 use OCP\User\Events\UserDeletedEvent;
 
 /**
@@ -129,6 +131,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\IUserManager::class),
 				$c->query(CategoryService::class),
 				$c->query(MoneyService::class),
+				$c->query(\OCP\IGroupManager::class),
 			);
 		});
 
@@ -262,6 +265,10 @@ class Application extends App implements IBootstrap
 		// React to permanent user deletions: remove memberships, scrub configured
 		// app-admin entries. Snapshots and historical ledger rows stay intact for audit.
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
+
+		// React to permanent group deletions: drop workspace group assignments and
+		// the directory allow-list entry so authorization never references a ghost group.
+		$context->registerEventListener(GroupDeletedEvent::class, GroupDeletedListener::class);
 	}
 
 	public function boot(IBootContext $context): void

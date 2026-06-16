@@ -70,8 +70,18 @@ class AccessControlService
 		self::ROLE_MANAGER => 3,
 	];
 
+	/**
+	 * Roles a Nextcloud group may hold in a workspace. Managers stay individual,
+	 * accountable accounts so the last-manager invariant cannot be satisfied by
+	 * a group whose membership is edited outside BudgetCheck.
+	 */
+	public const GROUP_ASSIGNABLE_ROLES = [self::ROLE_VIEWER, self::ROLE_CONTRIBUTOR];
+
 	/** @var array<string, bool> */
 	private array $groupMembershipCache = [];
+
+	/** @var array<string, list<string>> */
+	private array $userGroupIdsCache = [];
 
 	public function __construct(
 		private IDBConnection $db,
@@ -156,11 +166,14 @@ class AccessControlService
 	}
 
 	/**
-	 * Resolve the role of a user inside a workspace. App admins are treated as
-	 * managers everywhere so they can recover from a misconfigured workspace
-	 * without first having to add themselves as a member.
+	 * Resolve the effective role of a user inside a workspace. App admins are
+	 * treated as managers everywhere so they can recover from a misconfigured
+	 * workspace without first having to add themselves as a member.
 	 *
-	 * Returns null when the user has no role at all.
+	 * The effective role is the strongest of the user's own membership role and
+	 * the role of any group they belong to that is assigned to the workspace
+	 * (group roles never exceed contributor). Returns null when the user has no
+	 * role from any source.
 	 */
 	public function role(int $workspaceId, string $userId): ?string
 	{
@@ -170,6 +183,22 @@ class AccessControlService
 		if ($this->isAppAdmin($userId)) {
 			return self::ROLE_MANAGER;
 		}
+		$candidates = [];
+		$individual = $this->individualRole($workspaceId, $userId);
+		if ($individual !== null) {
+			$candidates[] = $individual;
+		}
+		foreach ($this->groupRolesForUser($workspaceId, $userId) as $groupRole) {
+			$candidates[] = $groupRole;
+		}
+		return $this->strongestRole($candidates);
+	}
+
+	/**
+	 * The user's own membership role from `bc_workspace_members`, or null.
+	 */
+	private function individualRole(int $workspaceId, string $userId): ?string
+	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('role')
 			->from('bc_workspace_members')
@@ -185,6 +214,74 @@ class AccessControlService
 		return in_array($role, [self::ROLE_MANAGER, self::ROLE_CONTRIBUTOR, self::ROLE_VIEWER], true)
 			? $role
 			: null;
+	}
+
+	/**
+	 * Roles the user inherits from groups assigned to the workspace. Only
+	 * group-assignable roles are honoured even if the row somehow stored a
+	 * higher role, so a corrupted/edited row can never elevate to manager.
+	 *
+	 * @return list<string>
+	 */
+	private function groupRolesForUser(int $workspaceId, string $userId): array
+	{
+		$gids = $this->userGroupIds($userId);
+		if ($gids === []) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('role')
+			->from('bc_workspace_groups')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->in('gid', $qb->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		$roles = [];
+		while ($row = $result->fetch()) {
+			$role = (string)$row['role'];
+			if (in_array($role, self::GROUP_ASSIGNABLE_ROLES, true)) {
+				$roles[] = $role;
+			}
+		}
+		$result->closeCursor();
+		return $roles;
+	}
+
+	/**
+	 * Pick the strongest role from a list, or null when the list is empty.
+	 *
+	 * Pure helper (no DB/session) so the precedence rule is unit-testable.
+	 *
+	 * @param list<string> $roles
+	 */
+	public function strongestRole(array $roles): ?string
+	{
+		$best = null;
+		$bestRank = 0;
+		foreach ($roles as $role) {
+			$rank = self::ROLE_RANK[$role] ?? 0;
+			if ($rank > $bestRank) {
+				$bestRank = $rank;
+				$best = $role;
+			}
+		}
+		return $best;
+	}
+
+	/**
+	 * Group IDs the user belongs to, cached for the request. Returns an empty
+	 * list for unknown/anonymous users.
+	 *
+	 * @return list<string>
+	 */
+	private function userGroupIds(string $userId): array
+	{
+		if (!array_key_exists($userId, $this->userGroupIdsCache)) {
+			$user = $userId !== '' ? $this->userManager->get($userId) : null;
+			$this->userGroupIdsCache[$userId] = $user === null
+				? []
+				: array_values($this->groupManager->getUserGroupIds($user));
+		}
+		return $this->userGroupIdsCache[$userId];
 	}
 
 	/**
@@ -243,7 +340,21 @@ class AccessControlService
 			$ids[] = (int)$row['workspace_id'];
 		}
 		$result->closeCursor();
-		return $ids;
+
+		$gids = $this->userGroupIds($userId);
+		if ($gids !== []) {
+			$gq = $this->db->getQueryBuilder();
+			$gq->selectDistinct('workspace_id')
+				->from('bc_workspace_groups')
+				->where($gq->expr()->in('gid', $gq->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+			$gResult = $gq->executeQuery();
+			while ($row = $gResult->fetch()) {
+				$ids[] = (int)$row['workspace_id'];
+			}
+			$gResult->closeCursor();
+		}
+
+		return array_values(array_unique($ids));
 	}
 
 	/**
@@ -485,6 +596,12 @@ class AccessControlService
 		return array_values(array_unique(array_filter($value, static fn ($v): bool => is_string($v) && $v !== '')));
 	}
 
+	/**
+	 * Count workspaces the user can reach as a member, counting both individual
+	 * memberships and groups they belong to. Short-circuits as soon as an
+	 * individual membership is found so {@see canUseApp} stays cheap for the
+	 * common case.
+	 */
 	private function countWorkspaceMemberships(string $userId): int
 	{
 		$qb = $this->db->getQueryBuilder();
@@ -494,7 +611,23 @@ class AccessControlService
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
-		return (int)($row['count'] ?? 0);
+		$count = (int)($row['count'] ?? 0);
+		if ($count > 0) {
+			return $count;
+		}
+
+		$gids = $this->userGroupIds($userId);
+		if ($gids === []) {
+			return 0;
+		}
+		$gq = $this->db->getQueryBuilder();
+		$gq->select($gq->func()->count('*', 'count'))
+			->from('bc_workspace_groups')
+			->where($gq->expr()->in('gid', $gq->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+		$gResult = $gq->executeQuery();
+		$gRow = $gResult->fetch();
+		$gResult->closeCursor();
+		return (int)($gRow['count'] ?? 0);
 	}
 
 	/**
@@ -527,6 +660,36 @@ class AccessControlService
 			json_encode($allowUsers, JSON_THROW_ON_ERROR),
 		);
 		$this->config->deleteUserValue($userId, Application::APP_ID, self::KEY_LAST_USED_WORKSPACE);
+	}
+
+	/**
+	 * Remove every trace of a deleted Nextcloud group: workspace group
+	 * assignments and the directory allow-list entry. Called from the
+	 * group-deleted event listener so authorization state never references a
+	 * group that no longer exists.
+	 */
+	public function purgeGroup(string $gid): void
+	{
+		if ($gid === '') {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('bc_workspace_groups')
+			->where($qb->expr()->eq('gid', $qb->createNamedParameter($gid)));
+		$qb->executeStatement();
+
+		$allowedGroups = $this->readJsonIdListConfig(self::KEY_ACCESS_ALLOWED_GROUP_IDS);
+		$filtered = array_values(array_filter(
+			$allowedGroups,
+			static fn (string $id): bool => $id !== $gid,
+		));
+		if ($filtered !== $allowedGroups) {
+			$this->config->setAppValue(
+				Application::APP_ID,
+				self::KEY_ACCESS_ALLOWED_GROUP_IDS,
+				json_encode($filtered, JSON_THROW_ON_ERROR),
+			);
+		}
 	}
 
 	private function userMatchesAccessAllowList(string $userId): bool

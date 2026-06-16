@@ -10,6 +10,7 @@ use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
+use OCP\IGroupManager;
 use OCP\IUserManager;
 
 /**
@@ -52,6 +53,7 @@ class WorkspaceService
 		private IUserManager $userManager,
 		private CategoryService $categories,
 		private MoneyService $money,
+		private IGroupManager $groupManager,
 	) {
 	}
 
@@ -426,21 +428,31 @@ class WorkspaceService
 	}
 
 	/**
+	 * List both individual members and group assignments of a workspace.
+	 *
+	 * Each row carries a `type` discriminator (`user` or `group`). User rows
+	 * keep their historical shape; group rows expose `groupId` plus a
+	 * best-effort `memberCount`. The two id spaces are independent
+	 * (`bc_workspace_members.id` vs `bc_workspace_groups.id`), so clients must
+	 * use the type-specific endpoints when mutating.
+	 *
 	 * @return list<array<string,mixed>>
 	 */
 	public function listMembers(int $workspaceId, string $userId): array
 	{
 		$this->getForUser($workspaceId, $userId);
+		$rows = [];
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from('bc_workspace_members')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
 			->orderBy('role', 'ASC');
 		$result = $qb->executeQuery();
-		$rows = [];
 		while ($row = $result->fetch()) {
 			$user = $this->userManager->get((string)$row['user_id']);
 			$rows[] = [
+				'type' => 'user',
 				'id' => (int)$row['id'],
 				'workspaceId' => (int)$row['workspace_id'],
 				'userId' => (string)$row['user_id'],
@@ -451,6 +463,36 @@ class WorkspaceService
 			];
 		}
 		$result->closeCursor();
+
+		$gq = $this->db->getQueryBuilder();
+		$gq->select('*')
+			->from('bc_workspace_groups')
+			->where($gq->expr()->eq('workspace_id', $gq->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->orderBy('role', 'ASC')
+			->addOrderBy('gid', 'ASC');
+		$gResult = $gq->executeQuery();
+		while ($row = $gResult->fetch()) {
+			$gid = (string)$row['gid'];
+			$group = $this->groupManager->get($gid);
+			$memberCount = null;
+			if ($group !== null) {
+				$count = $group->count();
+				$memberCount = is_int($count) ? max(0, $count) : null;
+			}
+			$rows[] = [
+				'type' => 'group',
+				'id' => (int)$row['id'],
+				'workspaceId' => (int)$row['workspace_id'],
+				'groupId' => $gid,
+				'displayName' => $group !== null ? $group->getDisplayName() : $gid,
+				'exists' => $group !== null,
+				'memberCount' => $memberCount,
+				'role' => (string)$row['role'],
+				'createdAt' => (string)$row['created_at'],
+			];
+		}
+		$gResult->closeCursor();
+
 		return $rows;
 	}
 
@@ -465,8 +507,11 @@ class WorkspaceService
 			throw new \InvalidArgumentException('Unknown user.');
 		}
 		$role = $this->normaliseRole((string)($payload['role'] ?? AccessControlService::ROLE_VIEWER));
-		// Conflict: trying to re-add an existing member.
-		if ($this->access->role($workspaceId, $candidate) !== null) {
+		// Conflict only on an existing *direct* membership. A user may already
+		// reach the workspace through a group; adding an individual role on top
+		// (e.g. promoting one person to manager) is legitimate, and the
+		// effective role is the strongest of the two.
+		if ($this->individualMemberId($workspaceId, $candidate) !== null) {
 			throw new \InvalidArgumentException('User is already a member of this workspace.');
 		}
 		$qb = $this->db->getQueryBuilder();
@@ -538,6 +583,130 @@ class WorkspaceService
 		$row = $result->fetch();
 		$result->closeCursor();
 		return $row === false ? null : $row;
+	}
+
+	/**
+	 * Id of the user's direct membership row in this workspace, or null. Used to
+	 * detect a real duplicate without being confused by group-derived roles.
+	 */
+	private function individualMemberId(int $workspaceId, string $userId): ?int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('bc_workspace_members')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? null : (int)$row['id'];
+	}
+
+	// ------------------------------------------------------------------
+	//  Group members
+	//
+	//  A group can be granted viewer or contributor only. Managers stay
+	//  individual accounts (see AccessControlService::GROUP_ASSIGNABLE_ROLES and
+	//  the last-manager protection above, which therefore needs no change).
+	// ------------------------------------------------------------------
+
+	public function addGroupMember(int $workspaceId, string $userId, array $payload): array
+	{
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		$gid = trim((string)($payload['groupId'] ?? ''));
+		if ($gid === '') {
+			throw new \InvalidArgumentException('groupId is required.');
+		}
+		$group = $this->groupManager->get($gid);
+		if ($group === null) {
+			throw new \InvalidArgumentException('Unknown group.');
+		}
+		$role = $this->normaliseGroupRole((string)($payload['role'] ?? AccessControlService::ROLE_VIEWER));
+		if ($this->groupAssignmentId($workspaceId, $gid) !== null) {
+			throw new \InvalidArgumentException('This group is already assigned to the workspace.');
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->insert('bc_workspace_groups')
+			->values([
+				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+				'gid' => $qb->createNamedParameter($gid),
+				'role' => $qb->createNamedParameter($role),
+				'created_at' => $qb->createNamedParameter($this->utcNow()),
+			]);
+		$qb->executeStatement();
+		$this->audit->record($userId, 'workspace_group_added', 'workspace_group', $gid, ['role' => $role], $workspaceId);
+		return $this->listMembers($workspaceId, $userId);
+	}
+
+	public function updateGroupMember(int $groupMemberId, string $userId, array $payload): array
+	{
+		$row = $this->loadGroupMember($groupMemberId);
+		if ($row === null) {
+			throw new AccessDeniedException();
+		}
+		$workspaceId = (int)$row['workspace_id'];
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		$role = $this->normaliseGroupRole((string)($payload['role'] ?? $row['role']));
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('bc_workspace_groups')
+			->set('role', $qb->createNamedParameter($role))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($groupMemberId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
+		$this->audit->record($userId, 'workspace_group_updated', 'workspace_group', (string)$row['gid'], ['role' => $role], $workspaceId);
+		return $this->listMembers($workspaceId, $userId);
+	}
+
+	public function removeGroupMember(int $groupMemberId, string $userId): array
+	{
+		$row = $this->loadGroupMember($groupMemberId);
+		if ($row === null) {
+			throw new AccessDeniedException();
+		}
+		$workspaceId = (int)$row['workspace_id'];
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('bc_workspace_groups')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($groupMemberId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
+		$this->audit->record($userId, 'workspace_group_removed', 'workspace_group', (string)$row['gid'], [], $workspaceId);
+		return $this->listMembers($workspaceId, $userId);
+	}
+
+	private function loadGroupMember(int $groupMemberId): ?array
+	{
+		if ($groupMemberId < 1) {
+			return null;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_workspace_groups')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($groupMemberId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? null : $row;
+	}
+
+	private function groupAssignmentId(int $workspaceId, string $gid): ?int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('bc_workspace_groups')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('gid', $qb->createNamedParameter($gid)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? null : (int)$row['id'];
+	}
+
+	private function normaliseGroupRole(string $role): string
+	{
+		$role = strtolower(trim($role));
+		if (!in_array($role, AccessControlService::GROUP_ASSIGNABLE_ROLES, true)) {
+			throw new \InvalidArgumentException('Groups can be viewers or contributors only. Assign managers to individual people.');
+		}
+		return $role;
 	}
 
 	private function ensureNotLastManager(int $workspaceId, int $memberIdBeingChanged): void

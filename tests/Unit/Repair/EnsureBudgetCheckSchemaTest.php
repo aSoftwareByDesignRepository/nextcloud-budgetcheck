@@ -27,6 +27,6 @@ final class EnsureBudgetCheckSchemaTest extends TestCase
 
 		$step = new EnsureBudgetCheckSchema($connection, $config);
 		$step->run($output);
-		self::assertSame(11, count(BudgetCheckTableCatalog::TABLES));
+		self::assertSame(12, count(BudgetCheckTableCatalog::TABLES));
 	}
 }

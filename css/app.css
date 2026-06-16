@@ -237,6 +237,28 @@
 }
 .bc-badge--household { background: var(--bc-tint-household); }
 .bc-badge--project { background: var(--bc-tint-project); }
+.bc-badge--user { background: var(--bc-tint-project); }
+.bc-badge--group { background: var(--bc-tint-household); }
+.bc-badge--warning {
+	background: var(--bc-tint-warning);
+	border-color: var(--color-warning, #c98600);
+}
+
+/* Member cell: principal name with an optional secondary note below it. */
+.bc-member-name {
+	display: block;
+	font-weight: 500;
+}
+.bc-member-meta {
+	display: block;
+	margin-top: 2px;
+	font-size: var(--bc-fs-xs);
+	color: var(--bc-muted);
+}
+.bc-member-name + .bc-badge--warning,
+.bc-member-meta + .bc-badge--warning {
+	margin-top: 4px;
+}
 
 /* Cards + sections */
 .bc-card {
