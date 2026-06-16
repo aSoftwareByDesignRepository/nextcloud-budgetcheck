@@ -41,6 +41,10 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 				</div>
 				<?php if ($canContribute): ?>
 					<div class="bc-section__controls">
+						<a class="button bc-tx-import-btn" href="#" data-bc-link="import">
+							<?php print_unescaped(IconCatalog::render('upload', 'bc-icon--inline')); ?>
+							<span><?php p($l->t('Import CSV')); ?></span>
+						</a>
 						<button type="button" class="button primary bc-tx-new-btn" data-bc-action="open-create-transaction">
 							<?php print_unescaped(IconCatalog::render('plus', 'bc-icon--inline')); ?>
 							<span><?php p($l->t('New transaction')); ?></span>

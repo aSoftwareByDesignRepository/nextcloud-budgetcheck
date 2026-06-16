@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CSV transaction import:** guided import page with preview validation and atomic commit (`TransactionImportService`, `/import`, API preview/commit endpoints).
 - **Unit tests** for `AccessControlService::canUseApp()` allow-list behaviour (`AccessControlAppAccessTest`).
 - **Integration test** for `AppAccessMiddleware` deny/allow flows against live app config (`AppAccessGateIntegrationTest`).
 

@@ -412,6 +412,7 @@ class TransactionService
 	public function create(int $workspaceId, string $userId, array $payload, array $workspace, array $category, ?array $bookingStatus = null): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+		$this->validateCreatePayload($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus);
 		$direction = $this->normaliseDirection((string)($payload['direction'] ?? ''));
 		$this->ensureCategoryMatchesDirection($category, $direction);
 		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
@@ -463,6 +464,25 @@ class TransactionService
 			'date' => $bookingDate->format('Y-m-d'),
 		], $workspaceId);
 		return $this->loadHydrated($id, $workspace['currencyCode']);
+	}
+
+	public function validateCreatePayload(int $workspaceId, string $userId, array $payload, array $workspace, array $category, ?array $bookingStatus = null): void
+	{
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+		$direction = $this->normaliseDirection((string)($payload['direction'] ?? ''));
+		$this->ensureCategoryMatchesDirection($category, $direction);
+		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
+		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
+			throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
+		}
+		$this->normaliseTitle((string)($payload['title'] ?? ''));
+		$this->normaliseNotes($payload['notes'] ?? null);
+		$this->normaliseExternalRef($payload['externalRef'] ?? null);
+		$this->resolveBookingStatusId($workspace, $bookingStatus);
+
+		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
+		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
+		$this->resolveTaxFields($payload, $workspace, $amount, $direction);
 	}
 
 	public function update(int $transactionId, string $userId, array $payload, array $workspace, ?array $category = null, ?array $bookingStatus = null): array

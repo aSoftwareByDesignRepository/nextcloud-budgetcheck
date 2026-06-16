@@ -84,6 +84,20 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	public function import(): TemplateResponse
+	{
+		$ctx = $this->resolveWorkspace();
+		return $this->page('import', $this->l10n->t('Import transactions'),
+			$ctx['workspace'] === null
+				? $this->l10n->t('Pick a workspace before importing transactions.')
+				: $this->l10n->t('Upload a CSV file, validate every row, then import safely in one atomic step.'),
+			$ctx,
+			'import'
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function budgets(): TemplateResponse
 	{
 		$ctx = $this->resolveWorkspace();
@@ -302,6 +316,7 @@ class PageController extends Controller
 			'urls' => [
 				'dashboard'    => $this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'),
 				'transactions' => $this->urlGenerator->linkToRoute('budgetcheck.page.transactions'),
+				'import'       => $this->urlGenerator->linkToRoute('budgetcheck.page.import'),
 				'budgets'      => $this->urlGenerator->linkToRoute('budgetcheck.page.budgets'),
 				'monthly'      => $this->urlGenerator->linkToRoute('budgetcheck.page.monthly'),
 				'period'       => $this->urlGenerator->linkToRoute('budgetcheck.page.period'),
@@ -332,6 +347,9 @@ class PageController extends Controller
 		if ($pageScript === 'transactions') {
 			Util::addStyle(Application::APP_ID, 'transactions-v106');
 		}
+		if ($pageScript === 'import') {
+			Util::addStyle(Application::APP_ID, 'import-v106');
+		}
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
 		Util::addScript(Application::APP_ID, 'common/dates');
@@ -360,10 +378,12 @@ class PageController extends Controller
 		$workspaceType = $workspace['type'] ?? null;
 		$workspaceId = $workspace !== null ? (int)$workspace['id'] : null;
 		$paramsWithWs = $workspaceId !== null ? ['workspaceId' => $workspaceId] : [];
+		$canContribute = $workspace !== null && in_array(($workspace['role'] ?? null), [AccessControlService::ROLE_MANAGER, AccessControlService::ROLE_CONTRIBUTOR], true);
 
 		$items = [
 			['id' => 'dashboard',    'label' => $this->l10n->t('Dashboard'),      'icon' => 'layout-grid',    'route' => 'budgetcheck.page.dashboard',    'show' => true,                                 'hint' => $this->l10n->t('Quick overview')],
 			['id' => 'transactions', 'label' => $this->l10n->t('Transactions'),   'icon' => 'list',           'route' => 'budgetcheck.page.transactions', 'show' => $workspace !== null,                  'hint' => $this->l10n->t('Income and expenses')],
+			['id' => 'import',       'label' => $this->l10n->t('Import'),         'icon' => 'upload',         'route' => 'budgetcheck.page.import',       'show' => $workspace !== null && $canContribute, 'hint' => $this->l10n->t('Guided CSV import with validation')],
 			['id' => 'budgets',      'label' => $this->l10n->t('Budgets'),        'icon' => 'wallet',         'route' => 'budgetcheck.page.budgets',      'show' => false,                                 'hint' => $this->l10n->t('Monthly planning')],
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],

@@ -47,6 +47,7 @@ $localeFormat = $_['localeFormat'] ?? null;
 $pageIcons = [
 	'dashboard' => 'layout-grid',
 	'transactions' => 'list',
+	'import' => 'upload',
 	'budgets' => 'wallet',
 	'monthly' => 'calendar-days',
 	'period' => 'calendar-range',

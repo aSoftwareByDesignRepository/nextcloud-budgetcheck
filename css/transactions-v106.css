@@ -51,6 +51,13 @@
 	min-height: 44px;
 	white-space: nowrap;
 }
+.bc-tx-import-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--bc-space-2);
+	min-height: 44px;
+	white-space: nowrap;
+}
 
 /* ── Filter bar ────────────────────────────────────────────────── */
 .bc-tx-filterbar {

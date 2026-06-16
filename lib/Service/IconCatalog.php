@@ -56,6 +56,7 @@ final class IconCatalog
 		'menu' => '<path d="M3 6h18M3 12h18M3 18h18"/>',
 		'send' => '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
 		'sparkles' => '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6 7.7 7.7M16.3 16.3l2.1 2.1M5.6 18.4 7.7 16.3M16.3 7.7l2.1-2.1"/>',
+		'upload' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
 	];
 
 	public static function render(string $name, ?string $extraClass = null): string

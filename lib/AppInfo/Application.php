@@ -24,6 +24,7 @@ use OCA\BudgetCheck\Service\SavingsTargetService;
 use OCA\BudgetCheck\Service\SnapshotService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
+use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
@@ -46,8 +47,8 @@ use OCP\User\Events\UserDeletedEvent;
  *   view loads globals before the page module (path-based boot detection is
  *   unreliable across servers and custom_apps URL layouts).
  * - Adds the Files-style sidebar navigation entry only for users that pass
- *   {@see AccessControlService::canUseApp} (workspace member, app admin, or system admin;
- *   plus optional directory restriction). UI hiding is convenience only;
+ *   {@see AccessControlService::canUseApp} (authenticated user, plus optional
+ *   directory restriction and app/system administrator bypass). UI hiding is convenience only;
  *   server enforcement lives in the access middleware and per-route service checks.
  */
 class Application extends App implements IBootstrap
@@ -153,6 +154,17 @@ class Application extends App implements IBootstrap
 				$c->query(AuditLogService::class),
 				$c->query(CategoryService::class),
 				$c->query(BookingStatusService::class),
+			);
+		});
+
+		$context->registerService(TransactionImportService::class, function ($c): TransactionImportService {
+			return new TransactionImportService(
+				$c->query(CategoryService::class),
+				$c->query(BookingStatusService::class),
+				$c->query(TransactionService::class),
+				$c->query(AuditLogService::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\IDBConnection::class),
 			);
 		});
 

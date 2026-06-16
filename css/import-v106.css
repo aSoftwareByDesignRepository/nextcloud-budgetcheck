@@ -1,0 +1,161 @@
+/*
+ * Import page — guided CSV workflow.
+ */
+
+.bc-import-steps {
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+}
+
+.bc-import-callout {
+	background: var(--bc-tint-info);
+	border-color: transparent;
+}
+
+.bc-import-callout ul {
+	margin: var(--bc-space-2) 0 0;
+	padding-inline-start: 1.25rem;
+}
+
+.bc-import-defaults {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--bc-space-3);
+}
+
+@media (min-width: 768px) {
+	.bc-import-defaults {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.bc-import-defaults > .bc-field:last-child {
+		grid-column: 1 / -1;
+	}
+}
+
+/* Styled CSV file picker (replaces native input chrome) */
+.bc-file-picker {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-2);
+}
+
+.bc-file-picker__surface {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--bc-space-4);
+	width: 100%;
+	min-height: 88px;
+	padding: var(--bc-space-4) var(--bc-space-5);
+	border: 2px dashed var(--bc-border-strong);
+	border-radius: var(--bc-radius-md);
+	background: var(--bc-bg-soft);
+	color: var(--color-main-text, #1d1d1d);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.bc-file-picker__input {
+	display: none;
+}
+
+.bc-file-picker__icon,
+.bc-file-picker__copy {
+	pointer-events: none;
+}
+
+.bc-file-picker__surface:hover {
+	border-color: var(--color-primary-element, #0082c9);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 6%, var(--bc-bg-soft) 94%);
+}
+
+.bc-file-picker__surface:has(.bc-file-picker__input:focus-visible) {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 2px;
+	border-color: var(--color-primary-element, #0082c9);
+}
+
+.bc-file-picker.is-dragover .bc-file-picker__surface,
+.bc-file-picker__surface:active {
+	border-color: var(--color-primary-element, #0082c9);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 10%, var(--bc-bg-soft) 90%);
+	box-shadow: var(--bc-shadow-sm);
+}
+
+.bc-file-picker.is-selected .bc-file-picker__surface {
+	border-style: solid;
+	border-color: color-mix(in srgb, var(--color-primary-element, #0082c9) 45%, var(--bc-border-strong) 55%);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 8%, var(--bc-bg-card) 92%);
+}
+
+.bc-file-picker__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--bc-radius-sm);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 14%, transparent);
+	color: var(--color-primary-element, #0082c9);
+}
+
+.bc-file-picker__icon .bc-icon,
+.bc-file-picker__icon svg {
+	width: 20px;
+	height: 20px;
+	min-width: 20px;
+	min-height: 20px;
+	max-width: 20px;
+	max-height: 20px;
+}
+
+.bc-file-picker__copy {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	min-width: 0;
+}
+
+.bc-file-picker__title {
+	font-weight: 600;
+	font-size: var(--bc-fs-md);
+	line-height: var(--bc-line-tight);
+}
+
+.bc-file-picker__sub {
+	font-size: var(--bc-fs-sm);
+	color: var(--bc-muted);
+	line-height: var(--bc-line-base);
+}
+
+.bc-file-picker__name {
+	margin: 0;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-stripe);
+	border: 1px solid var(--bc-border);
+	font-size: var(--bc-fs-sm);
+	line-height: var(--bc-line-base);
+	word-break: break-all;
+}
+
+.bc-file-picker__name-label {
+	font-weight: 500;
+	color: var(--bc-muted);
+	margin-inline-end: var(--bc-space-2);
+}
+
+.bc-file-picker__name-text,
+.bc-file-picker__name [data-bc-import-file-name-text] {
+	font-weight: 600;
+}

@@ -9,6 +9,7 @@ return [
 		['name' => 'page#index',        'url' => '/',             'verb' => 'GET'],
 		['name' => 'page#dashboard',    'url' => '/dashboard',    'verb' => 'GET'],
 		['name' => 'page#transactions', 'url' => '/transactions', 'verb' => 'GET'],
+		['name' => 'page#import',       'url' => '/import',       'verb' => 'GET'],
 		['name' => 'page#budgets',      'url' => '/budgets',      'verb' => 'GET'],
 		['name' => 'page#monthly',      'url' => '/monthly',      'verb' => 'GET'],
 		['name' => 'page#period',       'url' => '/period',       'verb' => 'GET'],
@@ -48,6 +49,8 @@ return [
 		// Transactions
 		['name' => 'api#listTransactions',   'url' => '/api/transactions',                 'verb' => 'GET'],
 		['name' => 'api#createTransaction',  'url' => '/api/transactions',                 'verb' => 'POST'],
+		['name' => 'api#previewTransactionImport', 'url' => '/api/transactions/import/preview', 'verb' => 'POST'],
+		['name' => 'api#commitTransactionImport', 'url' => '/api/transactions/import/commit', 'verb' => 'POST'],
 		['name' => 'api#updateTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'PUT'],
 		['name' => 'api#deleteTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'DELETE'],
 

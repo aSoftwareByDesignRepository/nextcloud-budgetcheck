@@ -25,6 +25,7 @@ use OCA\BudgetCheck\Service\SavingsTargetService;
 use OCA\BudgetCheck\Service\SnapshotService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
+use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\AppFramework\Controller;
@@ -71,6 +72,7 @@ class ApiController extends Controller
 		private RecurringRuleService $recurring,
 		private BudgetService $budgets,
 		private BookingStatusService $bookingStatuses,
+		private TransactionImportService $transactionImport,
 		private SavingsTargetService $savings,
 		private SummaryService $summaries,
 		private SnapshotService $snapshots,
@@ -408,6 +410,46 @@ class ApiController extends Controller
 			$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
 			$bookingStatus = $this->resolveBookingStatus(($payload['bookingStatusId'] ?? null), $workspaceId, $workspace);
 			return ['transaction' => $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function previewTransactionImport(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$rows = $payload['rows'] ?? null;
+			if (!is_array($rows)) {
+				throw new \InvalidArgumentException('rows must be an array.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'transaction_import_preview', 40, 300);
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$defaults = is_array($payload['defaults'] ?? null) ? $payload['defaults'] : [];
+			return ['preview' => $this->transactionImport->preview($workspaceId, $userId, $workspace, $rows, $defaults)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function commitTransactionImport(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$rows = $payload['rows'] ?? null;
+			if (!is_array($rows)) {
+				throw new \InvalidArgumentException('rows must be an array.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'transaction_import_commit', 20, 300);
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$defaults = is_array($payload['defaults'] ?? null) ? $payload['defaults'] : [];
+			return ['result' => $this->transactionImport->commit($workspaceId, $userId, $workspace, $rows, $defaults)];
 		});
 	}
 
