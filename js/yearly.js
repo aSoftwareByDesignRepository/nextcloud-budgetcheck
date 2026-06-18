@@ -55,7 +55,24 @@
 			exportBtn.addEventListener('click', () => exportWorkbook(exportBtn));
 		}
 		load();
+		wireIncludeSpecialsRefresh();
 	});
+
+	function wireIncludeSpecialsRefresh() {
+		if (!SpecialsView || !ws) return;
+		window.addEventListener('pageshow', (event) => {
+			if (!event.persisted) return;
+			const next = SpecialsView.refreshIncludeSpecials(ws.id, includeSpecials);
+			if (next === includeSpecials) return;
+			includeSpecials = next;
+			const grid = document.querySelector('[data-bc-summary-grid]');
+			const months = document.querySelector('[data-bc-month-cards]');
+			if (lastSummary) {
+				if (grid) renderTotals(grid, lastSummary);
+				if (months) renderMonths(months, lastSummary);
+			}
+		});
+	}
 
 	async function load() {
 		const grid = document.querySelector('[data-bc-summary-grid]');
@@ -69,18 +86,6 @@
 			const summary = normalizeSummary(data && data.summary ? data.summary : null);
 			lastSummary = summary;
 			renderTotals(grid, summary);
-			const toggleHost = document.querySelector('[data-bc-specials-toggle]');
-			if (toggleHost && SpecialsView && ws) {
-				SpecialsView.mountToggle(toggleHost, {
-					workspaceId: ws.id,
-					hasSpecialTransactions: !!(summary.totals && summary.totals.hasSpecialTransactions),
-					onChange: (on) => {
-						includeSpecials = on;
-						renderTotals(grid, summary);
-						renderMonths(months, summary);
-					},
-				});
-			}
 			if (period) period.textContent = String(summary.year);
 			renderMonths(months, summary);
 		} catch (err) {

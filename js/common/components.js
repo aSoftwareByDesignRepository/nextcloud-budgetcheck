@@ -290,7 +290,7 @@
 			]);
 		};
 
-		const makeSection = (title, hint, tiles) => {
+		const makeSection = (title, hint, tiles, footerNodes) => {
 			const section = createElement('section', { class: 'bc-summary-section' });
 			const head = createElement('header', { class: 'bc-summary-section__header' });
 			head.appendChild(createElement('h3', { class: 'bc-summary-section__title', text: title }));
@@ -301,7 +301,59 @@
 			const tileGrid = createElement('div', { class: 'bc-summary-grid' });
 			tiles.forEach((tile) => tileGrid.appendChild(tile));
 			section.appendChild(tileGrid);
+			if (footerNodes && footerNodes.length) {
+				const foot = createElement('div', { class: 'bc-summary-section__footer' });
+				footerNodes.forEach((node) => foot.appendChild(node));
+				section.appendChild(foot);
+			}
 			grid.appendChild(section);
+		};
+
+		const makeInfoCallout = (bodyText, linkHref, linkLabel) => {
+			const callout = createElement('div', {
+				class: 'bc-callout bc-callout--info',
+				attrs: { role: 'note' },
+			});
+			callout.appendChild(createElement('p', { class: 'bc-summary-callout__text', text: bodyText }));
+			if (linkHref && linkLabel) {
+				const actions = createElement('div', { class: 'bc-summary-callout__actions' });
+				actions.appendChild(createElement('a', {
+					class: 'button',
+					attrs: { href: linkHref },
+					text: linkLabel,
+				}));
+				callout.appendChild(actions);
+			}
+			return callout;
+		};
+
+		const makeSavingsSetupCallout = () => {
+			const Ws = window.BudgetCheckWorkspace;
+			const callout = createElement('div', {
+				class: 'bc-callout bc-callout--info',
+				attrs: { role: 'note' },
+			});
+			callout.appendChild(createElement('p', {
+				class: 'bc-summary-callout__title',
+				text: t('budgetcheck', 'Savings transfers not tracked yet'),
+			}));
+			callout.appendChild(createElement('p', {
+				class: 'bc-callout__hint',
+				text: t('budgetcheck', 'Mark one expense category as Savings transfer to track money you set aside toward your target.'),
+			}));
+			const settingsHref = Ws && Ws.urls && Ws.urls.settings
+				? Ws.withWorkspace(Ws.urls.settings) + '#bc-categories-title'
+				: null;
+			if (settingsHref) {
+				const actions = createElement('div', { class: 'bc-summary-callout__actions' });
+				actions.appendChild(createElement('a', {
+					class: 'button',
+					attrs: { href: settingsHref },
+					text: t('budgetcheck', 'Open categories'),
+				}));
+				callout.appendChild(actions);
+			}
+			return callout;
 		};
 
 		const cashFlowHint = includeSpecials
@@ -318,6 +370,7 @@
 			}),
 			makeTile(t('budgetcheck', 'Net result'), totals.netResult, { primary: true }),
 		];
+		let cashFlowFooter = null;
 		if (!includeSpecials && rawTotals.hasSpecialTransactions) {
 			const parts = [];
 			const si = rawTotals.specialIncome?.minor || 0;
@@ -331,18 +384,30 @@
 					.replace('{amount}', Money.formatEnvelope(rawTotals.specialExpense, htmlLang)));
 			}
 			if (parts.length) {
-				cashFlowTiles.push(createElement('p', { class: 'bc-summary-section__note', text: parts.join(' · ') }));
+				const Ws = window.BudgetCheckWorkspace;
+				const settingsHref = Ws && Ws.urls && Ws.urls.settings
+					? Ws.withWorkspace(Ws.urls.settings)
+					: null;
+				cashFlowFooter = [
+					makeInfoCallout(
+						parts.join(' · '),
+						settingsHref,
+						settingsHref ? t('budgetcheck', 'Change in workspace settings') : null,
+					),
+				];
 			}
 		}
 		makeSection(
 			t('budgetcheck', 'Cash flow'),
 			cashFlowHint,
 			cashFlowTiles,
+			cashFlowFooter,
 		);
 
 		const savingsTiles = [
 			makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget),
 		];
+		let savingsFooter = null;
 		if (totals.tracksSavingsTransfers) {
 			savingsTiles.push(makeTile(t('budgetcheck', 'Saved this month'), totals.savingsTransferred, { primary: true }));
 			const aboveMinor = Number.parseInt(String(totals.savingsAboveTarget?.minor ?? 0), 10) || 0;
@@ -350,10 +415,7 @@
 				savingsTiles.push(makeTile(t('budgetcheck', 'Above savings target'), totals.savingsAboveTarget));
 			}
 		} else {
-			savingsTiles.push(createElement('p', {
-				class: 'bc-summary-section__note',
-				text: t('budgetcheck', 'Mark your savings category under Settings → Categories to track transfers against this target.'),
-			}));
+			savingsFooter = [makeSavingsSetupCallout()];
 		}
 		savingsTiles.push(makeTile(t('budgetcheck', 'Available after savings'), totals.availableAfterSavings, {
 			hint: t('budgetcheck', 'Planning cushion after the target—not your bank balance.'),
@@ -362,6 +424,7 @@
 			t('budgetcheck', 'Savings'),
 			t('budgetcheck', 'Your monthly savings goal and how much you moved aside.'),
 			savingsTiles,
+			savingsFooter,
 		);
 
 		if (budget) {

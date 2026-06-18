@@ -37,8 +37,10 @@
 	const PAGE_SIZE = 50;
 	const SEARCH_DEBOUNCE_MS = 250;
 
-	// Whitelist of range preset keys. Anything else falls back to 'all'.
+	// Whitelist of range preset keys. Anything else falls back to the default preset.
 	const RANGE_PRESETS = new Set(['all', 'thisMonth', 'lastMonth', 'last30', 'ytd', 'last12', 'custom']);
+	// First visit / reset uses the current calendar month (matches dashboard mental model).
+	const DEFAULT_RANGE_PRESET = 'thisMonth';
 
 	const state = {
 		filters: emptyFilters(),
@@ -59,10 +61,11 @@
 	let openMenu = null;
 
 	function emptyFilters() {
+		const range = datesForPreset(DEFAULT_RANGE_PRESET);
 		return {
-			from: '',
-			to: '',
-			rangePreset: 'all',
+			from: range.from,
+			to: range.to,
+			rangePreset: DEFAULT_RANGE_PRESET,
 			categoryId: '',
 			groupKey: '',
 			statusId: '',
@@ -70,6 +73,33 @@
 			isSpecial: false,
 			uncategorized: false,
 		};
+	}
+
+	function isDefaultDateRange(fromIso, toIso) {
+		const def = datesForPreset(DEFAULT_RANGE_PRESET);
+		return fromIso === def.from && toIso === def.to;
+	}
+
+	function applyDefaultDateRange(filters) {
+		const range = datesForPreset(DEFAULT_RANGE_PRESET);
+		filters.from = range.from;
+		filters.to = range.to;
+		filters.rangePreset = DEFAULT_RANGE_PRESET;
+	}
+
+	/** True when only the baseline date scope is active (default month or explicit all-time). */
+	function isBaselineFilterState() {
+		const f = state.filters;
+		if (f.categoryId || f.groupKey || f.statusId || f.q || f.isSpecial || f.uncategorized) return false;
+		if (f.rangePreset === 'all' && !f.from && !f.to) return true;
+		return f.rangePreset === DEFAULT_RANGE_PRESET && isDefaultDateRange(f.from, f.to);
+	}
+
+	function shouldShowDateChip() {
+		const f = state.filters;
+		if (!f.from && !f.to) return false;
+		if (f.rangePreset === 'all') return false;
+		return !(f.rangePreset === DEFAULT_RANGE_PRESET && isDefaultDateRange(f.from, f.to));
 	}
 
 	function activeDecimals() {
@@ -164,8 +194,12 @@
 		wireGlobalDismiss();
 		loadCategoriesIntoSelect();
 		loadStatusesIntoSelect();
+		if (state.filters.rangePreset === 'custom') {
+			openMorePanel(true);
+		}
 		render(); // initial paint of chips + advanced visibility
 		loadAndRender();
+		maybeOpenNewTransactionFromUrl();
 	});
 
 	// ---------------------------------------------------------------
@@ -218,12 +252,58 @@
 		if (offsetRaw && /^\d+$/.test(offsetRaw)) {
 			state.offset = Math.min(100000, Number.parseInt(offsetRaw, 10));
 		}
+
+		finalizeRangeFromUrl(sp);
+	}
+
+	/**
+	 * After reading URL params: apply the default month when no date scope was given,
+	 * resolve preset-only deep links, and honour an explicit `rangePreset=all`.
+	 */
+	function finalizeRangeFromUrl(sp) {
+		const hasDateParams = sp.has('from') || sp.has('to') || sp.has('yearMonth');
+		const explicitAll = sp.get('rangePreset') === 'all';
+
+		if (explicitAll) {
+			state.filters.from = '';
+			state.filters.to = '';
+			state.filters.rangePreset = 'all';
+			return;
+		}
+
+		if (!hasDateParams) {
+			const presetInUrl = sp.get('rangePreset');
+			if (presetInUrl === 'custom') {
+				state.filters.rangePreset = 'custom';
+				state.filters.from = '';
+				state.filters.to = '';
+				return;
+			}
+			if (presetInUrl && RANGE_PRESETS.has(presetInUrl) && presetInUrl !== 'all' && presetInUrl !== 'custom') {
+				const range = datesForPreset(presetInUrl);
+				state.filters.from = range.from;
+				state.filters.to = range.to;
+				state.filters.rangePreset = presetInUrl;
+				return;
+			}
+			applyDefaultDateRange(state.filters);
+			return;
+		}
+
+		if (state.filters.rangePreset !== 'all'
+			&& state.filters.rangePreset !== 'custom'
+			&& !state.filters.from
+			&& !state.filters.to) {
+			const range = datesForPreset(state.filters.rangePreset);
+			state.filters.from = range.from;
+			state.filters.to = range.to;
+		}
 	}
 
 	function syncUrlFromState() {
 		// `workspaceId` is required by the page; preserve any other unknown params untouched.
 		const sp = new URLSearchParams(window.location.search);
-		const drop = ['from', 'to', 'yearMonth', 'filter', 'categoryId', 'groupKey', 'statusId', 'q', 'isSpecial', 'uncategorized', 'rangePreset', 'offset'];
+		const drop = ['from', 'to', 'yearMonth', 'filter', 'categoryId', 'groupKey', 'statusId', 'q', 'isSpecial', 'uncategorized', 'rangePreset', 'offset', 'newTransaction'];
 		drop.forEach((k) => sp.delete(k));
 		const f = state.filters;
 		if (f.from) sp.set('from', f.from);
@@ -234,7 +314,9 @@
 		if (f.q) sp.set('q', f.q);
 		if (f.isSpecial) sp.set('isSpecial', '1');
 		if (f.uncategorized) sp.set('uncategorized', '1');
-		if (f.rangePreset && f.rangePreset !== 'all' && f.rangePreset !== 'custom') {
+		if (f.rangePreset === 'all') {
+			sp.set('rangePreset', 'all');
+		} else if (f.rangePreset && f.rangePreset !== 'custom') {
 			sp.set('rangePreset', f.rangePreset);
 		}
 		if (state.offset > 0) sp.set('offset', String(state.offset));
@@ -322,10 +404,14 @@
 			Msg.announce(err.message, 'error');
 			return;
 		}
-		// If user manually edits dates, switch preset to 'custom'; if they clear both, switch to 'all'.
+		// If user manually edits dates, switch preset to 'custom'; if they clear both, restore default month.
 		if (key === 'from' || key === 'to') {
 			const f = state.filters;
-			state.filters.rangePreset = (!f.from && !f.to) ? 'all' : detectPresetFromDates(f.from, f.to);
+			if (!f.from && !f.to) {
+				applyDefaultDateRange(f);
+			} else {
+				f.rangePreset = detectPresetFromDates(f.from, f.to);
+			}
 			const presetEl = form.querySelector('[data-bc-filter="rangePreset"]');
 			if (presetEl) presetEl.value = state.filters.rangePreset;
 		}
@@ -374,7 +460,7 @@
 		set('[data-bc-filter="q"]', f.q);
 		set('[data-bc-filter="isSpecial"]', f.isSpecial, 'checkbox');
 		set('[data-bc-filter="uncategorized"]', f.uncategorized, 'checkbox');
-		set('[data-bc-filter="rangePreset"]', RANGE_PRESETS.has(f.rangePreset) ? f.rangePreset : 'all');
+		set('[data-bc-filter="rangePreset"]', RANGE_PRESETS.has(f.rangePreset) ? f.rangePreset : DEFAULT_RANGE_PRESET);
 		toggleSearchClear(f.q);
 		updateMoreCount();
 	}
@@ -688,7 +774,12 @@
 
 	function announceResult(total) {
 		if (total === 0) {
-			Msg.announce(t('budgetcheck', 'No transactions match these filters.'), 'success');
+			const msg = isBaselineFilterState()
+				? (state.filters.rangePreset === DEFAULT_RANGE_PRESET
+					? t('budgetcheck', 'No transactions this month.')
+					: t('budgetcheck', 'No bookings yet.'))
+				: t('budgetcheck', 'No transactions match these filters.');
+			Msg.announce(msg, 'success');
 			return;
 		}
 		// Soft announcement; the polite live region inside page-start handles this.
@@ -782,7 +873,20 @@
 
 		// Title (+ optional notes preview)
 		const titleTd = C.createElement('td', { attrs: { 'data-cell': 'title' } });
-		titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-title', text: tx.title || '' }));
+		const usesCategoryTitle = cat && tx.title === cat.name;
+		if (usesCategoryTitle) {
+			titleTd.appendChild(C.createElement('span', {
+				class: 'bc-tx-row-title bc-tx-row-title--default',
+				attrs: { 'aria-hidden': 'true' },
+				text: '—',
+			}));
+			titleTd.appendChild(C.createElement('span', {
+				class: 'bc-sr-only',
+				text: t('budgetcheck', 'Uses category name: {name}').replace('{name}', cat.name),
+			}));
+		} else {
+			titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-title', text: tx.title || '' }));
+		}
 		if (tx.notes) {
 			titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-notes', text: String(tx.notes).slice(0, 280) }));
 		}
@@ -967,32 +1071,57 @@
 		stateEl.hidden = false;
 		if (scroll) scroll.hidden = true;
 
-		const noFilters = !hasActiveFilters();
+		const narrowed = !isBaselineFilterState();
+		const defaultMonthEmpty = !narrowed
+			&& state.filters.rangePreset === DEFAULT_RANGE_PRESET
+			&& isDefaultDateRange(state.filters.from, state.filters.to);
+		const allTimeEmpty = !narrowed
+			&& state.filters.rangePreset === 'all'
+			&& !state.filters.from
+			&& !state.filters.to;
 
 		const icon = C.createElement('div', { class: 'bc-tx-ledger__state-icon', attrs: { 'aria-hidden': 'true' } }, [
 			iconSvg('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z'),
 		]);
 		const title = C.createElement('h3', {
 			class: 'bc-tx-ledger__state-title',
-			text: noFilters
-				? (Ws.canContribute ? t('budgetcheck', 'Add your first booking') : t('budgetcheck', 'No bookings yet'))
-				: t('budgetcheck', 'No bookings match these filters.'),
+			text: narrowed
+				? t('budgetcheck', 'No bookings match these filters.')
+				: (defaultMonthEmpty
+					? t('budgetcheck', 'No transactions this month.')
+					: (allTimeEmpty && Ws.canContribute
+						? t('budgetcheck', 'Add your first booking')
+						: t('budgetcheck', 'No bookings yet'))),
 		});
 		const body = C.createElement('p', {
 			class: 'bc-tx-ledger__state-body',
-			text: noFilters
-				? (Ws.canContribute
-					? t('budgetcheck', 'Once you add a booking it will appear here. You can edit, tag, or delete entries from this page.')
-					: t('budgetcheck', 'Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist.'))
-				: t('budgetcheck', 'Try a wider date range, a different category, or clear the filters to see everything.'),
+			text: narrowed
+				? t('budgetcheck', 'Try a wider date range, a different category, or clear the filters to see everything.')
+				: (defaultMonthEmpty
+					? t('budgetcheck', 'Nothing is booked for the selected month yet. Widen the date range to see older entries, or add a new transaction.')
+					: (allTimeEmpty && Ws.canContribute
+						? t('budgetcheck', 'Once you add a booking it will appear here. You can edit, tag, or delete entries from this page.')
+						: t('budgetcheck', 'Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist.'))),
 		});
 		const actions = C.createElement('div', { class: 'bc-tx-ledger__state-actions' });
-		if (noFilters && Ws.canContribute) {
+		if (defaultMonthEmpty) {
+			const allTimeBtn = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Show all time') });
+			allTimeBtn.addEventListener('click', () => {
+				state.filters.from = '';
+				state.filters.to = '';
+				state.filters.rangePreset = 'all';
+				state.offset = 0;
+				syncFormFromState();
+				loadAndRender();
+			});
+			actions.appendChild(allTimeBtn);
+		}
+		if ((allTimeEmpty || defaultMonthEmpty) && Ws.canContribute) {
 			const newBtn = C.createElement('button', { type: 'button', class: 'button primary', text: t('budgetcheck', 'New transaction') });
 			newBtn.addEventListener('click', () => openEditModal(null));
 			actions.appendChild(newBtn);
 		}
-		if (!noFilters) {
+		if (narrowed) {
 			const clear = C.createElement('button', { type: 'button', class: 'button primary', text: t('budgetcheck', 'Clear filters') });
 			clear.addEventListener('click', () => {
 				state.filters = emptyFilters();
@@ -1011,8 +1140,7 @@
 	}
 
 	function hasActiveFilters() {
-		const f = state.filters;
-		return !!(f.from || f.to || f.categoryId || f.groupKey || f.statusId || f.q || f.isSpecial || f.uncategorized);
+		return !isBaselineFilterState();
 	}
 
 	// ---------------------------------------------------------------
@@ -1026,7 +1154,7 @@
 		const f = state.filters;
 		const chips = [];
 
-		if (f.from || f.to) {
+		if (shouldShowDateChip()) {
 			const label = f.from && f.to
 				? Dates.formatDisplayDate(f.from, Ws.htmlLang) + ' – ' + Dates.formatDisplayDate(f.to, Ws.htmlLang)
 				: (f.from
@@ -1036,7 +1164,7 @@
 				labelPrefix: t('budgetcheck', 'Date'),
 				label,
 				removeAria: t('budgetcheck', 'Clear date range'),
-				remove: () => { f.from = ''; f.to = ''; f.rangePreset = 'all'; afterChipChange(); },
+				remove: () => { applyDefaultDateRange(f); afterChipChange(); },
 			});
 		}
 		if (f.categoryId) {
@@ -1129,7 +1257,7 @@
 		const f = state.filters;
 		// Count "advanced" filters (excluding search, range preset, category which live in primary row).
 		let n = 0;
-		if (f.from || f.to) n++;
+		if (f.rangePreset === 'custom' && (f.from || f.to)) n++;
 		if (f.groupKey) n++;
 		if (f.statusId) n++;
 		if (f.isSpecial) n++;
@@ -1348,253 +1476,26 @@
 		});
 	}
 
-	function openEditModal(tx) {
-		const isEdit = !!tx;
-		const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
-		C.openModal({
-			title: isEdit ? t('budgetcheck', 'Edit transaction') : t('budgetcheck', 'New transaction'),
-			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add transaction'),
-			render: () => {
-				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
+	function defaultBookingDateForNew() {
+		return window.BudgetCheckTransactionEditor.defaultBookingDateForRange(state.filters.from, state.filters.to);
+	}
 
-				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [
-					C.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense') }),
-					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
-				]);
-				directionSelect.value = tx ? tx.direction : 'expense';
-				wrapField(form, t('budgetcheck', 'Direction'), directionSelect, t('budgetcheck', 'Expense means money leaving the workspace; income means money arriving. The category list updates when you change this.'));
+	function maybeOpenNewTransactionFromUrl() {
+		const sp = new URLSearchParams(window.location.search);
+		if (sp.get('newTransaction') !== '1') return;
+		sp.delete('newTransaction');
+		const qs = sp.toString();
+		const next = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+		window.history.replaceState(null, '', next);
+		if (!Ws.canContribute) return;
+		openEditModal(null, { bookingDate: defaultBookingDateForNew() });
+	}
 
-				const titleInput = C.createElement('input', { name: 'title', type: 'text', class: 'bc-input', maxlength: 180, required: true });
-				titleInput.value = tx ? tx.title : '';
-				wrapField(form, t('budgetcheck', 'Title'), titleInput, t('budgetcheck', 'Short title shown in lists and reports (for example office supplies or client payment).'));
-
-				const dateInput = C.createElement('input', {
-					name: 'bookingDate',
-					type: 'date',
-					class: 'bc-input',
-					autocomplete: 'off',
-					required: true,
-					value: tx ? String(tx.bookingDate) : Dates.isoDate(new Date()),
-					attrs: { lang: Ws.htmlLang },
-				});
-				wrapField(form, t('budgetcheck', 'Date'), dateInput, dateHintText, 'bc-field--full-width');
-
-				const amountInput = C.createElement('input', {
-					name: 'amount', type: 'text', inputmode: 'decimal', class: 'bc-input', required: true,
-				});
-				amountInput.value = tx ? String(tx.amount.minor / Math.pow(10, activeDecimals())).replace('.', ',') : '';
-				wrapField(form, t('budgetcheck', 'Amount'), amountInput, t('budgetcheck', 'Amount in this workspace’s currency. Use your usual decimal separator (dot or comma).'));
-
-				const taxModeEnabled = !!(Ws.workspace && Ws.workspace.taxModeEnabled);
-				let entryBasisSelect = null;
-				let vatPresetSelect = null;
-				let vatCustomWrap = null;
-				let vatCustomInput = null;
-				let taxPreviewEl = null;
-				if (taxModeEnabled) {
-					entryBasisSelect = C.createElement('select', { name: 'entryAmountBasis', class: 'bc-input' }, [
-						C.createElement('option', { value: 'simple', text: t('budgetcheck', 'No tax split') }),
-						C.createElement('option', { value: 'gross', text: t('budgetcheck', 'Gross') }),
-						C.createElement('option', { value: 'net', text: t('budgetcheck', 'Net') }),
-					]);
-					entryBasisSelect.value = tx ? (tx.entryAmountBasis || 'simple') : (Ws.workspace.taxBudgetBasis || 'gross');
-					wrapField(form, t('budgetcheck', 'Tax entry basis'), entryBasisSelect, t('budgetcheck', 'Choose whether the amount you entered is gross or net. Budget usage follows the workspace tax basis in settings.'));
-
-					vatPresetSelect = C.createElement('select', { name: 'vatPreset', class: 'bc-input' }, [
-						C.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)') }),
-						C.createElement('option', { value: '500', text: t('budgetcheck', '5 %') }),
-						C.createElement('option', { value: '700', text: t('budgetcheck', '7 %') }),
-						C.createElement('option', { value: '1000', text: t('budgetcheck', '10 %') }),
-						C.createElement('option', { value: '1300', text: t('budgetcheck', '13 %') }),
-						C.createElement('option', { value: '1500', text: t('budgetcheck', '15 %') }),
-						C.createElement('option', { value: '1900', text: t('budgetcheck', '19 %') }),
-						C.createElement('option', { value: '2000', text: t('budgetcheck', '20 %') }),
-						C.createElement('option', { value: '2100', text: t('budgetcheck', '21 %') }),
-						C.createElement('option', { value: '2500', text: t('budgetcheck', '25 %') }),
-						C.createElement('option', { value: 'custom', text: t('budgetcheck', 'Custom…') }),
-					]);
-					const initialRate = tx && Number.isFinite(tx.vatRateBp) ? String(tx.vatRateBp) : String(Ws.workspace.defaultVatRateBp ?? 0);
-					const presetValues = new Set(Array.from(vatPresetSelect.options).map((o) => o.value));
-					vatPresetSelect.value = presetValues.has(initialRate) ? initialRate : 'custom';
-					wrapField(form, t('budgetcheck', 'VAT rate'), vatPresetSelect, t('budgetcheck', 'Used when basis is gross or net.'));
-
-					vatCustomInput = C.createElement('input', { name: 'vatRateBpCustom', type: 'number', min: '0', max: '5000', step: '1', class: 'bc-input' });
-					vatCustomInput.value = vatPresetSelect.value === 'custom' ? initialRate : '';
-					vatCustomWrap = C.createElement('label', { class: 'bc-field', attrs: { 'data-bc-vat-custom-wrap': '1' } }, [
-						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom VAT (basis points)') }),
-						vatCustomInput,
-						C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%') }),
-					]);
-					form.appendChild(vatCustomWrap);
-
-					taxPreviewEl = C.createElement('p', { class: 'bc-field__hint bc-field__hint--block' });
-					form.appendChild(taxPreviewEl);
-				}
-
-				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
-				const filterCategories = () => {
-					const dir = directionSelect.value;
-					catSelect.replaceChildren();
-					state.categories.filter((c) => c.type === dir && c.isActive).forEach((c) => {
-						catSelect.appendChild(C.createElement('option', { value: String(c.id), text: c.name }));
-					});
-					if (tx && tx.categoryId) {
-						const opt = Array.from(catSelect.options).find((o) => o.value === String(tx.categoryId));
-						if (opt) catSelect.value = opt.value;
-					}
-				};
-				filterCategories();
-				directionSelect.addEventListener('change', filterCategories);
-				wrapField(form, t('budgetcheck', 'Category'), catSelect, t('budgetcheck', 'Choose the category that best describes this booking. Only categories for the direction you selected are listed.'));
-
-				let bookingStatusSelect = null;
-				if (Ws.workspace && Ws.workspace.type === 'project') {
-					bookingStatusSelect = C.createElement('select', { name: 'bookingStatusId', class: 'bc-input' });
-					bookingStatusSelect.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'No status') }));
-					state.statuses.filter((status) => status.isActive).forEach((status) => {
-						bookingStatusSelect.appendChild(C.createElement('option', { value: String(status.id), text: status.name }));
-					});
-					if (tx && tx.bookingStatusId) {
-						bookingStatusSelect.value = String(tx.bookingStatusId);
-					}
-					wrapField(form, t('budgetcheck', 'Booking status'), bookingStatusSelect, t('budgetcheck', 'In project workspaces you can tag a booking with a status (for example in progress or paid). Leave empty if you do not need a workflow step.'), 'bc-field--full-width');
-				}
-
-				const specialOuter = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
-				specialOuter.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Special') }));
-				const specialRow = C.createElement('span', { class: 'bc-boolean-control' });
-				const specialInput = C.createElement('input', { type: 'checkbox', name: 'isSpecial', value: '1' });
-				specialInput.checked = !!(tx && tx.isSpecial);
-				specialRow.appendChild(specialInput);
-				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special (large/unusual entry)') }));
-				specialOuter.appendChild(specialRow);
-				const specialHintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
-				specialOuter.appendChild(C.createElement('span', { id: specialHintId, class: 'bc-field__hint', text: t('budgetcheck', 'Use for unusually large or one-off entries. They stay in the ledger but are excluded from everyday monthly totals unless you include them on the dashboard.') }));
-				specialInput.setAttribute('aria-describedby', specialHintId);
-				form.appendChild(specialOuter);
-
-				const notesArea = C.createElement('textarea', { name: 'notes', class: 'bc-input', maxlength: 4000, rows: 3 });
-				notesArea.value = tx && tx.notes ? tx.notes : '';
-				wrapField(form, t('budgetcheck', 'Notes'), notesArea, t('budgetcheck', 'Optional detail for people who can view this booking—references, links, or context.'), 'bc-field--full-width');
-
-				function syncTaxControls() {
-					if (!taxModeEnabled || !entryBasisSelect || !vatPresetSelect || !vatCustomWrap || !vatCustomInput || !taxPreviewEl) return;
-					const basis = entryBasisSelect.value;
-					const needsRate = basis !== 'simple';
-					vatPresetSelect.disabled = !needsRate;
-					vatCustomWrap.hidden = !needsRate || vatPresetSelect.value !== 'custom';
-					vatCustomInput.disabled = vatCustomWrap.hidden;
-					if (!needsRate) {
-						taxPreviewEl.textContent = t('budgetcheck', 'No tax split: amount is stored as a plain amount.');
-						return;
-					}
-					let amountMinor = null;
-					try {
-						amountMinor = Money.parseHuman(amountInput.value || '', activeDecimals());
-					} catch (_) {
-						taxPreviewEl.textContent = t('budgetcheck', 'Enter an amount to preview net/VAT/gross.');
-						return;
-					}
-					let bp = null;
-					if (vatPresetSelect.value === 'custom') {
-						const raw = String(vatCustomInput.value || '').trim();
-						if (!/^\d+$/.test(raw)) {
-							taxPreviewEl.textContent = t('budgetcheck', 'Enter a valid VAT rate in basis points.');
-							return;
-						}
-						bp = Number.parseInt(raw, 10);
-					} else {
-						bp = Number.parseInt(vatPresetSelect.value, 10);
-					}
-					if (!Number.isInteger(bp) || bp < 0 || bp > 5000) {
-						taxPreviewEl.textContent = t('budgetcheck', 'VAT rate must be between 0 and 5000 basis points.');
-						return;
-					}
-					const converted = Money.convertTaxPreview(amountMinor, bp, basis);
-					taxPreviewEl.textContent = t('budgetcheck', 'Preview: Net {net} · VAT {vat} · Gross {gross}')
-						.replace('{net}', Money.formatMinor(converted.net, Ws.workspace.currencyCode, Ws.htmlLang))
-						.replace('{vat}', Money.formatMinor(converted.vat, Ws.workspace.currencyCode, Ws.htmlLang))
-						.replace('{gross}', Money.formatMinor(converted.gross, Ws.workspace.currencyCode, Ws.htmlLang));
-				}
-				if (taxModeEnabled && entryBasisSelect && vatPresetSelect && vatCustomInput) {
-					entryBasisSelect.addEventListener('change', syncTaxControls);
-					vatPresetSelect.addEventListener('change', syncTaxControls);
-					vatCustomInput.addEventListener('input', syncTaxControls);
-					amountInput.addEventListener('input', syncTaxControls);
-					syncTaxControls();
-				}
-
-				form._collect = () => ({
-					workspaceId: Ws.workspace.id,
-					title: titleInput.value.trim(),
-					direction: directionSelect.value,
-					bookingDate: dateInput.value.trim(),
-					amount: amountInput.value,
-					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
-					bookingStatusId: bookingStatusSelect && bookingStatusSelect.value ? Number.parseInt(bookingStatusSelect.value, 10) : null,
-					isSpecial: specialInput.checked,
-					notes: notesArea.value.trim(),
-					entryAmountBasis: entryBasisSelect ? entryBasisSelect.value : undefined,
-					vatPreset: vatPresetSelect ? vatPresetSelect.value : undefined,
-					vatRateBpCustom: vatCustomInput ? vatCustomInput.value : undefined,
-					version: tx ? tx.version : undefined,
-				});
-				return form;
-			},
-			onSubmit: async ({ close, body }) => {
-				const form = body;
-				const payload = form && form._collect ? form._collect() : null;
-				if (!payload) return false;
-				if (!Dates.isIsoCalendarDay(String(payload.bookingDate || '').trim())) {
-					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
-					return false;
-				}
-				payload.bookingDate = String(payload.bookingDate).trim();
-				try {
-					Money.parseHuman(payload.amount, activeDecimals());
-				} catch (e) {
-					Msg.announce(e.message, 'error');
-					return false;
-				}
-				if (Ws.workspace && Ws.workspace.taxModeEnabled) {
-					const basis = String(payload.entryAmountBasis || 'simple');
-					if (basis !== 'simple') {
-						let bp = null;
-						if (payload.vatPreset === 'custom') {
-							const raw = String(payload.vatRateBpCustom || '').trim();
-							if (!/^\d+$/.test(raw)) {
-								Msg.announce(t('budgetcheck', 'Enter a valid VAT rate in basis points.'), 'error');
-								return false;
-							}
-							bp = Number.parseInt(raw, 10);
-						} else {
-							bp = Number.parseInt(String(payload.vatPreset || ''), 10);
-						}
-						if (!Number.isInteger(bp) || bp < 0 || bp > 5000) {
-							Msg.announce(t('budgetcheck', 'VAT rate must be between 0 and 5000 basis points.'), 'error');
-							return false;
-						}
-						payload.vatRateBp = bp;
-					}
-					payload.entryAmountBasis = basis;
-				}
-				delete payload.vatPreset;
-				delete payload.vatRateBpCustom;
-				try {
-					if (isEdit) {
-						await Api.put('/apps/budgetcheck/api/transactions/' + tx.id, payload);
-						Msg.announce(t('budgetcheck', 'Transaction updated.'), 'success');
-					} else {
-						await Api.post('/apps/budgetcheck/api/transactions', payload);
-						Msg.announce(t('budgetcheck', 'Transaction created.'), 'success');
-					}
-					loadAndRender();
-					close(true);
-				} catch (err) {
-					Msg.handleApiError(err, { reloadOnConflict: false });
-					return false;
-				}
-			},
+	function openEditModal(tx, opts) {
+		window.BudgetCheckTransactionEditor.open({
+			tx: tx || null,
+			bookingDate: opts && opts.bookingDate ? opts.bookingDate : undefined,
+			onSaved: () => loadAndRender(),
 		});
 	}
 
@@ -1613,26 +1514,6 @@
 		} catch (err) {
 			Msg.handleApiError(err);
 		}
-	}
-
-	function wrapField(form, labelText, control, hintText, labelExtraClass) {
-		const labelClasses = ['bc-field'];
-		if (labelExtraClass) {
-			String(labelExtraClass).split(/\s+/).filter(Boolean).forEach((c) => labelClasses.push(c));
-		}
-		const parts = [
-			C.createElement('span', { class: 'bc-field__label', text: labelText }),
-			control,
-		];
-		if (hintText) {
-			const hintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
-			parts.push(C.createElement('span', { id: hintId, class: 'bc-field__hint', text: hintText }));
-			if (control && typeof control.setAttribute === 'function') {
-				const cur = control.getAttribute('aria-describedby');
-				control.setAttribute('aria-describedby', cur ? (cur + ' ' + hintId) : hintId);
-			}
-		}
-		form.appendChild(C.createElement('label', { class: labelClasses.join(' ') }, parts));
 	}
 
 	function render() {

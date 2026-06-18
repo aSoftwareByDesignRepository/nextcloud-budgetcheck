@@ -56,7 +56,22 @@
 		if (reopenBtn) reopenBtn.addEventListener('click', () => reopenMonth());
 		if (budgetOverridesBtn) budgetOverridesBtn.addEventListener('click', () => openBudgetOverridesModal());
 		load();
+		wireIncludeSpecialsRefresh();
 	});
+
+	function wireIncludeSpecialsRefresh() {
+		if (!SpecialsView || !ws) return;
+		window.addEventListener('pageshow', (event) => {
+			if (!event.persisted) return;
+			const next = SpecialsView.refreshIncludeSpecials(ws.id, includeSpecials);
+			if (next === includeSpecials) return;
+			includeSpecials = next;
+			const grid = document.querySelector('[data-bc-summary-grid]');
+			if (grid && state.summary) {
+				renderSummary(grid, state.summary);
+			}
+		});
+	}
 
 	async function load() {
 		const grid = document.querySelector('[data-bc-summary-grid]');
@@ -104,17 +119,6 @@
 
 	function renderSummary(grid, summary) {
 		C.renderHouseholdSummaryTiles(grid, summary, Ws.htmlLang, { includeSpecials });
-		const toggleHost = document.querySelector('[data-bc-specials-toggle]');
-		if (toggleHost && SpecialsView && ws) {
-			SpecialsView.mountToggle(toggleHost, {
-				workspaceId: ws.id,
-				hasSpecialTransactions: !!(summary.totals && summary.totals.hasSpecialTransactions),
-				onChange: (on) => {
-					includeSpecials = on;
-					C.renderHouseholdSummaryTiles(grid, summary, Ws.htmlLang, { includeSpecials });
-				},
-			});
-		}
 	}
 
 	function renderWarnings(section, list, warnings) {

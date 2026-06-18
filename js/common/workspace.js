@@ -8,8 +8,12 @@
 	// from the live DOM so script load order never snapshots an empty
 	// `#app-content` (which would permanently strand flags like `canAdmin`).
 
+	function appRoot() {
+		return document.querySelector('#app-content.bc-app') || document.getElementById('app-content');
+	}
+
 	function dataset() {
-		return document.getElementById('app-content')?.dataset || {};
+		return appRoot()?.dataset || {};
 	}
 
 	function parseJson(value, fallback) {
@@ -65,7 +69,7 @@
 		},
 		patchWorkspace(patch) {
 			if (!patch || typeof patch !== 'object') return;
-			const el = document.getElementById('app-content');
+			const el = appRoot();
 			if (!el) return;
 			const current = parseJson(el.dataset.bcWorkspace, null);
 			if (!current) return;
@@ -93,7 +97,10 @@
 	// Hide quick-start when previously dismissed (per-workspace key).
 	document.addEventListener('DOMContentLoaded', () => {
 		const dismiss = (key) => {
-			const button = document.querySelector(`[data-bc-dismiss-hint="${CSS.escape(key)}"]`);
+			const esc = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+				? CSS.escape.bind(CSS)
+				: (value) => String(value).replace(/["\\]/g, '\\$&');
+			const button = document.querySelector(`[data-bc-dismiss-hint="${esc(key)}"]`);
 			if (!button) return;
 			const card = button.closest('.bc-card');
 			if (!card) return;
@@ -112,9 +119,9 @@
 		dismiss('dashboard_quickstart_v1');
 
 		const D = window.BudgetCheckDates;
-		const appRoot = document.getElementById('app-content');
-		if (D && typeof D.applyLocaleToTemporalInputs === 'function' && appRoot) {
-			D.applyLocaleToTemporalInputs(appRoot, ctx.htmlLang);
+		const appRootEl = appRoot();
+		if (D && typeof D.applyLocaleToTemporalInputs === 'function' && appRootEl) {
+			D.applyLocaleToTemporalInputs(appRootEl, ctx.htmlLang);
 		}
 
 		wireWorkspaceCreator();

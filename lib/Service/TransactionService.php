@@ -375,7 +375,7 @@ class TransactionService
 	 * Resolve the (from,to) bounds we will apply to a transaction list query.
 	 * Project workspaces are clamped to their date window when bounds are omitted
 	 * or wider than the project. Household workspaces apply no date filter unless
-	 * the client sends explicit from/to (matches the Transactions “All time” preset).
+	 * the client sends explicit from/to (the Transactions page defaults to this month).
 	 *
 	 * @return array{0:?string, 1:?string}
 	 */
@@ -409,7 +409,7 @@ class TransactionService
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
 			throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
 		}
-		$title = $this->normaliseTitle((string)($payload['title'] ?? ''));
+		$title = $this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
 		$isSpecial = !empty($payload['isSpecial']) || ($category['isSpecial'] ?? false);
 		$externalRef = $this->normaliseExternalRef($payload['externalRef'] ?? null);
@@ -491,7 +491,7 @@ class TransactionService
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
 			throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
 		}
-		$this->normaliseTitle((string)($payload['title'] ?? ''));
+		$this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$this->normaliseNotes($payload['notes'] ?? null);
 		$this->normaliseExternalRef($payload['externalRef'] ?? null);
 		$this->resolveBookingStatusId($workspace, $bookingStatus);
@@ -554,7 +554,11 @@ class TransactionService
 			}
 		}
 		if (array_key_exists('title', $payload)) {
-			$title = $this->normaliseTitle((string)$payload['title']);
+			$categoryForTitle = $category;
+			if ($categoryForTitle === null || !isset($categoryForTitle['name'])) {
+				$categoryForTitle = ['name' => $this->loadCategoryName((int)$existing['category_id'])];
+			}
+			$title = $this->resolveTitle((string)$payload['title'], $categoryForTitle);
 			if ($title !== (string)$existing['title']) {
 				$updates['title'] = $title;
 				$logChanges['title'] = $title;
@@ -963,6 +967,37 @@ class TransactionService
 			throw new \InvalidArgumentException('direction must be income or expense.');
 		}
 		return $direction;
+	}
+
+	private function resolveTitle(string $title, array $category): string
+	{
+		$title = trim($title);
+		if ($title === '') {
+			$fallback = trim((string)($category['name'] ?? ''));
+			if ($fallback === '') {
+				throw new \InvalidArgumentException('title is required when the category has no name.');
+			}
+			$title = $fallback;
+		}
+		if (mb_strlen($title) > 180) {
+			throw new \InvalidArgumentException('title must be 180 characters or fewer.');
+		}
+		return $title;
+	}
+
+	private function loadCategoryName(int $categoryId): string
+	{
+		if ($categoryId < 1) {
+			return '';
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('name')
+			->from('bc_categories')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? '' : trim((string)$row['name']);
 	}
 
 	private function normaliseTitle(string $title): string

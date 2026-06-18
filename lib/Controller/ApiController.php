@@ -530,10 +530,10 @@ class ApiController extends Controller
 			$workspaceId = (int)$existing['workspace_id'];
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'transaction_write', 240, 300);
-			$category = null;
-			if (isset($payload['categoryId'])) {
-				$category = $this->resolveCategory((int)$payload['categoryId'], $workspaceId);
-			}
+			$categoryId = isset($payload['categoryId'])
+				? (int)$payload['categoryId']
+				: (int)$existing['category_id'];
+			$category = $this->resolveCategory($categoryId, $workspaceId);
 			$bookingStatus = array_key_exists('bookingStatusId', $payload)
 				? $this->resolveBookingStatus($payload['bookingStatusId'], $workspaceId, $workspace)
 				: null;

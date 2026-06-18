@@ -105,10 +105,21 @@
 }
 #app-content.bc-app .bc-tx-filterbar__search .bc-tx-filterbar__search-input {
 	/* Override NC/browser search defaults that can reinsert icon + reset padding. */
+	background-color: var(--color-main-background, var(--bc-bg-card)) !important;
+	color: var(--color-main-text, #1d1d1d) !important;
+	border: 1px solid var(--bc-border-strong) !important;
 	background-image: none !important;
 	padding-left: calc(var(--bc-space-4) + 18px + var(--bc-space-3)) !important;
 	padding-right: calc(var(--bc-space-3) + 28px) !important;
 	text-indent: 0;
+}
+.bc-tx-filterbar__search-input::placeholder {
+	color: var(--bc-muted);
+	opacity: 1;
+}
+.bc-tx-filterbar__search-input:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 1px;
 }
 .bc-tx-filterbar__search-input::-webkit-search-decoration,
 .bc-tx-filterbar__search-input::-webkit-search-results-button,
@@ -159,6 +170,9 @@
 	min-height: 44px;
 	align-self: stretch;
 	white-space: nowrap;
+	background: var(--color-main-background, var(--bc-bg-card));
+	border: 1px solid var(--bc-border-strong);
+	color: var(--color-main-text, #1d1d1d);
 }
 .bc-tx-filterbar__more[aria-expanded="true"] {
 	background: var(--bc-tint-info);

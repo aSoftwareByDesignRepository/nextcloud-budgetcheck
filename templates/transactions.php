@@ -107,8 +107,8 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 					<label class="bc-field bc-field--inline bc-tx-filterbar__range">
 						<span class="bc-field__label"><?php p($l->t('Range')); ?></span>
 						<select class="bc-input" data-bc-filter="rangePreset">
+							<option value="thisMonth" selected><?php p($l->t('This month')); ?></option>
 							<option value="all"><?php p($l->t('All time')); ?></option>
-							<option value="thisMonth"><?php p($l->t('This month')); ?></option>
 							<option value="lastMonth"><?php p($l->t('Last month')); ?></option>
 							<option value="last30"><?php p($l->t('Last 30 days')); ?></option>
 							<option value="ytd"><?php p($l->t('Year to date')); ?></option>

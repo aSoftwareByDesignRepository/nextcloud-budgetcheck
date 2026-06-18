@@ -1082,6 +1082,29 @@
 .bc-modal .bc-form-grid > .bc-fieldset {
 	grid-column: 1 / -1;
 }
+.bc-modal__optional {
+	margin: 0;
+}
+/* Transaction modal: one column so every field is the same width */
+.bc-form-grid.bc-modal__form--transaction {
+	grid-template-columns: minmax(0, 1fr);
+}
+/* Title + amount share one row with equal width on tablet+ */
+.bc-form-grid > .bc-tx-title-amount-row {
+	grid-column: 1 / -1;
+	display: grid;
+	gap: var(--bc-space-3);
+	grid-template-columns: minmax(0, 1fr);
+	align-items: start;
+}
+@media (min-width: 768px) {
+	.bc-form-grid > .bc-tx-title-amount-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+.bc-tx-row-title--default {
+	color: var(--bc-muted);
+}
 
 /* Savings target: modes left, values right (stacks on narrow viewports) */
 .bc-form-grid > .bc-savings-layout {
@@ -1356,6 +1379,34 @@
 	font-size: var(--bc-fs-sm);
 	color: var(--bc-muted);
 	max-width: 70ch;
+}
+.bc-summary-section__footer {
+	margin-top: var(--bc-space-3);
+}
+.bc-summary-callout__title {
+	margin: 0;
+	font-weight: 600;
+	line-height: 1.35;
+}
+.bc-summary-callout__text {
+	margin: 0;
+	line-height: 1.45;
+}
+.bc-summary-callout__actions {
+	margin-top: var(--bc-space-3);
+}
+.bc-summary-section__link {
+	display: inline-block;
+	margin-top: var(--bc-space-2);
+	font-size: var(--bc-fs-sm);
+	font-weight: 600;
+	color: var(--color-primary-element, #0082c9);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.bc-summary-section__link:hover,
+.bc-summary-section__link:focus-visible {
+	color: var(--color-primary-element-hover, #006aa3);
 }
 .bc-specials-toggle-wrap {
 	min-width: min(100%, 22rem);
@@ -1655,6 +1706,113 @@
 	gap: var(--bc-space-2);
 }
 .bc-quickstart__item p { margin: 0; color: var(--bc-muted); font-size: var(--bc-fs-sm); }
+
+/* Household dashboard quick actions */
+.bc-dash-quick-actions .bc-section__header {
+	margin-bottom: var(--bc-space-4);
+}
+#app-content.bc-app .bc-dash-actions-grid,
+.bc-dash-actions-grid {
+	display: grid;
+	gap: var(--bc-space-3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	width: 100%;
+	/* Equal-width tiles: 1 col mobile → 2 col tablet → up to 4 equal cols desktop */
+	grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 540px) {
+	#app-content.bc-app .bc-dash-actions-grid,
+	.bc-dash-actions-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@media (min-width: 960px) {
+	#app-content.bc-app .bc-dash-actions-grid,
+	.bc-dash-actions-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+#app-content.bc-app .bc-dash-actions-grid--count-3,
+.bc-dash-actions-grid--count-3 {
+	grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 540px) {
+	#app-content.bc-app .bc-dash-actions-grid--count-3,
+	.bc-dash-actions-grid--count-3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+#app-content.bc-app a.bc-dash-action,
+#app-content.bc-app button.bc-dash-action,
+.bc-dash-action {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	gap: var(--bc-space-2);
+	padding: var(--bc-space-4);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-card);
+	text-decoration: none;
+	color: inherit;
+	min-height: 5.75rem;
+	height: 100%;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	font: inherit;
+	text-align: start;
+	width: 100%;
+	cursor: pointer;
+}
+.bc-dash-action__title {
+	font-weight: 600;
+	font-size: var(--bc-fs-md, 1rem);
+	line-height: 1.35;
+}
+.bc-dash-action__hint {
+	margin: 0;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+	line-height: 1.45;
+}
+button.bc-dash-action {
+	appearance: none;
+	-webkit-appearance: none;
+}
+.bc-dash-action:hover,
+.bc-dash-action:focus-visible {
+	border-color: var(--color-primary-element, #00679e);
+	box-shadow: 0 0 0 2px var(--color-primary-element-light, rgba(0, 103, 158, 0.2));
+	outline: none;
+}
+.bc-dash-action--primary {
+	border-color: var(--color-primary-element, #00679e);
+	background: var(--color-primary-element-light, rgba(0, 103, 158, 0.08));
+}
+.bc-dash-action--accent {
+	border-color: var(--color-success, #46ba61);
+	background: var(--color-success-rgb, rgba(70, 186, 97, 0.08));
+}
+.bc-dash-action--accent:hover,
+.bc-dash-action--accent:focus-visible {
+	border-color: var(--color-success, #46ba61);
+	box-shadow: 0 0 0 2px rgba(70, 186, 97, 0.25);
+}
+.bc-dash-activity-grid {
+	margin-bottom: var(--bc-space-4);
+}
+.bc-dash-ledger-table {
+	margin-top: 0;
+}
+.bc-dash-ledger-footer {
+	margin: var(--bc-space-3) 0 0;
+	text-align: center;
+}
+.bc-dash-ledger-footer__link {
+	font-weight: 600;
+}
 .bc-hint-dismiss {
 	display: inline-flex;
 	align-items: center;
@@ -1770,6 +1928,28 @@
 	background: color-mix(in srgb, var(--color-main-text, #000) 60%, transparent);
 	/* Keep dialogs above Nextcloud app/navigation chrome. */
 	z-index: 10000;
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-modal .bc-input,
+.bc-modal select.bc-input,
+.bc-modal textarea.bc-input {
+	background: var(--color-main-background, var(--bc-bg-card));
+	color: var(--color-main-text, #1d1d1d);
+	border: 1px solid var(--bc-border-strong);
+}
+.bc-modal .bc-input::placeholder {
+	color: var(--bc-muted);
+	opacity: 1;
+}
+.bc-modal .bc-field__label {
+	color: var(--color-main-text, #1d1d1d);
+}
+.bc-modal .bc-field__hint {
+	color: var(--bc-muted);
+}
+.bc-modal .bc-boolean-control {
+	background: var(--color-main-background, var(--bc-bg-card));
+	color: var(--color-main-text, #1d1d1d);
 }
 .bc-modal__dialog {
 	background: var(--bc-bg-card);
@@ -1783,10 +1963,25 @@
 	padding: var(--bc-space-4);
 	box-sizing: border-box;
 }
-.bc-modal__dialog--wide {
-	max-width: min(1080px, 96vw);
+.bc-modal__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--bc-space-3);
+	margin-bottom: var(--bc-space-4);
+	padding-bottom: var(--bc-space-3);
+	border-bottom: 1px solid var(--bc-border);
 }
-.bc-modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--bc-space-3); }
+.bc-modal__header h2 {
+	margin: 0;
+	font-size: var(--bc-fs-lg);
+	line-height: var(--bc-line-tight);
+	font-weight: 700;
+}
+.bc-modal__body {
+	margin-bottom: var(--bc-space-4);
+	min-width: 0;
+}
 .bc-modal__close {
 	display: inline-flex;
 	align-items: center;
@@ -1804,6 +1999,14 @@
 	font: inherit;
 }
 .bc-modal__close:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent); }
+.bc-modal__dialog--wide {
+	max-width: min(1080px, 96vw);
+}
+.bc-modal__actions {
+	padding-top: var(--bc-space-4);
+	border-top: 1px solid var(--bc-border);
+	justify-content: flex-end;
+}
 
 /* Budget override modal: use available width, prevent clipped table columns */
 .bc-modal__form--budget-overrides {

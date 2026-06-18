@@ -17,6 +17,17 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 		<p><?php p($l->t('Select a workspace from the sidebar to open workspace settings.')); ?></p>
 	</section>
 <?php else: ?>
+	<?php if ($workspace !== null && $workspace['type'] === 'household'): ?>
+		<section class="bc-card bc-section" aria-labelledby="bc-summary-view-prefs-title">
+			<header class="bc-section__header">
+				<div>
+					<h2 id="bc-summary-view-prefs-title"><?php p($l->t('Your planning view')); ?></h2>
+					<p class="bc-section__sub"><?php p($l->t('Controls how income and expense totals appear on the dashboard, monthly plan, and yearly overview—for you only.')); ?></p>
+				</div>
+			</header>
+			<div class="bc-specials-toggle-wrap" data-bc-summary-view-prefs></div>
+		</section>
+	<?php endif; ?>
 	<?php if ($workspace !== null): ?>
 		<section class="bc-card bc-section" aria-labelledby="bc-ws-meta-title">
 			<header class="bc-section__header">
@@ -79,7 +90,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 					</label>
 					<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width">
 						<legend class="bc-fieldset__legend"><?php p($l->t('Planning summaries')); ?></legend>
-						<p class="bc-field__hint bc-field__hint--block" id="bc-summary-default-hint"><?php p($l->t('Members who have not set a personal preference inherit this default. Anyone can override it on the dashboard, monthly, or yearly pages.')); ?></p>
+						<p class="bc-field__hint bc-field__hint--block" id="bc-summary-default-hint"><?php p($l->t('Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above.')); ?></p>
 						<label class="bc-field bc-field--boolean">
 							<span class="bc-boolean-control">
 								<input type="checkbox" name="includeSpecialsInTotalsDefault" value="1" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-summary-default-hint">

@@ -189,20 +189,20 @@ class PageController extends Controller
 	{
 		$ctx = $this->resolveWorkspace();
 		$selected = $ctx['workspace'];
-		$canManage = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
-		if (!$canManage) {
-			$params = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
-
-			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard', $params));
+		if ($selected === null) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
 		}
+		$canManage = in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
 		$userId = $this->access->currentUserId();
 		$ctx['canAdminApp'] = $this->access->isAppAdmin($userId);
-		if ($selected !== null) {
-			$ctx['currencyChangeAllowed'] = $this->workspaces->currencyChangeAllowed((int) $selected['id']);
-		}
+		$ctx['currencyChangeAllowed'] = $this->workspaces->currencyChangeAllowed((int) $selected['id']);
+
+		$description = $canManage
+			? $this->l10n->t('Manage this workspace: details, tax mode, categories, members, and recurring rules.')
+			: $this->l10n->t('View workspace details and set how planning totals appear for you.');
 
 		return $this->page('settings', $this->l10n->t('Workspace settings'),
-			$this->l10n->t('Manage this workspace: details, tax mode, categories, members, and recurring rules.'),
+			$description,
 			$ctx,
 			'settings'
 		);
@@ -357,13 +357,16 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
+		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
+		if (in_array($pageScript, ['dashboard', 'transactions'], true)) {
+			Util::addScript(Application::APP_ID, 'common/transaction-editor');
+		}
 		if ($pageScript === 'dashboard') {
 			Util::addScript(Application::APP_ID, 'common/transaction-list');
 		}
-		if (in_array($pageScript, ['dashboard', 'monthly', 'yearly'], true)) {
+		if (in_array($pageScript, ['dashboard', 'monthly', 'yearly', 'settings'], true)) {
 			Util::addScript(Application::APP_ID, 'common/specials-view');
 		}
-		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
 		Util::addScript(Application::APP_ID, 'common/catalog-pickers');
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
 			Util::addScript(Application::APP_ID, 'common/entity-picker');
@@ -394,7 +397,7 @@ class PageController extends Controller
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],
-			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null && $canManageWorkspace, 'hint' => $this->l10n->t('Members, categories, tax, and workspace details.')],
+			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null, 'hint' => $canManageWorkspace ? $this->l10n->t('Members, categories, tax, and workspace details.') : $this->l10n->t('Your planning view and read-only workspace details.')],
 			['id' => 'app-settings', 'label' => $this->l10n->t('App settings'),   'icon' => 'shield-check',   'route' => 'budgetcheck.page.appSettings',  'show' => $canAdminApp, 'hint' => $this->l10n->t('Directory access, app administrators, and defaults for new workspaces.')],
 		];
 

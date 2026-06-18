@@ -127,12 +127,13 @@
 			return null;
 		}
 		container.replaceChildren();
-		if (!options.hasSpecialTransactions) {
+		const alwaysShow = !!options.alwaysShow;
+		if (!alwaysShow && !options.hasSpecialTransactions) {
 			container.hidden = true;
 			return null;
 		}
 		container.hidden = false;
-		const inputId = 'bc-include-specials-' + String(options.workspaceId) + '-' + Math.random().toString(36).slice(2, 8);
+		const inputId = options.inputId || ('bc-include-specials-' + String(options.workspaceId) + '-' + Math.random().toString(36).slice(2, 8));
 		const hintId = inputId + '-hint';
 		let include = getIncludeSpecials(options.workspaceId);
 		const label = C.createElement('label', { class: 'bc-field bc-field--boolean bc-specials-toggle' });
@@ -152,6 +153,14 @@
 				.then((saved) => {
 					include = saved;
 					input.checked = saved;
+					if (Msg && typeof Msg.announce === 'function') {
+						Msg.announce(
+							saved
+								? t('budgetcheck', 'Planning totals now include one-off special transactions.')
+								: t('budgetcheck', 'Planning totals now exclude one-off special transactions.'),
+							'success',
+						);
+					}
 					if (typeof options.onChange === 'function') {
 						options.onChange(saved);
 					}
@@ -183,11 +192,24 @@
 		return { input: input, getValue: () => include };
 	}
 
+	/**
+	 * Re-read the effective preference after bfcache restore or workspace patch.
+	 *
+	 * @param {number} workspaceId
+	 * @param {boolean} current
+	 * @return {boolean}
+	 */
+	function refreshIncludeSpecials(workspaceId, current) {
+		const next = getIncludeSpecials(workspaceId);
+		return typeof current === 'boolean' && next === current ? current : next;
+	}
+
 	window.BudgetCheckSpecialsView = {
 		getIncludeSpecials,
 		setIncludeSpecials,
 		migrateLegacyLocalStorage,
 		resolveCashFlowTotals,
 		mountToggle,
+		refreshIncludeSpecials,
 	};
 })();

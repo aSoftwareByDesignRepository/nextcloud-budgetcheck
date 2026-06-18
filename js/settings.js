@@ -9,6 +9,7 @@
 	const Ws = window.BudgetCheckWorkspace;
 	const EntityPicker = window.BudgetCheckEntityPicker;
 	const CatalogPickers = window.BudgetCheckCatalogPickers;
+	const SpecialsView = window.BudgetCheckSpecialsView;
 
 	let capabilities = null;
 	let workspaceTimezonePicker = null;
@@ -38,6 +39,7 @@
 		wireWorkspaceForm();
 		wireTaxForm();
 		wireVatPresetUi();
+		await initSummaryViewPreferences();
 		if (Ws.canManage) {
 			loadCategories();
 			loadBudgetDefaults();
@@ -58,6 +60,26 @@
 		return typeof Ws.workspace?.currencyDecimals === 'number'
 			? Ws.workspace.currencyDecimals
 			: (Ws.workspace?.currencyCode === 'JPY' ? 0 : 2);
+	}
+
+	async function initSummaryViewPreferences() {
+		if (!Ws.workspace || Ws.workspace.type !== 'household' || !SpecialsView) {
+			return;
+		}
+		const host = document.querySelector('[data-bc-summary-view-prefs]');
+		if (!host) {
+			return;
+		}
+		try {
+			await SpecialsView.migrateLegacyLocalStorage(Ws.workspace.id);
+		} catch (_) {
+			/* best effort */
+		}
+		SpecialsView.mountToggle(host, {
+			workspaceId: Ws.workspace.id,
+			alwaysShow: true,
+			inputId: 'bc-include-specials-pref',
+		});
 	}
 
 	async function loadBudgetDefaults() {
