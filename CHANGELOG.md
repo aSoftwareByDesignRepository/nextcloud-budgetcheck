@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] - 2026-06-18
+
+### Added
+
+- **Shared transaction editor:** dashboard and ledger pages use a common inline editor for creating and editing bookings (`transaction-editor.js`).
+- **Dashboard quick actions:** household dashboards show month-scoped shortcuts (new transaction, open ledger) with a compact recent-ledger preview.
+- **Transaction title fallback:** blank titles default to the selected category name; unit tests cover resolution rules (`TransactionTitleTest`).
+
+### Changed
+
+- **Workspace settings for all members:** non-managers can open settings to view workspace details and personal planning-total preferences; managers retain full configuration access.
+- **Transactions default window:** the ledger opens on the current month instead of all time.
+- Full translations (da, de, en, es, fr, it, nb, nl, pl, sv) updated for new UI strings.
+
 ## [1.0.17] - 2026-06-18
 
 ### Added
