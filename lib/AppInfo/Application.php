@@ -16,6 +16,7 @@ use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\HouseholdYearlyExportService;
 use OCA\BudgetCheck\Service\ImportPreferencesService;
+use OCA\BudgetCheck\Service\SummaryViewPreferencesService;
 use OCA\BudgetCheck\Service\LocaleFormatService;
 use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\MoneyService;
@@ -134,6 +135,7 @@ class Application extends App implements IBootstrap
 				$c->query(CategoryService::class),
 				$c->query(MoneyService::class),
 				$c->query(\OCP\IGroupManager::class),
+				$c->query(SummaryViewPreferencesService::class),
 			);
 		});
 
@@ -172,6 +174,13 @@ class Application extends App implements IBootstrap
 
 		$context->registerService(ImportPreferencesService::class, function ($c): ImportPreferencesService {
 			return new ImportPreferencesService(
+				$c->query(\OCP\IConfig::class),
+				$c->query(AccessControlService::class),
+			);
+		});
+
+		$context->registerService(SummaryViewPreferencesService::class, function ($c): SummaryViewPreferencesService {
+			return new SummaryViewPreferencesService(
 				$c->query(\OCP\IConfig::class),
 				$c->query(AccessControlService::class),
 			);

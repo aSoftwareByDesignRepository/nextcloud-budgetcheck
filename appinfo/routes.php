@@ -53,6 +53,8 @@ return [
 		['name' => 'api#commitTransactionImport', 'url' => '/api/transactions/import/commit', 'verb' => 'POST'],
 		['name' => 'api#getImportPreferences', 'url' => '/api/workspaces/{workspaceId}/import-preferences', 'verb' => 'GET'],
 		['name' => 'api#saveImportPreferences', 'url' => '/api/workspaces/{workspaceId}/import-preferences', 'verb' => 'PUT'],
+		['name' => 'api#getSummaryViewPreferences', 'url' => '/api/workspaces/{workspaceId}/summary-view-preferences', 'verb' => 'GET'],
+		['name' => 'api#saveSummaryViewPreferences', 'url' => '/api/workspaces/{workspaceId}/summary-view-preferences', 'verb' => 'PUT'],
 		['name' => 'api#updateTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'PUT'],
 		['name' => 'api#deleteTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'DELETE'],
 

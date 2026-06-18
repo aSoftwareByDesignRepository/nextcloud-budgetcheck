@@ -63,6 +63,15 @@
 			const sep = url.indexOf('?') === -1 ? '?' : '&';
 			return url + sep + 'workspaceId=' + encodeURIComponent(w.id);
 		},
+		patchWorkspace(patch) {
+			if (!patch || typeof patch !== 'object') return;
+			const el = document.getElementById('app-content');
+			if (!el) return;
+			const current = parseJson(el.dataset.bcWorkspace, null);
+			if (!current) return;
+			Object.assign(current, patch);
+			el.dataset.bcWorkspace = JSON.stringify(current);
+		},
 		navigateTo(name) {
 			const url = this.urls[name];
 			if (!url) return;

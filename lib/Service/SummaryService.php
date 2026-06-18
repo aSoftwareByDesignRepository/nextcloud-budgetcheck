@@ -56,27 +56,43 @@ class SummaryService
 
 		$rows = $this->loadTransactionsForRange($workspaceId, $start, $end);
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
-		$figures = $this->aggregateMonth($workspace, $rows, $uncatIds);
+		$workspaceCategories = $this->workspaceCategoryMeta($workspaceId);
+		$savingsCategoryIds = $this->savingsTransferCategoryIds($workspaceCategories);
+		$tracksSavingsTransfers = $savingsCategoryIds !== [];
+		$figures = $this->aggregateMonth($workspace, $rows, $uncatIds, $savingsCategoryIds);
 		$savingsRow = $this->savings->load($workspaceId, $userId, $ym, $workspace['currencyCode']);
 		$plannedMap = $this->budgets->plannedMapForMonth($workspaceId, $ym);
-		$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds);
+		$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds, $savingsCategoryIds);
 		$plannedTotalMinor = 0;
 		foreach ($plannedMap as $cid => $plannedAmt) {
 			$cid = (int)$cid;
-			if ($cid > 0 && in_array($cid, $uncatIds, true)) {
+			if ($cid <= 0 || in_array($cid, $uncatIds, true)) {
+				continue;
+			}
+			if (in_array($cid, $savingsCategoryIds, true)) {
+				continue;
+			}
+			$type = $workspaceCategories[$cid]['type'] ?? '';
+			if ($type !== CategoryService::TYPE_EXPENSE) {
 				continue;
 			}
 			$plannedTotalMinor += (int)$plannedAmt;
 		}
 		$figures['plannedTotalMinor'] = $plannedTotalMinor;
 		$savingsTargetMinor = $this->savings->computeTargetValue($savingsRow, $figures['totalIncomeMinor']);
+		$savingsTransferredMinor = (int)($figures['savingsTransferredMinor'] ?? 0);
+		$savingsAboveTargetMinor = max(0, $savingsTransferredMinor - $savingsTargetMinor);
 		$availableAfterSavingsMinor = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'] - $savingsTargetMinor;
 		$snapshot = $this->loadSnapshot($workspaceId, $ym);
 
 		$uncategorizedExpenseCount = 0;
 		$uncategorizedExpenseMinor = 0;
+		$excludeSpecials = $this->excludeSpecialsFromPlanningTotals($workspace);
 		foreach ($rows as $row) {
 			if ((string)$row['direction'] !== TransactionService::DIRECTION_EXPENSE) {
+				continue;
+			}
+			if ($excludeSpecials && (bool)$row['is_special']) {
 				continue;
 			}
 			if (!in_array((int)$row['category_id'], $uncatIds, true)) {
@@ -101,7 +117,11 @@ class SummaryService
 		// Categories never come back null in our model — every row has a
 		// category id — but we keep the warning hook in the engine for future
 		// soft-deleted-category states.
-		$warnings = $this->warnings->household($monthlyForWarnings, $consumption);
+		$everydayConsumption = array_values(array_filter(
+			$consumption,
+			static fn (array $row): bool => !($row['isSavingsTransfer'] ?? false),
+		));
+		$warnings = $this->warnings->household($monthlyForWarnings, $everydayConsumption);
 		$activity = $this->monthlyActivity($rows);
 		$monthTransactions = $this->monthlyTransactions($rows, $workspace['currencyCode']);
 
@@ -111,27 +131,22 @@ class SummaryService
 			'ledgerYearMonthSpan' => $this->transactions->ledgerYearMonthBounds($workspaceId),
 			'monthLedger' => [
 				'transactionCount' => count($rows),
-				'hasIncomeOrExpense' => $figures['totalIncomeMinor'] > 0 || $figures['totalExpenseMinor'] > 0,
+				'hasIncomeOrExpense' => ($figures['ledgerIncomeMinor'] ?? $figures['totalIncomeMinor']) > 0
+					|| ($figures['ledgerExpenseMinor'] ?? $figures['totalExpenseMinor']) > 0,
 			],
 			'activity' => $activity,
 			'monthTransactions' => $monthTransactions,
 			'isClosed' => $snapshot !== null,
 			'snapshot' => $snapshot,
-			'totals' => [
-				'income' => $this->money->envelope($figures['totalIncomeMinor'], $workspace['currencyCode']),
-				'expense' => $this->money->envelope($figures['totalExpenseMinor'], $workspace['currencyCode']),
-				'netResult' => $this->money->envelope($figures['netResultMinor'], $workspace['currencyCode']),
-				'savingsTarget' => $this->money->envelope($savingsTargetMinor, $workspace['currencyCode']),
-				'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $workspace['currencyCode']),
-				'specialIncome' => $this->money->envelope($figures['specialIncomeMinor'], $workspace['currencyCode']),
-				'specialExpense' => $this->money->envelope($figures['specialExpenseMinor'], $workspace['currencyCode']),
-				'taxBasis' => $workspace['taxModeEnabled'] ? $workspace['taxBudgetBasis'] : null,
-				'tax' => $workspace['taxModeEnabled'] ? [
-					'net' => $this->money->envelope($figures['totalNetMinor'], $workspace['currencyCode']),
-					'vat' => $this->money->envelope($figures['totalVatMinor'], $workspace['currencyCode']),
-					'gross' => $this->money->envelope($figures['totalGrossMinor'], $workspace['currencyCode']),
-				] : null,
-			],
+			'totals' => $this->buildHouseholdTotalsEnvelope(
+				$workspace,
+				$figures,
+				$savingsTargetMinor,
+				$availableAfterSavingsMinor,
+				$savingsTransferredMinor,
+				$savingsAboveTargetMinor,
+				$tracksSavingsTransfers,
+			),
 			'savings' => $savingsRow,
 			'budget' => [
 				'plannedTotal' => $this->money->envelope($figures['plannedTotalMinor'], $workspace['currencyCode']),
@@ -141,6 +156,7 @@ class SummaryService
 					'categoryId' => $row['categoryId'],
 					'name' => $row['name'],
 					'direction' => $row['direction'],
+					'isSavingsTransfer' => (bool)($row['isSavingsTransfer'] ?? false),
 					'hasBudget' => $row['plannedMinor'] !== null,
 					'planned' => $row['plannedMinor'] !== null
 						? $this->money->envelope($row['plannedMinor'], $workspace['currencyCode'])
@@ -265,6 +281,8 @@ class SummaryService
 		$months = [];
 		$totalIncome = 0;
 		$totalExpense = 0;
+		$totalLedgerIncome = 0;
+		$totalLedgerExpense = 0;
 		$savingsAchievedTotal = 0;
 		$savingsTargetTotal = 0;
 		$budgetPlannedTotal = 0;
@@ -272,21 +290,32 @@ class SummaryService
 		$budgetUnspentTotal = 0;
 		$budgetOverspentTotal = 0;
 		$overBudgetMonths = 0;
+		$specialIncomeTotal = 0;
+		$specialExpenseTotal = 0;
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
+		$workspaceCategories = $this->workspaceCategoryMeta($workspaceId);
+		$savingsCategoryIds = $this->savingsTransferCategoryIds($workspaceCategories);
+		$tracksSavingsTransfers = $savingsCategoryIds !== [];
 		for ($month = 1; $month <= 12; $month++) {
 			$ym = sprintf('%04d-%02d', $year, $month);
 			[$start, $end] = $this->monthBounds($ym);
 			$rows = $this->loadTransactionsForRange($workspaceId, $start, $end);
-			$figures = $this->aggregateMonth($workspace, $rows, $uncatIds);
+			$figures = $this->aggregateMonth($workspace, $rows, $uncatIds, $savingsCategoryIds);
 			$savingsRow = $this->savings->load($workspaceId, $userId, $ym, $workspace['currencyCode']);
 			$savingsTargetMinor = $this->savings->computeTargetValue($savingsRow, $figures['totalIncomeMinor']);
 			$availableAfterSavingsMinor = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'] - $savingsTargetMinor;
 			$plannedMap = $this->budgets->plannedMapForMonth($workspaceId, $ym);
-			$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds);
+			$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds, $savingsCategoryIds);
 			$plannedTotalMinor = 0;
 			foreach ($plannedMap as $cid => $plannedAmt) {
 				$cid = (int)$cid;
-				if ($cid > 0 && in_array($cid, $uncatIds, true)) {
+				if ($cid <= 0 || in_array($cid, $uncatIds, true)) {
+					continue;
+				}
+				if (in_array($cid, $savingsCategoryIds, true)) {
+					continue;
+				}
+				if (($workspaceCategories[$cid]['type'] ?? '') !== CategoryService::TYPE_EXPENSE) {
 					continue;
 				}
 				$plannedTotalMinor += (int)$plannedAmt;
@@ -297,6 +326,9 @@ class SummaryService
 			$budgetOverspentMinor = $budgetRemainingMinor < 0 ? abs($budgetRemainingMinor) : 0;
 			$overBudget = false;
 			foreach ($consumption as $row) {
+				if (($row['isSavingsTransfer'] ?? false) || ($row['direction'] ?? '') === CategoryService::TYPE_INCOME) {
+					continue;
+				}
 				if ($row['plannedMinor'] > 0 && $row['actualMinor'] > $row['plannedMinor']) {
 					$overBudget = true;
 					break;
@@ -307,18 +339,29 @@ class SummaryService
 			}
 			$totalIncome += $figures['totalIncomeMinor'];
 			$totalExpense += $figures['totalExpenseMinor'];
+			$totalLedgerIncome += (int)$figures['ledgerIncomeMinor'];
+			$totalLedgerExpense += (int)$figures['ledgerExpenseMinor'];
+			$specialIncomeTotal += (int)$figures['specialIncomeMinor'];
+			$specialExpenseTotal += (int)$figures['specialExpenseMinor'];
 			$savingsTargetTotal += $savingsTargetMinor;
 			$budgetPlannedTotal += $plannedTotalMinor;
 			$budgetActualTotal += $budgetActualMinor;
 			$budgetUnspentTotal += $budgetUnspentMinor;
 			$budgetOverspentTotal += $budgetOverspentMinor;
-			$cashAfterExpenses = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'];
-			$savingsAchievedTotal += min($savingsTargetMinor, max(0, $cashAfterExpenses));
+			$savingsTransferredMinor = (int)($figures['savingsTransferredMinor'] ?? 0);
+			if ($tracksSavingsTransfers) {
+				$savingsAchievedTotal += min($savingsTargetMinor, $savingsTransferredMinor);
+			} else {
+				$cashAfterExpenses = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'];
+				$savingsAchievedTotal += min($savingsTargetMinor, max(0, $cashAfterExpenses));
+			}
 			$months[] = [
 				'yearMonth' => $ym,
 				'income' => $this->money->envelope($figures['totalIncomeMinor'], $workspace['currencyCode']),
 				'expense' => $this->money->envelope($figures['totalExpenseMinor'], $workspace['currencyCode']),
 				'netResult' => $this->money->envelope($figures['netResultMinor'], $workspace['currencyCode']),
+				'hasSpecialTransactions' => $this->hasSpecialTransactions($figures),
+				'withSpecials' => $this->buildWithSpecialsEnvelope($workspace, $figures, $savingsTargetMinor),
 				'savingsTarget' => $this->money->envelope($savingsTargetMinor, $workspace['currencyCode']),
 				'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $workspace['currencyCode']),
 				'budget' => [
@@ -333,6 +376,15 @@ class SummaryService
 			];
 		}
 		$achievementRatio = $savingsTargetTotal > 0 ? min(1.0, $savingsAchievedTotal / $savingsTargetTotal) : null;
+		$yearFigures = [
+			'totalIncomeMinor' => $totalIncome,
+			'totalExpenseMinor' => $totalExpense,
+			'netResultMinor' => $totalIncome - $totalExpense,
+			'ledgerIncomeMinor' => $totalLedgerIncome,
+			'ledgerExpenseMinor' => $totalLedgerExpense,
+			'specialIncomeMinor' => $specialIncomeTotal,
+			'specialExpenseMinor' => $specialExpenseTotal,
+		];
 		return [
 			'workspace' => $workspace,
 			'year' => $year,
@@ -340,6 +392,10 @@ class SummaryService
 				'income' => $this->money->envelope($totalIncome, $workspace['currencyCode']),
 				'expense' => $this->money->envelope($totalExpense, $workspace['currencyCode']),
 				'netResult' => $this->money->envelope($totalIncome - $totalExpense, $workspace['currencyCode']),
+				'hasSpecialTransactions' => $this->hasSpecialTransactions($yearFigures),
+				'withSpecials' => $this->buildWithSpecialsEnvelope($workspace, $yearFigures, $savingsTargetTotal),
+				'specialIncome' => $this->money->envelope($specialIncomeTotal, $workspace['currencyCode']),
+				'specialExpense' => $this->money->envelope($specialExpenseTotal, $workspace['currencyCode']),
 				'savingsTarget' => $this->money->envelope($savingsTargetTotal, $workspace['currencyCode']),
 				'savingsAchieved' => $this->money->envelope($savingsAchievedTotal, $workspace['currencyCode']),
 				'savingsAchievementRatio' => $achievementRatio,
@@ -363,6 +419,8 @@ class SummaryService
 	 *     totalIncomeMinor:int,
 	 *     totalExpenseMinor:int,
 	 *     netResultMinor:int,
+	 *     ledgerIncomeMinor:int,
+	 *     ledgerExpenseMinor:int,
 	 *     specialIncomeMinor:int,
 	 *     specialExpenseMinor:int,
 	 *     largestSpecialMinor:int,
@@ -375,65 +433,100 @@ class SummaryService
 	 *     specials:list<array<string,mixed>>
 	 * }
 	 */
-	private function aggregateMonth(array $workspace, array $rows, array $uncategorizedCategoryIds = []): array
+	private function aggregateMonth(array $workspace, array $rows, array $uncategorizedCategoryIds = [], array $savingsCategoryIds = []): array
 	{
 		$uncategorizedCategoryIds = array_values(array_unique(array_map(static fn (int $id): int => $id, $uncategorizedCategoryIds)));
+		$savingsCategoryIds = array_values(array_unique(array_map(static fn (int $id): int => $id, $savingsCategoryIds)));
+		$savingsSet = array_fill_keys($savingsCategoryIds, true);
+		$excludeSpecials = $this->excludeSpecialsFromPlanningTotals($workspace);
 		$totalIncome = 0;
 		$totalExpense = 0;
+		$ledgerIncome = 0;
+		$ledgerExpense = 0;
 		$specialIncome = 0;
 		$specialExpense = 0;
 		$largestSpecialMinor = 0;
 		$largestSpecialTitle = '';
 		$budgetedActual = 0;
+		$savingsTransferred = 0;
 		$totalNet = 0;
 		$totalVat = 0;
 		$totalGross = 0;
+		$ledgerNet = 0;
+		$ledgerVat = 0;
+		$ledgerGross = 0;
 		$specials = [];
 		$basis = $workspace['taxBudgetBasis'] ?? 'gross';
 		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
 
 		foreach ($rows as $row) {
-			$amountForBudget = (int)$row['amount_minor'];
+			$isSpecial = (bool)$row['is_special'];
+			$countsForPlanning = !$excludeSpecials || !$isSpecial;
+			$amountMinor = (int)$row['amount_minor'];
+			$amountForBudget = $amountMinor;
 			if ($taxModeEnabled && (string)$row['entry_amount_basis'] !== TransactionService::BASIS_SIMPLE) {
 				if ($basis === 'net' && $row['net_amount_minor'] !== null) {
 					$amountForBudget = (int)$row['net_amount_minor'];
 				} elseif ($basis === 'gross' && $row['gross_amount_minor'] !== null) {
 					$amountForBudget = (int)$row['gross_amount_minor'];
 				}
-				$totalNet += (int)($row['net_amount_minor'] ?? $row['amount_minor']);
-				$totalVat += (int)($row['vat_amount_minor'] ?? 0);
-				$totalGross += (int)($row['gross_amount_minor'] ?? $row['amount_minor']);
+				$rowNet = (int)($row['net_amount_minor'] ?? $amountMinor);
+				$rowVat = (int)($row['vat_amount_minor'] ?? 0);
+				$rowGross = (int)($row['gross_amount_minor'] ?? $amountMinor);
+				$ledgerNet += $rowNet;
+				$ledgerVat += $rowVat;
+				$ledgerGross += $rowGross;
+				if ($countsForPlanning) {
+					$totalNet += $rowNet;
+					$totalVat += $rowVat;
+					$totalGross += $rowGross;
+				}
 			} else {
-				$totalNet += (int)$row['amount_minor'];
-				$totalGross += (int)$row['amount_minor'];
+				$ledgerNet += $amountMinor;
+				$ledgerGross += $amountMinor;
+				if ($countsForPlanning) {
+					$totalNet += $amountMinor;
+					$totalGross += $amountMinor;
+				}
 			}
 			if ((string)$row['direction'] === TransactionService::DIRECTION_INCOME) {
-				$totalIncome += (int)$row['amount_minor'];
-				if ((bool)$row['is_special']) {
-					$specialIncome += (int)$row['amount_minor'];
+				$ledgerIncome += $amountMinor;
+				if ($countsForPlanning) {
+					$totalIncome += $amountMinor;
+				}
+				if ($isSpecial) {
+					$specialIncome += $amountMinor;
 				}
 			} else {
-				$totalExpense += (int)$row['amount_minor'];
-				if ((bool)$row['is_special']) {
-					$specialExpense += (int)$row['amount_minor'];
+				$ledgerExpense += $amountMinor;
+				if ($countsForPlanning) {
+					$totalExpense += $amountMinor;
 				}
-				if (!in_array((int)$row['category_id'], $uncategorizedCategoryIds, true)) {
-					$budgetedActual += $amountForBudget;
+				if ($isSpecial) {
+					$specialExpense += $amountMinor;
+				}
+				if ($countsForPlanning) {
+					$cid = (int)$row['category_id'];
+					if (isset($savingsSet[$cid])) {
+						$savingsTransferred += $amountForBudget;
+					} elseif (!in_array($cid, $uncategorizedCategoryIds, true)) {
+						$budgetedActual += $amountForBudget;
+					}
 				}
 			}
-			if ((bool)$row['is_special']) {
+			if ($isSpecial) {
 				if (
 					(string)$row['direction'] === TransactionService::DIRECTION_EXPENSE
-					&& (int)$row['amount_minor'] > $largestSpecialMinor
+					&& $amountMinor > $largestSpecialMinor
 				) {
-					$largestSpecialMinor = (int)$row['amount_minor'];
+					$largestSpecialMinor = $amountMinor;
 					$largestSpecialTitle = (string)$row['title'];
 				}
 				$specials[] = [
 					'id' => (int)$row['id'],
 					'title' => (string)$row['title'],
 					'date' => (string)$row['booking_date'],
-					'amountMinor' => (int)$row['amount_minor'],
+					'amountMinor' => $amountMinor,
 					'direction' => (string)$row['direction'],
 				];
 			}
@@ -442,15 +535,22 @@ class SummaryService
 			'totalIncomeMinor' => $totalIncome,
 			'totalExpenseMinor' => $totalExpense,
 			'netResultMinor' => $totalIncome - $totalExpense,
+			'ledgerIncomeMinor' => $ledgerIncome,
+			'ledgerExpenseMinor' => $ledgerExpense,
+			'ledgerNetResultMinor' => $ledgerIncome - $ledgerExpense,
 			'specialIncomeMinor' => $specialIncome,
 			'specialExpenseMinor' => $specialExpense,
 			'largestSpecialMinor' => $largestSpecialMinor,
 			'largestSpecialTitle' => $largestSpecialTitle,
 			'budgetedActualMinor' => $budgetedActual,
+			'savingsTransferredMinor' => $savingsTransferred,
 			'plannedTotalMinor' => 0, // filled by category consumption helper
 			'totalNetMinor' => $taxModeEnabled ? $totalNet : 0,
 			'totalVatMinor' => $taxModeEnabled ? $totalVat : 0,
 			'totalGrossMinor' => $taxModeEnabled ? $totalGross : 0,
+			'ledgerNetMinor' => $taxModeEnabled ? $ledgerNet : 0,
+			'ledgerVatMinor' => $taxModeEnabled ? $ledgerVat : 0,
+			'ledgerGrossMinor' => $taxModeEnabled ? $ledgerGross : 0,
 			'specials' => $specials,
 		];
 	}
@@ -459,8 +559,10 @@ class SummaryService
 	 * @param list<int> $uncategorizedCategoryIds excluded from planned-vs-actual rows (§9)
 	 * @return list<array{categoryId:int, name:string, direction:string, plannedMinor:?int, actualMinor:int}>
 	 */
-	private function categoryConsumption(array $workspace, array $rows, array $plannedMap, array $uncategorizedCategoryIds = []): array
+	private function categoryConsumption(array $workspace, array $rows, array $plannedMap, array $uncategorizedCategoryIds = [], array $savingsCategoryIds = []): array
 	{
+		$savingsSet = array_fill_keys($savingsCategoryIds, true);
+		$excludeSpecials = $this->excludeSpecialsFromPlanningTotals($workspace);
 		// Build a category id set from active categories, planned budgets, and
 		// rows with actual activity so the monthly table stays complete.
 		$categoryIds = [];
@@ -496,6 +598,9 @@ class SummaryService
 		$basis = $workspace['taxBudgetBasis'] ?? 'gross';
 		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
 		foreach ($rows as $row) {
+			if ($excludeSpecials && (bool)$row['is_special']) {
+				continue;
+			}
 			$cid = (int)$row['category_id'];
 			if (in_array($cid, $uncategorizedCategoryIds, true)) {
 				continue;
@@ -523,6 +628,7 @@ class SummaryService
 				'categoryId' => $cid,
 				'name' => is_array($category) ? (string)($category['name'] ?? ('#' . $cid)) : ('#' . $cid),
 				'direction' => $direction,
+				'isSavingsTransfer' => isset($savingsSet[$cid]),
 				'plannedMinor' => $plannedRaw,
 				'actualMinor' => (int)($actuals[$cid] ?? 0),
 			];
@@ -566,7 +672,7 @@ class SummaryService
 	private function workspaceCategoryMeta(int $workspaceId): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('id', 'name', 'type', 'is_active')
+		$qb->select('id', 'name', 'type', 'is_active', 'is_savings_transfer')
 			->from('bc_categories')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$result = $qb->executeQuery();
@@ -576,10 +682,28 @@ class SummaryService
 				'name' => (string)$row['name'],
 				'type' => (string)$row['type'],
 				'isActive' => (bool)$row['is_active'],
+				'isSavingsTransfer' => (bool)($row['is_savings_transfer'] ?? false),
 			];
 		}
 		$result->closeCursor();
 		return $out;
+	}
+
+	/**
+	 * @param array<int,array{name:string,type:string,isActive:bool,isSavingsTransfer?:bool}> $workspaceCategories
+	 * @return list<int>
+	 */
+	private function savingsTransferCategoryIds(array $workspaceCategories): array
+	{
+		$ids = [];
+		foreach ($workspaceCategories as $cid => $meta) {
+			if (!empty($meta['isSavingsTransfer'])) {
+				$ids[] = (int)$cid;
+			}
+		}
+		sort($ids);
+
+		return $ids;
 	}
 
 	/**
@@ -706,6 +830,104 @@ class SummaryService
 			throw new \InvalidArgumentException('yearMonth must be in YYYY-MM format with a valid month.');
 		}
 		return $value;
+	}
+
+	private function excludeSpecialsFromPlanningTotals(array $workspace): bool
+	{
+		return ($workspace['type'] ?? '') === WorkspaceService::TYPE_HOUSEHOLD;
+	}
+
+	/**
+	 * @param array{specialIncomeMinor?:int,specialExpenseMinor?:int} $figures
+	 */
+	private function hasSpecialTransactions(array $figures): bool
+	{
+		return ((int)($figures['specialIncomeMinor'] ?? 0)) > 0
+			|| ((int)($figures['specialExpenseMinor'] ?? 0)) > 0;
+	}
+
+	/**
+	 * @param array{
+	 *     ledgerIncomeMinor?:int,
+	 *     ledgerExpenseMinor?:int,
+	 *     ledgerNetMinor?:int,
+	 *     ledgerVatMinor?:int,
+	 *     ledgerGrossMinor?:int
+	 * } $figures
+	 * @return array<string,mixed>|null
+	 */
+	private function buildWithSpecialsEnvelope(array $workspace, array $figures, int $savingsTargetMinor = 0): ?array
+	{
+		if (!$this->excludeSpecialsFromPlanningTotals($workspace)) {
+			return null;
+		}
+		$currencyCode = (string)$workspace['currencyCode'];
+		$ledgerIncome = (int)($figures['ledgerIncomeMinor'] ?? 0);
+		$ledgerExpense = (int)($figures['ledgerExpenseMinor'] ?? 0);
+		$ledgerNet = $ledgerIncome - $ledgerExpense;
+		$out = [
+			'income' => $this->money->envelope($ledgerIncome, $currencyCode),
+			'expense' => $this->money->envelope($ledgerExpense, $currencyCode),
+			'netResult' => $this->money->envelope($ledgerNet, $currencyCode),
+			'availableAfterSavings' => $this->money->envelope($ledgerNet - $savingsTargetMinor, $currencyCode),
+		];
+		if (!empty($workspace['taxModeEnabled'])) {
+			$out['tax'] = [
+				'net' => $this->money->envelope((int)($figures['ledgerNetMinor'] ?? 0), $currencyCode),
+				'vat' => $this->money->envelope((int)($figures['ledgerVatMinor'] ?? 0), $currencyCode),
+				'gross' => $this->money->envelope((int)($figures['ledgerGrossMinor'] ?? 0), $currencyCode),
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * @param array{
+	 *     totalIncomeMinor:int,
+	 *     totalExpenseMinor:int,
+	 *     netResultMinor:int,
+	 *     specialIncomeMinor:int,
+	 *     specialExpenseMinor:int,
+	 *     totalNetMinor?:int,
+	 *     totalVatMinor?:int,
+	 *     totalGrossMinor?:int,
+	 *     ledgerNetMinor?:int,
+	 *     ledgerVatMinor?:int,
+	 *     ledgerGrossMinor?:int
+	 * } $figures
+	 * @return array<string,mixed>
+	 */
+	private function buildHouseholdTotalsEnvelope(
+		array $workspace,
+		array $figures,
+		int $savingsTargetMinor,
+		int $availableAfterSavingsMinor,
+		int $savingsTransferredMinor,
+		int $savingsAboveTargetMinor,
+		bool $tracksSavingsTransfers,
+	): array {
+		$currencyCode = (string)$workspace['currencyCode'];
+		$totals = [
+			'income' => $this->money->envelope($figures['totalIncomeMinor'], $currencyCode),
+			'expense' => $this->money->envelope($figures['totalExpenseMinor'], $currencyCode),
+			'netResult' => $this->money->envelope($figures['netResultMinor'], $currencyCode),
+			'savingsTarget' => $this->money->envelope($savingsTargetMinor, $currencyCode),
+			'savingsTransferred' => $this->money->envelope($savingsTransferredMinor, $currencyCode),
+			'savingsAboveTarget' => $this->money->envelope($savingsAboveTargetMinor, $currencyCode),
+			'tracksSavingsTransfers' => $tracksSavingsTransfers,
+			'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $currencyCode),
+			'specialIncome' => $this->money->envelope($figures['specialIncomeMinor'], $currencyCode),
+			'specialExpense' => $this->money->envelope($figures['specialExpenseMinor'], $currencyCode),
+			'hasSpecialTransactions' => $this->hasSpecialTransactions($figures),
+			'withSpecials' => $this->buildWithSpecialsEnvelope($workspace, $figures, $savingsTargetMinor),
+			'taxBasis' => $workspace['taxModeEnabled'] ? $workspace['taxBudgetBasis'] : null,
+			'tax' => $workspace['taxModeEnabled'] ? [
+				'net' => $this->money->envelope($figures['totalNetMinor'], $currencyCode),
+				'vat' => $this->money->envelope($figures['totalVatMinor'], $currencyCode),
+				'gross' => $this->money->envelope($figures['totalGrossMinor'], $currencyCode),
+			] : null,
+		];
+		return $totals;
 	}
 
 }

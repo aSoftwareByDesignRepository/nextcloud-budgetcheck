@@ -54,6 +54,7 @@ class WorkspaceService
 		private CategoryService $categories,
 		private MoneyService $money,
 		private IGroupManager $groupManager,
+		private SummaryViewPreferencesService $summaryViewPrefs,
 	) {
 	}
 
@@ -114,7 +115,7 @@ class WorkspaceService
 			throw new AccessDeniedException();
 		}
 		$workspace['role'] = $role;
-		return $workspace;
+		return $this->summaryViewPrefs->enrichHouseholdWorkspace($workspace, $userId);
 	}
 
 	public function createWorkspace(string $userId, array $payload): array
@@ -264,6 +265,14 @@ class WorkspaceService
 			if ($autoCopy !== $workspace['autoCopyBudgetsFromPreviousMonth']) {
 				$updates[self::COL_AUTO_COPY_PREV_MONTH] = $autoCopy;
 				$logChanges['autoCopyBudgetsFromPreviousMonth'] = $autoCopy;
+			}
+		}
+		if ($workspace['type'] === self::TYPE_HOUSEHOLD && array_key_exists('includeSpecialsInTotalsDefault', $payload)) {
+			$includeDefault = (bool)$payload['includeSpecialsInTotalsDefault'];
+			$current = (bool)($workspace['includeSpecialsInTotalsDefault'] ?? false);
+			if ($includeDefault !== $current) {
+				$updates['include_specials_default'] = $includeDefault;
+				$logChanges['includeSpecialsInTotalsDefault'] = $includeDefault;
 			}
 		}
 		if ($workspace['type'] === self::TYPE_HOUSEHOLD && array_key_exists('primaryPlanningYear', $payload)) {
@@ -781,6 +790,7 @@ class WorkspaceService
 			'primaryPlanningYear' => isset($row['primary_planning_year']) && $row['primary_planning_year'] !== null
 				? (int)$row['primary_planning_year']
 				: null,
+			'includeSpecialsInTotalsDefault' => (bool)($row['include_specials_default'] ?? false),
 		];
 	}
 

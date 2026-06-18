@@ -859,6 +859,7 @@
 
 	function collectTagPills(tx) {
 		const out = [];
+		if (tx.isPlanned) out.push({ cls: 'bc-tx-tag-pill bc-tx-tag-pill--planned', text: t('budgetcheck', 'Planned') });
 		if (tx.isSpecial) out.push({ cls: 'bc-tx-tag-pill bc-tx-tag-pill--special', text: t('budgetcheck', 'Special') });
 		if (tx.entryAmountBasis === 'gross') out.push({ cls: 'bc-tx-tag-pill', text: t('budgetcheck', 'Gross') });
 		else if (tx.entryAmountBasis === 'net') out.push({ cls: 'bc-tx-tag-pill', text: t('budgetcheck', 'Net') });
@@ -1468,7 +1469,7 @@
 				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special (large/unusual entry)') }));
 				specialOuter.appendChild(specialRow);
 				const specialHintId = 'bc-field-hint-' + Math.random().toString(36).slice(2);
-				specialOuter.appendChild(C.createElement('span', { id: specialHintId, class: 'bc-field__hint', text: t('budgetcheck', 'Use for unusually large or one-off entries so they are easy to find in summaries and filters.') }));
+				specialOuter.appendChild(C.createElement('span', { id: specialHintId, class: 'bc-field__hint', text: t('budgetcheck', 'Use for unusually large or one-off entries. They stay in the ledger but are excluded from everyday monthly totals unless you include them on the dashboard.') }));
 				specialInput.setAttribute('aria-describedby', specialHintId);
 				form.appendChild(specialOuter);
 

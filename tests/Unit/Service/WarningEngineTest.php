@@ -36,6 +36,20 @@ final class WarningEngineTest extends TestCase
 		$this->assertSame(5, $out[0]['meta']['categoryId']);
 	}
 
+	public function testHouseholdIncomeOverTargetDoesNotWarn(): void
+	{
+		$out = $this->engine->household($this->monthly(0, 0, null), [
+			[
+				'categoryId' => 3,
+				'name' => 'Salary',
+				'direction' => 'income',
+				'plannedMinor' => 50_000,
+				'actualMinor' => 60_000,
+			],
+		]);
+		$this->assertSame([], $out);
+	}
+
 	public function testHouseholdNearBudgetEmitsInfo(): void
 	{
 		// 92% of 50000 = 46000. 0.92 >= 0.9 triggers the near-limit info.

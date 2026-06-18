@@ -7,7 +7,6 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
-	const INTERNAL_UNCATEGORIZED_GROUP = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
 
 	/** @type {{ id: number, type: string, currencyCode: string, currencyDecimals?: number } | null} */
 	let ws = null;
@@ -143,9 +142,7 @@
 		if (window_) window_.textContent = Dates.formatYearMonth(state.yearMonth, Ws.htmlLang);
 		if (!tbody) return;
 		tbody.replaceChildren();
-		const expenseCats = state.categories.filter(
-			(c) => c.type === 'expense' && c.groupKey !== INTERNAL_UNCATEGORIZED_GROUP,
-		);
+		const budgetCats = window.BudgetCheckConstants.budgetableCategories(state.categories);
 		const actualMap = new Map();
 		if (state.summary && state.summary.budget && state.summary.budget.byCategory) {
 			state.summary.budget.byCategory.forEach((row) => actualMap.set(row.categoryId, row.actual));
@@ -158,13 +155,39 @@
 			}
 		});
 
-		if (expenseCats.length === 0) {
+		if (budgetCats.length === 0) {
 			tbody.appendChild(C.createElement('tr', null, [
-				C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'Add a few expense categories first.') }),
+				C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'Add income or expense categories first.') }),
 			]));
 			return;
 		}
-		expenseCats.forEach((cat) => tbody.appendChild(renderRow(cat, plannedMap.get(cat.id), actualMap.get(cat.id))));
+		let lastType = null;
+		budgetCats.forEach((cat) => {
+			if (cat.type !== lastType) {
+				lastType = cat.type;
+				const sectionLabel = cat.type === 'income'
+					? t('budgetcheck', 'Income')
+					: t('budgetcheck', 'Expenses');
+				const sectionRow = C.createElement('tr', { class: 'bc-table__section' });
+				sectionRow.appendChild(C.createElement('th', {
+					attrs: { colspan: '5', scope: 'colgroup' },
+					class: 'bc-table__section-label',
+					text: sectionLabel,
+				}));
+				tbody.appendChild(sectionRow);
+			}
+			tbody.appendChild(renderRow(cat, plannedMap.get(cat.id), actualMap.get(cat.id)));
+		});
+	}
+
+	function remainingClassForCategory(cat, remainingMinor) {
+		if (remainingMinor === 0) {
+			return 'bc-table__col--num';
+		}
+		if (cat.type === 'income') {
+			return 'bc-table__col--num ' + (remainingMinor < 0 ? 'bc-tx-amount--income' : 'bc-tx-amount--expense');
+		}
+		return 'bc-table__col--num ' + (remainingMinor < 0 ? 'bc-tx-amount--expense' : 'bc-tx-amount--income');
 	}
 
 	function renderRow(cat, plannedEnv, actualEnv) {
@@ -174,7 +197,9 @@
 		const remainingEnv = { minor: remainingMinor, currency: ws.currencyCode, decimals };
 		const tr = C.createElement('tr');
 		tr.appendChild(C.createElement('td', { text: cat.name }));
-		tr.appendChild(C.createElement('td', { text: t('budgetcheck', 'Expense') }));
+		tr.appendChild(C.createElement('td', {
+			text: cat.type === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense'),
+		}));
 		const plannedTd = C.createElement('td', { class: 'bc-table__col--num' });
 		const input = C.createElement('input', {
 			type: 'text', inputmode: 'decimal', class: 'bc-input',
@@ -190,7 +215,7 @@
 		tr.appendChild(plannedTd);
 		tr.appendChild(C.createElement('td', { class: 'bc-table__col--num', text: Money.formatEnvelope(actual, Ws.htmlLang) }));
 		tr.appendChild(C.createElement('td', {
-			class: 'bc-table__col--num' + (remainingMinor < 0 ? ' bc-tx-amount--expense' : ''),
+			class: remainingClassForCategory(cat, remainingMinor),
 			text: Money.formatEnvelope(remainingEnv, Ws.htmlLang),
 		}));
 		return tr;

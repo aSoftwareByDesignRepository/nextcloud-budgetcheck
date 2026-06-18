@@ -10,8 +10,9 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 
 /**
- * Recurring transaction templates ("rules"). The product never auto-posts
- * transactions; rules only suggest entries to the planner.
+ * Recurring transaction templates ("rules"). Rules never post on their own;
+ * a manager explicitly runs **Generate**, which creates **planned** ledger
+ * rows. A matching bank import or manual entry removes the plan automatically.
  *
  * The {@see preview()} method projects all dues between the rule's
  * `next_due_date` and the requested upper bound (capped at 36 occurrences to
@@ -303,6 +304,8 @@ class RecurringRuleService
 				'amountMinor' => (int)$row['amount_minor'],
 				'title' => (string)$row['title'],
 				'isSpecial' => false,
+				'isPlanned' => true,
+				'recurringRuleId' => $ruleId,
 			], $workspace, $category);
 			$createdIds[] = (int)$created['id'];
 			$firstCreated ??= $created;

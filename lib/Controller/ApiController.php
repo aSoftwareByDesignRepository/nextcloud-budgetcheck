@@ -19,6 +19,7 @@ use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\ImportPreferencesService;
+use OCA\BudgetCheck\Service\SummaryViewPreferencesService;
 use OCA\BudgetCheck\Service\MoneyService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
@@ -75,6 +76,7 @@ class ApiController extends Controller
 		private BookingStatusService $bookingStatuses,
 		private TransactionImportService $transactionImport,
 		private ImportPreferencesService $importPreferences,
+		private SummaryViewPreferencesService $summaryViewPrefs,
 		private SavingsTargetService $savings,
 		private SummaryService $summaries,
 		private SnapshotService $snapshots,
@@ -476,6 +478,42 @@ class ApiController extends Controller
 			$this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'import_preferences_write', 60, 300);
 			return ['preferences' => $this->importPreferences->save($workspaceId, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getSummaryViewPreferences(int $workspaceId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			if (($workspace['type'] ?? '') !== WorkspaceService::TYPE_HOUSEHOLD) {
+				throw new WorkspaceTypeMismatchException('Summary view preferences apply to household workspaces only.');
+			}
+			$default = (bool)($workspace['includeSpecialsInTotalsDefault'] ?? false);
+			return [
+				'preferences' => $this->summaryViewPrefs->get($workspaceId, $userId, $default),
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function saveSummaryViewPreferences(int $workspaceId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			if (($workspace['type'] ?? '') !== WorkspaceService::TYPE_HOUSEHOLD) {
+				throw new WorkspaceTypeMismatchException('Summary view preferences apply to household workspaces only.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'summary_view_prefs_write', 120, 300);
+			$default = (bool)($workspace['includeSpecialsInTotalsDefault'] ?? false);
+			$prefs = $this->summaryViewPrefs->save($workspaceId, $userId, $this->payload(), $default);
+			return [
+				'preferences' => $prefs,
+				'workspace' => $this->workspaces->getForUser($workspaceId, $userId),
+			];
 		});
 	}
 

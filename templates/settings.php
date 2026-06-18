@@ -78,6 +78,16 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 						</span>
 					</label>
 					<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width">
+						<legend class="bc-fieldset__legend"><?php p($l->t('Planning summaries')); ?></legend>
+						<p class="bc-field__hint bc-field__hint--block" id="bc-summary-default-hint"><?php p($l->t('Members who have not set a personal preference inherit this default. Anyone can override it on the dashboard, monthly, or yearly pages.')); ?></p>
+						<label class="bc-field bc-field--boolean">
+							<span class="bc-boolean-control">
+								<input type="checkbox" name="includeSpecialsInTotalsDefault" value="1" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-summary-default-hint">
+								<span class="bc-boolean-control__text"><?php p($l->t('Include one-off transactions in totals by default')); ?></span>
+							</span>
+						</label>
+					</fieldset>
+					<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width">
 						<legend class="bc-fieldset__legend"><?php p($l->t('Default savings target for new months')); ?></legend>
 						<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('If set, months without an explicit savings target inherit this default automatically.')); ?></p>
 						<label class="bc-field bc-field--radio">
@@ -190,7 +200,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 			<header class="bc-section__header">
 				<div>
 					<h2 id="bc-categories-title"><?php p($l->t('Categories')); ?></h2>
-					<p class="bc-section__sub"><?php p($l->t('Income and expense categories used for transactions and budgets.')); ?></p>
+					<p class="bc-section__sub"><?php p($l->t('Name categories for your budget. Group is for a few custom buckets in reports and filters—not bank hierarchy. Notes on transactions work well for vendor names.')); ?></p>
 				</div>
 				<?php if ($canManage): ?>
 					<button type="button" class="button primary" data-bc-action="open-create-category">
@@ -206,6 +216,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 							<th scope="col"><?php p($l->t('Direction')); ?></th>
 							<th scope="col"><?php p($l->t('Group')); ?></th>
 							<th scope="col"><?php p($l->t('Special')); ?></th>
+							<th scope="col"><?php p($l->t('Savings transfer')); ?></th>
 							<th scope="col"><?php p($l->t('Tax handling')); ?></th>
 							<th scope="col"><?php p($l->t('Status')); ?></th>
 							<?php if ($canManage): ?>
@@ -215,7 +226,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 					</thead>
 					<tbody data-bc-category-rows>
 						<tr>
-							<td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+							<td colspan="8" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
 						</tr>
 					</tbody>
 				</table>
@@ -385,7 +396,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 				<header class="bc-section__header">
 					<div>
 						<h2 id="bc-recurring-title"><?php p($l->t('Recurring rules')); ?></h2>
-						<p class="bc-section__sub"><?php p($l->t('Templates that suggest entries; nothing posts automatically.')); ?></p>
+						<p class="bc-section__sub"><?php p($l->t('Repeating income or expenses. Generate creates planned ledger entries; a matching import removes the plan automatically.')); ?></p>
 					</div>
 					<button type="button" class="button primary" data-bc-action="open-create-recurring">
 						<?php p($l->t('New rule')); ?>
@@ -429,8 +440,18 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 						<dd><?php p($l->t('Planned amount for a category minus spending that counts toward that plan in the month.')); ?></dd>
 						<dt><?php p($l->t('Available after savings')); ?></dt>
 						<dd><?php p($l->t('Income minus expenses minus the savings target for that month.')); ?></dd>
+						<dt><?php p($l->t('Category group')); ?></dt>
+						<dd><?php p($l->t('Optional tag shared by a few related categories—for rolled-up totals in transaction analytics and filters. It is not a bank hierarchy; use Notes for vendor or payee names.')); ?></dd>
+						<dt><?php p($l->t('Notes')); ?></dt>
+						<dd><?php p($l->t('Free text on a transaction, searchable from the transactions page. Ideal for bank vendor names when categories stay broad.')); ?></dd>
 						<dt><?php p($l->t('Savings target')); ?></dt>
 						<dd><?php p($l->t('The amount you plan to set aside (percentage, fixed amount, or the higher of both).')); ?></dd>
+						<dt><?php p($l->t('Savings achieved')); ?></dt>
+						<dd><?php p($l->t('When a category is marked as savings transfer, progress uses those bookings. Otherwise it uses income minus everyday expenses.')); ?></dd>
+						<dt><?php p($l->t('Savings transfer')); ?></dt>
+						<dd><?php p($l->t('Category flag for money moved to savings. Counts toward your savings goal and is excluded from everyday budget saldo, but stays in total expenses.')); ?></dd>
+						<dt><?php p($l->t('Planned entry')); ?></dt>
+						<dd><?php p($l->t('A transaction created from Generate on a recurring rule. It stays until a real booking with the same category, direction, and amount arrives in the same or neighbouring month.')); ?></dd>
 						<dt><?php p($l->t('Cap warning')); ?></dt>
 						<dd><?php p($l->t('For projects, a reminder when all-time spend approaches or exceeds the optional cap.')); ?></dd>
 					</dl>

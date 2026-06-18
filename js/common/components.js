@@ -264,5 +264,137 @@
 		});
 	}
 
-	window.BudgetCheckComponents = { createElement, openModal, confirmDialog, renderMonthlyLedgerHelp };
+	function renderHouseholdSummaryTiles(grid, summary, htmlLang, opts) {
+		const Money = window.BudgetCheckMoney;
+		const SpecialsView = window.BudgetCheckSpecialsView;
+		if (!grid || !Money) {
+			return;
+		}
+		const options = opts || {};
+		const includeSpecials = !!options.includeSpecials;
+		const rawTotals = summary.totals || {};
+		const totals = SpecialsView
+			? SpecialsView.resolveCashFlowTotals(rawTotals, includeSpecials)
+			: rawTotals;
+		const budget = summary.budget || null;
+
+		grid.replaceChildren();
+		grid.className = 'bc-summary-sections';
+
+		const makeTile = (label, env, tileOpts) => {
+			const o = tileOpts || {};
+			return createElement('div', { class: 'bc-summary-tile' + (o.primary ? ' bc-summary-tile--primary' : '') }, [
+				createElement('div', { class: 'bc-summary-tile__label', text: label }),
+				createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, htmlLang) : '—' }),
+				o.hint ? createElement('div', { class: 'bc-summary-tile__hint', text: o.hint }) : null,
+			]);
+		};
+
+		const makeSection = (title, hint, tiles) => {
+			const section = createElement('section', { class: 'bc-summary-section' });
+			const head = createElement('header', { class: 'bc-summary-section__header' });
+			head.appendChild(createElement('h3', { class: 'bc-summary-section__title', text: title }));
+			if (hint) {
+				head.appendChild(createElement('p', { class: 'bc-summary-section__hint', text: hint }));
+			}
+			section.appendChild(head);
+			const tileGrid = createElement('div', { class: 'bc-summary-grid' });
+			tiles.forEach((tile) => tileGrid.appendChild(tile));
+			section.appendChild(tileGrid);
+			grid.appendChild(section);
+		};
+
+		const cashFlowHint = includeSpecials
+			? t('budgetcheck', 'Full ledger totals, including one-off special transactions.')
+			: (rawTotals.hasSpecialTransactions
+				? t('budgetcheck', 'Everyday income and expenses—one-off special transactions are excluded.')
+				: t('budgetcheck', 'Ledger totals for this month. Expenses include transfers to savings categories.'));
+		const cashFlowTiles = [
+			makeTile(t('budgetcheck', 'Income'), totals.income),
+			makeTile(t('budgetcheck', 'Expenses'), totals.expense, {
+				hint: totals.tracksSavingsTransfers
+					? t('budgetcheck', 'Includes savings transfers')
+					: null,
+			}),
+			makeTile(t('budgetcheck', 'Net result'), totals.netResult, { primary: true }),
+		];
+		if (!includeSpecials && rawTotals.hasSpecialTransactions) {
+			const parts = [];
+			const si = rawTotals.specialIncome?.minor || 0;
+			const se = rawTotals.specialExpense?.minor || 0;
+			if (si > 0) {
+				parts.push(t('budgetcheck', 'Excluded special income: {amount}')
+					.replace('{amount}', Money.formatEnvelope(rawTotals.specialIncome, htmlLang)));
+			}
+			if (se > 0) {
+				parts.push(t('budgetcheck', 'Excluded special expense: {amount}')
+					.replace('{amount}', Money.formatEnvelope(rawTotals.specialExpense, htmlLang)));
+			}
+			if (parts.length) {
+				cashFlowTiles.push(createElement('p', { class: 'bc-summary-section__note', text: parts.join(' · ') }));
+			}
+		}
+		makeSection(
+			t('budgetcheck', 'Cash flow'),
+			cashFlowHint,
+			cashFlowTiles,
+		);
+
+		const savingsTiles = [
+			makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget),
+		];
+		if (totals.tracksSavingsTransfers) {
+			savingsTiles.push(makeTile(t('budgetcheck', 'Saved this month'), totals.savingsTransferred, { primary: true }));
+			const aboveMinor = Number.parseInt(String(totals.savingsAboveTarget?.minor ?? 0), 10) || 0;
+			if (aboveMinor > 0) {
+				savingsTiles.push(makeTile(t('budgetcheck', 'Above savings target'), totals.savingsAboveTarget));
+			}
+		} else {
+			savingsTiles.push(createElement('p', {
+				class: 'bc-summary-section__note',
+				text: t('budgetcheck', 'Mark your savings category under Settings → Categories to track transfers against this target.'),
+			}));
+		}
+		savingsTiles.push(makeTile(t('budgetcheck', 'Available after savings'), totals.availableAfterSavings, {
+			hint: t('budgetcheck', 'Planning cushion after the target—not your bank balance.'),
+		}));
+		makeSection(
+			t('budgetcheck', 'Savings'),
+			t('budgetcheck', 'Your monthly savings goal and how much you moved aside.'),
+			savingsTiles,
+		);
+
+		if (budget) {
+			const saldoMinor = Number.parseInt(String(budget.remaining?.minor ?? 0), 10) || 0;
+			const unspentEnv = saldoMinor > 0
+				? budget.remaining
+				: { minor: 0, currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 };
+			const overspentEnv = saldoMinor < 0
+				? { minor: Math.abs(saldoMinor), currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 }
+				: { minor: 0, currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 };
+			makeSection(
+				t('budgetcheck', 'Everyday spending budget'),
+				t('budgetcheck', 'Planned spending on groceries, housing, and similar—excluding savings transfers.'),
+				[
+					makeTile(t('budgetcheck', 'Budget saldo'), budget.remaining, { primary: true }),
+					makeTile(t('budgetcheck', 'Not spent (under budget)'), unspentEnv),
+					makeTile(t('budgetcheck', 'Overspent (over budget)'), overspentEnv),
+				],
+			);
+		}
+
+		if (totals.tax && totals.taxBasis) {
+			makeSection(t('budgetcheck', 'Tax totals'), null, [
+				makeTile(t('budgetcheck', 'Tax net total'), totals.tax.net),
+				makeTile(t('budgetcheck', 'Tax VAT total'), totals.tax.vat),
+				makeTile(
+					t('budgetcheck', 'Tax gross total'),
+					totals.tax.gross,
+					{ hint: t('budgetcheck', 'Budget basis: {basis}').replace('{basis}', totals.taxBasis === 'net' ? t('budgetcheck', 'Net') : t('budgetcheck', 'Gross')) },
+				),
+			]);
+		}
+	}
+
+	window.BudgetCheckComponents = { createElement, openModal, confirmDialog, renderMonthlyLedgerHelp, renderHouseholdSummaryTiles };
 })();

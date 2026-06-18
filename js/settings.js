@@ -73,18 +73,36 @@
 			(defaultsData.defaults || []).forEach((row) => {
 				if (row && row.categoryId) defaultsMap.set(Number(row.categoryId), row);
 			});
-			const categories = (catData.categories || []).filter((c) => c.isActive && c.type === 'expense');
+			const categories = window.BudgetCheckConstants.budgetableCategories(catData.categories || []);
 			tbody.replaceChildren();
 			if (categories.length === 0) {
 				tbody.appendChild(C.createElement('tr', null, [
-					C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-loading', text: t('budgetcheck', 'Add a few expense categories first.') }),
+					C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-loading', text: t('budgetcheck', 'Add income or expense categories first.') }),
 				]));
 				return;
 			}
+			const decimals = workspaceBudgetDecimals();
+			let lastType = null;
 			categories.forEach((cat) => {
+				if (cat.type !== lastType) {
+					lastType = cat.type;
+					const sectionLabel = cat.type === 'income'
+						? t('budgetcheck', 'Income')
+						: t('budgetcheck', 'Expenses');
+					const sectionRow = C.createElement('tr', { class: 'bc-table__section' });
+					const th = C.createElement('th', {
+						attrs: { colspan: '3', scope: 'colgroup' },
+						class: 'bc-table__section-label',
+						text: sectionLabel,
+					});
+					sectionRow.appendChild(th);
+					tbody.appendChild(sectionRow);
+				}
 				const tr = C.createElement('tr');
 				tr.appendChild(C.createElement('td', { text: cat.name }));
-				tr.appendChild(C.createElement('td', { text: t('budgetcheck', 'Expense') }));
+				tr.appendChild(C.createElement('td', {
+					text: cat.type === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense'),
+				}));
 				const td = C.createElement('td', { class: 'bc-table__col--num' });
 				const input = C.createElement('input', {
 					type: 'text',
@@ -93,7 +111,6 @@
 					attrs: { 'aria-label': t('budgetcheck', 'Default amount') + ' ' + cat.name },
 				});
 				const env = defaultsMap.get(Number(cat.id))?.planned || null;
-				const decimals = workspaceBudgetDecimals();
 				input.value = env && typeof env.minor === 'number'
 					? (env.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',')
 					: '';
@@ -227,6 +244,8 @@
 			setVal(form, 'primaryPlanningYear', String(py));
 			const cb = form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]');
 			if (cb) cb.checked = !!Ws.workspace.autoCopyBudgetsFromPreviousMonth;
+			const specialsDefault = form.querySelector('input[name="includeSpecialsInTotalsDefault"]');
+			if (specialsDefault) specialsDefault.checked = !!Ws.workspace.includeSpecialsInTotalsDefault;
 			hydrateDefaultSavingsUi(form);
 		} else {
 			setVal(form, 'projectStartDate', Ws.workspace.projectStartDate ? String(Ws.workspace.projectStartDate) : '');
@@ -380,6 +399,7 @@
 				}
 				payload.primaryPlanningYear = py;
 				payload.autoCopyBudgetsFromPreviousMonth = !!form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]')?.checked;
+				payload.includeSpecialsInTotalsDefault = !!form.querySelector('input[name="includeSpecialsInTotalsDefault"]')?.checked;
 				const defaultMode = String(form.querySelector('input[name="defaultSavingsTargetMode"]:checked')?.value || '');
 				payload.defaultSavingsTargetMode = defaultMode;
 				if (defaultMode === '') {
@@ -632,7 +652,7 @@
 			(data.categories || []).forEach((c) => tbody.appendChild(renderCategoryRow(c)));
 			if ((data.categories || []).length === 0) {
 				tbody.appendChild(C.createElement('tr', null, [
-					C.createElement('td', { attrs: { colspan: '7' }, class: 'bc-loading', text: t('budgetcheck', 'No categories yet.') }),
+					C.createElement('td', { attrs: { colspan: '8' }, class: 'bc-loading', text: t('budgetcheck', 'No categories yet.') }),
 				]));
 			}
 		} catch (err) {
@@ -649,6 +669,7 @@
 		tr.appendChild(C.createElement('td', { text: cat.type === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
 		tr.appendChild(C.createElement('td', { text: categoryGroupKeyLabel(cat.groupKey) }));
 		tr.appendChild(C.createElement('td', { text: cat.isSpecial ? t('budgetcheck', 'Yes') : t('budgetcheck', 'No') }));
+		tr.appendChild(C.createElement('td', { text: cat.isSavingsTransfer ? t('budgetcheck', 'Yes') : t('budgetcheck', 'No') }));
 		tr.appendChild(C.createElement('td', { text: taxHandlingModeLabel(cat.taxHandlingMode) }));
 		tr.appendChild(C.createElement('td', { text: cat.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
 		if (Ws.canManage) {
@@ -735,6 +756,26 @@
 				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Enable this if entries in this category are usually one-off or exceptional.') }));
 				specialOuter.appendChild(specialRow);
 				form.appendChild(specialOuter);
+				const savingsOuter = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean', attrs: { 'data-bc-savings-transfer-wrap': '1' } });
+				savingsOuter.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Savings tracking') }));
+				const savingsRow = C.createElement('span', { class: 'bc-boolean-control' });
+				const savingsInput = C.createElement('input', { type: 'checkbox', name: 'isSavingsTransfer', value: '1' });
+				savingsInput.checked = !!(cat && cat.isSavingsTransfer);
+				savingsRow.appendChild(savingsInput);
+				savingsRow.appendChild(C.createElement('span', {
+					class: 'bc-boolean-control__text',
+					text: t('budgetcheck', 'Transfers in this category count toward your savings goal and are excluded from everyday budget saldo.'),
+				}));
+				savingsOuter.appendChild(savingsRow);
+				form.appendChild(savingsOuter);
+				const syncSavingsUi = () => {
+					savingsOuter.hidden = typeSelect.value !== 'expense';
+					if (typeSelect.value !== 'expense') {
+						savingsInput.checked = false;
+					}
+				};
+				typeSelect.addEventListener('change', syncSavingsUi);
+				syncSavingsUi();
 				form._collect = () => {
 					let groupKey = null;
 					const choice = groupSelect.value;
@@ -753,6 +794,7 @@
 						groupKey,
 						taxHandlingMode: taxSelect.value,
 						isSpecial: specialInput.checked,
+						isSavingsTransfer: savingsInput.checked,
 					};
 				};
 				return form;
@@ -1166,6 +1208,10 @@
 			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
 			render: () => {
 				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
+				form.appendChild(C.createElement('p', {
+					class: 'bc-field__hint bc-field__hint--block',
+					text: t('budgetcheck', 'Generate creates a planned entry on Transactions. A matching bank import or manual booking removes it automatically (same category, direction, amount, same or neighbouring month).'),
+				}));
 				const titleInput = C.createElement('input', { type: 'text', name: 'title', class: 'bc-input', maxlength: 180, required: true, value: rule ? rule.title : '' });
 				wrap(form, t('budgetcheck', 'Title'), titleInput, t('budgetcheck', 'Use a short name that explains what repeats.'));
 				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [

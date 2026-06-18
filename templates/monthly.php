@@ -43,8 +43,10 @@ $canManage = !empty($_['canManageWorkspace']);
 		<header class="bc-section__header">
 			<div>
 				<h2 id="bc-month-summary-title"><?php p($l->t('Totals')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Totals for this month, grouped so cash flow, savings, and everyday budgets are easy to tell apart.')); ?></p>
 				<p class="bc-section__sub" data-bc-summary-period></p>
 			</div>
+			<div class="bc-section__controls bc-specials-toggle-wrap" data-bc-specials-toggle hidden></div>
 		</header>
 		<div class="bc-summary-grid" data-bc-summary-grid aria-busy="true">
 			<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>

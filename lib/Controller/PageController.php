@@ -357,6 +357,12 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
+		if ($pageScript === 'dashboard') {
+			Util::addScript(Application::APP_ID, 'common/transaction-list');
+		}
+		if (in_array($pageScript, ['dashboard', 'monthly', 'yearly'], true)) {
+			Util::addScript(Application::APP_ID, 'common/specials-view');
+		}
 		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
 		Util::addScript(Application::APP_ID, 'common/catalog-pickers');
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {

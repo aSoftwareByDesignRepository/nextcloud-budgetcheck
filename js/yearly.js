@@ -13,10 +13,24 @@
 	let ws = null;
 	/** @type {any | null} */
 	let lastSummary = null;
+	let includeSpecials = false;
+	const SpecialsView = window.BudgetCheckSpecialsView;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		ws = Ws.workspace;
 		if (!ws || ws.type !== 'household') return;
+		if (SpecialsView) {
+			includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+			void SpecialsView.migrateLegacyLocalStorage(ws.id).then(() => {
+				includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+				if (lastSummary) {
+					const grid = document.querySelector('[data-bc-summary-grid]');
+					const months = document.querySelector('[data-bc-month-cards]');
+					renderTotals(grid, lastSummary);
+					renderMonths(months, lastSummary);
+				}
+			});
+		}
 		const helpBtn = document.querySelector('[data-bc-yearly-summary-help]');
 		const exportBtn = document.querySelector('[data-bc-yearly-export]');
 		const yearSelect = document.querySelector('[data-bc-year-picker]');
@@ -55,6 +69,18 @@
 			const summary = normalizeSummary(data && data.summary ? data.summary : null);
 			lastSummary = summary;
 			renderTotals(grid, summary);
+			const toggleHost = document.querySelector('[data-bc-specials-toggle]');
+			if (toggleHost && SpecialsView && ws) {
+				SpecialsView.mountToggle(toggleHost, {
+					workspaceId: ws.id,
+					hasSpecialTransactions: !!(summary.totals && summary.totals.hasSpecialTransactions),
+					onChange: (on) => {
+						includeSpecials = on;
+						renderTotals(grid, summary);
+						renderMonths(months, summary);
+					},
+				});
+			}
 			if (period) period.textContent = String(summary.year);
 			renderMonths(months, summary);
 		} catch (err) {
@@ -65,10 +91,28 @@
 		}
 	}
 
+	function resolveYearTotals(totals) {
+		if (!SpecialsView || !includeSpecials) {
+			return totals;
+		}
+		return SpecialsView.resolveCashFlowTotals(totals, true) || totals;
+	}
+
+	function resolveMonthTotals(month) {
+		if (!includeSpecials || !month.withSpecials) {
+			return month;
+		}
+		return Object.assign({}, month, {
+			income: month.withSpecials.income,
+			expense: month.withSpecials.expense,
+			netResult: month.withSpecials.netResult,
+		});
+	}
+
 	function renderTotals(grid, summary) {
 		if (!grid) return;
 		grid.replaceChildren();
-		const totals = summary.totals || {};
+		const totals = resolveYearTotals(summary.totals || {});
 		const ratio = normalizeRatio(totals.savingsAchievementRatio);
 		const tiles = [
 			[t('budgetcheck', 'Income'), totals.income],
@@ -103,18 +147,19 @@
 		if (!container) return;
 		container.replaceChildren();
 		(summary.months || []).forEach((m) => {
+			const display = resolveMonthTotals(m);
 			const url = Ws.withWorkspace(Ws.urls.monthly) + '&yearMonth=' + encodeURIComponent(m.yearMonth);
 			const klass = ['bc-month-card'];
 			if (m.overBudget) klass.push('bc-month-card--over');
 			if (m.isClosed) klass.push('bc-month-card--closed');
 			const card = C.createElement('a', { href: url, class: klass.join(' ') }, [
 				C.createElement('span', { class: 'bc-month-card__name', text: Dates.formatYearMonth(m.yearMonth, Ws.htmlLang) }),
-				C.createElement('span', { class: 'bc-month-card__net', text: Money.formatEnvelope(m.netResult, Ws.htmlLang) }),
+				C.createElement('span', { class: 'bc-month-card__net', text: Money.formatEnvelope(display.netResult, Ws.htmlLang) }),
 				C.createElement('span', {
 					class: 'bc-month-card__meta',
 					text: t('budgetcheck', 'In: {income} · Out: {expense}')
-						.replace('{income}', Money.formatEnvelope(m.income, Ws.htmlLang))
-						.replace('{expense}', Money.formatEnvelope(m.expense, Ws.htmlLang)),
+						.replace('{income}', Money.formatEnvelope(display.income, Ws.htmlLang))
+						.replace('{expense}', Money.formatEnvelope(display.expense, Ws.htmlLang)),
 				}),
 				C.createElement('span', {
 					class: 'bc-month-card__meta',

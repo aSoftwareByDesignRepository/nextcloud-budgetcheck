@@ -35,6 +35,7 @@ $workspace = $_['workspace'] ?? null;
 				<p class="bc-section__sub" data-bc-summary-period></p>
 			</div>
 			<div class="bc-section__controls bc-section__controls--stack bc-section__controls--yearly-help">
+				<div class="bc-specials-toggle-wrap" data-bc-specials-toggle hidden></div>
 				<button
 					type="button"
 					class="button"

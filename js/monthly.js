@@ -11,12 +11,24 @@
 
 	const state = { yearMonth: Dates.currentYearMonth(), summary: null };
 	let periodPicker = null;
+	let includeSpecials = false;
+	const SpecialsView = window.BudgetCheckSpecialsView;
 	/** @type {{ id: number, type: string, currencyCode: string } | null} */
 	let ws = null;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		ws = Ws.workspace;
 		if (!ws || ws.type !== 'household') return; // PageController also redirects, but be safe.
+		if (SpecialsView) {
+			includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+			void SpecialsView.migrateLegacyLocalStorage(ws.id).then(() => {
+				includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+				if (state.summary) {
+					const grid = document.querySelector('[data-bc-summary-grid]');
+					renderSummary(grid, state.summary);
+				}
+			});
+		}
 		const sp = new URLSearchParams(window.location.search);
 		const ym = sp.get('yearMonth');
 		if (ym && /^\d{4}-(0[1-9]|1[0-2])$/.test(ym)) state.yearMonth = ym;
@@ -91,51 +103,16 @@
 	}
 
 	function renderSummary(grid, summary) {
-		if (!grid) return;
-		grid.replaceChildren();
-		const totals = summary.totals || {};
-		[
-			[t('budgetcheck', 'Income'), totals.income],
-			[t('budgetcheck', 'Expenses'), totals.expense],
-			[t('budgetcheck', 'Net result'), totals.netResult, true],
-			[t('budgetcheck', 'Savings target'), totals.savingsTarget],
-			[t('budgetcheck', 'Available after savings'), totals.availableAfterSavings],
-		].forEach(([label, env, primary]) => {
-			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
-				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-				C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
-			]));
-		});
-		const budget = summary.budget || null;
-		if (budget) {
-			const saldoMinor = Number.parseInt(String(budget.remaining?.minor ?? 0), 10) || 0;
-			const unspentEnv = saldoMinor > 0
-				? budget.remaining
-				: { minor: 0, currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 };
-			const overspentEnv = saldoMinor < 0
-				? { minor: Math.abs(saldoMinor), currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 }
-				: { minor: 0, currency: Ws.workspace.currencyCode, decimals: Ws.workspace.currencyDecimals || 2 };
-			[
-				[t('budgetcheck', 'Budget saldo'), budget.remaining, true],
-				[t('budgetcheck', 'Not spent (under budget)'), unspentEnv],
-				[t('budgetcheck', 'Overspent (over budget)'), overspentEnv],
-			].forEach(([label, env, primary]) => {
-				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
-					C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-					C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
-				]));
-			});
-		}
-		if (totals.tax && totals.taxBasis) {
-			[
-				[t('budgetcheck', 'Tax net total'), totals.tax.net],
-				[t('budgetcheck', 'Tax VAT total'), totals.tax.vat],
-				[t('budgetcheck', 'Tax gross total'), totals.tax.gross],
-			].forEach(([label, env]) => {
-				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-					C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-					C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
-				]));
+		C.renderHouseholdSummaryTiles(grid, summary, Ws.htmlLang, { includeSpecials });
+		const toggleHost = document.querySelector('[data-bc-specials-toggle]');
+		if (toggleHost && SpecialsView && ws) {
+			SpecialsView.mountToggle(toggleHost, {
+				workspaceId: ws.id,
+				hasSpecialTransactions: !!(summary.totals && summary.totals.hasSpecialTransactions),
+				onChange: (on) => {
+					includeSpecials = on;
+					C.renderHouseholdSummaryTiles(grid, summary, Ws.htmlLang, { includeSpecials });
+				},
 			});
 		}
 	}
@@ -169,7 +146,24 @@
 			]));
 			return;
 		}
-		rows.forEach((row) => {
+		const everyday = rows.filter((row) => !row.isSavingsTransfer);
+		const savings = rows.filter((row) => row.isSavingsTransfer);
+		const appendSection = (label, sectionRows) => {
+			if (!sectionRows.length) return;
+			const sectionRow = C.createElement('tr', { class: 'bc-table__section' });
+			sectionRow.appendChild(C.createElement('th', {
+				attrs: { colspan: '4', scope: 'colgroup' },
+				class: 'bc-table__section-label',
+				text: label,
+			}));
+			tbody.appendChild(sectionRow);
+			sectionRows.forEach((row) => tbody.appendChild(renderConsumptionRow(row)));
+		};
+		appendSection(t('budgetcheck', 'Everyday spending'), everyday);
+		appendSection(t('budgetcheck', 'Savings transfers'), savings);
+	}
+
+	function renderConsumptionRow(row) {
 			const tr = C.createElement('tr');
 			const hasBudget = !!row.hasBudget && !!row.planned;
 			const actualMinor = Number.parseInt(String(row.actual?.minor ?? 0), 10) || 0;
@@ -195,10 +189,16 @@
 				actualClass += ' bc-tx-amount--expense';
 			}
 			tr.appendChild(C.createElement('td', { class: actualClass, text: Money.formatEnvelope(row.actual, Ws.htmlLang) }));
+			let remainingClass = 'bc-table__col--num';
+			if (remainingMinor !== null) {
+				if (direction === 'income') {
+					remainingClass += remainingMinor < 0 ? ' bc-tx-amount--income' : ' bc-tx-amount--expense';
+				} else {
+					remainingClass += remainingMinor < 0 ? ' bc-tx-amount--expense' : ' bc-tx-amount--income';
+				}
+			}
 			tr.appendChild(C.createElement('td', {
-				class: 'bc-table__col--num'
-					+ (remainingMinor !== null && remainingMinor < 0 ? ' bc-tx-amount--expense' : '')
-					+ (remainingMinor !== null && remainingMinor > 0 ? ' bc-tx-amount--income' : ''),
+				class: remainingClass,
 				text: remainingMinor === null
 					? '—'
 					: Money.formatEnvelope(
@@ -206,8 +206,7 @@
 						Ws.htmlLang
 					),
 			}));
-			tbody.appendChild(tr);
-		});
+		return tr;
 	}
 
 	function monthlyCategoryLink(categoryId) {
@@ -280,9 +279,7 @@
 				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth }),
 				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: ws.id }),
 			]);
-			categories = (data[0]?.categories || []).filter(
-				(cat) => cat.isActive && cat.type === 'expense' && cat.groupKey !== INTERNAL_UNCATEGORIZED_GROUP,
-			);
+			categories = window.BudgetCheckConstants.budgetableCategories(data[0]?.categories || []);
 			budgets = data[1]?.budgets || [];
 			defaults = data[2]?.defaults || [];
 		} catch (err) {
@@ -336,10 +333,24 @@
 				const tbody = C.createElement('tbody');
 				if (!categories.length) {
 					tbody.appendChild(C.createElement('tr', null, [
-						C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'No expense categories available.') }),
+						C.createElement('td', { attrs: { colspan: '5' }, class: 'bc-loading', text: t('budgetcheck', 'Add income or expense categories first.') }),
 					]));
 				} else {
+					let lastType = null;
 					categories.forEach((cat) => {
+						if (cat.type !== lastType) {
+							lastType = cat.type;
+							const sectionLabel = cat.type === 'income'
+								? t('budgetcheck', 'Income')
+								: t('budgetcheck', 'Expenses');
+							const sectionRow = C.createElement('tr', { class: 'bc-table__section' });
+							sectionRow.appendChild(C.createElement('th', {
+								attrs: { colspan: '5', scope: 'colgroup' },
+								class: 'bc-table__section-label',
+								text: sectionLabel,
+							}));
+							tbody.appendChild(sectionRow);
+						}
 						const defaultEnv = defaultPlannedByCategory.get(cat.id) || null;
 						const plannedEnv = monthPlannedByCategory.get(cat.id) || null;
 						const actualEnv = actualByCategory.get(cat.id) || { minor: 0, currency: ws.currencyCode, decimals };

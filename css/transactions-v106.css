@@ -323,6 +323,10 @@
 	background: var(--bc-tint-warning);
 	border-color: transparent;
 }
+.bc-tx-tag-pill--planned {
+	background: var(--bc-tint-info, color-mix(in srgb, var(--color-primary-element, #0082c9) 14%, transparent));
+	border-color: transparent;
+}
 
 /* Row action menu (kebab) */
 .bc-tx-actions { position: relative; }

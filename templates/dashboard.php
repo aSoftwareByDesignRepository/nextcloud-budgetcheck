@@ -83,6 +83,7 @@ $canContribute = !empty($_['canContribute']);
 					</fieldset>
 					<p id="bc-dash-month-hint" class="bc-section__control-hint"><?php p($l->t('Pick a calendar year and month for this snapshot.')); ?></p>
 				</div>
+				<div class="bc-section__controls bc-specials-toggle-wrap" data-bc-specials-toggle hidden></div>
 			<?php endif; ?>
 		</header>
 		<div class="bc-summary-grid" data-bc-summary-grid aria-busy="true">

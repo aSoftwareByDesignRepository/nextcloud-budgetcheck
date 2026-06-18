@@ -373,9 +373,9 @@ class TransactionService
 
 	/**
 	 * Resolve the (from,to) bounds we will apply to a transaction list query.
-	 * Project workspaces are clamped to their date window even if a wider range
-	 * was requested; household workspaces default to current calendar year up to
-	 * end of current month when the caller did not supply explicit bounds.
+	 * Project workspaces are clamped to their date window when bounds are omitted
+	 * or wider than the project. Household workspaces apply no date filter unless
+	 * the client sends explicit from/to (matches the Transactions “All time” preset).
 	 *
 	 * @return array{0:?string, 1:?string}
 	 */
@@ -396,16 +396,6 @@ class TransactionService
 			return [$from, $to];
 		}
 
-		if ($from === null && $to === null) {
-			$tz = new \DateTimeZone($workspace['timezone'] ?? 'UTC');
-			$now = $this->timeFactory->getDateTime('now', $tz);
-			$year = (int)$now->format('Y');
-			$month = (int)$now->format('m');
-			$from = sprintf('%04d-01-01', $year);
-			$to = (new \DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month), $tz))
-				->modify('last day of this month')
-				->format('Y-m-d');
-		}
 		return [$from, $to];
 	}
 
@@ -424,6 +414,17 @@ class TransactionService
 		$isSpecial = !empty($payload['isSpecial']) || ($category['isSpecial'] ?? false);
 		$externalRef = $this->normaliseExternalRef($payload['externalRef'] ?? null);
 		$bookingStatusId = $this->resolveBookingStatusId($workspace, $bookingStatus);
+		$isPlanned = !empty($payload['isPlanned']);
+		$recurringRuleId = isset($payload['recurringRuleId']) ? (int)$payload['recurringRuleId'] : null;
+		if ($recurringRuleId !== null && $recurringRuleId < 1) {
+			$recurringRuleId = null;
+		}
+		if ($isPlanned && $recurringRuleId === null) {
+			throw new \InvalidArgumentException('recurringRuleId is required when isPlanned is true.');
+		}
+		if (!$isPlanned && $recurringRuleId !== null) {
+			throw new \InvalidArgumentException('recurringRuleId is only allowed for planned entries.');
+		}
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
@@ -449,6 +450,8 @@ class TransactionService
 				'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
 				'external_ref' => $qb->createNamedParameter($externalRef),
 				'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+				'recurring_rule_id' => $qb->createNamedParameter($recurringRuleId, $recurringRuleId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+				'is_planned' => $qb->createNamedParameter($isPlanned, \PDO::PARAM_BOOL),
 				'version' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
 				'created_by' => $qb->createNamedParameter($userId),
 				'updated_by' => $qb->createNamedParameter($userId),
@@ -462,7 +465,20 @@ class TransactionService
 			'amountMinor' => $amount,
 			'direction' => $direction,
 			'date' => $bookingDate->format('Y-m-d'),
+			'isPlanned' => $isPlanned,
 		], $workspaceId);
+		if (!$isPlanned) {
+			(new PlannedTransactionMatchService($this->db, $this->audit, $this->timeFactory))
+				->replaceMatchingPlanned(
+					$workspaceId,
+					$userId,
+					(int)$category['id'],
+					$direction,
+					$amount,
+					$bookingDate->format('Y-m-d'),
+					$id,
+				);
+		}
 		return $this->loadHydrated($id, $workspace['currencyCode']);
 	}
 
@@ -819,6 +835,10 @@ class TransactionService
 			'isSpecial' => (bool)$row['is_special'],
 			'externalRef' => $row['external_ref'] !== null ? (string)$row['external_ref'] : null,
 			'bookingStatusId' => $row['booking_status_id'] === null ? null : (int)$row['booking_status_id'],
+			'recurringRuleId' => isset($row['recurring_rule_id']) && $row['recurring_rule_id'] !== null
+				? (int)$row['recurring_rule_id']
+				: null,
+			'isPlanned' => (bool)($row['is_planned'] ?? false),
 			'version' => (int)$row['version'],
 			'createdBy' => (string)$row['created_by'],
 			'updatedBy' => (string)$row['updated_by'],

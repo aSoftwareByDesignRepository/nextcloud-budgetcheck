@@ -56,6 +56,12 @@ class WarningEngine
 			if (($row['plannedMinor'] ?? 0) <= 0) {
 				continue;
 			}
+			$direction = (string)($row['direction'] ?? '');
+			if ($direction === CategoryService::TYPE_INCOME) {
+				// Income targets use the same planned/actual fields but exceeding the
+				// target is desirable — never emit expense-style overspend warnings.
+				continue;
+			}
 			$categoryId = (int)($row['categoryId'] ?? 0);
 			$planned = (int)$row['plannedMinor'];
 			$actual = (int)($row['actualMinor'] ?? 0);

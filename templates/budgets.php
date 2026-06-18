@@ -79,7 +79,7 @@ $canManage = !empty($_['canManageWorkspace']);
 			<header class="bc-section__header">
 				<div>
 					<h2 id="bc-savings-title"><?php p($l->t('Savings target')); ?></h2>
-					<p class="bc-section__sub"><?php p($l->t('A household can save by percentage of income, an absolute amount, or whichever is larger.')); ?></p>
+					<p class="bc-section__sub"><?php p($l->t('A household can save by percentage of income, an absolute amount, or whichever is larger. Progress appears on the dashboard and yearly overview—no need to tag individual transactions.')); ?></p>
 				</div>
 			</header>
 			<form class="bc-form-grid" data-bc-savings-form>

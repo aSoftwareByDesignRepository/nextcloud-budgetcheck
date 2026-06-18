@@ -13,6 +13,9 @@
 	let ws = null;
 	let isHousehold = false;
 	let dashPeriodPicker = null;
+	let lastSummary = null;
+	let includeSpecials = false;
+	const SpecialsView = window.BudgetCheckSpecialsView;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		ws = Ws.workspace;
@@ -20,6 +23,18 @@
 			return;
 		}
 		isHousehold = ws.type === 'household';
+		if (isHousehold && SpecialsView) {
+			includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+			void SpecialsView.migrateLegacyLocalStorage(ws.id).then(() => {
+				includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+				if (lastSummary) {
+					const grid = document.querySelector('[data-bc-summary-grid]');
+					if (grid) {
+						C.renderHouseholdSummaryTiles(grid, lastSummary, Ws.htmlLang, { includeSpecials });
+					}
+				}
+			});
+		}
 		const summarySection = document.querySelector('[data-bc-summary]');
 		const box = summarySection?.querySelector('[data-bc-household-period]');
 		const Period = window.BudgetCheckHouseholdPeriod;
@@ -93,16 +108,21 @@
 	}
 
 	function renderTxListItem(tx) {
-		const directionLabel = tx.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense');
+		const TxList = window.BudgetCheckTransactionList;
+		const meta = TxList
+			? TxList.recentListMeta(tx, Ws.htmlLang)
+			: { text: Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang), fullNote: null };
+		const metaAttrs = meta.fullNote ? { title: meta.fullNote } : {};
+		const directionPrefix = tx.direction === 'income' ? t('budgetcheck', 'Income:') : t('budgetcheck', 'Expense:');
 		const amount = Money.formatEnvelope(tx.amount, Ws.htmlLang);
-		const metaParts = [Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang), directionLabel];
+		const metaParts = [meta.text];
 		if (tx.entryAmountBasis === 'gross') metaParts.push(t('budgetcheck', 'Gross'));
 		if (tx.entryAmountBasis === 'net') metaParts.push(t('budgetcheck', 'Net'));
 		if (Number.isInteger(tx.vatRateBp)) metaParts.push(t('budgetcheck', 'VAT {rate}%').replace('{rate}', (tx.vatRateBp / 100).toString()));
 		return C.createElement('li', { class: 'bc-tx-list__item' }, [
 			C.createElement('div', null, [
 				C.createElement('div', { class: 'bc-tx-list__title', text: tx.title }),
-				C.createElement('div', { class: 'bc-tx-list__meta', text: metaParts.join(' · ') }),
+				C.createElement('div', { class: 'bc-tx-list__meta', attrs: metaAttrs, text: metaParts.join(' · ') }),
 				(tx.entryAmountBasis && tx.entryAmountBasis !== 'simple' && tx.net && tx.vat && tx.gross)
 					? C.createElement('div', {
 						class: 'bc-tx-list__meta',
@@ -115,12 +135,32 @@
 			]),
 			C.createElement('div', {
 				class: 'bc-tx-list__amount ' + (tx.direction === 'income' ? 'bc-tx-amount--income' : 'bc-tx-amount--expense'),
-				text: (tx.direction === 'income' ? '+' : '−') + ' ' + amount,
-			}),
+			}, [
+				C.createElement('span', { class: 'bc-sr-only', text: directionPrefix + ' ' }),
+				document.createTextNode((tx.direction === 'income' ? '+' : '−') + ' ' + amount),
+			]),
 		]);
 	}
 
 	function renderSummaryGrid(grid, summary) {
+		if (isHousehold) {
+			lastSummary = summary;
+			C.renderHouseholdSummaryTiles(grid, summary, Ws.htmlLang, { includeSpecials });
+			const toggleHost = document.querySelector('[data-bc-specials-toggle]');
+			if (toggleHost && SpecialsView) {
+				SpecialsView.mountToggle(toggleHost, {
+					workspaceId: ws.id,
+					hasSpecialTransactions: !!(summary.totals && summary.totals.hasSpecialTransactions),
+					onChange: (on) => {
+						includeSpecials = on;
+						if (lastSummary && grid) {
+							C.renderHouseholdSummaryTiles(grid, lastSummary, Ws.htmlLang, { includeSpecials });
+						}
+					},
+				});
+			}
+			return;
+		}
 		grid.replaceChildren();
 		const totals = summary.totals || {};
 		const tiles = [];
@@ -136,10 +176,7 @@
 				{ hint: t('budgetcheck', 'Budget basis: {basis}').replace('{basis}', totals.taxBasis === 'net' ? t('budgetcheck', 'Net') : t('budgetcheck', 'Gross')) }
 			));
 		}
-		if (isHousehold) {
-			tiles.push(makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget));
-			tiles.push(makeTile(t('budgetcheck', 'Available after savings'), totals.availableAfterSavings, { hint: t('budgetcheck', 'After income − expenses − savings target') }));
-		} else if (summary.allTime && summary.allTime.cap) {
+		if (summary.allTime && summary.allTime.cap) {
 			tiles.push(makeTile(t('budgetcheck', 'Cap'), summary.allTime.cap, { hint: t('budgetcheck', 'Project total cap') }));
 			tiles.push(makeTile(t('budgetcheck', 'Spent so far'), summary.allTime.expense));
 			tiles.push(makeTile(t('budgetcheck', 'Remaining headroom'), summary.allTime.remainingHeadroom, { primary: true }));

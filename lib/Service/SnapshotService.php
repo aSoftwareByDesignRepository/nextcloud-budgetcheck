@@ -121,6 +121,7 @@ class SnapshotService
 			'expenseMinor' => (int)($totals['expense']['minor'] ?? 0),
 			'netResultMinor' => (int)($totals['netResult']['minor'] ?? 0),
 			'savingsTargetMinor' => (int)($totals['savingsTarget']['minor'] ?? 0),
+			'savingsTransferredMinor' => (int)($totals['savingsTransferred']['minor'] ?? 0),
 			'availableAfterSavingsMinor' => (int)($totals['availableAfterSavings']['minor'] ?? 0),
 			'specialIncomeMinor' => (int)($totals['specialIncome']['minor'] ?? 0),
 			'specialExpenseMinor' => (int)($totals['specialExpense']['minor'] ?? 0),

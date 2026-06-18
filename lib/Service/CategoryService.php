@@ -19,6 +19,9 @@ use OCP\IDBConnection;
  *   keep referring to the archived row by id, so renames never lose history.
  * - The optional `group_key` lets users tag related categories (e.g. "boat",
  *   "car") without inventing a new entity.
+ * - `is_savings_transfer` marks expense categories used for money moved to
+ *   savings. Those bookings stay in total expenses (bank mirror) but are
+ *   excluded from everyday budget saldo and count toward savings progress.
  */
 class CategoryService
 {
@@ -96,6 +99,7 @@ class CategoryService
 		$type = $this->normaliseType((string)($payload['type'] ?? ''));
 		$groupKey = $this->normaliseGroupKey($payload['groupKey'] ?? null);
 		$isSpecial = !empty($payload['isSpecial']);
+		$isSavingsTransfer = $this->normaliseIsSavingsTransfer($payload['isSavingsTransfer'] ?? false, $type);
 		$taxMode = $this->normaliseTaxMode((string)($payload['taxHandlingMode'] ?? 'inherit_workspace'));
 
 		$this->ensureUniqueActive($workspaceId, $name, $type);
@@ -109,6 +113,7 @@ class CategoryService
 				'type' => $qb->createNamedParameter($type),
 				'group_key' => $qb->createNamedParameter($groupKey),
 				'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
+				'is_savings_transfer' => $qb->createNamedParameter($isSavingsTransfer, \PDO::PARAM_BOOL),
 				'tax_handling_mode' => $qb->createNamedParameter($taxMode),
 				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
 				'created_by' => $qb->createNamedParameter($userId),
@@ -152,6 +157,13 @@ class CategoryService
 			if ($isSpecial !== $category['isSpecial']) {
 				$updates['is_special'] = $isSpecial;
 				$logChanges['isSpecial'] = $isSpecial;
+			}
+		}
+		if (array_key_exists('isSavingsTransfer', $payload)) {
+			$isSavingsTransfer = $this->normaliseIsSavingsTransfer($payload['isSavingsTransfer'], $category['type']);
+			if ($isSavingsTransfer !== $category['isSavingsTransfer']) {
+				$updates['is_savings_transfer'] = $isSavingsTransfer;
+				$logChanges['isSavingsTransfer'] = $isSavingsTransfer;
 			}
 		}
 		if (array_key_exists('taxHandlingMode', $payload)) {
@@ -304,6 +316,7 @@ class CategoryService
 			'type' => (string)$row['type'],
 			'groupKey' => $row['group_key'] !== null ? (string)$row['group_key'] : null,
 			'isSpecial' => (bool)$row['is_special'],
+			'isSavingsTransfer' => (bool)($row['is_savings_transfer'] ?? false),
 			'taxHandlingMode' => (string)$row['tax_handling_mode'],
 			'isActive' => (bool)$row['is_active'],
 			'createdBy' => (string)$row['created_by'],
@@ -372,6 +385,16 @@ class CategoryService
 			throw new \InvalidArgumentException('groupKey may only contain letters, digits, spaces, underscore and hyphen.');
 		}
 		return $value;
+	}
+
+	private function normaliseIsSavingsTransfer(mixed $value, string $categoryType): bool
+	{
+		$flag = !empty($value);
+		if ($flag && $categoryType !== self::TYPE_EXPENSE) {
+			throw new \InvalidArgumentException('isSavingsTransfer applies to expense categories only.');
+		}
+
+		return $flag;
 	}
 
 	private function normaliseTaxMode(string $mode): string
