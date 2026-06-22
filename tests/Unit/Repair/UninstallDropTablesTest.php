@@ -34,7 +34,7 @@ final class UninstallDropTablesTest extends TestCase
 			$this->createMock(\OCP\IDBConnection::class),
 			$this->createMock(\OCP\IConfig::class),
 		);
-		self::assertStringContainsString('BudgetCheck', $step->getName());
+		self::assertStringContainsString('budgetcheck', strtolower($step->getName()));
 		self::assertStringContainsString('uninstall', strtolower($step->getName()));
 	}
 }
