@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\BudgetCheck\AppInfo;
 
+use OCP\Lock\ILockingProvider;
+use OCP\Files\IRootFolder;
+use OCP\App\IAppManager;
+use OCA\BudgetCheck\Service\UpgradeBackupService;
+use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCA\BudgetCheck\Listener\GroupDeletedListener;
 use OCA\BudgetCheck\Listener\UserDeletedListener;
 use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
@@ -289,8 +294,26 @@ class Application extends App implements IBootstrap
 			return new UninstallDropTables(
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(\OCP\IConfig::class),
+				$c->query(IRootFolder::class),
 			);
 		});
+		$context->registerService(UpgradeBackupService::class, function ($c): UpgradeBackupService {
+			return new UpgradeBackupService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(IRootFolder::class),
+				$c->query(IAppManager::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+
+		$context->registerService(BackupBeforeUpdate::class, function ($c): BackupBeforeUpdate {
+			return new BackupBeforeUpdate(
+				$c->query(UpgradeBackupService::class),
+			);
+		});
+
 
 		// React to permanent user deletions: remove memberships, scrub configured
 		// app-admin entries. Snapshots and historical ledger rows stay intact for audit.

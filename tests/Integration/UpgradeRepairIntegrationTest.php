@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Tests\Integration;
 
 use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
 use OCA\BudgetCheck\Repair\UninstallDropTables;
+use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCP\Migration\IOutput;
 use Test\TestCase;
 
@@ -16,6 +17,7 @@ class UpgradeRepairIntegrationTest extends TestCase
 		foreach ([
 			EnsureBudgetCheckSchema::class,
 			UninstallDropTables::class,
+			BackupBeforeUpdate::class,
 		] as $class) {
 			$step = \OC::$server->get($class);
 			$this->assertInstanceOf($class, $step);

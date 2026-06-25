@@ -148,7 +148,10 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 			<icon>app.svg</icon>
 			<order>11</order>
 		</navigation>
-	</navigations>
+	</navigations>	<commands>
+		<command>OCA\BudgetCheck\Command\UpgradeBackupCommand</command>
+	</commands>
+
 	<repair-steps>
 		<install>
 			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
@@ -159,5 +162,8 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 		<uninstall>
 			<step>OCA\BudgetCheck\Repair\UninstallDropTables</step>
 		</uninstall>
-	</repair-steps>
+		<pre-migration>
+			<step>OCA\BudgetCheck\Repair\BackupBeforeUpdate</step>
+		</pre-migration>
+</repair-steps>
 </info>
