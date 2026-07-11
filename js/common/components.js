@@ -215,7 +215,8 @@
 		instance._open = true;
 		openInstance = instance;
 
-		const firstField = focusables(dialog)[0] || primaryBtn;
+		const bodyFocusables = focusables(bodyContainer);
+		const firstField = bodyFocusables[0] || primaryBtn;
 		firstField.focus();
 		return instance;
 	}

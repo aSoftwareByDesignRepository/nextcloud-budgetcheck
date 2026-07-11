@@ -288,6 +288,9 @@
 
 	async function generatePlannedFromBudgets() {
 		if (!ws) return;
+		const btn = document.querySelector('[data-bc-action="generate-planned-budgets"]');
+		btn?.setAttribute('aria-busy', 'true');
+		if (btn) btn.disabled = true;
 		try {
 			const res = await Api.post('/apps/budgetcheck/api/budgets/generate-planned', {
 				workspaceId: ws.id,
@@ -298,6 +301,9 @@
 			renderRows();
 		} catch (err) {
 			Msg.handleApiError(err);
+		} finally {
+			btn?.setAttribute('aria-busy', 'false');
+			if (btn) btn.disabled = false;
 		}
 	}
 

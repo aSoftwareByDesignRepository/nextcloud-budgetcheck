@@ -428,13 +428,14 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 								<th scope="col" class="bc-table__col--num"><?php p($l->t('Amount')); ?></th>
 								<th scope="col"><?php p($l->t('Frequency')); ?></th>
 								<th scope="col"><?php p($l->t('Next due')); ?></th>
+								<th scope="col"><?php p($l->t('End date')); ?></th>
 								<th scope="col"><?php p($l->t('Status')); ?></th>
 								<th scope="col" class="bc-sr-only"><?php p($l->t('Actions')); ?></th>
 							</tr>
 						</thead>
 						<tbody data-bc-recurring-rows>
 							<tr>
-								<td colspan="7" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
+								<td colspan="8" class="bc-loading"><?php p($l->t('Loading…')); ?></td>
 							</tr>
 						</tbody>
 					</table>

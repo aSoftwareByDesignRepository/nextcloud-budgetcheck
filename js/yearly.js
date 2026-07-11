@@ -154,11 +154,26 @@
 		(summary.months || []).forEach((m) => {
 			const display = resolveMonthTotals(m);
 			const url = Ws.withWorkspace(Ws.urls.monthly) + '&yearMonth=' + encodeURIComponent(m.yearMonth);
+			const monthLabel = Dates.formatYearMonth(m.yearMonth, Ws.htmlLang);
 			const klass = ['bc-month-card'];
 			if (m.overBudget) klass.push('bc-month-card--over');
 			if (m.isClosed) klass.push('bc-month-card--closed');
-			const card = C.createElement('a', { href: url, class: klass.join(' ') }, [
-				C.createElement('span', { class: 'bc-month-card__name', text: Dates.formatYearMonth(m.yearMonth, Ws.htmlLang) }),
+			const statusParts = [];
+			if (m.overBudget) statusParts.push(t('budgetcheck', 'Over budget'));
+			if (m.isClosed) statusParts.push(t('budgetcheck', 'Closed'));
+			const ariaLabel = statusParts.length
+				? monthLabel + ' — ' + statusParts.join(', ')
+				: monthLabel;
+			const cardChildren = [
+				C.createElement('span', { class: 'bc-month-card__name', text: monthLabel }),
+			];
+			if (statusParts.length) {
+				cardChildren.push(C.createElement('span', { class: 'bc-month-card__badges' }, statusParts.map((label) => C.createElement('span', {
+					class: 'bc-month-card__badge',
+					text: label,
+				}))));
+			}
+			cardChildren.push(
 				C.createElement('span', { class: 'bc-month-card__net', text: Money.formatEnvelope(display.netResult, Ws.htmlLang) }),
 				C.createElement('span', {
 					class: 'bc-month-card__meta',
@@ -171,10 +186,12 @@
 					text: t('budgetcheck', 'Budget saldo: {saldo}')
 						.replace('{saldo}', Money.formatEnvelope(m.budget?.saldo, Ws.htmlLang)),
 				}),
-				m.isClosed
-					? C.createElement('span', { class: 'bc-month-card__meta', text: t('budgetcheck', 'Closed') })
-					: null,
-			]);
+			);
+			const card = C.createElement('a', {
+				href: url,
+				class: klass.join(' '),
+				attrs: { 'aria-label': ariaLabel },
+			}, cardChildren);
 			container.appendChild(C.createElement('li', null, [card]));
 		});
 	}

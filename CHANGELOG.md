@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.21] - 2026-07-11
+
+### Fixed
+
+- **Planned entries in summaries:** dashboard, monthly, yearly, and close snapshots now exclude `is_planned` placeholder rows from income/expense/budget actual totals (they remain visible on the ledger until matched).
+- **Recurring generate:** batch generation runs in a DB transaction, skips duplicate dates idempotently, blocks closed months, and deactivates rules that have passed their end date.
+- **Budget planned sync:** month sync is transactional; zero-target categories no longer throw a misleading 403 when no budget row exists.
+
+### Changed
+
+- Recurring rules table shows end date; modal adds active/inactive toggle and stronger end-date warnings (live region + save confirm).
+- Yearly month cards show text badges for over-budget and closed states; recurring action buttons have unique accessible names.
+- Modal focus lands on the first form field; dashboard warnings include severity text for screen readers.
+
 ## [1.0.20] - 2026-07-11
 
 ### Fixed

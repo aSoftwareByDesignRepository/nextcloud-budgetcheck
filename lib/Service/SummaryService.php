@@ -465,6 +465,11 @@ class SummaryService
 		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
 
 		foreach ($rows as $row) {
+			if (!empty($row['is_planned'])) {
+				// Planned placeholders live on the ledger for visibility but must not
+				// inflate income, expense, budget actuals, or close evidence.
+				continue;
+			}
 			$isSpecial = (bool)$row['is_special'];
 			$countsForPlanning = !$excludeSpecials || !$isSpecial;
 			$amountMinor = (int)$row['amount_minor'];
@@ -603,6 +608,9 @@ class SummaryService
 		$basis = $workspace['taxBudgetBasis'] ?? 'gross';
 		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
 		foreach ($rows as $row) {
+			if (!empty($row['is_planned'])) {
+				continue;
+			}
 			if ($excludeSpecials && (bool)$row['is_special']) {
 				continue;
 			}

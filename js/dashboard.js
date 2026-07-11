@@ -491,10 +491,14 @@
 
 	function renderWarning(warning) {
 		const sev = warning.severity || 'info';
-		const item = C.createElement('li', { class: 'bc-warning bc-warning--' + sev });
+		const severityLabel = sev === 'critical'
+			? t('budgetcheck', 'Critical')
+			: (sev === 'warning' ? t('budgetcheck', 'Warning') : t('budgetcheck', 'Info'));
+		const titleText = (warning.title || warning.code || '').trim();
+		const item = C.createElement('li', { class: 'bc-warning bc-warning--' + sev, attrs: { role: 'status' } });
 		item.appendChild(C.createElement('span', { 'aria-hidden': 'true', text: sev === 'critical' ? '!' : (sev === 'warning' ? '⚠' : 'i') }));
 		const body = C.createElement('div');
-		body.appendChild(C.createElement('div', { class: 'bc-warning__title', text: warning.title || warning.code }));
+		body.appendChild(C.createElement('div', { class: 'bc-warning__title', text: severityLabel + (titleText ? ': ' + titleText : '') }));
 		body.appendChild(C.createElement('div', { class: 'bc-warning__message', text: warning.message || '' }));
 		item.appendChild(body);
 		const recovery = warning.recovery;

@@ -1182,7 +1182,7 @@
 			(data.rules || []).forEach((r) => tbody.appendChild(renderRecurringRow(r)));
 			if ((data.rules || []).length === 0) {
 				tbody.appendChild(C.createElement('tr', null, [
-					C.createElement('td', { attrs: { colspan: '7' }, class: 'bc-loading', text: t('budgetcheck', 'No recurring rules.') }),
+					C.createElement('td', { attrs: { colspan: '8' }, class: 'bc-loading', text: t('budgetcheck', 'No recurring rules.') }),
 				]));
 			}
 		} catch (err) {
@@ -1195,6 +1195,7 @@
 
 	function renderRecurringRow(rule) {
 		const tr = C.createElement('tr');
+		const ruleLabel = rule.title || ('#' + rule.id);
 		tr.appendChild(C.createElement('td', { text: rule.title }));
 		tr.appendChild(C.createElement('td', { text: rule.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
 		tr.appendChild(C.createElement('td', { class: 'bc-table__col--num', text: Money.formatEnvelope(rule.amount, Ws.htmlLang) }));
@@ -1202,21 +1203,44 @@
 			text: recurringFrequencyLabel(rule.frequency) + (rule.intervalCount > 1 ? ' \u00d7 ' + rule.intervalCount : ''),
 		}));
 		tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang) }));
+		tr.appendChild(C.createElement('td', {
+			text: rule.endDate ? Dates.formatDisplayDate(rule.endDate, Ws.htmlLang) : t('budgetcheck', 'Open-ended'),
+		}));
 		tr.appendChild(C.createElement('td', { text: rule.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
 		const actions = C.createElement('td', { class: 'bc-recurring-actions-cell' });
-		const actionsGroup = C.createElement('div', { class: 'bc-recurring-actions', attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions') } });
-		const gen = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Generate next') });
+		const actionsGroup = C.createElement('div', { class: 'bc-recurring-actions', attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for {title}').replace('{title}', ruleLabel) } });
+		const gen = C.createElement('button', {
+			type: 'button',
+			class: 'button',
+			text: t('budgetcheck', 'Generate next'),
+			attrs: { 'aria-label': t('budgetcheck', 'Generate next for {title}').replace('{title}', ruleLabel) },
+		});
 		gen.addEventListener('click', () => generateRecurring(rule));
 		actionsGroup.appendChild(gen);
 		if (rule.endDate) {
-			const genFull = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Generate full period') });
+			const genFull = C.createElement('button', {
+				type: 'button',
+				class: 'button',
+				text: t('budgetcheck', 'Generate full period'),
+				attrs: { 'aria-label': t('budgetcheck', 'Generate full period for {title}').replace('{title}', ruleLabel) },
+			});
 			genFull.addEventListener('click', () => generateRecurring(rule, { fullPeriod: true }));
 			actionsGroup.appendChild(genFull);
 		}
-		const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
+		const edit = C.createElement('button', {
+			type: 'button',
+			class: 'button',
+			text: t('budgetcheck', 'Edit'),
+			attrs: { 'aria-label': t('budgetcheck', 'Edit rule {title}').replace('{title}', ruleLabel) },
+		});
 		edit.addEventListener('click', () => openRecurringModal(rule));
 		actionsGroup.appendChild(edit);
-		const del = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Delete') });
+		const del = C.createElement('button', {
+			type: 'button',
+			class: 'button danger',
+			text: t('budgetcheck', 'Delete'),
+			attrs: { 'aria-label': t('budgetcheck', 'Delete rule {title}').replace('{title}', ruleLabel) },
+		});
 		del.addEventListener('click', () => deleteRecurring(rule));
 		actionsGroup.appendChild(del);
 		actions.appendChild(actionsGroup);
@@ -1306,16 +1330,22 @@
 				syncIntervalUi();
 				const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 				const startDh = 'bc-rec-dh-s-' + Math.random().toString(36).slice(2);
+				const startPurposeId = 'bc-rec-start-purpose-' + Math.random().toString(36).slice(2);
 				const startInput = C.createElement('input', {
 					type: 'date', name: 'startDate', class: 'bc-input', autocomplete: 'off', required: true,
 					value: rule ? String(rule.startDate) : Dates.isoDate(new Date()),
-					attrs: { 'aria-describedby': startDh, lang: Ws.htmlLang },
+					attrs: { 'aria-describedby': startPurposeId + ' ' + startDh, lang: Ws.htmlLang },
+				});
+				const startPurposeHint = C.createElement('span', {
+					id: startPurposeId,
+					class: 'bc-field__hint',
+					text: t('budgetcheck', 'First date when this rule can create a booking.'),
 				});
 				const startHint = C.createElement('span', { id: startDh, class: 'bc-field__hint', text: dateHintText });
 				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Start date') }),
 					startInput,
-					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'First date when this rule can create a booking.') }),
+					startPurposeHint,
 					startHint,
 				]));
 				const endDh = 'bc-rec-dh-e-' + Math.random().toString(36).slice(2);
@@ -1348,13 +1378,37 @@
 						&& end === start
 						&& Dates.isIsoCalendarDay(start)
 						&& Dates.isIsoCalendarDay(end);
+					const wasHidden = endSameDayWarning.hidden;
 					endSameDayWarning.hidden = !show;
+					if (show && wasHidden) {
+						Msg.announce(endSameDayWarning.textContent || '', 'error');
+					}
 				};
 				startInput.addEventListener('input', syncEndDateWarning);
 				startInput.addEventListener('change', syncEndDateWarning);
 				endInput.addEventListener('input', syncEndDateWarning);
 				endInput.addEventListener('change', syncEndDateWarning);
 				syncEndDateWarning();
+				const isActiveInput = C.createElement('input', {
+					type: 'checkbox',
+					name: 'isActive',
+					value: '1',
+					checked: rule ? !!rule.isActive : true,
+				});
+				form.appendChild(C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' }, [
+					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Rule status') }),
+					C.createElement('span', { class: 'bc-boolean-control' }, [
+						isActiveInput,
+						C.createElement('span', {
+							class: 'bc-boolean-control__text',
+							text: t('budgetcheck', 'Rule is active'),
+						}),
+					]),
+					C.createElement('span', {
+						class: 'bc-field__hint',
+						text: t('budgetcheck', 'Inactive rules stay listed but cannot generate new planned entries.'),
+					}),
+				]));
 				let realignToggle = null;
 				let realignDateInput = null;
 				let realignDateWrap = null;
@@ -1426,6 +1480,7 @@
 					intervalCount: freqSelect.value === 'custom_interval' ? (Number.parseInt(intervalSelect.value, 10) || 2) : 1,
 					startDate: startInput.value.trim(),
 					endDate: endInput.value.trim(),
+					isActive: isActiveInput.checked,
 					realignNextDue: !!(realignToggle && realignToggle.checked),
 					realignFromDate: realignDateInput ? realignDateInput.value.trim() : '',
 				});

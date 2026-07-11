@@ -1856,6 +1856,36 @@ button.bc-dash-action {
 	text-align: center;
 }
 
+.bc-table-scroll:focus-visible {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+
+.bc-month-card:focus-visible {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+
+.bc-month-card__badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-1);
+}
+.bc-month-card__badge {
+	display: inline-block;
+	padding: 0.1rem 0.45rem;
+	border-radius: var(--bc-radius-pill, 999px);
+	font-size: var(--bc-fs-xs);
+	font-weight: 600;
+	line-height: 1.3;
+	background: var(--bc-tint-warning);
+	color: var(--color-main-text, #1d1d1d);
+	border: 1px solid var(--bc-border);
+}
+.bc-month-card--closed .bc-month-card__badge {
+	background: var(--bc-tint-info);
+}
+
 /* Month grid (yearly) */
 .bc-month-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--bc-space-3); }
 .bc-month-card {

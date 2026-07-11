@@ -54,92 +54,104 @@ final class BudgetPlannedService
 
 		$stats = ['created' => 0, 'updated' => 0, 'removed' => 0, 'skipped' => 0];
 
-		foreach ($plannedMap as $categoryKey => $plannedMinor) {
-			$categoryId = (int)$categoryKey;
-			if ($categoryId < 1) {
-				continue;
-			}
-			if ($uncatId !== null && $categoryId === $uncatId) {
-				continue;
-			}
-			$cat = $categoriesById[$categoryId] ?? null;
-			if ($cat === null || empty($cat['isActive'])) {
-				continue;
-			}
-			if (!empty($cat['isSavingsTransfer'])) {
-				continue;
-			}
-			$direction = (string)($cat['type'] ?? '');
-			if ($direction !== CategoryService::TYPE_INCOME && $direction !== CategoryService::TYPE_EXPENSE) {
-				continue;
-			}
-
-			$plannedMinor = max(0, (int)$plannedMinor);
-			$budgetRow = $this->ensureBudgetRow($workspaceId, $userId, $ym, $categoryId, $plannedMinor);
-			$budgetId = (int)$budgetRow['id'];
-
-			$existing = $this->loadPlannedForBudget($workspaceId, $budgetId);
-
-			if ($plannedMinor === 0) {
-				if ($existing !== null) {
-					$this->softDeletePlanned($existing, $userId, $workspaceId);
-					$stats['removed']++;
+		$this->db->beginTransaction();
+		try {
+			foreach ($plannedMap as $categoryKey => $plannedMinor) {
+				$categoryId = (int)$categoryKey;
+				if ($categoryId < 1) {
+					continue;
 				}
-				continue;
-			}
+				if ($uncatId !== null && $categoryId === $uncatId) {
+					continue;
+				}
+				$cat = $categoriesById[$categoryId] ?? null;
+				if ($cat === null || empty($cat['isActive'])) {
+					continue;
+				}
+				if (!empty($cat['isSavingsTransfer'])) {
+					continue;
+				}
+				$direction = (string)($cat['type'] ?? '');
+				if ($direction !== CategoryService::TYPE_INCOME && $direction !== CategoryService::TYPE_EXPENSE) {
+					continue;
+				}
 
-			if ($this->hasRealBookingInMonth($workspaceId, $categoryId, $direction, $ym)) {
-				if ($existing !== null) {
-					$this->softDeletePlanned($existing, $userId, $workspaceId);
-					$stats['removed']++;
+				$plannedMinor = max(0, (int)$plannedMinor);
+				$budgetRow = $this->loadBudgetRow($workspaceId, $ym, $categoryId);
+				$budgetId = $budgetRow !== null ? (int)$budgetRow['id'] : null;
+				$existing = $budgetId !== null ? $this->loadPlannedForBudget($workspaceId, $budgetId) : null;
+
+				if ($plannedMinor === 0) {
+					if ($existing !== null) {
+						$this->softDeletePlanned($existing, $userId, $workspaceId);
+						$stats['removed']++;
+					}
+					continue;
+				}
+
+				$budgetRow = $this->ensureBudgetRow($workspaceId, $userId, $ym, $categoryId, $plannedMinor);
+				$budgetId = (int)$budgetRow['id'];
+				$existing = $this->loadPlannedForBudget($workspaceId, $budgetId);
+
+				if ($this->hasRealBookingInMonth($workspaceId, $categoryId, $direction, $ym)) {
+					if ($existing !== null) {
+						$this->softDeletePlanned($existing, $userId, $workspaceId);
+						$stats['removed']++;
+					} else {
+						$stats['skipped']++;
+					}
+					continue;
+				}
+
+				if ($this->hasRecurringPlannedInMonth($workspaceId, $categoryId, $direction, $ym)) {
+					$stats['skipped']++;
+					continue;
+				}
+
+				$bookingDate = $ym . '-01';
+				$title = (string)$cat['name'];
+
+				if ($existing === null) {
+					$this->transactions->create($workspaceId, $userId, [
+						'categoryId' => $categoryId,
+						'direction' => $direction,
+						'bookingDate' => $bookingDate,
+						'amountMinor' => $plannedMinor,
+						'title' => $title,
+						'isSpecial' => false,
+						'isPlanned' => true,
+						'budgetId' => $budgetId,
+					], $workspace, $cat);
+					$stats['created']++;
+					continue;
+				}
+
+				$needsUpdate = (int)$existing['amount_minor'] !== $plannedMinor
+					|| (string)$existing['booking_date'] !== $bookingDate
+					|| (int)$existing['category_id'] !== $categoryId
+					|| (string)$existing['direction'] !== $direction;
+				if ($needsUpdate) {
+					$this->updatePlannedRow($existing, $userId, $workspace, [
+						'amount_minor' => $plannedMinor,
+						'booking_date' => $bookingDate,
+						'category_id' => $categoryId,
+						'direction' => $direction,
+						'title' => $title,
+					]);
+					$stats['updated']++;
 				} else {
 					$stats['skipped']++;
 				}
-				continue;
 			}
 
-			if ($this->hasRecurringPlannedInMonth($workspaceId, $categoryId, $direction, $ym)) {
-				$stats['skipped']++;
-				continue;
+			$this->cleanupStaleBudgetPlanned($workspaceId, $userId, $ym, $plannedMap, $uncatId, $categoriesById, $stats);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
 			}
-
-			$bookingDate = $ym . '-01';
-			$title = (string)$cat['name'];
-
-			if ($existing === null) {
-				$this->transactions->create($workspaceId, $userId, [
-					'categoryId' => $categoryId,
-					'direction' => $direction,
-					'bookingDate' => $bookingDate,
-					'amountMinor' => $plannedMinor,
-					'title' => $title,
-					'isSpecial' => false,
-					'isPlanned' => true,
-					'budgetId' => $budgetId,
-				], $workspace, $cat);
-				$stats['created']++;
-				continue;
-			}
-
-			$needsUpdate = (int)$existing['amount_minor'] !== $plannedMinor
-				|| (string)$existing['booking_date'] !== $bookingDate
-				|| (int)$existing['category_id'] !== $categoryId
-				|| (string)$existing['direction'] !== $direction;
-			if ($needsUpdate) {
-				$this->updatePlannedRow($existing, $userId, $workspace, [
-					'amount_minor' => $plannedMinor,
-					'booking_date' => $bookingDate,
-					'category_id' => $categoryId,
-					'direction' => $direction,
-					'title' => $title,
-				]);
-				$stats['updated']++;
-			} else {
-				$stats['skipped']++;
-			}
+			throw $e;
 		}
-
-		$this->cleanupStaleBudgetPlanned($workspaceId, $userId, $ym, $plannedMap, $uncatId, $categoriesById, $stats);
 
 		$this->audit->record($userId, 'budget_planned_synced', 'budget', $ym, $stats, $workspaceId);
 
@@ -153,9 +165,12 @@ final class BudgetPlannedService
 	 */
 	private function ensureBudgetRow(int $workspaceId, string $userId, string $yearMonth, int $categoryId, int $plannedMinor): array
 	{
+		if ($plannedMinor < 1) {
+			throw new \InvalidArgumentException('plannedMinor must be positive when ensuring a budget row.');
+		}
 		$existing = $this->loadBudgetRow($workspaceId, $yearMonth, $categoryId);
 		if ($existing !== null) {
-			if ((int)$existing['planned_minor'] !== $plannedMinor && $plannedMinor > 0) {
+			if ((int)$existing['planned_minor'] !== $plannedMinor) {
 				$now = $this->utcNow();
 				$qb = $this->db->getQueryBuilder();
 				$qb->update('bc_budgets')
@@ -167,9 +182,6 @@ final class BudgetPlannedService
 				$existing['planned_minor'] = $plannedMinor;
 			}
 			return $existing;
-		}
-		if ($plannedMinor === 0) {
-			throw new AccessDeniedException();
 		}
 		$now = $this->utcNow();
 		$qb = $this->db->getQueryBuilder();

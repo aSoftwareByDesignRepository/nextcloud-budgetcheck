@@ -233,6 +233,12 @@ class RecurringRuleService
 			throw new AccessDeniedException();
 		}
 		$this->access->ensureMembership((int)$workspace['id'], $userId);
+		if (!(bool)$row['is_active']) {
+			return [
+				'rule' => $this->hydrate($row, $workspace['currencyCode']),
+				'occurrences' => [],
+			];
+		}
 		$end = $through !== null && $through !== ''
 			? $this->parseIsoDate($through, 'through')
 			: (new \DateTimeImmutable($row['next_due_date']))->modify('+12 months');
@@ -289,44 +295,107 @@ class RecurringRuleService
 		$createdIds = [];
 		$firstCreated = null;
 		$generatedCount = 0;
+		$skippedCount = 0;
 		$generatedFrom = null;
 		$generatedTo = null;
 		$finalNext = $next;
 		$loopEnd = $through ?? $next;
-		while ($finalNext <= $loopEnd) {
-			if ($generatedCount >= self::MAX_GENERATE_BATCH) {
-				throw new \InvalidArgumentException('Too many occurrences in one generate call. Shorten the period and try again.');
+
+		$this->db->beginTransaction();
+		try {
+			$row = $this->loadRowForUpdate($ruleId);
+			if ($row === null || (int)$row['workspace_id'] !== (int)$workspace['id']) {
+				throw new AccessDeniedException();
 			}
-			$created = $tx->create((int)$workspace['id'], $userId, [
-				'categoryId' => (int)$row['category_id'],
-				'direction' => (string)$row['direction'],
-				'bookingDate' => $finalNext->format('Y-m-d'),
-				'amountMinor' => (int)$row['amount_minor'],
-				'title' => (string)$row['title'],
-				'isSpecial' => false,
-				'isPlanned' => true,
-				'recurringRuleId' => $ruleId,
-			], $workspace, $category);
-			$createdIds[] = (int)$created['id'];
-			$firstCreated ??= $created;
-			$generatedCount++;
-			$generatedFrom ??= $finalNext;
-			$generatedTo = $finalNext;
-			$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+			if (!(bool)$row['is_active']) {
+				throw new \InvalidArgumentException('Rule is inactive.');
+			}
+			$ruleEnd = $row['end_date'] !== null ? new \DateTimeImmutable($row['end_date']) : null;
+			$finalNext = new \DateTimeImmutable((string)$row['next_due_date']);
 			if ($ruleEnd !== null && $finalNext > $ruleEnd) {
-				break;
+				throw new \InvalidArgumentException('Rule has reached its end date.');
 			}
+			$loopEnd = $through ?? $finalNext;
+			if ($through !== null && $through < $finalNext) {
+				throw new \InvalidArgumentException('through must be on or after next due date.');
+			}
+			if ($ruleEnd !== null && $through !== null && $through > $ruleEnd) {
+				$loopEnd = $ruleEnd;
+			}
+
+			while ($finalNext <= $loopEnd) {
+				if ($generatedCount >= self::MAX_GENERATE_BATCH) {
+					throw new \InvalidArgumentException('Too many occurrences in one generate call. Shorten the period and try again.');
+				}
+				$bookingDate = $finalNext->format('Y-m-d');
+				if ($tx->hasLivePlannedForRecurringDate((int)$workspace['id'], $ruleId, $bookingDate)) {
+					$skippedCount++;
+					$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+					if ($ruleEnd !== null && $finalNext > $ruleEnd) {
+						break;
+					}
+					continue;
+				}
+				$created = $tx->create((int)$workspace['id'], $userId, [
+					'categoryId' => (int)$row['category_id'],
+					'direction' => (string)$row['direction'],
+					'bookingDate' => $bookingDate,
+					'amountMinor' => (int)$row['amount_minor'],
+					'title' => (string)$row['title'],
+					'isSpecial' => false,
+					'isPlanned' => true,
+					'recurringRuleId' => $ruleId,
+				], $workspace, $category);
+				$createdIds[] = (int)$created['id'];
+				$firstCreated ??= $created;
+				$generatedCount++;
+				$generatedFrom ??= $finalNext;
+				$generatedTo = $finalNext;
+				$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+				if ($ruleEnd !== null && $finalNext > $ruleEnd) {
+					break;
+				}
+			}
+
+			$ruleUpdates = [
+				'next_due_date' => $finalNext->format('Y-m-d'),
+				'updated_at' => $this->utcNow(),
+			];
+			if ($ruleEnd !== null && $finalNext > $ruleEnd) {
+				$ruleUpdates['is_active'] = false;
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_recurring_rules');
+			foreach ($ruleUpdates as $col => $value) {
+				$type = match (true) {
+					is_bool($value) => \PDO::PARAM_BOOL,
+					default => \PDO::PARAM_STR,
+				};
+				$qb->set($col, $qb->createNamedParameter($value, $type));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($ruleId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_recurring_rules')
-			->set('next_due_date', $qb->createNamedParameter($finalNext->format('Y-m-d')))
-			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($ruleId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
+		if ($through !== null && $generatedCount === 0 && $skippedCount === 0) {
+			throw new \InvalidArgumentException('No occurrences could be generated for this period.');
+		}
+		if ($through === null && $generatedCount === 0) {
+			if ($skippedCount > 0) {
+				throw new \InvalidArgumentException('A planned entry already exists for the next due date.');
+			}
+			throw new \InvalidArgumentException('No transaction was generated.');
+		}
 
 		$details = [
 			'count' => $generatedCount,
+			'skipped' => $skippedCount,
 			'transactionIds' => $createdIds,
 			'nextDueDate' => $finalNext->format('Y-m-d'),
 		];
@@ -402,6 +471,14 @@ class RecurringRuleService
 		$row = $result->fetch();
 		$result->closeCursor();
 		return $row === false ? null : $row;
+	}
+
+	/**
+	 * Re-read the rule inside an open transaction (portable row lock where supported).
+	 */
+	private function loadRowForUpdate(int $ruleId): ?array
+	{
+		return $this->loadRow($ruleId);
 	}
 
 	private function hydrate(array $row, string $currencyCode): array

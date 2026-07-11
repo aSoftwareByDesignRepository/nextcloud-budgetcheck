@@ -432,6 +432,18 @@ class TransactionService
 		if ($isPlanned && $recurringRuleId !== null && $budgetId !== null) {
 			throw new \InvalidArgumentException('Planned entries cannot reference both recurringRuleId and budgetId.');
 		}
+		if ($isPlanned && ($workspace['type'] ?? '') === WorkspaceService::TYPE_HOUSEHOLD) {
+			$ym = substr($bookingDate->format('Y-m-d'), 0, 7);
+			if ($this->monthIsClosed($workspaceId, $ym)) {
+				throw new \InvalidArgumentException('Month is closed. Reopen it before creating planned entries.');
+			}
+		}
+		if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
+			throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
+		}
+		if ($isPlanned && $budgetId !== null && $this->hasLivePlannedForBudget($workspaceId, $budgetId)) {
+			throw new \InvalidArgumentException('A planned entry already exists for this budget target.');
+		}
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
@@ -965,6 +977,43 @@ class TransactionService
 			->from('bc_monthly_snapshots')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('year_month', $qb->createNamedParameter($yearMonth)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0) > 0;
+	}
+
+	public function hasLivePlannedForRecurringDate(int $workspaceId, int $recurringRuleId, string $bookingDate): bool
+	{
+		if ($recurringRuleId < 1 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDate)) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('recurring_rule_id', $qb->createNamedParameter($recurringRuleId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('booking_date', $qb->createNamedParameter($bookingDate)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0) > 0;
+	}
+
+	public function hasLivePlannedForBudget(int $workspaceId, int $budgetId): bool
+	{
+		if ($budgetId < 1) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('budget_id', $qb->createNamedParameter($budgetId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
