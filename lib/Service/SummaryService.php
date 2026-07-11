@@ -284,6 +284,7 @@ class SummaryService
 		$totalLedgerIncome = 0;
 		$totalLedgerExpense = 0;
 		$savingsAchievedTotal = 0;
+		$savingsTowardTargetTotal = 0;
 		$savingsTargetTotal = 0;
 		$budgetPlannedTotal = 0;
 		$budgetActualTotal = 0;
@@ -349,12 +350,15 @@ class SummaryService
 			$budgetUnspentTotal += $budgetUnspentMinor;
 			$budgetOverspentTotal += $budgetOverspentMinor;
 			$savingsTransferredMinor = (int)($figures['savingsTransferredMinor'] ?? 0);
-			if ($tracksSavingsTransfers) {
-				$savingsAchievedTotal += min($savingsTargetMinor, $savingsTransferredMinor);
-			} else {
-				$cashAfterExpenses = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'];
-				$savingsAchievedTotal += min($savingsTargetMinor, max(0, $cashAfterExpenses));
-			}
+			$monthSavings = $this->yearlySavingsMonthContributions(
+				$savingsTargetMinor,
+				$savingsTransferredMinor,
+				$figures['totalIncomeMinor'],
+				$figures['totalExpenseMinor'],
+				$tracksSavingsTransfers,
+			);
+			$savingsAchievedTotal += $monthSavings['achievedMinor'];
+			$savingsTowardTargetTotal += $monthSavings['towardTargetMinor'];
 			$months[] = [
 				'yearMonth' => $ym,
 				'income' => $this->money->envelope($figures['totalIncomeMinor'], $workspace['currencyCode']),
@@ -363,6 +367,7 @@ class SummaryService
 				'hasSpecialTransactions' => $this->hasSpecialTransactions($figures),
 				'withSpecials' => $this->buildWithSpecialsEnvelope($workspace, $figures, $savingsTargetMinor),
 				'savingsTarget' => $this->money->envelope($savingsTargetMinor, $workspace['currencyCode']),
+				'savingsAchieved' => $this->money->envelope($monthSavings['achievedMinor'], $workspace['currencyCode']),
 				'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $workspace['currencyCode']),
 				'budget' => [
 					'plannedTotal' => $this->money->envelope($plannedTotalMinor, $workspace['currencyCode']),
@@ -375,7 +380,7 @@ class SummaryService
 				'isClosed' => $this->loadSnapshot($workspaceId, $ym) !== null,
 			];
 		}
-		$achievementRatio = $savingsTargetTotal > 0 ? min(1.0, $savingsAchievedTotal / $savingsTargetTotal) : null;
+		$achievementRatio = $savingsTargetTotal > 0 ? min(1.0, $savingsTowardTargetTotal / $savingsTargetTotal) : null;
 		$yearFigures = [
 			'totalIncomeMinor' => $totalIncome,
 			'totalExpenseMinor' => $totalExpense,
@@ -835,6 +840,33 @@ class SummaryService
 	private function excludeSpecialsFromPlanningTotals(array $workspace): bool
 	{
 		return ($workspace['type'] ?? '') === WorkspaceService::TYPE_HOUSEHOLD;
+	}
+
+	/**
+	 * Yearly savings tiles use two distinct figures:
+	 *  - achievedMinor: actual money set aside (savings-transfer categories, or income surplus)
+	 *  - towardTargetMinor: capped per month for the achievement ratio vs the yearly target
+	 *
+	 * @return array{achievedMinor:int, towardTargetMinor:int}
+	 */
+	private function yearlySavingsMonthContributions(
+		int $savingsTargetMinor,
+		int $savingsTransferredMinor,
+		int $totalIncomeMinor,
+		int $totalExpenseMinor,
+		bool $tracksSavingsTransfers,
+	): array {
+		if ($tracksSavingsTransfers) {
+			return [
+				'achievedMinor' => $savingsTransferredMinor,
+				'towardTargetMinor' => min($savingsTargetMinor, $savingsTransferredMinor),
+			];
+		}
+		$surplusMinor = max(0, $totalIncomeMinor - $totalExpenseMinor);
+		return [
+			'achievedMinor' => $surplusMinor,
+			'towardTargetMinor' => min($savingsTargetMinor, $surplusMinor),
+		];
 	}
 
 	/**

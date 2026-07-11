@@ -1319,18 +1319,42 @@
 					startHint,
 				]));
 				const endDh = 'bc-rec-dh-e-' + Math.random().toString(36).slice(2);
+				const endSameDayWarningId = 'bc-rec-end-same-' + Math.random().toString(36).slice(2);
 				const endInput = C.createElement('input', {
 					type: 'date', name: 'endDate', class: 'bc-input', autocomplete: 'off',
 					value: rule && rule.endDate ? String(rule.endDate) : '',
-					attrs: { 'aria-describedby': endDh, lang: Ws.htmlLang },
+					attrs: { 'aria-describedby': endDh + ' ' + endSameDayWarningId, lang: Ws.htmlLang },
 				});
 				const endHint = C.createElement('span', { id: endDh, class: 'bc-field__hint', text: dateHintText });
+				const endSameDayWarning = C.createElement('p', {
+					id: endSameDayWarningId,
+					class: 'bc-field__warning',
+					hidden: true,
+					attrs: { role: 'alert' },
+					text: t('budgetcheck', 'Start and end date are the same. This rule can create at most one booking on that day and will not repeat afterward. Clear the end date if it should continue on your repeat schedule.'),
+				});
 				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'End date (optional)') }),
 					endInput,
 					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Leave empty if this rule should continue indefinitely.') }),
 					endHint,
+					endSameDayWarning,
 				]));
+				const syncEndDateWarning = () => {
+					const start = startInput.value.trim();
+					const end = endInput.value.trim();
+					const show = end !== ''
+						&& start !== ''
+						&& end === start
+						&& Dates.isIsoCalendarDay(start)
+						&& Dates.isIsoCalendarDay(end);
+					endSameDayWarning.hidden = !show;
+				};
+				startInput.addEventListener('input', syncEndDateWarning);
+				startInput.addEventListener('change', syncEndDateWarning);
+				endInput.addEventListener('input', syncEndDateWarning);
+				endInput.addEventListener('change', syncEndDateWarning);
+				syncEndDateWarning();
 				let realignToggle = null;
 				let realignDateInput = null;
 				let realignDateWrap = null;
@@ -1421,6 +1445,16 @@
 				if (payload.endDate !== '' && payload.endDate < payload.startDate) {
 					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
 					return false;
+				}
+				if (payload.endDate !== '' && payload.endDate === payload.startDate) {
+					const proceed = await C.confirmDialog({
+						title: t('budgetcheck', 'Same start and end date?'),
+						body: t('budgetcheck', 'Only one planned booking can be created on this date. Clear the end date if you want the rule to repeat on your schedule.'),
+						confirmLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
+					});
+					if (!proceed) {
+						return false;
+					}
 				}
 				try {
 					Money.parseHuman(payload.amount, decimals);

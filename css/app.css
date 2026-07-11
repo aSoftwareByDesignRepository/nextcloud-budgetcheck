@@ -541,6 +541,18 @@
 	max-width: 52ch;
 }
 
+.bc-field__warning {
+	display: block;
+	margin: var(--bc-space-2) 0 0;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border-left: 3px solid var(--color-warning, #c98600);
+	background: var(--bc-tint-warning);
+	color: var(--color-main-text, #1d1d1d);
+	font-size: var(--bc-fs-sm);
+	line-height: 1.45;
+	max-width: 52ch;
+}
+
 .bc-chip-list {
 	list-style: none;
 	margin: var(--bc-space-2) 0 var(--bc-space-3);

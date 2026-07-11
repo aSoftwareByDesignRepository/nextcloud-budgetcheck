@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.20] - 2026-07-11
+
+### Fixed
+
+- **Yearly savings achieved (#10):** the annual “Savings achieved” total now sums actual savings transfers (matching the monthly “Saved this month” tile) instead of capping each month at the savings target. The achievement percentage still measures progress toward the yearly target.
+- **Recurring rule end date (#11):** the rule editor warns when start and end date are the same (one booking only) and asks for confirmation before saving.
+
 ## [1.0.19] - 2026-06-19
 
 ### Added
