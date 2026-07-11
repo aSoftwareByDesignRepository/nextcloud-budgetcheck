@@ -14,6 +14,7 @@ use OCA\BudgetCheck\Exception\ValidationException;
 use OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
+use OCA\BudgetCheck\Service\BudgetPlannedService;
 use OCA\BudgetCheck\Service\BudgetService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
@@ -73,6 +74,7 @@ class ApiController extends Controller
 		private TransactionService $transactions,
 		private RecurringRuleService $recurring,
 		private BudgetService $budgets,
+		private BudgetPlannedService $budgetPlanned,
 		private BookingStatusService $bookingStatuses,
 		private TransactionImportService $transactionImport,
 		private ImportPreferencesService $importPreferences,
@@ -716,7 +718,37 @@ class ApiController extends Controller
 			}
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'budget_write', 60, 300);
-			return ['budgets' => $this->budgets->bulkUpsert($workspaceId, $userId, $ym, $rows, $workspace)];
+			$budgets = $this->budgets->bulkUpsert($workspaceId, $userId, $ym, $rows, $workspace);
+			$out = ['budgets' => $budgets];
+			$generate = !empty($payload['generatePlanned']);
+			if (!$generate && array_key_exists('generatePlanned', $payload) === false) {
+				$generate = (bool)($workspace['generatePlannedFromBudgetsDefault'] ?? false);
+			}
+			if ($generate && ($workspace['type'] ?? null) === WorkspaceService::TYPE_HOUSEHOLD) {
+				$out['plannedSync'] = $this->budgetPlanned->syncMonth($workspaceId, $userId, $ym, $workspace);
+			}
+			return $out;
+		});
+	}
+
+	#[NoAdminRequired]
+	public function generatePlannedFromBudgets(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			$ym = (string)($payload['yearMonth'] ?? '');
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			if ($ym === '') {
+				throw new \InvalidArgumentException('yearMonth is required.');
+			}
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'budget_planned_generate', 30, 300);
+			return [
+				'plannedSync' => $this->budgetPlanned->syncMonth($workspaceId, $userId, $ym, $workspace),
+			];
 		});
 	}
 

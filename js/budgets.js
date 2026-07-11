@@ -48,6 +48,13 @@
 		document.querySelectorAll('[data-bc-action="save-budgets"]').forEach((btn) => {
 			btn.addEventListener('click', () => saveBudgets());
 		});
+		document.querySelectorAll('[data-bc-action="generate-planned-budgets"]').forEach((btn) => {
+			btn.addEventListener('click', () => generatePlannedFromBudgets());
+		});
+		const generateOnSave = document.querySelector('[data-bc-generate-planned-on-save]');
+		if (generateOnSave && ws && ws.generatePlannedFromBudgetsDefault) {
+			generateOnSave.checked = true;
+		}
 		const savingsForm = document.querySelector('[data-bc-savings-form]');
 		if (savingsForm) {
 			savingsForm.addEventListener('submit', (e) => { e.preventDefault(); saveSavingsTarget(savingsForm); });
@@ -243,14 +250,50 @@
 			Msg.announce(e.message, 'error');
 			return;
 		}
+		const generatePlanned = !!document.querySelector('[data-bc-generate-planned-on-save]')?.checked;
 		try {
-			await Api.post('/apps/budgetcheck/api/budgets/bulk-upsert', {
-				workspaceId: ws.id, yearMonth: state.yearMonth, rows,
+			const res = await Api.post('/apps/budgetcheck/api/budgets/bulk-upsert', {
+				workspaceId: ws.id, yearMonth: state.yearMonth, rows, generatePlanned,
 			});
 			Msg.announce(t('budgetcheck', 'Budgets saved.'), 'success');
+			announcePlannedSync(res.plannedSync);
 			state.dirty.clear();
 			toggleSaveButton(false);
 			await loadBudgets();
+			await loadSummary();
+			renderRows();
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	function announcePlannedSync(sync) {
+		if (!sync) return;
+		const created = Number.parseInt(String(sync.created ?? 0), 10) || 0;
+		const updated = Number.parseInt(String(sync.updated ?? 0), 10) || 0;
+		const removed = Number.parseInt(String(sync.removed ?? 0), 10) || 0;
+		if (created + updated + removed === 0) {
+			return;
+		}
+		if (created === 1 && updated === 0 && removed === 0) {
+			Msg.announce(t('budgetcheck', '1 planned entry created from budget targets.'), 'success');
+			return;
+		}
+		if (created > 0 && updated === 0 && removed === 0) {
+			Msg.announce(t('budgetcheck', '{count} planned entries created from budget targets.').replace('{count}', String(created)), 'success');
+			return;
+		}
+		Msg.announce(t('budgetcheck', 'Planned entries synced from budgets.'), 'success');
+	}
+
+	async function generatePlannedFromBudgets() {
+		if (!ws) return;
+		try {
+			const res = await Api.post('/apps/budgetcheck/api/budgets/generate-planned', {
+				workspaceId: ws.id,
+				yearMonth: state.yearMonth,
+			});
+			announcePlannedSync(res.plannedSync);
 			await loadSummary();
 			renderRows();
 		} catch (err) {

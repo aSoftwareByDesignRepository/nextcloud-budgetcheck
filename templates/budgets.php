@@ -66,11 +66,23 @@ $canManage = !empty($_['canManageWorkspace']);
 			</table>
 		</div>
 		<?php if ($canManage): ?>
-			<div class="bc-form-actions">
-				<button type="button" class="button primary" data-bc-action="save-budgets" disabled>
-					<?php p($l->t('Save changes')); ?>
-				</button>
+			<div class="bc-form-actions bc-form-actions--split">
+				<label class="bc-field bc-field--boolean bc-budget-generate-opt">
+					<span class="bc-boolean-control">
+						<input type="checkbox" data-bc-generate-planned-on-save value="1">
+						<span class="bc-boolean-control__text"><?php p($l->t('Also create planned ledger entries when saving')); ?></span>
+					</span>
+				</label>
+				<div class="bc-form-actions__buttons">
+					<button type="button" class="button" data-bc-action="generate-planned-budgets">
+						<?php p($l->t('Generate planned entries')); ?>
+					</button>
+					<button type="button" class="button primary" data-bc-action="save-budgets" disabled>
+						<?php p($l->t('Save changes')); ?>
+					</button>
+				</div>
 			</div>
+			<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('Planned entries reflect your category budget targets for this month. A real booking in the same category removes the placeholder automatically (any amount, same or neighbouring month).')); ?></p>
 		<?php endif; ?>
 	</section>
 

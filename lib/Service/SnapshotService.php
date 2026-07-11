@@ -142,6 +142,15 @@ class SnapshotService
 		return json_encode($picked, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 	}
 
+	public function isMonthClosed(int $workspaceId, string $yearMonth): bool
+	{
+		$ym = trim($yearMonth);
+		if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $ym)) {
+			return false;
+		}
+		return $this->loadSnapshotRow($workspaceId, $ym) !== null;
+	}
+
 	private function loadSnapshotRow(int $workspaceId, string $yearMonth): ?array
 	{
 		$qb = $this->db->getQueryBuilder();

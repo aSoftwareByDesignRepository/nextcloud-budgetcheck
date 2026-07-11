@@ -419,11 +419,18 @@ class TransactionService
 		if ($recurringRuleId !== null && $recurringRuleId < 1) {
 			$recurringRuleId = null;
 		}
-		if ($isPlanned && $recurringRuleId === null) {
-			throw new \InvalidArgumentException('recurringRuleId is required when isPlanned is true.');
+		$budgetId = isset($payload['budgetId']) ? (int)$payload['budgetId'] : null;
+		if ($budgetId !== null && $budgetId < 1) {
+			$budgetId = null;
 		}
-		if (!$isPlanned && $recurringRuleId !== null) {
-			throw new \InvalidArgumentException('recurringRuleId is only allowed for planned entries.');
+		if ($isPlanned && $recurringRuleId === null && $budgetId === null) {
+			throw new \InvalidArgumentException('Planned entries require recurringRuleId or budgetId.');
+		}
+		if (!$isPlanned && ($recurringRuleId !== null || $budgetId !== null)) {
+			throw new \InvalidArgumentException('recurringRuleId and budgetId are only allowed for planned entries.');
+		}
+		if ($isPlanned && $recurringRuleId !== null && $budgetId !== null) {
+			throw new \InvalidArgumentException('Planned entries cannot reference both recurringRuleId and budgetId.');
 		}
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
@@ -451,6 +458,7 @@ class TransactionService
 				'external_ref' => $qb->createNamedParameter($externalRef),
 				'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'recurring_rule_id' => $qb->createNamedParameter($recurringRuleId, $recurringRuleId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+				'budget_id' => $qb->createNamedParameter($budgetId, $budgetId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'is_planned' => $qb->createNamedParameter($isPlanned, \PDO::PARAM_BOOL),
 				'version' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
 				'created_by' => $qb->createNamedParameter($userId),
@@ -841,6 +849,9 @@ class TransactionService
 			'bookingStatusId' => $row['booking_status_id'] === null ? null : (int)$row['booking_status_id'],
 			'recurringRuleId' => isset($row['recurring_rule_id']) && $row['recurring_rule_id'] !== null
 				? (int)$row['recurring_rule_id']
+				: null,
+			'budgetId' => isset($row['budget_id']) && $row['budget_id'] !== null
+				? (int)$row['budget_id']
 				: null,
 			'isPlanned' => (bool)($row['is_planned'] ?? false),
 			'version' => (int)$row['version'],

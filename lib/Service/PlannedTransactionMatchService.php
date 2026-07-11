@@ -65,14 +65,64 @@ final class PlannedTransactionMatchService
 			return null;
 		}
 
+		$budgetPick = $this->pickBudgetPlannedReplacement(
+			$workspaceId,
+			$categoryId,
+			$direction,
+			$bookingDate,
+		);
+		if ($budgetPick !== null) {
+			$this->softDeletePlanned(
+				(int)$budgetPick['id'],
+				(int)$budgetPick['version'],
+				$userId,
+				$workspaceId,
+				$realTransactionId,
+			);
+			return (int)$budgetPick['id'];
+		}
+
+		$recurringPick = $this->pickRecurringPlannedReplacement(
+			$workspaceId,
+			$categoryId,
+			$direction,
+			$amountMinor,
+			$bookingDate,
+		);
+		if ($recurringPick === null) {
+			return null;
+		}
+
+		$this->softDeletePlanned(
+			(int)$recurringPick['id'],
+			(int)$recurringPick['version'],
+			$userId,
+			$workspaceId,
+			$realTransactionId,
+		);
+
+		return (int)$recurringPick['id'];
+	}
+
+	/**
+	 * Budget-sourced planned rows match on category and month only (amount may differ).
+	 *
+	 * @return array{id:int, version:int}|null
+	 */
+	private function pickBudgetPlannedReplacement(
+		int $workspaceId,
+		int $categoryId,
+		string $direction,
+		string $bookingDate,
+	): ?array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id', 'booking_date', 'version')
 			->from('bc_transactions')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter($direction)))
-			->andWhere($qb->expr()->eq('amount_minor', $qb->createNamedParameter($amountMinor, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNotNull('budget_id'))
 			->andWhere($qb->expr()->isNull('deleted_at'));
 		$result = $qb->executeQuery();
 		$candidates = [];
@@ -83,30 +133,74 @@ final class PlannedTransactionMatchService
 			}
 			$candidates[] = [
 				'id' => (int)$row['id'],
-				'bookingDate' => $plannedDate,
 				'version' => (int)$row['version'],
 				'distance' => abs(strtotime($plannedDate) - strtotime($bookingDate)),
 			];
 		}
 		$result->closeCursor();
 
+		return self::pickClosestCandidate($candidates);
+	}
+
+	/**
+	 * Recurring-sourced planned rows require an exact amount match.
+	 *
+	 * @return array{id:int, version:int}|null
+	 */
+	private function pickRecurringPlannedReplacement(
+		int $workspaceId,
+		int $categoryId,
+		string $direction,
+		int $amountMinor,
+		string $bookingDate,
+	): ?array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'booking_date', 'version')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter($direction)))
+			->andWhere($qb->expr()->eq('amount_minor', $qb->createNamedParameter($amountMinor, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNotNull('recurring_rule_id'))
+			->andWhere($qb->expr()->isNull('budget_id'))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		$result = $qb->executeQuery();
+		$candidates = [];
+		while ($row = $result->fetch()) {
+			$plannedDate = (string)($row['booking_date'] ?? '');
+			if (!self::calendarMonthsAreAdjacent($plannedDate, $bookingDate)) {
+				continue;
+			}
+			$candidates[] = [
+				'id' => (int)$row['id'],
+				'version' => (int)$row['version'],
+				'distance' => abs(strtotime($plannedDate) - strtotime($bookingDate)),
+			];
+		}
+		$result->closeCursor();
+
+		return self::pickClosestCandidate($candidates);
+	}
+
+	/**
+	 * @param list<array{id:int, version:int, distance:int}> $candidates
+	 * @return array{id:int, version:int}|null
+	 */
+	public static function pickClosestCandidate(array $candidates): ?array
+	{
 		if ($candidates === []) {
 			return null;
 		}
-
 		usort($candidates, static function (array $a, array $b): int {
 			$dist = $a['distance'] <=> $b['distance'];
 			if ($dist !== 0) {
 				return $dist;
 			}
-
 			return $a['id'] <=> $b['id'];
 		});
-
 		$pick = $candidates[0];
-		$this->softDeletePlanned((int)$pick['id'], (int)$pick['version'], $userId, $workspaceId, $realTransactionId);
-
-		return (int)$pick['id'];
+		return ['id' => (int)$pick['id'], 'version' => (int)$pick['version']];
 	}
 
 	private function softDeletePlanned(int $transactionId, int $version, string $userId, int $workspaceId, int $replacedById): void

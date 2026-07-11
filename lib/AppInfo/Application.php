@@ -201,6 +201,19 @@ class Application extends App implements IBootstrap
 			);
 		});
 
+		$context->registerService(BudgetPlannedService::class, function ($c): BudgetPlannedService {
+			return new BudgetPlannedService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(BudgetService::class),
+				$c->query(CategoryService::class),
+				$c->query(TransactionService::class),
+				$c->query(SnapshotService::class),
+				$c->query(AuditLogService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+			);
+		});
+
 		$context->registerService(BudgetService::class, function ($c): BudgetService {
 			return new BudgetService(
 				$c->query(\OCP\IDBConnection::class),

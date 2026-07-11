@@ -1062,6 +1062,19 @@
 	flex-wrap: wrap;
 	grid-column: 1 / -1;
 }
+.bc-form-actions--split {
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--bc-space-3);
+}
+.bc-form-actions__buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+}
+.bc-budget-generate-opt {
+	margin: 0;
+}
 
 /*
  * Orphaned: the old .bc-filter-grid--transactions / .bc-filter-grid > .bc-field

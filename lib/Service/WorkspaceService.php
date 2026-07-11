@@ -275,6 +275,14 @@ class WorkspaceService
 				$logChanges['includeSpecialsInTotalsDefault'] = $includeDefault;
 			}
 		}
+		if ($workspace['type'] === self::TYPE_HOUSEHOLD && array_key_exists('generatePlannedFromBudgetsDefault', $payload)) {
+			$generateDefault = (bool)$payload['generatePlannedFromBudgetsDefault'];
+			$current = (bool)($workspace['generatePlannedFromBudgetsDefault'] ?? false);
+			if ($generateDefault !== $current) {
+				$updates['gen_planned_budget'] = $generateDefault;
+				$logChanges['generatePlannedFromBudgetsDefault'] = $generateDefault;
+			}
+		}
 		if ($workspace['type'] === self::TYPE_HOUSEHOLD && array_key_exists('primaryPlanningYear', $payload)) {
 			$py = $this->normalisePrimaryPlanningYear($payload['primaryPlanningYear']);
 			$cur = array_key_exists('primaryPlanningYear', $workspace) && $workspace['primaryPlanningYear'] !== null
@@ -791,6 +799,7 @@ class WorkspaceService
 				? (int)$row['primary_planning_year']
 				: null,
 			'includeSpecialsInTotalsDefault' => (bool)($row['include_specials_default'] ?? false),
+			'generatePlannedFromBudgetsDefault' => (bool)($row['gen_planned_budget'] ?? false),
 		];
 	}
 

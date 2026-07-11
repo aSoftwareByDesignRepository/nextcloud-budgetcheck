@@ -34,4 +34,27 @@ final class PlannedTransactionMatchTest extends TestCase
 	{
 		$this->assertFalse(PlannedTransactionMatchService::calendarMonthsAreAdjacent('not-a-date', '2026-01-01'));
 	}
+
+	public function testPickClosestCandidatePrefersNearestDate(): void
+	{
+		$pick = PlannedTransactionMatchService::pickClosestCandidate([
+			['id' => 2, 'version' => 1, 'distance' => 500],
+			['id' => 1, 'version' => 1, 'distance' => 100],
+		]);
+		$this->assertSame(1, $pick['id']);
+	}
+
+	public function testPickClosestCandidateTieBreaksById(): void
+	{
+		$pick = PlannedTransactionMatchService::pickClosestCandidate([
+			['id' => 5, 'version' => 1, 'distance' => 0],
+			['id' => 3, 'version' => 1, 'distance' => 0],
+		]);
+		$this->assertSame(3, $pick['id']);
+	}
+
+	public function testPickClosestCandidateEmptyReturnsNull(): void
+	{
+		$this->assertNull(PlannedTransactionMatchService::pickClosestCandidate([]));
+	}
 }

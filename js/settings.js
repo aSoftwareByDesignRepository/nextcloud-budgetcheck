@@ -266,6 +266,8 @@
 			setVal(form, 'primaryPlanningYear', String(py));
 			const cb = form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]');
 			if (cb) cb.checked = !!Ws.workspace.autoCopyBudgetsFromPreviousMonth;
+			const generatePlannedDefault = form.querySelector('input[name="generatePlannedFromBudgetsDefault"]');
+			if (generatePlannedDefault) generatePlannedDefault.checked = !!Ws.workspace.generatePlannedFromBudgetsDefault;
 			const specialsDefault = form.querySelector('input[name="includeSpecialsInTotalsDefault"]');
 			if (specialsDefault) specialsDefault.checked = !!Ws.workspace.includeSpecialsInTotalsDefault;
 			hydrateDefaultSavingsUi(form);
@@ -421,6 +423,7 @@
 				}
 				payload.primaryPlanningYear = py;
 				payload.autoCopyBudgetsFromPreviousMonth = !!form.querySelector('input[name="autoCopyBudgetsFromPreviousMonth"]')?.checked;
+				payload.generatePlannedFromBudgetsDefault = !!form.querySelector('input[name="generatePlannedFromBudgetsDefault"]')?.checked;
 				payload.includeSpecialsInTotalsDefault = !!form.querySelector('input[name="includeSpecialsInTotalsDefault"]')?.checked;
 				const defaultMode = String(form.querySelector('input[name="defaultSavingsTargetMode"]:checked')?.value || '');
 				payload.defaultSavingsTargetMode = defaultMode;

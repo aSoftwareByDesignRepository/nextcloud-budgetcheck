@@ -88,6 +88,12 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 							<span class="bc-boolean-control__text"><?php p($l->t('Copy last month\'s budget when opening a new month')); ?></span>
 						</span>
 					</label>
+					<label class="bc-field bc-field--full-width bc-field--boolean">
+						<span class="bc-boolean-control">
+							<input type="checkbox" name="generatePlannedFromBudgetsDefault" value="1" <?php p($canManage ? '' : 'disabled'); ?>>
+							<span class="bc-boolean-control__text"><?php p($l->t('Generate planned entries when budgets are saved')); ?></span>
+						</span>
+					</label>
 					<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width">
 						<legend class="bc-fieldset__legend"><?php p($l->t('Planning summaries')); ?></legend>
 						<p class="bc-field__hint bc-field__hint--block" id="bc-summary-default-hint"><?php p($l->t('Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above.')); ?></p>
@@ -462,7 +468,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 						<dt><?php p($l->t('Savings transfer')); ?></dt>
 						<dd><?php p($l->t('Category flag for money moved to savings. Counts toward your savings goal and is excluded from everyday budget saldo, but stays in total expenses.')); ?></dd>
 						<dt><?php p($l->t('Planned entry')); ?></dt>
-						<dd><?php p($l->t('A transaction created from Generate on a recurring rule. It stays until a real booking with the same category, direction, and amount arrives in the same or neighbouring month.')); ?></dd>
+						<dd><?php p($l->t('A placeholder booking from Generate on a recurring rule or from category budget targets. Recurring placeholders match amount; budget placeholders match category (any amount). A real booking in the same or neighbouring month removes the plan.')); ?></dd>
 						<dt><?php p($l->t('Cap warning')); ?></dt>
 						<dd><?php p($l->t('For projects, a reminder when all-time spend approaches or exceeds the optional cap.')); ?></dd>
 					</dl>
