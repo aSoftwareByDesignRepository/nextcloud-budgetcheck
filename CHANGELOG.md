@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] - 2026-07-15
+
+### Changed
+
+- **Receipt gallery toolbar:** grouped controls with tooltips, clearer hover/focus states, busy guards while saving, and a corrected rotate-clockwise icon.
+- **Gallery translations:** attachment gallery strings are now translated across all supported locales (including regional variants).
+
+### Fixed
+
+- **Upgrade backup:** snapshot folder creation failures (permissions, quota) now surface as `UpgradeBackupException` instead of escaping the backup handler.
+
 ## [1.0.25] - 2026-07-15
 
 ### Added
