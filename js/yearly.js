@@ -117,35 +117,113 @@
 	function renderTotals(grid, summary) {
 		if (!grid) return;
 		grid.replaceChildren();
+		grid.className = 'bc-summary-sections';
 		const totals = resolveYearTotals(summary.totals || {});
 		const ratio = normalizeRatio(totals.savingsAchievementRatio);
-		const tiles = [
-			[t('budgetcheck', 'Income'), totals.income],
-			[t('budgetcheck', 'Expenses'), totals.expense],
-			[t('budgetcheck', 'Net result'), totals.netResult, true],
-			[t('budgetcheck', 'Savings target'), totals.savingsTarget],
-			[t('budgetcheck', 'Savings achieved'), totals.savingsAchieved],
-			[t('budgetcheck', 'Budget saldo'), totals.budgetSaldo, true],
-			[t('budgetcheck', 'Not spent (under budget)'), totals.budgetUnspent],
-			[t('budgetcheck', 'Overspent (over budget)'), totals.budgetOverspent],
-		];
-		tiles.forEach(([label, env, primary]) => {
-			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
+
+		const makeTile = (label, env, primary) => {
+			return C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
 				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
 				C.createElement('div', { class: 'bc-summary-tile__value', text: formatEnv(env) }),
-			]));
-		});
-		grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-			C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Savings achievement') }),
-			C.createElement('div', {
-				class: 'bc-summary-tile__value bc-summary-tile__value--small',
-				text: ratio === null ? t('budgetcheck', 'No target set') : Math.round(ratio * 100) + '%',
-			}),
-		]));
-		grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-			C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Months over budget') }),
-			C.createElement('div', { class: 'bc-summary-tile__value bc-summary-tile__value--small', text: String(totals.overBudgetMonths || 0) }),
-		]));
+			]);
+		};
+
+		const makeSection = (title, hint, tiles, extraClass, sectionKey) => {
+			const titleId = sectionKey ? ('bc-summary-' + sectionKey + '-title') : null;
+			const section = C.createElement('section', {
+				class: ('bc-summary-section ' + String(extraClass || '')).trim(),
+				attrs: titleId ? { 'aria-labelledby': titleId } : {},
+			});
+			const head = C.createElement('header', { class: 'bc-summary-section__header' });
+			head.appendChild(C.createElement('h3', {
+				class: 'bc-summary-section__title',
+				attrs: titleId ? { id: titleId } : {},
+				text: title,
+			}));
+			if (hint) {
+				head.appendChild(C.createElement('p', { class: 'bc-summary-section__hint', text: hint }));
+			}
+			section.appendChild(head);
+			const tileGrid = C.createElement('div', { class: 'bc-summary-grid' });
+			tiles.forEach((tile) => tileGrid.appendChild(tile));
+			section.appendChild(tileGrid);
+			grid.appendChild(section);
+		};
+
+		makeSection(
+			t('budgetcheck', 'Cash flow'),
+			t('budgetcheck', 'Actual bookings only. Planned placeholders are shown separately below.'),
+			[
+				makeTile(t('budgetcheck', 'Income'), totals.income),
+				makeTile(t('budgetcheck', 'Expenses'), totals.expense),
+				makeTile(t('budgetcheck', 'Net result'), totals.netResult, true),
+			],
+			'',
+			'cashflow',
+		);
+
+		const planned = totals.planned || null;
+		const plannedLedger = planned && planned.ledger ? planned.ledger : null;
+		const plannedEntryCount = Number.parseInt(String(plannedLedger?.entryCount ?? 0), 10) || 0;
+		const incomeTargetMinor = Number.parseInt(String(planned?.incomeTarget?.minor ?? 0), 10) || 0;
+		const expenseTargetMinor = Number.parseInt(String(totals.budgetPlanned?.minor ?? 0), 10) || 0;
+		if (plannedEntryCount > 0 || incomeTargetMinor > 0 || expenseTargetMinor > 0) {
+			const plannedTiles = [];
+			if (incomeTargetMinor > 0) {
+				plannedTiles.push(makeTile(t('budgetcheck', 'Income target (year)'), planned.incomeTarget));
+			}
+			if (expenseTargetMinor > 0) {
+				plannedTiles.push(makeTile(t('budgetcheck', 'Expense target (year)'), totals.budgetPlanned));
+			}
+			if (plannedEntryCount > 0) {
+				plannedTiles.push(
+					makeTile(t('budgetcheck', 'Planned income (year)'), plannedLedger.income),
+					makeTile(t('budgetcheck', 'Planned expenses (year)'), plannedLedger.expense),
+				);
+			}
+			makeSection(
+				t('budgetcheck', 'Expected (plan)'),
+				t('budgetcheck', 'Budget targets and ledger placeholders for this year—not counted in actual cash flow above.'),
+				plannedTiles,
+				'bc-summary-section--plan',
+				'plan',
+			);
+		}
+
+		const savingsTiles = [
+			makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget),
+			makeTile(t('budgetcheck', 'Savings achieved'), totals.savingsAchieved, true),
+			C.createElement('div', { class: 'bc-summary-tile' }, [
+				C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Savings achievement') }),
+				C.createElement('div', {
+					class: 'bc-summary-tile__value bc-summary-tile__value--small',
+					text: ratio === null ? t('budgetcheck', 'No target set') : Math.round(ratio * 100) + '%',
+				}),
+			]),
+		];
+		makeSection(
+			t('budgetcheck', 'Savings'),
+			null,
+			savingsTiles,
+			'',
+			'savings',
+		);
+
+		makeSection(
+			t('budgetcheck', 'Everyday spending budget'),
+			null,
+			[
+				makeTile(t('budgetcheck', 'Budget saldo'), totals.budgetSaldo, true),
+				makeTile(t('budgetcheck', 'Not spent (under budget)'), totals.budgetUnspent),
+				makeTile(t('budgetcheck', 'Overspent (over budget)'), totals.budgetOverspent),
+				C.createElement('div', { class: 'bc-summary-tile' }, [
+					C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Months over budget') }),
+					C.createElement('div', { class: 'bc-summary-tile__value bc-summary-tile__value--small', text: String(totals.overBudgetMonths || 0) }),
+				]),
+			],
+			'',
+			'budget',
+		);
 	}
 
 	function renderMonths(container, summary) {
@@ -181,6 +259,33 @@
 						.replace('{income}', Money.formatEnvelope(display.income, Ws.htmlLang))
 						.replace('{expense}', Money.formatEnvelope(display.expense, Ws.htmlLang)),
 				}),
+			);
+			const monthPlanned = m.planned || null;
+			const monthPlannedLedger = monthPlanned && monthPlanned.ledger ? monthPlanned.ledger : null;
+			const monthPlannedCount = Number.parseInt(String(monthPlannedLedger?.entryCount ?? 0), 10) || 0;
+			const monthIncomeTargetMinor = Number.parseInt(String(monthPlanned?.incomeTarget?.minor ?? 0), 10) || 0;
+			const monthExpenseTargetMinor = Number.parseInt(String(m.budget?.plannedTotal?.minor ?? 0), 10) || 0;
+			if (monthPlannedCount > 0 || monthIncomeTargetMinor > 0 || monthExpenseTargetMinor > 0) {
+				const parts = [];
+				if (monthIncomeTargetMinor > 0) {
+					parts.push(t('budgetcheck', 'Income target: {amount}')
+						.replace('{amount}', Money.formatEnvelope(monthPlanned.incomeTarget, Ws.htmlLang)));
+				}
+				if (monthExpenseTargetMinor > 0) {
+					parts.push(t('budgetcheck', 'Expense target: {amount}')
+						.replace('{amount}', Money.formatEnvelope(m.budget.plannedTotal, Ws.htmlLang)));
+				}
+				if (monthPlannedCount > 0) {
+					parts.push(t('budgetcheck', 'Planned: In {income} · Out {expense}')
+						.replace('{income}', Money.formatEnvelope(monthPlannedLedger.income, Ws.htmlLang))
+						.replace('{expense}', Money.formatEnvelope(monthPlannedLedger.expense, Ws.htmlLang)));
+				}
+				cardChildren.push(C.createElement('span', {
+					class: 'bc-month-card__meta bc-month-card__meta--planned',
+					text: parts.join(' · '),
+				}));
+			}
+			cardChildren.push(
 				C.createElement('span', {
 					class: 'bc-month-card__meta',
 					text: t('budgetcheck', 'Budget saldo: {saldo}')
@@ -323,6 +428,8 @@
 		const base = summary && typeof summary === 'object' ? summary : {};
 		const totals = base.totals && typeof base.totals === 'object' ? base.totals : {};
 		const months = Array.isArray(base.months) ? base.months : [];
+		const plannedRaw = totals.planned && typeof totals.planned === 'object' ? totals.planned : null;
+		const plannedLedgerRaw = plannedRaw && plannedRaw.ledger ? plannedRaw.ledger : null;
 		return {
 			year: Number.parseInt(String(base.year || state.year), 10) || state.year,
 			totals: {
@@ -336,6 +443,15 @@
 				budgetOverspent: normalizeEnv(totals.budgetOverspent),
 				savingsAchievementRatio: normalizeRatio(totals.savingsAchievementRatio),
 				overBudgetMonths: Number.parseInt(String(totals.overBudgetMonths || 0), 10) || 0,
+				planned: plannedRaw ? {
+					incomeTarget: normalizeEnv(plannedRaw.incomeTarget),
+					ledger: plannedLedgerRaw ? {
+						income: normalizeEnv(plannedLedgerRaw.income),
+						expense: normalizeEnv(plannedLedgerRaw.expense),
+						netResult: normalizeEnv(plannedLedgerRaw.netResult),
+						entryCount: Number.parseInt(String(plannedLedgerRaw.entryCount || 0), 10) || 0,
+					} : null,
+				} : null,
 			},
 			months,
 		};

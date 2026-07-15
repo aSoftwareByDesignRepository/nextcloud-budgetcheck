@@ -48,6 +48,7 @@ class TransactionService
 		private AuditLogService $audit,
 		private CategoryService $categories,
 		private BookingStatusService $bookingStatuses,
+		private ?TransactionAttachmentService $attachments = null,
 	) {
 	}
 
@@ -74,6 +75,8 @@ class TransactionService
 			$rows[] = $this->hydrate($row, $workspace['currencyCode']);
 		}
 		$result->closeCursor();
+		$rows = $this->enrichWithAttachmentCounts($rows);
+		$rows = $this->enrichWithMonthClosedStatus($rows, $workspaceId);
 
 		$total = $this->countForWorkspace($workspaceId, $filters, $workspace);
 		return [
@@ -102,7 +105,7 @@ class TransactionService
 	private function analyticsForWorkspace(int $workspaceId, array $filters, array $workspace): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('booking_date', 'direction', 'amount_minor', 'category_id')
+		$qb->select('booking_date', 'direction', 'amount_minor', 'category_id', 'is_planned', 'is_special')
 			->from('bc_transactions')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$window = $this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
@@ -117,6 +120,9 @@ class TransactionService
 		$meta = $this->categoryMetaByIds($workspaceId, array_keys($categoryIds));
 		$income = 0;
 		$expense = 0;
+		$plannedIncome = 0;
+		$plannedExpense = 0;
+		$plannedCount = 0;
 		$byGroup = [];
 		$byCategory = [];
 		$byMonth = [];
@@ -125,6 +131,16 @@ class TransactionService
 			$dir = (string)$row['direction'];
 			$cid = (int)$row['category_id'];
 			$month = substr((string)$row['booking_date'], 0, 7);
+			$isPlanned = !empty($row['is_planned']);
+			if ($isPlanned) {
+				$plannedCount++;
+				if ($dir === self::DIRECTION_INCOME) {
+					$plannedIncome += $minor;
+				} else {
+					$plannedExpense += $minor;
+				}
+				continue;
+			}
 			if ($dir === self::DIRECTION_INCOME) {
 				$income += $minor;
 			} else {
@@ -210,7 +226,13 @@ class TransactionService
 				'income' => $toEnv($income),
 				'expense' => $toEnv($expense),
 				'net' => $toEnv($income - $expense),
-				'count' => count($rows),
+				'count' => count($rows) - $plannedCount,
+				'planned' => [
+					'income' => $toEnv($plannedIncome),
+					'expense' => $toEnv($plannedExpense),
+					'net' => $toEnv($plannedIncome - $plannedExpense),
+					'count' => $plannedCount,
+				],
 			],
 			'byGroup' => $groupRows,
 			'byCategory' => $categoryRows,
@@ -432,11 +454,14 @@ class TransactionService
 		if ($isPlanned && $recurringRuleId !== null && $budgetId !== null) {
 			throw new \InvalidArgumentException('Planned entries cannot reference both recurringRuleId and budgetId.');
 		}
-		if ($isPlanned && ($workspace['type'] ?? '') === WorkspaceService::TYPE_HOUSEHOLD) {
-			$ym = substr($bookingDate->format('Y-m-d'), 0, 7);
-			if ($this->monthIsClosed($workspaceId, $ym)) {
-				throw new \InvalidArgumentException('Month is closed. Reopen it before creating planned entries.');
-			}
+		// Closed months are locked for every write (§12): planned placeholders
+		// and real bookings alike. Project workspaces never have snapshots, so
+		// this is a no-op for them.
+		$ym = substr($bookingDate->format('Y-m-d'), 0, 7);
+		if ($this->monthIsClosed($workspaceId, $ym)) {
+			throw new \InvalidArgumentException($isPlanned
+				? 'Month is closed. Reopen it before creating planned entries.'
+				: 'This booking falls into a closed month. Reopen the month before adding transactions.');
 		}
 		if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
 			throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
@@ -532,6 +557,12 @@ class TransactionService
 		}
 		$this->access->ensureMinimumRole($workspace['id'], $userId, AccessControlService::ROLE_CONTRIBUTOR);
 
+		// The month-close lock covers edits as well as creates and deletes.
+		$currentYm = substr((string)$existing['booking_date'], 0, 7);
+		if ($this->monthIsClosed((int)$workspace['id'], $currentYm)) {
+			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before editing.');
+		}
+
 		// Optimistic locking.
 		$expectedVersion = isset($payload['version']) ? (int)$payload['version'] : null;
 		if ($expectedVersion !== null && $expectedVersion !== (int)$existing['version']) {
@@ -569,6 +600,10 @@ class TransactionService
 				throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
 			}
 			if ($bookingDate->format('Y-m-d') !== (string)$existing['booking_date']) {
+				$targetYm = substr($bookingDate->format('Y-m-d'), 0, 7);
+				if ($targetYm !== $currentYm && $this->monthIsClosed((int)$workspace['id'], $targetYm)) {
+					throw new \InvalidArgumentException('The new booking date falls into a closed month. Reopen that month first.');
+				}
 				$updates['booking_date'] = $bookingDate->format('Y-m-d');
 				$logChanges['bookingDate'] = $updates['booking_date'];
 			}
@@ -821,10 +856,93 @@ class TransactionService
 		if ($row === null) {
 			throw new InternalErrorException();
 		}
-		return $this->hydrate($row, $currencyCode);
+		$tx = $this->hydrate($row, $currencyCode);
+		$enriched = $this->enrichWithAttachmentCounts([$tx]);
+		$enriched = $this->enrichWithMonthClosedStatus($enriched, (int)$row['workspace_id']);
+		return $enriched[0] ?? $tx;
 	}
 
-	private function loadRow(int $transactionId): ?array
+	/**
+	 * @param list<array<string, mixed>> $transactions
+	 * @return list<array<string, mixed>>
+	 */
+	private function enrichWithMonthClosedStatus(array $transactions, int $workspaceId): array
+	{
+		if ($transactions === []) {
+			return $transactions;
+		}
+
+		$months = [];
+		foreach ($transactions as $tx) {
+			$ym = substr((string)($tx['bookingDate'] ?? ''), 0, 7);
+			if (preg_match('/^\d{4}-\d{2}$/', $ym)) {
+				$months[$ym] = true;
+			}
+		}
+		$closed = $this->closedMonthsInSet($workspaceId, array_keys($months));
+		return array_map(static function (array $tx) use ($closed): array {
+			$ym = substr((string)($tx['bookingDate'] ?? ''), 0, 7);
+			$tx['isMonthClosed'] = isset($closed[$ym]);
+			return $tx;
+		}, $transactions);
+	}
+
+	/**
+	 * @param list<string> $yearMonths Values in YYYY-MM format
+	 * @return array<string, true>
+	 */
+	private function closedMonthsInSet(int $workspaceId, array $yearMonths): array
+	{
+		$normalized = [];
+		foreach ($yearMonths as $yearMonth) {
+			$ym = trim($yearMonth);
+			if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $ym)) {
+				$normalized[$ym] = true;
+			}
+		}
+		if ($normalized === []) {
+			return [];
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('year_month')
+			->from('bc_monthly_snapshots')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->in('year_month', $qb->createNamedParameter(array_keys($normalized), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		$closed = [];
+		while ($row = $result->fetch()) {
+			$closed[(string)$row['year_month']] = true;
+		}
+		$result->closeCursor();
+		return $closed;
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $transactions
+	 * @return list<array<string, mixed>>
+	 */
+	private function enrichWithAttachmentCounts(array $transactions): array
+	{
+		if ($this->attachments === null || $transactions === []) {
+			return array_map(static function (array $tx): array {
+				$tx['attachmentCount'] = (int)($tx['attachmentCount'] ?? 0);
+				$tx['hasAttachments'] = $tx['attachmentCount'] > 0;
+				return $tx;
+			}, $transactions);
+		}
+
+		$ids = array_map(static fn (array $tx): int => (int)($tx['id'] ?? 0), $transactions);
+		$counts = $this->attachments->countsByTransactionIds($ids);
+		return array_map(static function (array $tx) use ($counts): array {
+			$count = $counts[(int)($tx['id'] ?? 0)] ?? 0;
+			$tx['attachmentCount'] = $count;
+			$tx['hasAttachments'] = $count > 0;
+			return $tx;
+		}, $transactions);
+	}
+
+	protected function loadRow(int $transactionId): ?array
 	{
 		if ($transactionId < 1) {
 			return null;
@@ -967,7 +1085,7 @@ class TransactionService
 		];
 	}
 
-	private function monthIsClosed(int $workspaceId, string $yearMonth): bool
+	protected function monthIsClosed(int $workspaceId, string $yearMonth): bool
 	{
 		if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
 			return false;

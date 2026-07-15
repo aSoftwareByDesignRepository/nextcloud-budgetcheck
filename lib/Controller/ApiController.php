@@ -29,6 +29,7 @@ use OCA\BudgetCheck\Service\SnapshotService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\TransactionImportService;
+use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\AppFramework\Controller;
@@ -72,6 +73,7 @@ class ApiController extends Controller
 		private WorkspaceService $workspaces,
 		private CategoryService $categories,
 		private TransactionService $transactions,
+		private TransactionAttachmentService $transactionAttachments,
 		private RecurringRuleService $recurring,
 		private BudgetService $budgets,
 		private BudgetPlannedService $budgetPlanned,
@@ -553,6 +555,59 @@ class ApiController extends Controller
 			$this->rateLimit->assertAllowed($userId, 'transaction_write', 240, 300);
 			$this->transactions->delete($id, $userId, $workspace);
 			return ['deleted' => true, 'id' => $id];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listTransactionAttachments(int $transactionId): JSONResponse
+	{
+		$transactionId = $this->validateId($transactionId);
+		return $this->safe(function (string $userId) use ($transactionId): array {
+			$this->ownerWorkspaceForTransaction($transactionId);
+			return [
+				'attachments' => $this->transactionAttachments->listForTransaction($transactionId, $userId),
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function uploadTransactionAttachment(int $transactionId): JSONResponse
+	{
+		$transactionId = $this->validateId($transactionId);
+		return $this->safe(function (string $userId) use ($transactionId): array {
+			$this->ownerWorkspaceForTransaction($transactionId);
+			$this->rateLimit->assertAllowed($userId, 'transaction_attachment_write', 120, 300);
+			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+				throw new \InvalidArgumentException('No file was uploaded.');
+			}
+			$attachment = $this->transactionAttachments->upload($transactionId, $userId, $_FILES['file']);
+			return ['attachment' => $attachment];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function deleteTransactionAttachment(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'transaction_attachment_write', 120, 300);
+			$this->transactionAttachments->delete($id, $userId);
+			return ['deleted' => true, 'id' => $id];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function replaceTransactionAttachment(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'transaction_attachment_write', 120, 300);
+			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+				throw new \InvalidArgumentException('No file was uploaded.');
+			}
+			$attachment = $this->transactionAttachments->replace($id, $userId, $_FILES['file']);
+			return ['attachment' => $attachment];
 		});
 	}
 

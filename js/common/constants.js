@@ -13,6 +13,40 @@
 		GROUP_INTERNAL_UNCATEGORIZED: '_bc_internal_uncategorized',
 
 		/**
+		 * @param {string|null|undefined} groupKey
+		 * @return {boolean}
+		 */
+		isInternalUncategorizedGroupKey(groupKey) {
+			return groupKey === window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
+		},
+
+		/**
+		 * User-facing label for a category group key. Internal system keys are never shown raw.
+		 *
+		 * @param {string|null|undefined} groupKey
+		 * @return {string}
+		 */
+		categoryGroupKeyLabel(groupKey) {
+			if (!groupKey) {
+				return '—';
+			}
+			if (window.BudgetCheckConstants.isInternalUncategorizedGroupKey(groupKey)) {
+				return t('budgetcheck', 'Built-in (uncategorized)');
+			}
+			return String(groupKey);
+		},
+
+		/**
+		 * Whether the group sub-label should appear in transaction lists (internal bucket is hidden).
+		 *
+		 * @param {string|null|undefined} groupKey
+		 * @return {boolean}
+		 */
+		shouldShowCategoryGroupBadge(groupKey) {
+			return Boolean(groupKey) && !window.BudgetCheckConstants.isInternalUncategorizedGroupKey(groupKey);
+		},
+
+		/**
 		 * Active categories that accept planned amounts (excludes internal uncategorized bucket).
 		 * Expense categories sort before income for stable tables.
 		 *

@@ -57,6 +57,11 @@ return [
 		['name' => 'api#saveSummaryViewPreferences', 'url' => '/api/workspaces/{workspaceId}/summary-view-preferences', 'verb' => 'PUT'],
 		['name' => 'api#updateTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'PUT'],
 		['name' => 'api#deleteTransaction',  'url' => '/api/transactions/{id}',            'verb' => 'DELETE'],
+		['name' => 'api#listTransactionAttachments', 'url' => '/api/transactions/{transactionId}/attachments', 'verb' => 'GET'],
+		['name' => 'api#uploadTransactionAttachment', 'url' => '/api/transactions/{transactionId}/attachments', 'verb' => 'POST'],
+		['name' => 'api#deleteTransactionAttachment', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'DELETE'],
+		['name' => 'api#replaceTransactionAttachment', 'url' => '/api/transaction-attachments/{id}/replace', 'verb' => 'POST'],
+		['name' => 'attachment#download', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'GET'],
 
 		// Recurring rules
 		['name' => 'api#listRecurringRules',     'url' => '/api/recurring-rules',                  'verb' => 'GET'],

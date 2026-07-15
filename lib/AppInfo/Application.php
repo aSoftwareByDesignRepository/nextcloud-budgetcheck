@@ -17,6 +17,7 @@ use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
+use OCA\BudgetCheck\Service\BudgetPlannedService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\HouseholdYearlyExportService;
@@ -33,6 +34,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
+use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Settings\AdminSettings;
@@ -162,6 +164,19 @@ class Application extends App implements IBootstrap
 				$c->query(AuditLogService::class),
 				$c->query(CategoryService::class),
 				$c->query(BookingStatusService::class),
+				$c->query(TransactionAttachmentService::class),
+			);
+		});
+
+		$context->registerService(TransactionAttachmentService::class, function ($c): TransactionAttachmentService {
+			return new TransactionAttachmentService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\Files\IRootFolder::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(AccessControlService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(AuditLogService::class),
+				$c->query(\OCP\IURLGenerator::class),
 			);
 		});
 

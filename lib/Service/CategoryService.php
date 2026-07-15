@@ -219,13 +219,31 @@ class CategoryService
 			->where($rqb->expr()->eq('category_id', $rqb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
 		$rqb->executeStatement();
 
+		// Live planned placeholders can never be matched again (bookings in a
+		// deactivated category are rejected), so retire them now. Real bookings
+		// stay untouched. Planned rows never feed close evidence, so this is
+		// safe regardless of month state.
+		$now = $this->utcNow();
+		$pqb = $this->db->getQueryBuilder();
+		$pqb->update('bc_transactions')
+			->set('deleted_at', $pqb->createNamedParameter($now))
+			->set('updated_by', $pqb->createNamedParameter($userId))
+			->set('updated_at', $pqb->createNamedParameter($now))
+			->set('version', $pqb->createFunction('version + 1'))
+			->where($pqb->expr()->eq('category_id', $pqb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
+			->andWhere($pqb->expr()->eq('is_planned', $pqb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($pqb->expr()->isNull('deleted_at'));
+		$plannedRemoved = $pqb->executeStatement();
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_categories')
 			->set('is_active', $qb->createNamedParameter(false, \PDO::PARAM_BOOL))
 			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
 		$qb->executeStatement();
-		$this->audit->record($userId, 'category_deactivated', 'category', (string)$categoryId, [], $category['workspaceId']);
+		$this->audit->record($userId, 'category_deactivated', 'category', (string)$categoryId, [
+			'plannedRemoved' => $plannedRemoved,
+		], $category['workspaceId']);
 		return $this->loadById($categoryId);
 	}
 
@@ -250,27 +268,43 @@ class CategoryService
 	 */
 	public function ensureSystemCategoriesForWorkspace(int $workspaceId, string $creatorUserId): void
 	{
-		if ($this->internalUncategorizedCategoryId($workspaceId) !== null) {
-			return;
+		$this->dedupeInternalUncategorizedCategories($workspaceId);
+
+		$this->db->beginTransaction();
+		try {
+			if ($this->internalUncategorizedCategoryId($workspaceId) !== null) {
+				$this->db->commit();
+				return;
+			}
+			$now = $this->utcNow();
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_categories')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'name' => $qb->createNamedParameter('Uncategorized'),
+					'type' => $qb->createNamedParameter(self::TYPE_EXPENSE),
+					'group_key' => $qb->createNamedParameter(self::GROUP_INTERNAL_UNCATEGORIZED),
+					'is_special' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
+					'tax_handling_mode' => $qb->createNamedParameter('inherit_workspace'),
+					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'created_by' => $qb->createNamedParameter($creatorUserId),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+				]);
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_categories');
+			$this->audit->record($creatorUserId, 'category_created', 'category', (string)$id, ['type' => self::TYPE_EXPENSE, 'name' => 'Uncategorized', 'system' => true], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			$this->dedupeInternalUncategorizedCategories($workspaceId);
+			if ($this->internalUncategorizedCategoryId($workspaceId) !== null) {
+				return;
+			}
+			throw $e;
 		}
-		$now = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_categories')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'name' => $qb->createNamedParameter('Uncategorized'),
-				'type' => $qb->createNamedParameter(self::TYPE_EXPENSE),
-				'group_key' => $qb->createNamedParameter(self::GROUP_INTERNAL_UNCATEGORIZED),
-				'is_special' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
-				'tax_handling_mode' => $qb->createNamedParameter('inherit_workspace'),
-				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
-				'created_by' => $qb->createNamedParameter($creatorUserId),
-				'created_at' => $qb->createNamedParameter($now),
-				'updated_at' => $qb->createNamedParameter($now),
-			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_categories');
-		$this->audit->record($creatorUserId, 'category_created', 'category', (string)$id, ['type' => self::TYPE_EXPENSE, 'name' => 'Uncategorized', 'system' => true], $workspaceId);
+
+		$this->dedupeInternalUncategorizedCategories($workspaceId);
 	}
 
 	/**
@@ -278,24 +312,59 @@ class CategoryService
 	 */
 	public function internalUncategorizedCategoryIds(int $workspaceId): array
 	{
-		$id = $this->internalUncategorizedCategoryId($workspaceId);
-		return $id === null ? [] : [$id];
-	}
-
-	public function internalUncategorizedCategoryId(int $workspaceId): ?int
-	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id')
 			->from('bc_categories')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->eq('group_key', $qb->createNamedParameter(self::GROUP_INTERNAL_UNCATEGORIZED)));
+			->andWhere($qb->expr()->eq('group_key', $qb->createNamedParameter(self::GROUP_INTERNAL_UNCATEGORIZED)))
+			->orderBy('id', 'ASC');
 		$result = $qb->executeQuery();
-		$row = $result->fetch();
-		$result->closeCursor();
-		if ($row === false) {
-			return null;
+		$ids = [];
+		while ($row = $result->fetch()) {
+			$ids[] = (int)$row['id'];
 		}
-		return (int)$row['id'];
+		$result->closeCursor();
+		return $ids;
+	}
+
+	public function internalUncategorizedCategoryId(int $workspaceId): ?int
+	{
+		$ids = $this->internalUncategorizedCategoryIds($workspaceId);
+		return $ids === [] ? null : $ids[0];
+	}
+
+	/**
+	 * Collapse duplicate system uncategorized rows (race-safe repair).
+	 */
+	public function dedupeInternalUncategorizedCategories(int $workspaceId): void
+	{
+		$ids = $this->internalUncategorizedCategoryIds($workspaceId);
+		if (count($ids) <= 1) {
+			return;
+		}
+		$keeperId = $ids[0];
+		$duplicateIds = array_slice($ids, 1);
+		foreach ($duplicateIds as $dupId) {
+			$this->reassignCategoryReferences($dupId, $keeperId);
+			$del = $this->db->getQueryBuilder();
+			$del->delete('bc_categories')
+				->where($del->expr()->eq('id', $del->createNamedParameter($dupId, \PDO::PARAM_INT)));
+			$del->executeStatement();
+		}
+	}
+
+	private function reassignCategoryReferences(int $fromCategoryId, int $toCategoryId): void
+	{
+		foreach (['bc_transactions', 'bc_recurring_rules', 'bc_budgets', 'bc_budget_defaults'] as $table) {
+			if (!$this->db->tableExists($table)) {
+				continue;
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->update($table)
+				->set('category_id', $qb->createNamedParameter($toCategoryId, \PDO::PARAM_INT))
+				->where($qb->expr()->eq('category_id', $qb->createNamedParameter($fromCategoryId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+		}
 	}
 
 	public function loadForWorkspace(int $categoryId, int $workspaceId): ?array

@@ -39,12 +39,37 @@
 		return ed ? ed.defaultBookingDateForRange(from, to) : Dates.isoDate(new Date());
 	}
 
+	function patchDashboardReceiptCount(transactionId, count) {
+		const txId = Number(transactionId);
+		if (!txId) return;
+		const n = Math.max(0, Number(count) || 0);
+		const TxList = window.BudgetCheckTransactionList;
+		const item = document.querySelector('[data-bc-tx-list] [data-bc-tx-id="' + txId + '"]');
+		if (!item) return;
+		let receiptEl = item.querySelector('.bc-tx-list__receipt');
+		if (n <= 0) {
+			if (receiptEl) receiptEl.remove();
+			return;
+		}
+		const label = TxList ? TxList.receiptLabel({ attachmentCount: n, hasAttachments: true }) : String(n);
+		if (!receiptEl) {
+			receiptEl = C.createElement('div', { class: 'bc-tx-list__receipt' });
+			const leftCol = item.querySelector('.bc-tx-list__title')?.parentElement || item.firstElementChild;
+			if (leftCol) leftCol.appendChild(receiptEl);
+		}
+		receiptEl.textContent = label;
+	}
+
 	function openNewTransactionFromDashboard(yearMonth) {
 		const ed = Editor();
 		if (!ed || !Ws.canContribute) return;
 		ed.open({
 			bookingDate: defaultBookingDateForMonth(yearMonth),
 			onSaved: () => loadAndRender(dashState.yearMonth),
+			onAttachmentsChanged: (payload) => {
+				if (!payload || !payload.transactionId) return;
+				patchDashboardReceiptCount(payload.transactionId, payload.attachmentCount);
+			},
 		});
 	}
 
@@ -406,20 +431,27 @@
 		if (tx.entryAmountBasis === 'gross') metaParts.push(t('budgetcheck', 'Gross'));
 		if (tx.entryAmountBasis === 'net') metaParts.push(t('budgetcheck', 'Net'));
 		if (Number.isInteger(tx.vatRateBp)) metaParts.push(t('budgetcheck', 'VAT {rate}%').replace('{rate}', (tx.vatRateBp / 100).toString()));
-		return C.createElement('li', { class: 'bc-tx-list__item' }, [
-			C.createElement('div', null, [
-				C.createElement('div', { class: 'bc-tx-list__title', text: tx.title }),
-				C.createElement('div', { class: 'bc-tx-list__meta', attrs: metaAttrs, text: metaParts.join(' · ') }),
-				(tx.entryAmountBasis && tx.entryAmountBasis !== 'simple' && tx.net && tx.vat && tx.gross)
-					? C.createElement('div', {
-						class: 'bc-tx-list__meta',
-						text: t('budgetcheck', 'Net {net} · VAT {vat} · Gross {gross}')
-							.replace('{net}', Money.formatEnvelope(tx.net, Ws.htmlLang))
-							.replace('{vat}', Money.formatEnvelope(tx.vat, Ws.htmlLang))
-							.replace('{gross}', Money.formatEnvelope(tx.gross, Ws.htmlLang)),
-					})
-					: null,
-			]),
+		const leftCol = C.createElement('div', null, [
+			C.createElement('div', { class: 'bc-tx-list__title', text: tx.title }),
+			C.createElement('div', { class: 'bc-tx-list__meta', attrs: metaAttrs, text: metaParts.join(' · ') }),
+		]);
+		if (TxList && typeof TxList.hasReceipts === 'function' && TxList.hasReceipts(tx)) {
+			leftCol.appendChild(C.createElement('div', {
+				class: 'bc-tx-list__receipt',
+				text: TxList.receiptLabel(tx),
+			}));
+		}
+		if (tx.entryAmountBasis && tx.entryAmountBasis !== 'simple' && tx.net && tx.vat && tx.gross) {
+			leftCol.appendChild(C.createElement('div', {
+				class: 'bc-tx-list__meta',
+				text: t('budgetcheck', 'Net {net} · VAT {vat} · Gross {gross}')
+					.replace('{net}', Money.formatEnvelope(tx.net, Ws.htmlLang))
+					.replace('{vat}', Money.formatEnvelope(tx.vat, Ws.htmlLang))
+					.replace('{gross}', Money.formatEnvelope(tx.gross, Ws.htmlLang)),
+			}));
+		}
+		return C.createElement('li', { class: 'bc-tx-list__item', attrs: { 'data-bc-tx-id': String(tx.id) } }, [
+			leftCol,
 			C.createElement('div', {
 				class: 'bc-tx-list__amount ' + (tx.direction === 'income' ? 'bc-tx-amount--income' : 'bc-tx-amount--expense'),
 			}, [

@@ -33,6 +33,7 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
+	const BcConst = window.BudgetCheckConstants;
 
 	const PAGE_SIZE = 50;
 	const SEARCH_DEBOUNCE_MS = 250;
@@ -45,6 +46,7 @@
 	const state = {
 		filters: emptyFilters(),
 		offset: 0,
+		viewYearMonth: '',
 		categories: [],
 		categoryById: new Map(),
 		statuses: [],
@@ -202,6 +204,23 @@
 		maybeOpenNewTransactionFromUrl();
 	});
 
+	function resolveViewYearMonth() {
+		// Active date filters win over a stale URL month so the header always matches the ledger scope.
+		const ym = Dates.yearMonthFromDateRange(state.filters.from, state.filters.to);
+		if (ym) {
+			return ym;
+		}
+		if (state.viewYearMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(state.viewYearMonth)) {
+			return state.viewYearMonth;
+		}
+		return '';
+	}
+
+	function syncViewYearMonthFromFilters() {
+		const ym = Dates.yearMonthFromDateRange(state.filters.from, state.filters.to);
+		state.viewYearMonth = ym || '';
+	}
+
 	// ---------------------------------------------------------------
 	//  URL ↔ state
 	// ---------------------------------------------------------------
@@ -218,6 +237,8 @@
 			const [y, m] = yearMonth.split('-').map(Number);
 			state.filters.from = yearMonth + '-01';
 			state.filters.to = yearMonth + '-' + pad2(lastDayOfMonth(y, m));
+			state.viewYearMonth = yearMonth;
+			state.filters.rangePreset = 'custom';
 		}
 
 		const filterMode = sp.get('filter');
@@ -254,6 +275,12 @@
 		}
 
 		finalizeRangeFromUrl(sp);
+		if (!state.viewYearMonth) {
+			syncViewYearMonthFromFilters();
+		}
+		if (state.viewYearMonth && state.filters.rangePreset === DEFAULT_RANGE_PRESET) {
+			state.filters.rangePreset = 'custom';
+		}
 	}
 
 	/**
@@ -308,6 +335,8 @@
 		const f = state.filters;
 		if (f.from) sp.set('from', f.from);
 		if (f.to) sp.set('to', f.to);
+		const viewYm = resolveViewYearMonth();
+		if (viewYm) sp.set('yearMonth', viewYm);
 		if (f.categoryId) sp.set('categoryId', f.categoryId);
 		if (f.groupKey) sp.set('groupKey', f.groupKey);
 		if (f.statusId) sp.set('statusId', f.statusId);
@@ -333,6 +362,7 @@
 		window.addEventListener('popstate', () => {
 			state.filters = emptyFilters();
 			state.offset = 0;
+			state.viewYearMonth = '';
 			hydrateFromUrl();
 			syncFormFromState();
 			loadAndRender({ skipUrlSync: true });
@@ -365,6 +395,7 @@
 			window.setTimeout(() => {
 				state.filters = emptyFilters();
 				state.offset = 0;
+				state.viewYearMonth = '';
 				syncFormFromState();
 				loadAndRender();
 			}, 0);
@@ -440,6 +471,7 @@
 		f.uncategorized = !!form.querySelector('[data-bc-filter="uncategorized"]')?.checked;
 		const presetEl = form.querySelector('[data-bc-filter="rangePreset"]');
 		if (presetEl && RANGE_PRESETS.has(presetEl.value)) f.rangePreset = presetEl.value;
+		syncViewYearMonthFromFilters();
 	}
 
 	function syncFormFromState() {
@@ -460,7 +492,9 @@
 		set('[data-bc-filter="q"]', f.q);
 		set('[data-bc-filter="isSpecial"]', f.isSpecial, 'checkbox');
 		set('[data-bc-filter="uncategorized"]', f.uncategorized, 'checkbox');
-		set('[data-bc-filter="rangePreset"]', RANGE_PRESETS.has(f.rangePreset) ? f.rangePreset : DEFAULT_RANGE_PRESET);
+		set('[data-bc-filter="rangePreset"]', RANGE_PRESETS.has(f.rangePreset)
+			? f.rangePreset
+			: (Dates.yearMonthFromDateRange(f.from, f.to) ? 'custom' : DEFAULT_RANGE_PRESET));
 		toggleSearchClear(f.q);
 		updateMoreCount();
 	}
@@ -484,6 +518,7 @@
 			state.filters.from = range.from;
 			state.filters.to = range.to;
 			state.offset = 0;
+			syncViewYearMonthFromFilters();
 			syncFormFromState();
 			loadAndRender();
 		});
@@ -533,6 +568,7 @@
 		btn.addEventListener('click', () => {
 			state.filters = emptyFilters();
 			state.offset = 0;
+			state.viewYearMonth = '';
 			syncFormFromState();
 			loadAndRender();
 			const search = document.querySelector('#bc-tx-q');
@@ -555,13 +591,18 @@
 				state.categories.forEach((cat) => {
 					const label = cat.name + ' (' + (cat.type === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense')) + ')';
 					select.appendChild(C.createElement('option', { value: String(cat.id), text: label }));
-					if (cat.groupKey) groups.add(String(cat.groupKey));
+					if (cat.groupKey && BcConst.shouldShowCategoryGroupBadge(cat.groupKey)) {
+						groups.add(String(cat.groupKey));
+					}
 				});
 				select.value = state.filters.categoryId || '';
 			}
 			if (groupSelect) {
 				Array.from(groups).sort((a, b) => a.localeCompare(b)).forEach((groupKey) => {
-					groupSelect.appendChild(C.createElement('option', { value: groupKey, text: groupKey }));
+					groupSelect.appendChild(C.createElement('option', {
+						value: groupKey,
+						text: BcConst.categoryGroupKeyLabel(groupKey),
+					}));
 				});
 				groupSelect.value = state.filters.groupKey || '';
 			}
@@ -722,7 +763,11 @@
 		// Window subline.
 		const windowEl = document.querySelector('[data-bc-tx-window]');
 		if (windowEl) {
-			if (window_.from && window_.to) {
+			const viewYm = resolveViewYearMonth();
+			if (viewYm) {
+				windowEl.textContent = t('budgetcheck', 'Month: {month}')
+					.replace('{month}', Dates.formatYearMonth(viewYm, Ws.htmlLang));
+			} else if (window_.from && window_.to) {
 				windowEl.textContent = t('budgetcheck', 'Period: {from} – {to}')
 					.replace('{from}', Dates.formatDisplayDate(window_.from, Ws.htmlLang))
 					.replace('{to}', Dates.formatDisplayDate(window_.to, Ws.htmlLang));
@@ -804,22 +849,25 @@
 		const expense = totals.expense || null;
 		const net = totals.net || null;
 		const count = Number(totals.count || 0);
+		const planned = totals.planned || null;
+		const plannedCount = Number(planned?.count || 0);
 
 		const netMinor = net ? Number(net.minor || 0) : 0;
 		const netVariant = netMinor > 0 ? 'bc-tx-kpi-tile--net-positive' : (netMinor < 0 ? 'bc-tx-kpi-tile--net-negative' : '');
 		const fmt = (env) => env ? Money.formatEnvelope(env, Ws.htmlLang) : '—';
 
-		tiles.setAttribute('aria-busy', 'false');
-		tiles.replaceChildren(
+		const tileNodes = [
 			kpiTile({
 				modifier: 'bc-tx-kpi-tile--income',
 				label: t('budgetcheck', 'Income'),
 				value: fmt(income),
+				sub: t('budgetcheck', 'Actual bookings only'),
 			}),
 			kpiTile({
 				modifier: 'bc-tx-kpi-tile--expense',
 				label: t('budgetcheck', 'Expenses'),
 				value: fmt(expense),
+				sub: t('budgetcheck', 'Actual bookings only'),
 			}),
 			kpiTile({
 				modifier: 'bc-tx-kpi-tile--net ' + netVariant,
@@ -838,7 +886,22 @@
 					: (count === 1 ? t('budgetcheck', '1 booking in this window.')
 						: t('budgetcheck', '{count} bookings in this window.').replace('{count}', String(count))),
 			}),
-		);
+		];
+		if (plannedCount > 0) {
+			tileNodes.push(kpiTile({
+				modifier: 'bc-tx-kpi-tile--planned',
+				label: t('budgetcheck', 'Planned placeholders'),
+				value: plannedCount === 1
+					? t('budgetcheck', '1 entry')
+					: t('budgetcheck', '{count} entries').replace('{count}', String(plannedCount)),
+				sub: t('budgetcheck', 'In {income} · Out {expense}')
+					.replace('{income}', fmt(planned.income))
+					.replace('{expense}', fmt(planned.expense)),
+			}));
+		}
+
+		tiles.setAttribute('aria-busy', 'false');
+		tiles.replaceChildren(...tileNodes);
 	}
 
 	function kpiTile({ modifier, label, value, sub, primary }) {
@@ -895,8 +958,11 @@
 		// Category (with group sub)
 		const catTd = C.createElement('td', { attrs: { 'data-cell': 'category' } });
 		catTd.appendChild(C.createElement('span', { class: 'bc-tx-row-category', text: cat ? cat.name : '#' + tx.categoryId }));
-		if (cat && cat.groupKey) {
-			catTd.appendChild(C.createElement('span', { class: 'bc-tx-row-group', text: cat.groupKey }));
+		if (cat && BcConst.shouldShowCategoryGroupBadge(cat.groupKey)) {
+			catTd.appendChild(C.createElement('span', {
+				class: 'bc-tx-row-group',
+				text: BcConst.categoryGroupKeyLabel(cat.groupKey),
+			}));
 		}
 		tr.appendChild(catTd);
 
@@ -1179,7 +1245,7 @@
 		if (f.groupKey) {
 			chips.push({
 				labelPrefix: t('budgetcheck', 'Group'),
-				label: f.groupKey === '__none__' ? t('budgetcheck', 'No group') : f.groupKey,
+				label: f.groupKey === '__none__' ? t('budgetcheck', 'No group') : BcConst.categoryGroupKeyLabel(f.groupKey),
 				removeAria: t('budgetcheck', 'Clear group filter'),
 				remove: () => { f.groupKey = ''; afterChipChange(); },
 			});
@@ -1380,7 +1446,7 @@
 				const groupBtn = C.createElement('button', {
 					type: 'button',
 					class: 'button button--text',
-					text: row.groupKey || t('budgetcheck', 'No group'),
+					text: row.groupKey ? BcConst.categoryGroupKeyLabel(row.groupKey) : t('budgetcheck', 'No group'),
 				});
 				groupBtn.addEventListener('click', () => applyAnalyticsDrilldown({ groupKey: row.groupKey || '__none__' }));
 				tr.appendChild(C.createElement('td', null, [groupBtn]));
@@ -1408,7 +1474,7 @@
 				const groupBtn = C.createElement('button', {
 					type: 'button',
 					class: 'button button--text',
-					text: row.groupKey || t('budgetcheck', 'No group'),
+					text: row.groupKey ? BcConst.categoryGroupKeyLabel(row.groupKey) : t('budgetcheck', 'No group'),
 				});
 				groupBtn.addEventListener('click', () => applyAnalyticsDrilldown({ groupKey: row.groupKey || '__none__' }));
 				tr.appendChild(C.createElement('td', null, [catBtn]));
@@ -1456,6 +1522,9 @@
 			state.filters.from = yearMonth + '-01';
 			state.filters.to = yearMonth + '-' + pad2(lastDayOfMonth(y, m));
 			state.filters.rangePreset = 'custom';
+			state.viewYearMonth = yearMonth;
+		} else {
+			syncViewYearMonthFromFilters();
 		}
 		state.offset = 0;
 		syncFormFromState();

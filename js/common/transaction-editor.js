@@ -7,6 +7,10 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 
+	function attachmentsApi() {
+		return window.BudgetCheckTransactionAttachments;
+	}
+
 	function Ws() {
 		return window.BudgetCheckWorkspace;
 	}
@@ -90,7 +94,7 @@
 	}
 
 	/**
-	 * @param {{tx?: object|null, bookingDate?: string, onSaved?: function(): void}} options
+	 * @param {{tx?: object|null, bookingDate?: string, onSaved?: function(): void, onAttachmentsChanged?: function(object): void}} options
 	 */
 	async function open(options) {
 		const opts = options || {};
@@ -133,6 +137,8 @@
 		const modalOpts = opts || {};
 		const ctx = Ws();
 		if (!ctx || !ctx.workspace) return;
+		let activeTx = tx ? Object.assign({}, tx) : null;
+		let attachmentsController = null;
 		const isEdit = !!tx;
 		const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 		const currencyCode = ctx.workspace.currencyCode || '';
@@ -143,7 +149,7 @@
 		C.openModal({
 			title: isEdit ? t('budgetcheck', 'Edit transaction') : t('budgetcheck', 'New transaction'),
 			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add transaction'),
-			render: () => {
+			render: ({ close }) => {
 				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form bc-modal__form--transaction' });
 
 				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [
@@ -370,6 +376,32 @@
 				specialInput.setAttribute('aria-describedby', specialHintId);
 				form.appendChild(specialOuter);
 
+				const attachmentsHost = C.createElement('div', { class: 'bc-field bc-field--full-width bc-tx-attachments-host' });
+				form.appendChild(C.createElement('hr', { class: 'bc-form-grid__divider' }));
+				form.appendChild(attachmentsHost);
+				if (attachmentsApi() && typeof attachmentsApi().mountSection === 'function') {
+					attachmentsController = attachmentsApi().mountSection(attachmentsHost, {
+						transactionId: activeTx ? activeTx.id : null,
+						readOnly: !ctx.canContribute || !!(activeTx && activeTx.isMonthClosed),
+						closedMonth: !!(activeTx && activeTx.isMonthClosed),
+						onChange: () => {
+							if (activeTx) {
+								activeTx.attachmentCount = attachmentsController ? attachmentsController.getCount() : 0;
+								activeTx.hasAttachments = activeTx.attachmentCount > 0;
+							}
+						},
+						onAttachmentsChanged: (payload) => {
+							if (activeTx && payload) {
+								activeTx.attachmentCount = Number(payload.attachmentCount) || 0;
+								activeTx.hasAttachments = !!payload.hasAttachments;
+							}
+							if (typeof modalOpts.onAttachmentsChanged === 'function') {
+								modalOpts.onAttachmentsChanged(payload);
+							}
+						},
+					});
+				}
+
 				function syncTaxControls() {
 					if (!taxModeEnabled || !entryBasisSelect || !vatPresetSelect || !vatCustomWrap || !vatCustomInput || !taxPreviewEl) return;
 					const basis = entryBasisSelect.value;
@@ -430,7 +462,7 @@
 					entryAmountBasis: entryBasisSelect ? entryBasisSelect.value : undefined,
 					vatPreset: vatPresetSelect ? vatPresetSelect.value : undefined,
 					vatRateBpCustom: vatCustomInput ? vatCustomInput.value : undefined,
-					version: tx ? tx.version : undefined,
+					version: activeTx && activeTx.id ? activeTx.version : undefined,
 				});
 				form._focusFirstInvalid = () => {
 					if (catSelect.disabled || !catSelect.value) {
@@ -446,8 +478,24 @@
 				};
 				return form;
 			},
-			onSubmit: async ({ close, body }) => {
+			onCancel: () => {
+				if (attachmentsController && typeof attachmentsController.destroy === 'function') {
+					attachmentsController.destroy();
+				}
+			},
+			onSubmit: async ({ close, body, dialog }) => {
 				const form = body;
+				const primaryBtn = dialog ? dialog.querySelector('.bc-modal__actions .button.primary') : null;
+				const modalTitle = dialog ? dialog.querySelector('.bc-modal__header h2') : null;
+				const syncModalLabelsForSavedTx = () => {
+					if (!activeTx || !activeTx.id) return;
+					if (primaryBtn) {
+						primaryBtn.textContent = t('budgetcheck', 'Save changes');
+					}
+					if (modalTitle) {
+						modalTitle.textContent = t('budgetcheck', 'Edit transaction');
+					}
+				};
 				if (form && typeof form.reportValidity === 'function' && !form.reportValidity()) {
 					if (typeof form._focusFirstInvalid === 'function') {
 						form._focusFirstInvalid();
@@ -466,7 +514,10 @@
 				const selectedCategory = categoryById(payload.categoryId);
 				if (selectedCategory && !selectedCategory.isActive) {
 					Msg.announce(t('budgetcheck', 'Category deactivated.'), 'error');
-					catSelect.focus();
+					const catField = form.querySelector('[name="categoryId"]');
+					if (catField && typeof catField.focus === 'function') {
+						catField.focus();
+					}
 					return false;
 				}
 				if (String(payload.amount || '').trim() === '') {
@@ -518,12 +569,46 @@
 				delete payload.vatPreset;
 				delete payload.vatRateBpCustom;
 				try {
-					if (isEdit) {
-						await Api.put('/apps/budgetcheck/api/transactions/' + tx.id, payload);
+					const txId = activeTx && activeTx.id ? activeTx.id : null;
+					let savedTx = null;
+					if (txId) {
+						const updated = await Api.put('/apps/budgetcheck/api/transactions/' + txId, payload);
+						savedTx = updated && updated.transaction ? updated.transaction : activeTx;
+						activeTx = savedTx;
 						Msg.announce(t('budgetcheck', 'Transaction updated.'), 'success');
 					} else {
-						await Api.post('/apps/budgetcheck/api/transactions', payload);
+						const created = await Api.post('/apps/budgetcheck/api/transactions', payload);
+						savedTx = created && created.transaction ? created.transaction : null;
+						if (!savedTx || !savedTx.id) {
+							throw new Error(t('budgetcheck', 'Could not save transaction.'));
+						}
+						activeTx = savedTx;
 						Msg.announce(t('budgetcheck', 'Transaction created.'), 'success');
+					}
+
+					if (attachmentsController && typeof attachmentsController.hasPending === 'function' && attachmentsController.hasPending()) {
+						if (typeof attachmentsController.setTransactionId === 'function') {
+							attachmentsController.setTransactionId(savedTx.id, { skipReload: true });
+						}
+						const flush = await attachmentsController.flushPending();
+						if (!flush.ok) {
+							syncModalLabelsForSavedTx();
+							if (typeof attachmentsController.reload === 'function') {
+								await attachmentsController.reload();
+							}
+							if (typeof modalOpts.onSaved === 'function') {
+								modalOpts.onSaved();
+							}
+							const attachSection = form.querySelector('.bc-tx-attachments');
+							if (attachSection && typeof attachSection.scrollIntoView === 'function') {
+								attachSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+							}
+							return false;
+						}
+					}
+
+					if (attachmentsController && typeof attachmentsController.destroy === 'function') {
+						attachmentsController.destroy();
 					}
 					if (typeof modalOpts.onSaved === 'function') {
 						modalOpts.onSaved();

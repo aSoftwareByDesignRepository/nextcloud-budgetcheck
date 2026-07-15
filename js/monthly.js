@@ -7,7 +7,6 @@
 	const Money = window.BudgetCheckMoney;
 	const Dates = window.BudgetCheckDates;
 	const Ws = window.BudgetCheckWorkspace;
-	const INTERNAL_UNCATEGORIZED_GROUP = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
 
 	const state = { yearMonth: Dates.currentYearMonth(), summary: null };
 	let periodPicker = null;
@@ -231,14 +230,21 @@
 		}
 		const first = activity.firstDate ? Dates.formatDisplayDate(activity.firstDate, Ws.htmlLang) : '—';
 		const last = activity.lastDate ? Dates.formatDisplayDate(activity.lastDate, Ws.htmlLang) : '—';
-		[
-			[t('budgetcheck', 'Total bookings'), String(activity.count || 0), true],
+		const plannedCount = Number.parseInt(String(activity.plannedCount ?? state.summary?.planned?.ledger?.entryCount ?? 0), 10) || 0;
+		const activityTiles = [
+			[t('budgetcheck', 'Actual bookings'), String(activity.count || 0), true],
 			[t('budgetcheck', 'Income bookings'), String(activity.incomeCount || 0)],
 			[t('budgetcheck', 'Expense bookings'), String(activity.expenseCount || 0)],
 			[t('budgetcheck', 'Special bookings'), String(activity.specialCount || 0)],
+		];
+		if (plannedCount > 0) {
+			activityTiles.push([t('budgetcheck', 'Planned placeholders'), String(plannedCount)]);
+		}
+		activityTiles.push(
 			[t('budgetcheck', 'First booking'), first],
 			[t('budgetcheck', 'Last booking'), last],
-		].forEach(([label, value, primary]) => {
+		);
+		activityTiles.forEach(([label, value, primary]) => {
 			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
 				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
 				C.createElement('div', { class: 'bc-summary-tile__value', text: value }),
@@ -256,13 +262,18 @@
 			return;
 		}
 		rows.forEach((row) => {
-			const tr = C.createElement('tr');
+			const tr = C.createElement('tr', {
+				class: row.isPlanned ? 'bc-table__row--planned' : '',
+			});
 			tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(row.date, Ws.htmlLang) }));
 			tr.appendChild(C.createElement('td', { text: row.title || ('#' + row.id) }));
 			tr.appendChild(C.createElement('td', { text: row.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
 			const amountClass = 'bc-table__col--num ' + (row.direction === 'income' ? 'bc-tx-amount--income' : 'bc-tx-amount--expense');
 			tr.appendChild(C.createElement('td', { class: amountClass, text: Money.formatEnvelope(row.amount, Ws.htmlLang) }));
-			tr.appendChild(C.createElement('td', { text: row.isSpecial ? t('budgetcheck', 'Special') : '—' }));
+			const tags = [];
+			if (row.isPlanned) tags.push(t('budgetcheck', 'Planned'));
+			if (row.isSpecial) tags.push(t('budgetcheck', 'Special'));
+			tr.appendChild(C.createElement('td', { text: tags.length ? tags.join(', ') : '—' }));
 			tbody.appendChild(tr);
 		});
 	}
@@ -274,6 +285,10 @@
 
 	async function openBudgetOverridesModal() {
 		if (!ws || !Ws.canManage) return;
+		if (state.summary && state.summary.isClosed) {
+			Msg.announce(t('budgetcheck', 'This month is closed. Reopen it to make changes.'), 'warning');
+			return;
+		}
 		let categories = [];
 		let budgets = [];
 		let defaults = [];
@@ -442,12 +457,19 @@
 	function updateActionButtons(isClosed) {
 		const closeBtn = document.querySelector('[data-bc-action="close-month"]');
 		const reopenBtn = document.querySelector('[data-bc-action="reopen-month"]');
+		const overridesBtn = document.querySelector('[data-bc-action="open-month-budget-overrides"]');
 		if (closeBtn) {
 			closeBtn.disabled = isClosed;
 			closeBtn.hidden = isClosed;
 		}
 		if (reopenBtn) {
 			reopenBtn.hidden = !isClosed;
+		}
+		if (overridesBtn) {
+			// Budgets of a closed month are part of the snapshot evidence and
+			// therefore read-only until the month is reopened.
+			overridesBtn.disabled = isClosed;
+			overridesBtn.title = isClosed ? t('budgetcheck', 'This month is closed. Reopen it to make changes.') : '';
 		}
 	}
 

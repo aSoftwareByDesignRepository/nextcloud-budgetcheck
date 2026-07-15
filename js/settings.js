@@ -553,19 +553,29 @@
 				return t('budgetcheck', 'Yearly');
 			case 'custom_interval':
 				return t('budgetcheck', 'Custom (months)');
+			case 'schedule':
+				return t('budgetcheck', 'Specific dates');
 			default:
 				return String(frequency || '');
 		}
 	}
 
+	const RECURRING_MAX_SCHEDULE_ENTRIES = 60;
+
+	function snapScheduleDateOnOrAfter(dates, isoDate) {
+		const sorted = [...dates].sort();
+		for (let i = 0; i < sorted.length; i++) {
+			if (sorted[i] >= isoDate) {
+				return sorted[i];
+			}
+		}
+		return null;
+	}
+
 	const INTERNAL_UNCATEGORIZED_GROUP = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
 
 	function categoryGroupKeyLabel(groupKey) {
-		if (!groupKey) return '—';
-		if (groupKey === INTERNAL_UNCATEGORIZED_GROUP) {
-			return t('budgetcheck', 'Built-in (uncategorized)');
-		}
-		return groupKey;
+		return window.BudgetCheckConstants.categoryGroupKeyLabel(groupKey);
 	}
 
 	// ------ Categories ------
@@ -1198,10 +1208,28 @@
 		const ruleLabel = rule.title || ('#' + rule.id);
 		tr.appendChild(C.createElement('td', { text: rule.title }));
 		tr.appendChild(C.createElement('td', { text: rule.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
-		tr.appendChild(C.createElement('td', { class: 'bc-table__col--num', text: Money.formatEnvelope(rule.amount, Ws.htmlLang) }));
+		const isSchedule = rule.frequency === 'schedule';
+		const scheduleEntries = isSchedule && Array.isArray(rule.schedule) ? rule.schedule : [];
+		const hasAmountOverrides = scheduleEntries.some((e) => e && e.amountMinor !== null && e.amountMinor !== undefined);
 		tr.appendChild(C.createElement('td', {
-			text: recurringFrequencyLabel(rule.frequency) + (rule.intervalCount > 1 ? ' \u00d7 ' + rule.intervalCount : ''),
+			class: 'bc-table__col--num',
+			text: hasAmountOverrides
+				? t('budgetcheck', 'Varies (default {amount})').replace('{amount}', Money.formatEnvelope(rule.amount, Ws.htmlLang))
+				: Money.formatEnvelope(rule.amount, Ws.htmlLang),
 		}));
+		let freqText = recurringFrequencyLabel(rule.frequency);
+		if (isSchedule) {
+			if (scheduleEntries.length === 0) {
+				freqText = recurringFrequencyLabel('schedule');
+			} else {
+				freqText = scheduleEntries.length === 1
+					? t('budgetcheck', 'Specific dates (1 date)')
+					: t('budgetcheck', 'Specific dates ({count} dates)').replace('{count}', String(scheduleEntries.length));
+			}
+		} else if (rule.intervalCount > 1) {
+			freqText += ' \u00d7 ' + rule.intervalCount;
+		}
+		tr.appendChild(C.createElement('td', { text: freqText }));
 		tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang) }));
 		tr.appendChild(C.createElement('td', {
 			text: rule.endDate ? Dates.formatDisplayDate(rule.endDate, Ws.htmlLang) : t('budgetcheck', 'Open-ended'),
@@ -1283,17 +1311,27 @@
 				filter();
 				directionSelect.addEventListener('change', filter);
 				wrap(form, t('budgetcheck', 'Category'), catSelect, t('budgetcheck', 'Only active categories of the selected type are shown.'));
+				const minorToHuman = (minor) => (minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',');
 				const amountInput = C.createElement('input', {
 					type: 'text', inputmode: 'decimal', name: 'amount', class: 'bc-input', required: true,
-					value: rule ? (rule.amount.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',') : '',
+					value: rule ? minorToHuman(rule.amount.minor) : '',
 					attrs: { 'aria-label': t('budgetcheck', 'Amount') },
 				});
-				wrap(form, t('budgetcheck', 'Amount'), amountInput, t('budgetcheck', 'Enter the amount for each occurrence.'));
+				const amountLabelText = C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Amount') });
+				const amountHintId = 'bc-rec-amount-hint-' + Math.random().toString(36).slice(2);
+				const amountHint = C.createElement('span', {
+					id: amountHintId,
+					class: 'bc-field__hint',
+					text: t('budgetcheck', 'Enter the amount for each occurrence.'),
+				});
+				amountInput.setAttribute('aria-describedby', amountHintId);
+				form.appendChild(C.createElement('label', { class: 'bc-field' }, [amountLabelText, amountInput, amountHint]));
 				const freqSelect = C.createElement('select', { name: 'frequency', class: 'bc-input' }, [
 					C.createElement('option', { value: 'monthly', text: t('budgetcheck', 'Monthly') }),
 					C.createElement('option', { value: 'quarterly', text: t('budgetcheck', 'Quarterly') }),
 					C.createElement('option', { value: 'yearly', text: t('budgetcheck', 'Yearly') }),
 					C.createElement('option', { value: 'custom_interval', text: t('budgetcheck', 'Custom (months)') }),
+					C.createElement('option', { value: 'schedule', text: t('budgetcheck', 'Specific dates') }),
 				]);
 				freqSelect.value = rule ? rule.frequency : 'monthly';
 				wrap(form, t('budgetcheck', 'Repeat'), freqSelect, t('budgetcheck', 'Choose how often this rule should create a suggestion.'));
@@ -1342,12 +1380,13 @@
 					text: t('budgetcheck', 'First date when this rule can create a booking.'),
 				});
 				const startHint = C.createElement('span', { id: startDh, class: 'bc-field__hint', text: dateHintText });
-				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
+				const startFieldWrap = C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Start date') }),
 					startInput,
 					startPurposeHint,
 					startHint,
-				]));
+				]);
+				form.appendChild(startFieldWrap);
 				const endDh = 'bc-rec-dh-e-' + Math.random().toString(36).slice(2);
 				const endSameDayWarningId = 'bc-rec-end-same-' + Math.random().toString(36).slice(2);
 				const endInput = C.createElement('input', {
@@ -1363,13 +1402,14 @@
 					attrs: { role: 'alert' },
 					text: t('budgetcheck', 'Start and end date are the same. This rule can create at most one booking on that day and will not repeat afterward. Clear the end date if it should continue on your repeat schedule.'),
 				});
-				form.appendChild(C.createElement('label', { class: 'bc-field' }, [
+				const endFieldWrap = C.createElement('label', { class: 'bc-field' }, [
 					C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'End date (optional)') }),
 					endInput,
 					C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Leave empty if this rule should continue indefinitely.') }),
 					endHint,
 					endSameDayWarning,
-				]));
+				]);
+				form.appendChild(endFieldWrap);
 				const syncEndDateWarning = () => {
 					const start = startInput.value.trim();
 					const end = endInput.value.trim();
@@ -1389,6 +1429,112 @@
 				endInput.addEventListener('input', syncEndDateWarning);
 				endInput.addEventListener('change', syncEndDateWarning);
 				syncEndDateWarning();
+
+				// ---- Specific dates (schedule) editor ----
+				let syncRealignUiRef = null;
+				const scheduleRows = C.createElement('div', { class: 'bc-schedule-editor__rows' });
+				const scheduleStatus = C.createElement('p', {
+					class: 'bc-field__hint bc-schedule-editor__status',
+					attrs: { role: 'status', 'aria-live': 'polite' },
+				});
+				const scheduleAddBtn = C.createElement('button', {
+					type: 'button',
+					class: 'button bc-schedule-editor__add',
+					text: t('budgetcheck', 'Add date'),
+				});
+				const syncScheduleStatus = () => {
+					const count = scheduleRows.children.length;
+					scheduleStatus.textContent = count === 1
+						? t('budgetcheck', '1 date scheduled.')
+						: t('budgetcheck', '{count} dates scheduled.').replace('{count}', String(count));
+					scheduleAddBtn.disabled = count >= RECURRING_MAX_SCHEDULE_ENTRIES;
+				};
+				const addScheduleRow = (dateVal, amountVal, focus) => {
+					if (scheduleRows.children.length >= RECURRING_MAX_SCHEDULE_ENTRIES) return;
+					const row = C.createElement('div', { class: 'bc-schedule-editor__row' });
+					const dateInput = C.createElement('input', {
+						type: 'date', class: 'bc-input bc-schedule-editor__date', autocomplete: 'off',
+						value: dateVal || '',
+						attrs: { 'aria-label': t('budgetcheck', 'Scheduled date'), lang: Ws.htmlLang, 'data-bc-schedule-date': '1' },
+					});
+					const rowAmountInput = C.createElement('input', {
+						type: 'text', inputmode: 'decimal', class: 'bc-input bc-schedule-editor__amount',
+						value: amountVal || '',
+						attrs: {
+							'aria-label': t('budgetcheck', 'Amount for this date (optional)'),
+							placeholder: t('budgetcheck', 'Default amount'),
+							'data-bc-schedule-amount': '1',
+						},
+					});
+					const removeBtn = C.createElement('button', {
+						type: 'button',
+						class: 'button bc-schedule-editor__remove',
+						text: t('budgetcheck', 'Remove'),
+						attrs: { 'aria-label': t('budgetcheck', 'Remove this date') },
+					});
+					removeBtn.addEventListener('click', () => {
+						row.remove();
+						if (scheduleRows.children.length === 0) {
+							addScheduleRow('', '', false);
+						}
+						syncScheduleStatus();
+						if (syncRealignUiRef) syncRealignUiRef();
+						scheduleAddBtn.focus();
+					});
+					const notifyRealignPreview = () => {
+						if (syncRealignUiRef) syncRealignUiRef();
+					};
+					dateInput.addEventListener('input', notifyRealignPreview);
+					dateInput.addEventListener('change', notifyRealignPreview);
+					row.appendChild(dateInput);
+					row.appendChild(rowAmountInput);
+					row.appendChild(removeBtn);
+					scheduleRows.appendChild(row);
+					if (window.BudgetCheckDates && typeof window.BudgetCheckDates.applyLocaleToTemporalInputs === 'function') {
+						window.BudgetCheckDates.applyLocaleToTemporalInputs(row);
+					}
+					if (focus) dateInput.focus();
+					syncScheduleStatus();
+				};
+				scheduleAddBtn.addEventListener('click', () => addScheduleRow('', '', true));
+				const scheduleWrap = C.createElement('fieldset', { class: 'bc-field bc-field--full-width bc-schedule-editor', hidden: true }, [
+					C.createElement('legend', { class: 'bc-field__label', text: t('budgetcheck', 'Scheduled dates') }),
+					C.createElement('p', {
+						class: 'bc-field__hint bc-field__hint--block',
+						text: t('budgetcheck', 'Add one row for each date this rule should create a planned booking. Leave a row\'s amount empty to use the default amount above. Dates can be in any order; they are sorted automatically.'),
+					}),
+					scheduleRows,
+					C.createElement('div', { class: 'bc-schedule-editor__footer' }, [scheduleAddBtn, scheduleStatus]),
+				]);
+				form.appendChild(scheduleWrap);
+				if (rule && rule.frequency === 'schedule' && Array.isArray(rule.schedule)) {
+					rule.schedule.forEach((entry) => {
+						addScheduleRow(
+							String(entry.date || ''),
+							entry.amountMinor !== null && entry.amountMinor !== undefined ? minorToHuman(entry.amountMinor) : '',
+							false
+						);
+					});
+				}
+				const syncScheduleUi = () => {
+					const scheduleMode = freqSelect.value === 'schedule';
+					scheduleWrap.hidden = !scheduleMode;
+					startFieldWrap.hidden = scheduleMode;
+					endFieldWrap.hidden = scheduleMode;
+					startInput.disabled = scheduleMode;
+					endInput.disabled = scheduleMode;
+					amountLabelText.textContent = scheduleMode ? t('budgetcheck', 'Default amount') : t('budgetcheck', 'Amount');
+					amountHint.textContent = scheduleMode
+						? t('budgetcheck', 'Used for scheduled dates that do not set their own amount.')
+						: t('budgetcheck', 'Enter the amount for each occurrence.');
+					if (scheduleMode && scheduleRows.children.length === 0) {
+						addScheduleRow('', '', false);
+					}
+					syncScheduleStatus();
+					if (syncRealignUiRef) syncRealignUiRef();
+				};
+				freqSelect.addEventListener('change', syncScheduleUi);
+				syncScheduleUi();
 				const isActiveInput = C.createElement('input', {
 					type: 'checkbox',
 					name: 'isActive',
@@ -1427,14 +1573,22 @@
 						value: rule ? String(rule.startDate) : Dates.isoDate(new Date()),
 						attrs: { lang: Ws.htmlLang },
 					});
+					const realignModeHint = C.createElement('span', {
+						class: 'bc-field__hint',
+						text: t('budgetcheck', 'When enabled, the next due date is reset to this date when you save.'),
+					});
 					realignDateWrap = C.createElement('label', { class: 'bc-field', hidden: true }, [
 						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Realign from date') }),
 						realignDateInput,
-						C.createElement('span', {
-							class: 'bc-field__hint',
-							text: t('budgetcheck', 'When enabled, the next due date is reset to this date when you save.'),
-						}),
+						realignModeHint,
 					]);
+					const syncRealignModeHint = () => {
+						realignModeHint.textContent = freqSelect.value === 'schedule'
+							? t('budgetcheck', 'When enabled, the next due date jumps to the first scheduled date on or after this day when you save.')
+							: t('budgetcheck', 'When enabled, the next due date is reset to this date when you save.');
+					};
+					freqSelect.addEventListener('change', syncRealignModeHint);
+					syncRealignModeHint();
 					realignPreview = C.createElement('span', { class: 'bc-field__hint' });
 					const realignControl = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' }, [
 						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Schedule alignment') }),
@@ -1462,53 +1616,124 @@
 							realignPreview.textContent = t('budgetcheck', 'Select a valid realign date.');
 							return;
 						}
+						if (freqSelect.value === 'schedule') {
+							const scheduleDates = Array.from(scheduleRows.children).map((scheduleRow) => {
+								return String(scheduleRow.querySelector('[data-bc-schedule-date]')?.value || '').trim();
+							}).filter((d) => Dates.isIsoCalendarDay(d));
+							const snapped = snapScheduleDateOnOrAfter(scheduleDates, raw);
+							if (snapped === null) {
+								realignPreview.textContent = t('budgetcheck', 'No scheduled date on or after the realign date.');
+							} else {
+								realignPreview.textContent = t('budgetcheck', 'After saving, next due date will be {date}.')
+									.replace('{date}', Dates.formatDisplayDate(snapped, Ws.htmlLang));
+							}
+							return;
+						}
 						realignPreview.textContent = t('budgetcheck', 'After saving, next due date will be {date}.')
 							.replace('{date}', Dates.formatDisplayDate(raw, Ws.htmlLang));
 					};
+					syncRealignUiRef = syncRealignUi;
 					realignToggle.addEventListener('change', syncRealignUi);
 					realignDateInput.addEventListener('input', syncRealignUi);
+					freqSelect.addEventListener('change', syncRealignUi);
 					syncRealignUi();
 				}
 
-				form._collect = () => ({
-					workspaceId: Ws.workspace.id,
-					title: titleInput.value.trim(),
-					direction: directionSelect.value,
-					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
-					amount: amountInput.value,
-					frequency: freqSelect.value,
-					intervalCount: freqSelect.value === 'custom_interval' ? (Number.parseInt(intervalSelect.value, 10) || 2) : 1,
-					startDate: startInput.value.trim(),
-					endDate: endInput.value.trim(),
-					isActive: isActiveInput.checked,
-					realignNextDue: !!(realignToggle && realignToggle.checked),
-					realignFromDate: realignDateInput ? realignDateInput.value.trim() : '',
-				});
+				form._collect = () => {
+					const scheduleMode = freqSelect.value === 'schedule';
+					const payload = {
+						workspaceId: Ws.workspace.id,
+						title: titleInput.value.trim(),
+						direction: directionSelect.value,
+						categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
+						amount: amountInput.value,
+						frequency: freqSelect.value,
+						intervalCount: freqSelect.value === 'custom_interval' ? (Number.parseInt(intervalSelect.value, 10) || 2) : 1,
+						isActive: isActiveInput.checked,
+						realignNextDue: !!(realignToggle && realignToggle.checked),
+						realignFromDate: realignDateInput ? realignDateInput.value.trim() : '',
+					};
+					if (scheduleMode) {
+						payload.schedule = Array.from(scheduleRows.children).map((row) => ({
+							date: String(row.querySelector('[data-bc-schedule-date]')?.value || '').trim(),
+							amount: String(row.querySelector('[data-bc-schedule-amount]')?.value || '').trim(),
+						}));
+					} else {
+						payload.startDate = startInput.value.trim();
+						payload.endDate = endInput.value.trim();
+					}
+					return payload;
+				};
 				return form;
 			},
 			onSubmit: async ({ close, body }) => {
 				const form = body;
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
-				const endRaw = String(payload.endDate || '').trim();
-				if (!Dates.isIsoCalendarDay(payload.startDate) || (endRaw !== '' && !Dates.isIsoCalendarDay(endRaw))) {
-					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
-					return false;
-				}
-				payload.startDate = String(payload.startDate).trim();
-				payload.endDate = endRaw;
-				if (payload.endDate !== '' && payload.endDate < payload.startDate) {
-					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
-					return false;
-				}
-				if (payload.endDate !== '' && payload.endDate === payload.startDate) {
-					const proceed = await C.confirmDialog({
-						title: t('budgetcheck', 'Same start and end date?'),
-						body: t('budgetcheck', 'Only one planned booking can be created on this date. Clear the end date if you want the rule to repeat on your schedule.'),
-						confirmLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
-					});
-					if (!proceed) {
+				const scheduleMode = payload.frequency === 'schedule';
+				if (scheduleMode) {
+					const cleaned = [];
+					const seen = new Set();
+					for (const row of (payload.schedule || [])) {
+						const date = String(row.date || '').trim();
+						const amount = String(row.amount || '').trim();
+						if (date === '' && amount === '') continue;
+						if (date === '' || !Dates.isIsoCalendarDay(date)) {
+							Msg.announce(t('budgetcheck', 'Every scheduled row needs a valid date.'), 'error');
+							return false;
+						}
+						if (seen.has(date)) {
+							Msg.announce(
+								t('budgetcheck', 'The date {date} is listed twice.').replace('{date}', Dates.formatDisplayDate(date, Ws.htmlLang)),
+								'error'
+							);
+							return false;
+						}
+						seen.add(date);
+						if (amount !== '') {
+							try {
+								Money.parseHuman(amount, decimals);
+							} catch (e) {
+								Msg.announce(e.message, 'error');
+								return false;
+							}
+						}
+						cleaned.push({ date, amount });
+					}
+					if (cleaned.length === 0) {
+						Msg.announce(t('budgetcheck', 'Add at least one scheduled date.'), 'error');
 						return false;
+					}
+					if (cleaned.length > RECURRING_MAX_SCHEDULE_ENTRIES) {
+						Msg.announce(
+							t('budgetcheck', 'A schedule can include at most {count} dates.')
+								.replace('{count}', String(RECURRING_MAX_SCHEDULE_ENTRIES)),
+							'error'
+						);
+						return false;
+					}
+					payload.schedule = cleaned;
+				} else {
+					const endRaw = String(payload.endDate || '').trim();
+					if (!Dates.isIsoCalendarDay(payload.startDate) || (endRaw !== '' && !Dates.isIsoCalendarDay(endRaw))) {
+						Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
+						return false;
+					}
+					payload.startDate = String(payload.startDate).trim();
+					payload.endDate = endRaw;
+					if (payload.endDate !== '' && payload.endDate < payload.startDate) {
+						Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
+						return false;
+					}
+					if (payload.endDate !== '' && payload.endDate === payload.startDate) {
+						const proceed = await C.confirmDialog({
+							title: t('budgetcheck', 'Same start and end date?'),
+							body: t('budgetcheck', 'Only one planned booking can be created on this date. Clear the end date if you want the rule to repeat on your schedule.'),
+							confirmLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
+						});
+						if (!proceed) {
+							return false;
+						}
 					}
 				}
 				try {
@@ -1523,13 +1748,21 @@
 						Msg.announce(t('budgetcheck', 'Select a valid realign date.'), 'error');
 						return false;
 					}
-					if (realignRaw < payload.startDate) {
-						Msg.announce(t('budgetcheck', 'Realign date must not be before start date.'), 'error');
-						return false;
-					}
-					if (payload.endDate !== '' && realignRaw > payload.endDate) {
-						Msg.announce(t('budgetcheck', 'Realign date must not be after end date.'), 'error');
-						return false;
+					if (scheduleMode) {
+						const lastDate = payload.schedule.reduce((max, e) => (e.date > max ? e.date : max), '');
+						if (lastDate !== '' && realignRaw > lastDate) {
+							Msg.announce(t('budgetcheck', 'No scheduled date on or after the realign date.'), 'error');
+							return false;
+						}
+					} else {
+						if (realignRaw < payload.startDate) {
+							Msg.announce(t('budgetcheck', 'Realign date must not be before start date.'), 'error');
+							return false;
+						}
+						if (payload.endDate !== '' && realignRaw > payload.endDate) {
+							Msg.announce(t('budgetcheck', 'Realign date must not be after end date.'), 'error');
+							return false;
+						}
 					}
 					payload.nextDueDate = realignRaw;
 				}

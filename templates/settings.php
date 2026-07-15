@@ -413,7 +413,7 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 				<header class="bc-section__header">
 					<div>
 						<h2 id="bc-recurring-title"><?php p($l->t('Recurring rules')); ?></h2>
-						<p class="bc-section__sub"><?php p($l->t('Repeating income or expenses. Generate creates planned ledger entries; a matching import removes the plan automatically.')); ?></p>
+						<p class="bc-section__sub"><?php p($l->t('Repeating income or expenses — on a fixed interval or on specific dates you list. Generate creates planned ledger entries; a matching import removes the plan automatically.')); ?></p>
 					</div>
 					<button type="button" class="button primary" data-bc-action="open-create-recurring">
 						<?php p($l->t('New rule')); ?>

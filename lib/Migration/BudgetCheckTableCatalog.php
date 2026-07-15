@@ -25,6 +25,7 @@ final class BudgetCheckTableCatalog
 		'bc_recurring_rules',
 		'bc_savings_targets',
 		'bc_transactions',
+		'bc_tx_attachments',
 		'bc_workspace_groups',
 		'bc_workspace_members',
 		'bc_workspaces',

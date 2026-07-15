@@ -14,6 +14,9 @@ use OCP\IDBConnection;
  * Match keys: workspace, category, direction, exact amount, booking month equal
  * or adjacent (covers salary on the last weekday vs. income counted from the
  * first day of the next month).
+ *
+ * Placeholders whose booking month has been closed are never touched: the
+ * month-close lock applies to system-driven writes too.
  */
 final class PlannedTransactionMatchService
 {
@@ -134,10 +137,12 @@ final class PlannedTransactionMatchService
 			$candidates[] = [
 				'id' => (int)$row['id'],
 				'version' => (int)$row['version'],
+				'yearMonth' => substr($plannedDate, 0, 7),
 				'distance' => abs(strtotime($plannedDate) - strtotime($bookingDate)),
 			];
 		}
 		$result->closeCursor();
+		$candidates = $this->withoutClosedMonths($workspaceId, $candidates);
 
 		return self::pickClosestCandidate($candidates);
 	}
@@ -175,12 +180,66 @@ final class PlannedTransactionMatchService
 			$candidates[] = [
 				'id' => (int)$row['id'],
 				'version' => (int)$row['version'],
+				'yearMonth' => substr($plannedDate, 0, 7),
 				'distance' => abs(strtotime($plannedDate) - strtotime($bookingDate)),
 			];
 		}
 		$result->closeCursor();
+		$candidates = $this->withoutClosedMonths($workspaceId, $candidates);
 
 		return self::pickClosestCandidate($candidates);
+	}
+
+	/**
+	 * Drop candidates whose booking month has an immutable close snapshot.
+	 *
+	 * @param list<array{id:int, version:int, yearMonth:string, distance:int}> $candidates
+	 * @return list<array{id:int, version:int, yearMonth:string, distance:int}>
+	 */
+	private function withoutClosedMonths(int $workspaceId, array $candidates): array
+	{
+		if ($candidates === []) {
+			return [];
+		}
+		$months = [];
+		foreach ($candidates as $candidate) {
+			$ym = (string)($candidate['yearMonth'] ?? '');
+			if (preg_match('/^\d{4}-\d{2}$/', $ym)) {
+				$months[$ym] = true;
+			}
+		}
+		if ($months === []) {
+			return $candidates;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('year_month')
+			->from('bc_monthly_snapshots')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->in('year_month', $qb->createNamedParameter(array_keys($months), \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		$closed = [];
+		while ($row = $result->fetch()) {
+			$closed[(string)$row['year_month']] = true;
+		}
+		$result->closeCursor();
+
+		return self::filterCandidatesByClosedMonths($candidates, $closed);
+	}
+
+	/**
+	 * @param list<array{id:int, version:int, yearMonth:string, distance:int}> $candidates
+	 * @param array<string,true> $closedMonths
+	 * @return list<array{id:int, version:int, yearMonth:string, distance:int}>
+	 */
+	public static function filterCandidatesByClosedMonths(array $candidates, array $closedMonths): array
+	{
+		if ($closedMonths === []) {
+			return $candidates;
+		}
+		return array_values(array_filter(
+			$candidates,
+			static fn (array $candidate): bool => !isset($closedMonths[(string)($candidate['yearMonth'] ?? '')]),
+		));
 	}
 
 	/**

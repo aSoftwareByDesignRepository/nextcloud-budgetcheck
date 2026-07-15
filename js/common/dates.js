@@ -245,6 +245,23 @@
 	}
 
 	/**
+	 * When from/to span exactly one calendar month (first through last day), return YYYY-MM.
+	 * @returns {string|null}
+	 */
+	function yearMonthFromDateRange(fromIso, toIso) {
+		const from = String(fromIso || '');
+		const to = String(toIso || '');
+		const head = from.match(/^(\d{4})-(\d{2})-01$/);
+		if (!head) return null;
+		const y = Number.parseInt(head[1], 10);
+		const mo = Number.parseInt(head[2], 10);
+		if (!Number.isFinite(y) || !Number.isFinite(mo) || mo < 1 || mo > 12) return null;
+		const lastDay = new Date(y, mo, 0).getDate();
+		const expectedTo = y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (lastDay < 10 ? '0' : '') + lastDay;
+		return to === expectedTo ? (y + '-' + (mo < 10 ? '0' : '') + mo) : null;
+	}
+
+	/**
 	 * Human copy for month pickers: workspace booking span + selected month activity.
 	 * Expects `summary.ledgerYearMonthSpan` and optional `summary.monthLedger` from monthly-summary or list-budgets (project).
 	 *
@@ -332,6 +349,7 @@
 		applyLocaleToTemporalInput,
 		applyLocaleToTemporalInputs,
 		compareYearMonth,
+		yearMonthFromDateRange,
 		monthlyLedgerHelpLines,
 	};
 })();

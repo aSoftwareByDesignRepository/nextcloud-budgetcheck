@@ -291,10 +291,18 @@
 			]);
 		};
 
-		const makeSection = (title, hint, tiles, footerNodes) => {
-			const section = createElement('section', { class: 'bc-summary-section' });
+		const makeSection = (title, hint, tiles, footerNodes, extraClass, sectionKey) => {
+			const titleId = sectionKey ? ('bc-summary-' + sectionKey + '-title') : null;
+			const section = createElement('section', {
+				class: ('bc-summary-section ' + String(extraClass || '')).trim(),
+				attrs: titleId ? { 'aria-labelledby': titleId } : {},
+			});
 			const head = createElement('header', { class: 'bc-summary-section__header' });
-			head.appendChild(createElement('h3', { class: 'bc-summary-section__title', text: title }));
+			head.appendChild(createElement('h3', {
+				class: 'bc-summary-section__title',
+				attrs: titleId ? { id: titleId } : {},
+				text: title,
+			}));
 			if (hint) {
 				head.appendChild(createElement('p', { class: 'bc-summary-section__hint', text: hint }));
 			}
@@ -361,7 +369,7 @@
 			? t('budgetcheck', 'Full ledger totals, including one-off special transactions.')
 			: (rawTotals.hasSpecialTransactions
 				? t('budgetcheck', 'Everyday income and expenses—one-off special transactions are excluded.')
-				: t('budgetcheck', 'Ledger totals for this month. Expenses include transfers to savings categories.'));
+				: t('budgetcheck', 'Actual bookings only. Planned placeholders are shown separately below.'));
 		const cashFlowTiles = [
 			makeTile(t('budgetcheck', 'Income'), totals.income),
 			makeTile(t('budgetcheck', 'Expenses'), totals.expense, {
@@ -403,7 +411,58 @@
 			cashFlowHint,
 			cashFlowTiles,
 			cashFlowFooter,
+			'',
+			'cashflow',
 		);
+
+		const planned = summary.planned || null;
+		const plannedLedger = planned && planned.ledger ? planned.ledger : null;
+		const plannedEntryCount = Number.parseInt(String(plannedLedger?.entryCount ?? 0), 10) || 0;
+		const incomeTargetMinor = Number.parseInt(String(planned?.incomeTarget?.minor ?? 0), 10) || 0;
+		const expenseTargetMinor = Number.parseInt(String(budget?.plannedTotal?.minor ?? 0), 10) || 0;
+		const showPlannedSection = plannedEntryCount > 0 || incomeTargetMinor > 0 || expenseTargetMinor > 0;
+		if (showPlannedSection) {
+			const plannedTiles = [];
+			if (incomeTargetMinor > 0) {
+				plannedTiles.push(makeTile(t('budgetcheck', 'Income target'), planned.incomeTarget, {
+					hint: t('budgetcheck', 'From your category budget plan'),
+				}));
+			}
+			if (expenseTargetMinor > 0) {
+				plannedTiles.push(makeTile(t('budgetcheck', 'Expense target'), budget.plannedTotal, {
+					hint: t('budgetcheck', 'From your category budget plan'),
+				}));
+			}
+			if (plannedEntryCount > 0) {
+				plannedTiles.push(
+					makeTile(t('budgetcheck', 'Planned income'), plannedLedger.income),
+					makeTile(t('budgetcheck', 'Planned expenses'), plannedLedger.expense),
+					makeTile(t('budgetcheck', 'Planned net'), plannedLedger.netResult, { primary: true }),
+				);
+			}
+			const Ws = window.BudgetCheckWorkspace;
+			const ledgerHref = Ws && Ws.urls && Ws.urls.transactions && summary.yearMonth
+				? Ws.withWorkspace(Ws.urls.transactions) + '&yearMonth=' + encodeURIComponent(String(summary.yearMonth))
+				: null;
+			const plannedFooter = plannedEntryCount > 0 && ledgerHref
+				? [makeInfoCallout(
+					plannedEntryCount === 1
+						? t('budgetcheck', '1 planned placeholder awaits a real booking. A matching import removes it automatically.')
+						: t('budgetcheck', '{count} planned placeholders await real bookings. Matching imports remove them automatically.')
+							.replace('{count}', String(plannedEntryCount)),
+					ledgerHref,
+					t('budgetcheck', 'Open ledger for this month'),
+				)]
+				: null;
+			makeSection(
+				t('budgetcheck', 'Expected (plan)'),
+				t('budgetcheck', 'Budget targets and ledger placeholders for this month—not counted in actual cash flow above.'),
+				plannedTiles,
+				plannedFooter,
+				'bc-summary-section--plan',
+				'plan',
+			);
+		}
 
 		const savingsTiles = [
 			makeTile(t('budgetcheck', 'Savings target'), totals.savingsTarget),
@@ -426,6 +485,8 @@
 			t('budgetcheck', 'Your monthly savings goal and how much you moved aside.'),
 			savingsTiles,
 			savingsFooter,
+			'',
+			'savings',
 		);
 
 		if (budget) {
@@ -444,6 +505,9 @@
 					makeTile(t('budgetcheck', 'Not spent (under budget)'), unspentEnv),
 					makeTile(t('budgetcheck', 'Overspent (over budget)'), overspentEnv),
 				],
+				null,
+				'',
+				'budget',
 			);
 		}
 

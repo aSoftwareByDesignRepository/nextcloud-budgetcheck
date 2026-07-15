@@ -32,6 +32,10 @@
 .bc-tx-kpi-tile--count {
 	border-inline-start: 4px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
 }
+.bc-tx-kpi-tile--planned {
+	border-inline-start: 4px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 75%, transparent);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 6%, var(--bc-bg-card));
+}
 .bc-tx-kpi-tile--skeleton .bc-summary-tile__label,
 .bc-tx-kpi-tile--skeleton .bc-summary-tile__value {
 	background: var(--bc-bg-stripe);
@@ -317,9 +321,11 @@
 	font-weight: 600;
 }
 .bc-tx-table .bc-tx-row-tags {
-	display: flex;
+	display: inline-flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--bc-space-1);
+	align-items: center;
+	min-height: 1.75rem;
 }
 .bc-tx-tag-pill {
 	display: inline-flex;
@@ -340,6 +346,12 @@
 .bc-tx-tag-pill--planned {
 	background: var(--bc-tint-info, color-mix(in srgb, var(--color-primary-element, #0082c9) 14%, transparent));
 	border-color: transparent;
+}
+.bc-tx-tag-pill--receipt {
+	background: var(--bc-tint-receipt, var(--bc-tint-info));
+	border: 1px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 35%, var(--bc-border) 65%);
+	color: var(--color-main-text, #1d1d1d);
+	font-weight: 600;
 }
 
 /* Row action menu (kebab) */
@@ -719,6 +731,7 @@
 		width: auto;
 		padding: var(--bc-space-3) var(--bc-space-4);
 		border-bottom: 1px solid var(--bc-border);
+		vertical-align: middle;
 	}
 	.bc-tx-table tbody tr {
 		display: table-row;
@@ -756,4 +769,13 @@
 		width: auto;
 		justify-content: flex-end;
 	}
+}
+
+/* Ledger receipt indicators */
+.bc-tx-row-receipts {
+	display: block;
+	margin-top: var(--bc-space-1);
+	font-size: var(--bc-fs-xs, 0.8125rem);
+	font-weight: 600;
+	color: var(--color-main-text, #1d1d1d);
 }

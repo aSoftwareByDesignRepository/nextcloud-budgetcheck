@@ -124,6 +124,14 @@ class SummaryService
 		$warnings = $this->warnings->household($monthlyForWarnings, $everydayConsumption);
 		$activity = $this->monthlyActivity($rows);
 		$monthTransactions = $this->monthlyTransactions($rows, $workspace['currencyCode']);
+		$plannedLedger = $this->aggregatePlannedLedger($workspace, $rows);
+		$incomeTargetMinor = $this->sumPlannedMapByDirection(
+			$plannedMap,
+			$workspaceCategories,
+			$uncatIds,
+			$savingsCategoryIds,
+			CategoryService::TYPE_INCOME,
+		);
 
 		return [
 			'workspace' => $workspace,
@@ -175,6 +183,15 @@ class SummaryService
 				'direction' => $row['direction'],
 			], $figures['specials']),
 			'warnings' => $warnings,
+			'planned' => [
+				'ledger' => [
+					'income' => $this->money->envelope($plannedLedger['incomeMinor'], $workspace['currencyCode']),
+					'expense' => $this->money->envelope($plannedLedger['expenseMinor'], $workspace['currencyCode']),
+					'netResult' => $this->money->envelope($plannedLedger['netResultMinor'], $workspace['currencyCode']),
+					'entryCount' => $plannedLedger['entryCount'],
+				],
+				'incomeTarget' => $this->money->envelope($incomeTargetMinor, $workspace['currencyCode']),
+			],
 		];
 	}
 
@@ -291,6 +308,10 @@ class SummaryService
 		$budgetUnspentTotal = 0;
 		$budgetOverspentTotal = 0;
 		$overBudgetMonths = 0;
+		$plannedLedgerIncomeTotal = 0;
+		$plannedLedgerExpenseTotal = 0;
+		$plannedLedgerEntryTotal = 0;
+		$incomeTargetTotal = 0;
 		$specialIncomeTotal = 0;
 		$specialExpenseTotal = 0;
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
@@ -350,6 +371,18 @@ class SummaryService
 			$budgetUnspentTotal += $budgetUnspentMinor;
 			$budgetOverspentTotal += $budgetOverspentMinor;
 			$savingsTransferredMinor = (int)($figures['savingsTransferredMinor'] ?? 0);
+			$plannedLedger = $this->aggregatePlannedLedger($workspace, $rows);
+			$incomeTargetMinor = $this->sumPlannedMapByDirection(
+				$plannedMap,
+				$workspaceCategories,
+				$uncatIds,
+				$savingsCategoryIds,
+				CategoryService::TYPE_INCOME,
+			);
+			$plannedLedgerIncomeTotal += $plannedLedger['incomeMinor'];
+			$plannedLedgerExpenseTotal += $plannedLedger['expenseMinor'];
+			$plannedLedgerEntryTotal += $plannedLedger['entryCount'];
+			$incomeTargetTotal += $incomeTargetMinor;
 			$monthSavings = $this->yearlySavingsMonthContributions(
 				$savingsTargetMinor,
 				$savingsTransferredMinor,
@@ -378,6 +411,15 @@ class SummaryService
 				],
 				'overBudget' => $overBudget,
 				'isClosed' => $this->loadSnapshot($workspaceId, $ym) !== null,
+				'planned' => [
+					'ledger' => [
+						'income' => $this->money->envelope($plannedLedger['incomeMinor'], $workspace['currencyCode']),
+						'expense' => $this->money->envelope($plannedLedger['expenseMinor'], $workspace['currencyCode']),
+						'netResult' => $this->money->envelope($plannedLedger['netResultMinor'], $workspace['currencyCode']),
+						'entryCount' => $plannedLedger['entryCount'],
+					],
+					'incomeTarget' => $this->money->envelope($incomeTargetMinor, $workspace['currencyCode']),
+				],
 			];
 		}
 		$achievementRatio = $savingsTargetTotal > 0 ? min(1.0, $savingsTowardTargetTotal / $savingsTargetTotal) : null;
@@ -410,6 +452,15 @@ class SummaryService
 				'budgetUnspent' => $this->money->envelope($budgetUnspentTotal, $workspace['currencyCode']),
 				'budgetOverspent' => $this->money->envelope($budgetOverspentTotal, $workspace['currencyCode']),
 				'overBudgetMonths' => $overBudgetMonths,
+				'planned' => [
+					'ledger' => [
+						'income' => $this->money->envelope($plannedLedgerIncomeTotal, $workspace['currencyCode']),
+						'expense' => $this->money->envelope($plannedLedgerExpenseTotal, $workspace['currencyCode']),
+						'netResult' => $this->money->envelope($plannedLedgerIncomeTotal - $plannedLedgerExpenseTotal, $workspace['currencyCode']),
+						'entryCount' => $plannedLedgerEntryTotal,
+					],
+					'incomeTarget' => $this->money->envelope($incomeTargetTotal, $workspace['currencyCode']),
+				],
 			],
 			'months' => $months,
 		];
@@ -438,6 +489,71 @@ class SummaryService
 	 *     specials:list<array<string,mixed>>
 	 * }
 	 */
+	/**
+	 * Sum placeholder ledger rows (`is_planned`) for forecast tiles. These never
+	 * feed actual cash flow, budget actuals, or monthly-close evidence.
+	 *
+	 * @return array{incomeMinor:int, expenseMinor:int, netResultMinor:int, entryCount:int}
+	 */
+	private function aggregatePlannedLedger(array $workspace, array $rows): array
+	{
+		$excludeSpecials = $this->excludeSpecialsFromPlanningTotals($workspace);
+		$income = 0;
+		$expense = 0;
+		$count = 0;
+		foreach ($rows as $row) {
+			if (empty($row['is_planned'])) {
+				continue;
+			}
+			if ($excludeSpecials && (bool)$row['is_special']) {
+				continue;
+			}
+			$amountMinor = (int)$row['amount_minor'];
+			$count++;
+			if ((string)$row['direction'] === TransactionService::DIRECTION_INCOME) {
+				$income += $amountMinor;
+			} else {
+				$expense += $amountMinor;
+			}
+		}
+		return [
+			'incomeMinor' => $income,
+			'expenseMinor' => $expense,
+			'netResultMinor' => $income - $expense,
+			'entryCount' => $count,
+		];
+	}
+
+	/**
+	 * @param array<int,int> $plannedMap
+	 * @param array<int,array{name:string,type:string,isActive:bool,isSavingsTransfer?:bool}> $workspaceCategories
+	 * @param list<int> $uncategorizedCategoryIds
+	 * @param list<int> $savingsCategoryIds
+	 */
+	private function sumPlannedMapByDirection(
+		array $plannedMap,
+		array $workspaceCategories,
+		array $uncategorizedCategoryIds,
+		array $savingsCategoryIds,
+		string $direction,
+	): int {
+		$total = 0;
+		foreach ($plannedMap as $cid => $plannedAmt) {
+			$cid = (int)$cid;
+			if ($cid <= 0 || in_array($cid, $uncategorizedCategoryIds, true)) {
+				continue;
+			}
+			if (in_array($cid, $savingsCategoryIds, true)) {
+				continue;
+			}
+			if (($workspaceCategories[$cid]['type'] ?? '') !== $direction) {
+				continue;
+			}
+			$total += max(0, (int)$plannedAmt);
+		}
+		return $total;
+	}
+
 	private function aggregateMonth(array $workspace, array $rows, array $uncategorizedCategoryIds = [], array $savingsCategoryIds = []): array
 	{
 		$uncategorizedCategoryIds = array_values(array_unique(array_map(static fn (int $id): int => $id, $uncategorizedCategoryIds)));
@@ -720,13 +836,26 @@ class SummaryService
 	}
 
 	/**
-	 * @return array{count:int,incomeCount:int,expenseCount:int,specialCount:int,firstDate:?string,lastDate:?string}
+	 * Activity counters for the monthly planner. Actual booking counts exclude
+	 * planned placeholders so they align with cash-flow tiles above.
+	 *
+	 * @return array{
+	 *     count:int,
+	 *     incomeCount:int,
+	 *     expenseCount:int,
+	 *     specialCount:int,
+	 *     plannedCount:int,
+	 *     ledgerCount:int,
+	 *     firstDate:?string,
+	 *     lastDate:?string
+	 * }
 	 */
 	private function monthlyActivity(array $rows): array
 	{
 		$incomeCount = 0;
 		$expenseCount = 0;
 		$specialCount = 0;
+		$plannedCount = 0;
 		$firstDate = null;
 		$lastDate = null;
 		foreach ($rows as $row) {
@@ -737,6 +866,10 @@ class SummaryService
 			if ($lastDate === null || strcmp($date, $lastDate) > 0) {
 				$lastDate = $date;
 			}
+			if (!empty($row['is_planned'])) {
+				$plannedCount++;
+				continue;
+			}
 			if ((string)$row['direction'] === TransactionService::DIRECTION_INCOME) {
 				$incomeCount++;
 			} else {
@@ -746,11 +879,14 @@ class SummaryService
 				$specialCount++;
 			}
 		}
+		$actualCount = $incomeCount + $expenseCount;
 		return [
-			'count' => count($rows),
+			'count' => $actualCount,
 			'incomeCount' => $incomeCount,
 			'expenseCount' => $expenseCount,
 			'specialCount' => $specialCount,
+			'plannedCount' => $plannedCount,
+			'ledgerCount' => $actualCount + $plannedCount,
 			'firstDate' => $firstDate,
 			'lastDate' => $lastDate,
 		];
@@ -776,6 +912,7 @@ class SummaryService
 				'title' => (string)$row['title'],
 				'direction' => (string)$row['direction'],
 				'isSpecial' => (bool)$row['is_special'],
+				'isPlanned' => (bool)($row['is_planned'] ?? false),
 				'amount' => $this->money->envelope((int)$row['amount_minor'], $currencyCode),
 			];
 		}

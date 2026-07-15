@@ -375,10 +375,27 @@ final class BudgetPlannedService
 			->andWhere($qb->expr()->isNotNull('budget_id'))
 			->andWhere($qb->expr()->isNull('deleted_at'))
 			->andWhere($qb->expr()->gte('booking_date', $qb->createNamedParameter($start)))
-			->andWhere($qb->expr()->lte('booking_date', $qb->createNamedParameter($end)));
+			->andWhere($qb->expr()->lte('booking_date', $qb->createNamedParameter($end)))
+			->orderBy('id', 'ASC');
 		$result = $qb->executeQuery();
+		$rows = [];
 		while ($row = $result->fetch()) {
+			$rows[] = $row;
+		}
+		$result->closeCursor();
+		$seenBudgetIds = [];
+		foreach ($rows as $row) {
 			$budgetId = (int)($row['budget_id'] ?? 0);
+			// Self-heal duplicates: keep the oldest live placeholder per budget
+			// row and retire any concurrent-sync leftovers.
+			if ($budgetId > 0 && isset($seenBudgetIds[$budgetId])) {
+				$this->softDeletePlanned($row, $userId, $workspaceId);
+				$stats['removed']++;
+				continue;
+			}
+			if ($budgetId > 0) {
+				$seenBudgetIds[$budgetId] = true;
+			}
 			$budgetRow = $budgetId > 0 ? $this->loadBudgetRowById($budgetId) : null;
 			$categoryId = $budgetRow !== null ? (int)($budgetRow['category_id'] ?? 0) : (int)($row['category_id'] ?? 0);
 			$plannedMinor = $categoryId > 0 ? (int)($plannedMap[$categoryId] ?? 0) : 0;
@@ -395,7 +412,6 @@ final class BudgetPlannedService
 				$stats['removed']++;
 			}
 		}
-		$result->closeCursor();
 	}
 
 	private function validateYearMonth(string $value): string

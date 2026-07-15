@@ -85,6 +85,11 @@ class BudgetService
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$ym = $this->validateYearMonth($yearMonth);
+		// The close snapshot hashes budget planned totals; editing targets of a
+		// closed month would silently invalidate that evidence.
+		if ($this->monthIsClosed($workspaceId, $ym)) {
+			throw new \InvalidArgumentException('Month is closed. Reopen it before changing budget targets.');
+		}
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		$now = $this->utcNow();
 		$uncatId = $this->categories->internalUncategorizedCategoryId($workspaceId);
@@ -122,6 +127,8 @@ class BudgetService
 			$seen[$key] = true;
 		}
 
+		$plannedRemoved = 0;
+		$plannedUpdated = 0;
 		$this->db->beginTransaction();
 		try {
 			foreach ($normalised as $row) {
@@ -142,6 +149,10 @@ class BudgetService
 						]);
 					$qb->executeStatement();
 				} elseif ($row['plannedMinor'] === 0) {
+					// The budget row is the source of truth for its ledger
+					// placeholder — remove the placeholder before the row so no
+					// orphaned budget_id reference survives.
+					$plannedRemoved += $this->softDeletePlannedForBudget($workspaceId, (int)$existing['id'], $userId, $now);
 					$qb = $this->db->getQueryBuilder();
 					$qb->delete('bc_budgets')
 						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
@@ -154,6 +165,7 @@ class BudgetService
 						->set('updated_at', $qb->createNamedParameter($now))
 						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
 					$qb->executeStatement();
+					$plannedUpdated += $this->syncPlannedAmountForBudget($workspaceId, (int)$existing['id'], $row['plannedMinor'], $userId, $now);
 				}
 			}
 			$this->db->commit();
@@ -164,7 +176,11 @@ class BudgetService
 			throw $e;
 		}
 
-		$this->audit->record($userId, 'budgets_upserted', 'budget', $ym, ['count' => count($normalised)], $workspaceId);
+		$this->audit->record($userId, 'budgets_upserted', 'budget', $ym, [
+			'count' => count($normalised),
+			'plannedRemoved' => $plannedRemoved,
+			'plannedUpdated' => $plannedUpdated,
+		], $workspaceId);
 		return $this->listForMonth($workspaceId, $userId, $ym, $workspace['currencyCode']);
 	}
 
@@ -268,6 +284,61 @@ class BudgetService
 		}
 		$this->audit->record($userId, 'budget_defaults_upserted', 'budget_default', (string)$workspaceId, ['count' => count($normalised)], $workspaceId);
 		return $this->listDefaults($workspaceId, $userId, $workspace['currencyCode']);
+	}
+
+	/**
+	 * Soft-delete the live planned ledger placeholder generated from a budget
+	 * row. Runs inside the caller's transaction. Returns the affected row count.
+	 */
+	private function softDeletePlannedForBudget(int $workspaceId, int $budgetId, string $userId, string $now): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('bc_transactions')
+			->set('deleted_at', $qb->createNamedParameter($now))
+			->set('updated_by', $qb->createNamedParameter($userId))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->set('version', $qb->createFunction('version + 1'))
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('budget_id', $qb->createNamedParameter($budgetId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		return $qb->executeStatement();
+	}
+
+	/**
+	 * Keep the live placeholder's amount aligned with a changed budget target.
+	 * Runs inside the caller's transaction. Returns the affected row count.
+	 */
+	private function syncPlannedAmountForBudget(int $workspaceId, int $budgetId, int $plannedMinor, string $userId, string $now): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('bc_transactions')
+			->set('amount_minor', $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT))
+			->set('updated_by', $qb->createNamedParameter($userId))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->set('version', $qb->createFunction('version + 1'))
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('budget_id', $qb->createNamedParameter($budgetId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->neq('amount_minor', $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		return $qb->executeStatement();
+	}
+
+	protected function monthIsClosed(int $workspaceId, string $yearMonth): bool
+	{
+		if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_monthly_snapshots')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('year_month', $qb->createNamedParameter($yearMonth)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0) > 0;
 	}
 
 	private function loadExisting(int $workspaceId, string $yearMonth, ?int $categoryId): ?array

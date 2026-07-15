@@ -47,6 +47,16 @@ class LocaleFormatService
 		$user = $this->userSession->getUser();
 		$lang = '';
 		if ($user !== null) {
+			// Nextcloud separates "Language" (UI strings) from "Locale"
+			// (date/number formats). Formats must follow the account locale so
+			// BudgetCheck matches Files, Calendar, etc. Fall back to the
+			// account language when no explicit locale is set (core behaves
+			// the same way, see \OC\L10N\Factory::findLocale()).
+			$explicitLocale = (string)$this->config->getUserValue($user->getUID(), 'core', 'locale', '');
+			if ($explicitLocale !== '') {
+				$this->cachedLocale = $explicitLocale;
+				return $explicitLocale;
+			}
 			$lang = (string)$this->l10nFactory->getUserLanguage($user);
 		}
 		if ($lang === '') {

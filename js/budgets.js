@@ -12,6 +12,7 @@
 	let ws = null;
 	let isHousehold = false;
 	let decimals = 2;
+	let monthClosed = false;
 
 	const state = {
 		yearMonth: Dates.currentYearMonth(),
@@ -71,8 +72,21 @@
 		if (isHousehold && periodPicker && state.summary && state.summary.ledgerYearMonthSpan) {
 			periodPicker.refreshLedgerSpan(state.summary.ledgerYearMonthSpan);
 		}
+		monthClosed = !!(isHousehold && state.summary && state.summary.isClosed);
 		renderRows();
 		renderLedgerHelp();
+		updateClosedControls();
+	}
+
+	function updateClosedControls() {
+		const note = document.querySelector('[data-bc-budget-closed-note]');
+		if (note) note.hidden = !monthClosed;
+		document.querySelectorAll('[data-bc-action="generate-planned-budgets"]').forEach((btn) => {
+			btn.disabled = monthClosed;
+		});
+		const generateOnSave = document.querySelector('[data-bc-generate-planned-on-save]');
+		if (generateOnSave) generateOnSave.disabled = monthClosed;
+		if (monthClosed) toggleSaveButton(false);
 	}
 
 	async function loadCategories() {
@@ -213,7 +227,7 @@
 			value: planned.minor ? (planned.minor / Math.pow(10, decimals)).toFixed(decimals).replace('.', ',') : '',
 			'aria-label': t('budgetcheck', 'Planned amount for {category}').replace('{category}', cat.name),
 		});
-		input.disabled = !Ws.canManage;
+		input.disabled = !Ws.canManage || monthClosed;
 		input.addEventListener('input', () => {
 			state.dirty.set(cat.id, input.value);
 			toggleSaveButton(true);
@@ -230,12 +244,12 @@
 
 	function toggleSaveButton(enabled) {
 		document.querySelectorAll('[data-bc-action="save-budgets"]').forEach((btn) => {
-			btn.disabled = !enabled;
+			btn.disabled = !enabled || monthClosed;
 		});
 	}
 
 	async function saveBudgets() {
-		if (!ws) return;
+		if (!ws || monthClosed) return;
 		const rows = [];
 		try {
 			state.dirty.forEach((value, categoryId) => {
@@ -287,7 +301,7 @@
 	}
 
 	async function generatePlannedFromBudgets() {
-		if (!ws) return;
+		if (!ws || monthClosed) return;
 		const btn = document.querySelector('[data-bc-action="generate-planned-budgets"]');
 		btn?.setAttribute('aria-busy', 'true');
 		if (btn) btn.disabled = true;
@@ -303,7 +317,7 @@
 			Msg.handleApiError(err);
 		} finally {
 			btn?.setAttribute('aria-busy', 'false');
-			if (btn) btn.disabled = false;
+			if (btn) btn.disabled = monthClosed;
 		}
 	}
 

@@ -49,6 +49,9 @@ $canManage = !empty($_['canManageWorkspace']);
 				<p class="bc-section__sub"><?php p($l->t('Plan a target amount per category. Workspace defaults are prefilled; this page overrides one month.')); ?></p>
 			</div>
 		</header>
+		<div class="bc-callout bc-callout--info" role="status" data-bc-budget-closed-note hidden>
+			<p><?php p($l->t('This month is closed. Reopen it to make changes.')); ?></p>
+		</div>
 		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Budgets')); ?>" tabindex="0">
 			<table class="bc-table bc-budget-table">
 				<thead>

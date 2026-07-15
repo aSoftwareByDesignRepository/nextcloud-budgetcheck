@@ -56,7 +56,7 @@ $canManage = !empty($_['canManageWorkspace']);
 		<header class="bc-section__header">
 			<div>
 				<h2 id="bc-month-activity-title"><?php p($l->t('Monthly activity')); ?></h2>
-				<p class="bc-section__sub"><?php p($l->t('Quick stats for all bookings in this month.')); ?></p>
+				<p class="bc-section__sub"><?php p($l->t('Actual bookings and planned placeholders counted separately—aligned with the cash-flow tiles above.')); ?></p>
 			</div>
 		</header>
 		<div class="bc-summary-grid" data-bc-month-activity-grid aria-busy="true">
@@ -168,6 +168,10 @@ $canManage = !empty($_['canManageWorkspace']);
 			</div>
 		</header>
 		<dl class="bc-glossary">
+			<div class="bc-glossary__item">
+				<dt><?php p($l->t('Expected (plan)')); ?></dt>
+				<dd><?php p($l->t('Budget targets and planned ledger placeholders for the month. These are not included in actual cash flow above—they show what you expect before real bookings arrive.')); ?></dd>
+			</div>
 			<div class="bc-glossary__item">
 				<dt><?php p($l->t('Income')); ?></dt>
 				<dd><?php p($l->t('Money that came in this month, summed in minor units (e.g. cents) and shown formatted in your locale.')); ?></dd>

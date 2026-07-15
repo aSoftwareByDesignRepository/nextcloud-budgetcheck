@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.25] - 2026-07-15
+
+### Added
+
+- **Receipt gallery lightbox:** open receipts in a full-screen gallery with previous/next navigation, zoom, rotate, and crop for images. Saved edits are written back to the server; pending files update locally until you save the transaction.
+- **PDF and EU e-invoice support:** PDF receipts preview inline in the gallery (including ZUGFeRD / Factur-X PDFs). Standalone XML e-invoices (XRechnung-style) can be uploaded, previewed as text, and downloaded.
+
+### Fixed
+
+- **Receipt counts after delete:** removing an attachment from the editor or gallery updates receipt badges in the ledger and dashboard immediately, without closing the modal or reloading the page.
+
+## [1.0.24] - 2026-07-15
+
+### Added
+
+- **Specific-date schedules for recurring rules (#11):** a recurring rule can now repeat on an explicit list of irregular dates instead of a fixed interval. Pick "Specific dates" in the rule editor and add one row per date; each date may carry its own amount or fall back to the rule's default amount. Generate next / Generate full period, planned-entry matching, month close, and audit logging all work identically to interval rules. Editing the date list preserves generation progress (already-generated dates are not re-created); the schedule-alignment toggle snaps the next due date to the first scheduled date on or after the chosen day.
+
+### Fixed
+
+- **Closed-month write lock (#12):** the month-close lock now covers every write path on the server, not only deletes. Creating or editing real bookings in a closed month, moving a booking into a closed month, changing budget targets of a closed month, and generating planned entries for it are all rejected with clear, translated messages. Automatic planned-placeholder matching skips placeholders that sit in closed months so the snapshot evidence stays intact.
+- **Planned placeholder cleanup (#12):** zeroing a budget target or deactivating a category now soft-deletes the matching planned placeholders instead of leaving orphaned rows; changing a target updates the placeholder amount. Duplicate placeholders from concurrent generate calls self-heal on the next sync.
+- **Closed-month UI state (#12):** the Budgets page disables planned inputs, Save, and Generate with an explanatory note while the month is closed; the monthly overview disables “Edit monthly overrides” and guards the modal.
+- **Transaction editor crash:** opening the new/edit transaction modal failed with a JavaScript error (`emptyGridMessage is not defined`) in the receipts section; the empty-state message is restored for both editable and read-only bookings.
+- **Completed rules could not be edited:** once a rule had generated past its end date (and auto-deactivated), any edit — even a title change — was rejected with "nextDueDate must not be after endDate". The window check now only applies when the update actually moves the rule's dates.
+- **Strict calendar validation for scheduled dates:** impossible days (e.g. 30 February) are rejected instead of silently rolling over into the next month.
+
+## [1.0.23] - 2026-07-15
+
+### Changed
+
+- **Receipt attachments — one-step save:** pick photos or PDFs while filling in the new/edit transaction form; files queue locally with previews and upload automatically when you save. Removed the old “save first, then Done” post-save step. Partial upload failures keep the modal open so you can retry; cancel discards queued files safely.
+- **Yearly overview layout (#14):** annual totals now use the same sectioned layout as the monthly plan (Cash flow, Expected plan, Savings, Budget) so planned income and expenses are easy to spot.
+
+### Fixed
+
+- **Ledger month header (#14):** the “Month: …” label now follows the active date filter instead of a stale `yearMonth` from the URL (e.g. August data no longer shows “July” after drilling down from analytics).
+- **Danish planned-forecast copy (#14):** translated the “Expected (plan)” section and related ledger hints for `da` users.
+- **Planned-forecast completeness (#14):** expense budget targets now appear in the Expected (plan) section (not only income targets and ledger placeholders); monthly activity counts separate actual bookings from planned placeholders; summary sections use labelled landmarks for screen readers.
+
+## [1.0.22] - 2026-07-15
+
+### Added
+
+- **Transaction attachments:** upload receipt photos and PDFs directly on a booking (create/edit modal). Files are stored in app data, workspace-scoped, with MIME validation, size limits, and secure streaming. The ledger shows a receipt indicator; existing notes/links remain fully supported.
+- **Planning forecast (#14):** monthly and yearly overviews now show a separate “Expected (plan)” section with income budget targets and ledger placeholder totals. Actual cash flow tiles stay real-booking-only; close snapshots unchanged.
+
+### Fixed
+
+- **Wrong language despite account setting (#15):** the app now ships catalogs for regional language variants (`en_GB` with British spellings, `de_DE` with formal German (Sie), and all `es_*` variants). Nextcloud resolves the interface language per app; without an exact match for e.g. “English (British English)” it silently fell back to the browser’s `Accept-Language` header, so a Danish browser profile rendered BudgetCheck in Danish while the rest of Nextcloud was in UK English. The account language now always wins. New `scripts/sync-l10n-variants.php` generates the variant catalogs; `scripts/de-formalize.php` produces the formal `de_DE` register from the informal `de` base.
+- **Date/number formats follow the account locale (#15):** `LocaleFormatService` now prefers the explicit account locale (Personal settings → Locale) over the account language, matching how Files and Calendar format dates and numbers.
+- **Ledger month deep links (#14):** opening the ledger with `yearMonth` in the URL now keeps that month in the address bar, shows “Month: …” in the header, and sets the range filter to Custom instead of “This month”.
+- **Ledger KPI consistency:** analytics totals exclude planned placeholders; a dedicated KPI tile lists placeholder income and expenses.
+- **Audit hardening (#14):** planned-section styling, monthly transaction tags, activity counts, popstate/clear-filter state fixes; production ledger script (`transactions-v106.js`) aligned with deep-link behaviour.
+
 ## [1.0.21] - 2026-07-11
 
 ### Fixed

@@ -14,6 +14,16 @@ use OCP\IDBConnection;
  * a manager explicitly runs **Generate**, which creates **planned** ledger
  * rows. A matching bank import or manual entry removes the plan automatically.
  *
+ * Two schedule models exist (issue #11):
+ *  - interval frequencies (monthly, quarterly, yearly, custom months) advance
+ *    `next_due_date` arithmetically with day-of-month clamping;
+ *  - `schedule` rules carry an explicit, sorted list of occurrence dates in
+ *    `schedule_json`, each optionally with its own amount (falling back to the
+ *    rule's default `amount_minor`). For these rules `start_date`, `end_date`
+ *    and `next_due_date` are always derived from the list, so every downstream
+ *    consumer (generate, full-period, planned matching, month close) behaves
+ *    exactly as it does for interval rules.
+ *
  * The {@see preview()} method projects all dues between the rule's
  * `next_due_date` and the requested upper bound (capped at 36 occurrences to
  * keep responses bounded). Calling {@see generate()} materialises one
@@ -25,7 +35,10 @@ class RecurringRuleService
 	public const FREQ_QUARTERLY = 'quarterly';
 	public const FREQ_YEARLY = 'yearly';
 	public const FREQ_CUSTOM = 'custom_interval';
-	private const FREQUENCIES = [self::FREQ_MONTHLY, self::FREQ_QUARTERLY, self::FREQ_YEARLY, self::FREQ_CUSTOM];
+	public const FREQ_SCHEDULE = 'schedule';
+	private const FREQUENCIES = [self::FREQ_MONTHLY, self::FREQ_QUARTERLY, self::FREQ_YEARLY, self::FREQ_CUSTOM, self::FREQ_SCHEDULE];
+
+	public const MAX_SCHEDULE_ENTRIES = 60;
 
 	private const MAX_PREVIEW = 36;
 	private const MAX_GENERATE_BATCH = 600;
@@ -78,15 +91,26 @@ class RecurringRuleService
 		if (!in_array($frequency, self::FREQUENCIES, true)) {
 			throw new \InvalidArgumentException('frequency must be one of: ' . implode(', ', self::FREQUENCIES) . '.');
 		}
-		$intervalCount = (int)($payload['intervalCount'] ?? 1);
-		if ($intervalCount < 1 || $intervalCount > 36) {
-			throw new \InvalidArgumentException('intervalCount must be between 1 and 36.');
-		}
-		$startDate = $this->parseIsoDate((string)($payload['startDate'] ?? ''), 'startDate');
-		$endRaw = (string)($payload['endDate'] ?? '');
-		$endDate = $endRaw !== '' ? $this->parseIsoDate($endRaw, 'endDate') : null;
-		if ($endDate !== null && $endDate < $startDate) {
-			throw new \InvalidArgumentException('endDate must not be before startDate.');
+		$schedule = null;
+		if ($frequency === self::FREQ_SCHEDULE) {
+			$schedule = $this->normaliseSchedulePayload($payload['schedule'] ?? null, $decimals);
+			$intervalCount = 1;
+			$startDate = new \DateTimeImmutable($schedule[0]['date'], new \DateTimeZone('UTC'));
+			$endDate = new \DateTimeImmutable($schedule[count($schedule) - 1]['date'], new \DateTimeZone('UTC'));
+		} else {
+			if (isset($payload['schedule']) && $payload['schedule'] !== [] && $payload['schedule'] !== null) {
+				throw new \InvalidArgumentException('schedule is only allowed when frequency is schedule.');
+			}
+			$intervalCount = (int)($payload['intervalCount'] ?? 1);
+			if ($intervalCount < 1 || $intervalCount > 36) {
+				throw new \InvalidArgumentException('intervalCount must be between 1 and 36.');
+			}
+			$startDate = $this->parseIsoDate((string)($payload['startDate'] ?? ''), 'startDate');
+			$endRaw = (string)($payload['endDate'] ?? '');
+			$endDate = $endRaw !== '' ? $this->parseIsoDate($endRaw, 'endDate') : null;
+			if ($endDate !== null && $endDate < $startDate) {
+				throw new \InvalidArgumentException('endDate must not be before startDate.');
+			}
 		}
 		$nextDue = $startDate;
 
@@ -104,6 +128,7 @@ class RecurringRuleService
 				'start_date' => $qb->createNamedParameter($startDate->format('Y-m-d')),
 				'end_date' => $qb->createNamedParameter($endDate?->format('Y-m-d')),
 				'next_due_date' => $qb->createNamedParameter($nextDue->format('Y-m-d')),
+				'schedule_json' => $qb->createNamedParameter($schedule !== null ? self::encodeSchedule($schedule) : null),
 				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
 				'created_by' => $qb->createNamedParameter($userId),
 				'created_at' => $qb->createNamedParameter($now),
@@ -114,6 +139,7 @@ class RecurringRuleService
 		$this->audit->record($userId, 'recurring_rule_created', 'recurring_rule', (string)$id, [
 			'frequency' => $frequency,
 			'amountMinor' => $amount,
+			'scheduleCount' => $schedule !== null ? count($schedule) : null,
 		], $workspaceId);
 		return $this->loadHydrated($id, $workspace['currencyCode']);
 	}
@@ -134,37 +160,114 @@ class RecurringRuleService
 			}
 			$updates['title'] = $title;
 		}
+		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		if (array_key_exists('amount', $payload) || array_key_exists('amountMinor', $payload)) {
-			$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 			$amount = $this->money->parseHumanAmount($payload['amount'] ?? $payload['amountMinor'], $decimals);
 			$updates['amount_minor'] = $amount;
 		}
+		$currentFrequency = (string)$row['frequency'];
+		$newFrequency = $currentFrequency;
 		if (array_key_exists('frequency', $payload)) {
-			$frequency = strtolower(trim((string)$payload['frequency']));
-			if (!in_array($frequency, self::FREQUENCIES, true)) {
+			$newFrequency = strtolower(trim((string)$payload['frequency']));
+			if (!in_array($newFrequency, self::FREQUENCIES, true)) {
 				throw new \InvalidArgumentException('frequency must be one of: ' . implode(', ', self::FREQUENCIES) . '.');
 			}
-			$updates['frequency'] = $frequency;
-		}
-		if (array_key_exists('intervalCount', $payload)) {
-			$intervalCount = (int)$payload['intervalCount'];
-			if ($intervalCount < 1 || $intervalCount > 36) {
-				throw new \InvalidArgumentException('intervalCount must be between 1 and 36.');
+			if ($newFrequency !== $currentFrequency) {
+				$updates['frequency'] = $newFrequency;
 			}
-			$updates['interval_count'] = $intervalCount;
 		}
-		if (array_key_exists('startDate', $payload)) {
-			$updates['start_date'] = $this->parseIsoDate((string)$payload['startDate'], 'startDate')->format('Y-m-d');
-		}
-		if (array_key_exists('endDate', $payload)) {
-			$endRaw = (string)$payload['endDate'];
-			$updates['end_date'] = $endRaw === '' ? null : $this->parseIsoDate($endRaw, 'endDate')->format('Y-m-d');
-		}
-		if (array_key_exists('nextDueDate', $payload)) {
-			$updates['next_due_date'] = $this->parseIsoDate((string)$payload['nextDueDate'], 'nextDueDate')->format('Y-m-d');
+		$schedulePayloadProvided = array_key_exists('schedule', $payload)
+			&& $payload['schedule'] !== null;
+		if ($newFrequency === self::FREQ_SCHEDULE) {
+			// start/end/next_due are derived from the schedule; direct edits would
+			// silently desynchronise the rule from its occurrence list.
+			if (array_key_exists('startDate', $payload) || array_key_exists('endDate', $payload)) {
+				throw new \InvalidArgumentException('startDate and endDate are derived from the schedule for schedule rules.');
+			}
+			if ($schedulePayloadProvided) {
+				$schedule = $this->normaliseSchedulePayload($payload['schedule'], $decimals);
+			} elseif ($currentFrequency === self::FREQ_SCHEDULE) {
+				$schedule = self::decodeSchedule($row['schedule_json'] ?? null);
+				if ($schedule === []) {
+					throw new InternalErrorException();
+				}
+			} else {
+				throw new \InvalidArgumentException('schedule is required when switching to schedule frequency.');
+			}
+			if ($schedulePayloadProvided) {
+				$updates['schedule_json'] = self::encodeSchedule($schedule);
+				$updates['start_date'] = $schedule[0]['date'];
+				$updates['end_date'] = $schedule[count($schedule) - 1]['date'];
+			}
+			if ($currentFrequency !== self::FREQ_SCHEDULE || ((int)$row['interval_count']) !== 1) {
+				$updates['interval_count'] = 1;
+			}
+			if (array_key_exists('nextDueDate', $payload)) {
+				// Realign: snap to the earliest scheduled date on or after the
+				// requested date so next_due_date always points at a real occurrence.
+				$requested = $this->parseIsoDate((string)$payload['nextDueDate'], 'nextDueDate')->format('Y-m-d');
+				$snapped = self::nextScheduleDateOnOrAfter($schedule, $requested);
+				if ($snapped === null) {
+					throw new \InvalidArgumentException('No scheduled date on or after the realign date.');
+				}
+				$updates['next_due_date'] = $snapped;
+			} elseif ($schedulePayloadProvided || $currentFrequency !== self::FREQ_SCHEDULE) {
+				// Schedule changed without an explicit realign: preserve progress.
+				// Dates before the previous next-due stay consumed; newly added later
+				// dates become reachable. An exhausted schedule deactivates the rule.
+				$snapped = self::nextScheduleDateOnOrAfter($schedule, (string)$row['next_due_date']);
+				if ($snapped !== null) {
+					$updates['next_due_date'] = $snapped;
+				} else {
+					$last = $schedule[count($schedule) - 1]['date'];
+					$updates['next_due_date'] = (new \DateTimeImmutable($last, new \DateTimeZone('UTC')))
+						->modify('+1 day')->format('Y-m-d');
+					if (!array_key_exists('isActive', $payload)) {
+						$updates['is_active'] = false;
+					}
+				}
+			}
+		} else {
+			if ($schedulePayloadProvided) {
+				throw new \InvalidArgumentException('schedule is only allowed when frequency is schedule.');
+			}
+			if ($currentFrequency === self::FREQ_SCHEDULE && $newFrequency !== self::FREQ_SCHEDULE) {
+				$updates['schedule_json'] = null;
+			}
+			if (array_key_exists('intervalCount', $payload)) {
+				$intervalCount = (int)$payload['intervalCount'];
+				if ($intervalCount < 1 || $intervalCount > 36) {
+					throw new \InvalidArgumentException('intervalCount must be between 1 and 36.');
+				}
+				$updates['interval_count'] = $intervalCount;
+			}
+			if (array_key_exists('startDate', $payload)) {
+				$updates['start_date'] = $this->parseIsoDate((string)$payload['startDate'], 'startDate')->format('Y-m-d');
+			}
+			if (array_key_exists('endDate', $payload)) {
+				$endRaw = (string)$payload['endDate'];
+				$updates['end_date'] = $endRaw === '' ? null : $this->parseIsoDate($endRaw, 'endDate')->format('Y-m-d');
+			}
+			if (array_key_exists('nextDueDate', $payload)) {
+				$updates['next_due_date'] = $this->parseIsoDate((string)$payload['nextDueDate'], 'nextDueDate')->format('Y-m-d');
+			}
 		}
 		if (array_key_exists('isActive', $payload)) {
 			$updates['is_active'] = (bool)$payload['isActive'];
+		}
+		// Reactivating a completed schedule rule leaves next_due_date one day past
+		// end_date, which blocks Generate until realigned. Rewind to the last
+		// scheduled occurrence so Generate can resume (skipping dates that already
+		// have a live planned row).
+		if (array_key_exists('isActive', $payload)
+			&& (bool)$payload['isActive']
+			&& !(bool)$row['is_active']
+			&& $newFrequency === self::FREQ_SCHEDULE
+			&& !array_key_exists('next_due_date', $updates)) {
+			$effectiveEnd = (string)($updates['end_date'] ?? $row['end_date'] ?? '');
+			if ($effectiveEnd !== '' && (string)$row['next_due_date'] > $effectiveEnd) {
+				$updates['next_due_date'] = $effectiveEnd;
+			}
 		}
 		if ($category !== null && (int)$category['id'] !== (int)$row['category_id']) {
 			$direction = $updates['direction'] ?? (string)$row['direction'];
@@ -182,11 +285,20 @@ class RecurringRuleService
 		if ($effectiveEnd !== null && $effectiveEnd < $effectiveStart) {
 			throw new \InvalidArgumentException('endDate must not be before startDate.');
 		}
-		if ($effectiveNextDue < $effectiveStart) {
-			throw new \InvalidArgumentException('nextDueDate must not be before startDate.');
-		}
-		if ($effectiveEnd !== null && $effectiveNextDue > $effectiveEnd) {
-			throw new \InvalidArgumentException('nextDueDate must not be after endDate.');
+		// Only enforce the next-due window when this update actually moves the
+		// schedule anchors. Completed rules legitimately store a next_due_date one
+		// step past end_date; a title-only edit must not be rejected for that.
+		$movedAnchors = array_key_exists('next_due_date', $updates)
+			|| array_key_exists('start_date', $updates)
+			|| array_key_exists('end_date', $updates);
+		if ($movedAnchors && $newFrequency !== self::FREQ_SCHEDULE) {
+			if ($effectiveNextDue < $effectiveStart) {
+				throw new \InvalidArgumentException('nextDueDate must not be before startDate.');
+			}
+			if ($effectiveEnd !== null && $effectiveNextDue > $effectiveEnd
+				&& array_key_exists('nextDueDate', $payload)) {
+				throw new \InvalidArgumentException('nextDueDate must not be after endDate.');
+			}
 		}
 		$updates['updated_at'] = $this->utcNow();
 		$qb = $this->db->getQueryBuilder();
@@ -246,15 +358,27 @@ class RecurringRuleService
 		if ($ruleEnd !== null && $end > $ruleEnd) {
 			$end = $ruleEnd;
 		}
+		$schedule = self::scheduleForRow($row);
 		$occurrences = [];
 		$next = new \DateTimeImmutable((string)$row['next_due_date']);
+		if ($schedule !== null) {
+			$snapped = self::nextScheduleDateOnOrAfter($schedule, $next->format('Y-m-d'));
+			// Exhausted schedule: place the cursor past the bound so no occurrences render.
+			$next = $snapped !== null
+				? new \DateTimeImmutable($snapped, new \DateTimeZone('UTC'))
+				: $end->modify('+1 day');
+		}
 		$count = 0;
 		while ($next <= $end && $count < self::MAX_PREVIEW) {
+			$date = $next->format('Y-m-d');
 			$occurrences[] = [
-				'date' => $next->format('Y-m-d'),
-				'amount' => $this->money->envelope((int)$row['amount_minor'], $workspace['currencyCode']),
+				'date' => $date,
+				'amount' => $this->money->envelope(
+					self::occurrenceAmountMinor($schedule, $date, (int)$row['amount_minor']),
+					$workspace['currencyCode'],
+				),
 			];
-			$next = $this->advance($next, (string)$row['frequency'], (int)$row['interval_count']);
+			$next = $this->advanceForRow($row, $schedule, $next);
 			$count++;
 		}
 		return [
@@ -312,6 +436,17 @@ class RecurringRuleService
 			}
 			$ruleEnd = $row['end_date'] !== null ? new \DateTimeImmutable($row['end_date']) : null;
 			$finalNext = new \DateTimeImmutable((string)$row['next_due_date']);
+			$schedule = self::scheduleForRow($row);
+			if ($schedule !== null) {
+				// Defensive: next_due_date is always derived from the schedule, but if
+				// the two ever disagree, snap forward to a real occurrence instead of
+				// booking an off-schedule date.
+				$snapped = self::nextScheduleDateOnOrAfter($schedule, $finalNext->format('Y-m-d'));
+				if ($snapped === null) {
+					throw new \InvalidArgumentException('Rule has reached its end date.');
+				}
+				$finalNext = new \DateTimeImmutable($snapped, new \DateTimeZone('UTC'));
+			}
 			if ($ruleEnd !== null && $finalNext > $ruleEnd) {
 				throw new \InvalidArgumentException('Rule has reached its end date.');
 			}
@@ -330,7 +465,7 @@ class RecurringRuleService
 				$bookingDate = $finalNext->format('Y-m-d');
 				if ($tx->hasLivePlannedForRecurringDate((int)$workspace['id'], $ruleId, $bookingDate)) {
 					$skippedCount++;
-					$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+					$finalNext = $this->advanceForRow($row, $schedule, $finalNext);
 					if ($ruleEnd !== null && $finalNext > $ruleEnd) {
 						break;
 					}
@@ -340,7 +475,7 @@ class RecurringRuleService
 					'categoryId' => (int)$row['category_id'],
 					'direction' => (string)$row['direction'],
 					'bookingDate' => $bookingDate,
-					'amountMinor' => (int)$row['amount_minor'],
+					'amountMinor' => self::occurrenceAmountMinor($schedule, $bookingDate, (int)$row['amount_minor']),
 					'title' => (string)$row['title'],
 					'isSpecial' => false,
 					'isPlanned' => true,
@@ -351,7 +486,7 @@ class RecurringRuleService
 				$generatedCount++;
 				$generatedFrom ??= $finalNext;
 				$generatedTo = $finalNext;
-				$finalNext = $this->advance($finalNext, (string)$row['frequency'], (int)$row['interval_count']);
+				$finalNext = $this->advanceForRow($row, $schedule, $finalNext);
 				if ($ruleEnd !== null && $finalNext > $ruleEnd) {
 					break;
 				}
@@ -412,6 +547,193 @@ class RecurringRuleService
 		}
 
 		return $details;
+	}
+
+	/**
+	 * Schedule-aware successor of `advance()`. For schedule rules the next
+	 * occurrence is the earliest scheduled date strictly after `$current`; when
+	 * the list is exhausted the day after the last scheduled date is returned,
+	 * which is by construction past `end_date` and terminates the generate loop
+	 * (deactivating the rule) exactly like interval rules reaching their end.
+	 *
+	 * @param list<array{date:string, amountMinor:int|null}>|null $schedule decoded schedule, null for interval rules
+	 */
+	private function advanceForRow(array $row, ?array $schedule, \DateTimeImmutable $current): \DateTimeImmutable
+	{
+		if ($schedule === null) {
+			return $this->advance($current, (string)$row['frequency'], (int)$row['interval_count']);
+		}
+		$next = self::nextScheduleDateAfter($schedule, $current->format('Y-m-d'));
+		if ($next !== null) {
+			return new \DateTimeImmutable($next, new \DateTimeZone('UTC'));
+		}
+		$last = $schedule[count($schedule) - 1]['date'];
+		return (new \DateTimeImmutable($last, new \DateTimeZone('UTC')))->modify('+1 day');
+	}
+
+	/**
+	 * Decode the schedule for a DB row, or null when the rule is interval-based.
+	 *
+	 * @return list<array{date:string, amountMinor:int|null}>|null
+	 */
+	public static function scheduleForRow(array $row): ?array
+	{
+		if ((string)($row['frequency'] ?? '') !== self::FREQ_SCHEDULE) {
+			return null;
+		}
+		$schedule = self::decodeSchedule($row['schedule_json'] ?? null);
+		if ($schedule === []) {
+			throw new InternalErrorException();
+		}
+		return $schedule;
+	}
+
+	/**
+	 * Parse and validate a user-supplied schedule list. Returns entries sorted
+	 * ascending by date; per-entry amounts are optional and fall back to the
+	 * rule's default amount at generate time.
+	 *
+	 * @return non-empty-list<array{date:string, amountMinor:int|null}>
+	 */
+	private function normaliseSchedulePayload(mixed $raw, int $decimals): array
+	{
+		if (!is_array($raw) || $raw === []) {
+			throw new \InvalidArgumentException('schedule must be a non-empty list of dates.');
+		}
+		if (count($raw) > self::MAX_SCHEDULE_ENTRIES) {
+			throw new \InvalidArgumentException('schedule supports at most ' . self::MAX_SCHEDULE_ENTRIES . ' dates.');
+		}
+		$entries = [];
+		$seen = [];
+		foreach (array_values($raw) as $index => $entry) {
+			if (!is_array($entry)) {
+				throw new \InvalidArgumentException('schedule entries must be objects with a date.');
+			}
+			$rawDate = trim((string)($entry['date'] ?? ''));
+			// Strict calendar validation: PHP's date parser would silently roll
+			// e.g. 2026-02-30 over to 2026-03-02, corrupting the schedule.
+			if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $rawDate, $m) || !checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
+				throw new \InvalidArgumentException('schedule[' . $index . '].date must be a valid calendar day in YYYY-MM-DD format.');
+			}
+			$date = $rawDate;
+			if (isset($seen[$date])) {
+				throw new \InvalidArgumentException('schedule contains the same date twice: ' . $date . '.');
+			}
+			$seen[$date] = true;
+			$amountRaw = $entry['amount'] ?? ($entry['amountMinor'] ?? null);
+			$amountMinor = null;
+			if ($amountRaw !== null && $amountRaw !== '') {
+				$amountMinor = $this->money->parseHumanAmount($amountRaw, $decimals);
+			}
+			$entries[] = ['date' => $date, 'amountMinor' => $amountMinor];
+		}
+		usort($entries, static fn (array $a, array $b): int => strcmp($a['date'], $b['date']));
+		return $entries;
+	}
+
+	/**
+	 * @param list<array{date:string, amountMinor:int|null}> $schedule
+	 */
+	public static function encodeSchedule(array $schedule): string
+	{
+		return json_encode(
+			array_map(
+				static fn (array $e): array => ['date' => $e['date'], 'amountMinor' => $e['amountMinor']],
+				$schedule,
+			),
+			JSON_THROW_ON_ERROR,
+		);
+	}
+
+	/**
+	 * Defensive decoder: invalid JSON or malformed entries yield an empty list
+	 * rather than crashing consumers. Output is sorted and duplicate-free.
+	 *
+	 * @return list<array{date:string, amountMinor:int|null}>
+	 */
+	public static function decodeSchedule(mixed $json): array
+	{
+		if (!is_string($json) || trim($json) === '') {
+			return [];
+		}
+		try {
+			$decoded = json_decode($json, true, 8, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			return [];
+		}
+		if (!is_array($decoded)) {
+			return [];
+		}
+		$entries = [];
+		foreach ($decoded as $entry) {
+			if (!is_array($entry)) {
+				continue;
+			}
+			$date = (string)($entry['date'] ?? '');
+			if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+				continue;
+			}
+			[$y, $m, $d] = array_map('intval', explode('-', $date));
+			if (!checkdate($m, $d, $y)) {
+				continue;
+			}
+			$amountMinor = $entry['amountMinor'] ?? null;
+			if ($amountMinor !== null && (!is_int($amountMinor) || $amountMinor < 1)) {
+				$amountMinor = null;
+			}
+			$entries[$date] = ['date' => $date, 'amountMinor' => $amountMinor];
+		}
+		ksort($entries);
+		return array_values($entries);
+	}
+
+	/**
+	 * Earliest scheduled date >= `$isoDate`, or null when exhausted.
+	 *
+	 * @param list<array{date:string, amountMinor:int|null}> $schedule sorted ascending
+	 */
+	public static function nextScheduleDateOnOrAfter(array $schedule, string $isoDate): ?string
+	{
+		foreach ($schedule as $entry) {
+			if ($entry['date'] >= $isoDate) {
+				return $entry['date'];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Earliest scheduled date strictly after `$isoDate`, or null when exhausted.
+	 *
+	 * @param list<array{date:string, amountMinor:int|null}> $schedule sorted ascending
+	 */
+	public static function nextScheduleDateAfter(array $schedule, string $isoDate): ?string
+	{
+		foreach ($schedule as $entry) {
+			if ($entry['date'] > $isoDate) {
+				return $entry['date'];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Amount for one occurrence: the per-date override when set, the rule's
+	 * default amount otherwise (and always for interval rules).
+	 *
+	 * @param list<array{date:string, amountMinor:int|null}>|null $schedule
+	 */
+	public static function occurrenceAmountMinor(?array $schedule, string $isoDate, int $defaultMinor): int
+	{
+		if ($schedule === null) {
+			return $defaultMinor;
+		}
+		foreach ($schedule as $entry) {
+			if ($entry['date'] === $isoDate) {
+				return $entry['amountMinor'] ?? $defaultMinor;
+			}
+		}
+		return $defaultMinor;
 	}
 
 	private function advance(\DateTimeImmutable $current, string $frequency, int $interval): \DateTimeImmutable
@@ -478,11 +800,35 @@ class RecurringRuleService
 	 */
 	private function loadRowForUpdate(int $ruleId): ?array
 	{
-		return $this->loadRow($ruleId);
+		if ($ruleId < 1) {
+			return null;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_recurring_rules')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($ruleId, \PDO::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row === false ? null : $row;
 	}
 
 	private function hydrate(array $row, string $currencyCode): array
 	{
+		$schedule = null;
+		if ((string)$row['frequency'] === self::FREQ_SCHEDULE) {
+			$schedule = array_map(
+				fn (array $entry): array => [
+					'date' => $entry['date'],
+					'amountMinor' => $entry['amountMinor'],
+					'amount' => $entry['amountMinor'] !== null
+						? $this->money->envelope($entry['amountMinor'], $currencyCode)
+						: null,
+				],
+				self::decodeSchedule($row['schedule_json'] ?? null),
+			);
+		}
 		return [
 			'id' => (int)$row['id'],
 			'workspaceId' => (int)$row['workspace_id'],
@@ -495,6 +841,7 @@ class RecurringRuleService
 			'startDate' => (string)$row['start_date'],
 			'endDate' => $row['end_date'] !== null ? (string)$row['end_date'] : null,
 			'nextDueDate' => (string)$row['next_due_date'],
+			'schedule' => $schedule,
 			'isActive' => (bool)$row['is_active'],
 			'createdBy' => (string)$row['created_by'],
 			'createdAt' => (string)$row['created_at'],
@@ -505,14 +852,13 @@ class RecurringRuleService
 	private function parseIsoDate(string $value, string $field): \DateTimeImmutable
 	{
 		$value = trim($value);
-		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
 			throw new \InvalidArgumentException($field . ' must be in YYYY-MM-DD format.');
 		}
-		try {
-			return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
-		} catch (\Throwable) {
+		if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
 			throw new \InvalidArgumentException($field . ' is not a valid date.');
 		}
+		return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
 	}
 
 	private function utcNow(): string

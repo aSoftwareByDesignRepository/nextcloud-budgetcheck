@@ -112,12 +112,58 @@
 		return response;
 	}
 
+	/**
+	 * POST multipart/form-data (file uploads). Do not set Content-Type — the browser
+	 * adds the boundary. CSRF token is always sent.
+	 */
+	async function upload(path, formData, options) {
+		const opts = options || {};
+		if (!(formData instanceof FormData)) {
+			throw new Error('upload() expects FormData.');
+		}
+		const token = csrfToken();
+		if (!token) {
+			throw new Error(t('budgetcheck', 'Missing CSRF request token.'));
+		}
+		const headers = Object.assign({ Accept: 'application/json', requesttoken: token }, opts.headers || {});
+		let response;
+		try {
+			response = await fetch(buildUrl(path, opts.params), {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers,
+				body: formData,
+				signal: opts.signal,
+			});
+		} catch (e) {
+			const err = new Error(t('budgetcheck', 'Network error. Please retry.'));
+			err.status = 0;
+			err.cause = e;
+			throw err;
+		}
+		const isJson = (response.headers.get('content-type') || '').toLowerCase().includes('application/json');
+		const data = isJson ? await response.json().catch(() => null) : await response.text();
+		if (!response.ok) {
+			const err = new Error(
+				(data && typeof data === 'object' && data.message)
+					? String(data.message)
+					: t('budgetcheck', 'Request failed.')
+			);
+			err.status = response.status;
+			err.payload = data;
+			err.code = (data && data.error && data.error.code) || null;
+			throw err;
+		}
+		return data;
+	}
+
 	window.BudgetCheckApi = {
 		get: (path, params, options) => request(path, Object.assign({}, options || {}, { method: 'GET', params })),
 		post: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'POST', body })),
 		put: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'PUT', body })),
 		del: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'DELETE', body })),
 		download,
+		upload,
 		request,
 	};
 })();
