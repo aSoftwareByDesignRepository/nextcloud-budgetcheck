@@ -182,6 +182,7 @@
 		let index = clamp(Number(opts.startIndex) || 0, 0, items.length - 1);
 		const readOnly = !!opts.readOnly;
 		let saving = false;
+		let loadingMedia = false;
 		let loadingXml = false;
 		let loadSeq = 0;
 		const blobUrls = new Set();
@@ -278,27 +279,76 @@
 			attrs: { role: 'status', 'aria-live': 'polite' },
 		});
 
-		const btnZoomOut = iconButton({ label: t('budgetcheck', 'Zoom out'), icon: 'zoom-out', className: 'bc-attach-gallery__tool' });
-		const btnZoomIn = iconButton({ label: t('budgetcheck', 'Zoom in'), icon: 'zoom-in', className: 'bc-attach-gallery__tool' });
-		const btnRotateLeft = iconButton({ label: t('budgetcheck', 'Rotate left'), icon: 'rotate-ccw', className: 'bc-attach-gallery__tool' });
-		const btnRotateRight = iconButton({ label: t('budgetcheck', 'Rotate right'), icon: 'rotate-cw', className: 'bc-attach-gallery__tool' });
-		const btnCrop = iconButton({ label: t('budgetcheck', 'Crop'), icon: 'crop', className: 'bc-attach-gallery__tool', toggle: true });
-		const btnReset = iconButton({ label: t('budgetcheck', 'Reset view'), icon: 'refresh-cw', className: 'bc-attach-gallery__tool' });
+		const btnZoomOut = iconButton({
+			label: t('budgetcheck', 'Zoom out'),
+			caption: t('budgetcheck', 'Zoom out'),
+			hint: t('budgetcheck', 'Zoom out — scroll wheel down also works.'),
+			icon: 'zoom-out',
+			className: 'bc-attach-gallery__tool',
+		});
+		const btnZoomIn = iconButton({
+			label: t('budgetcheck', 'Zoom in'),
+			caption: t('budgetcheck', 'Zoom in'),
+			hint: t('budgetcheck', 'Zoom in — scroll wheel up also works.'),
+			icon: 'zoom-in',
+			className: 'bc-attach-gallery__tool',
+		});
+		const btnRotateLeft = iconButton({
+			label: t('budgetcheck', 'Rotate left'),
+			caption: t('budgetcheck', 'Rotate left'),
+			hint: t('budgetcheck', 'Rotate 90° counter-clockwise.'),
+			icon: 'rotate-ccw',
+			className: 'bc-attach-gallery__tool',
+		});
+		const btnRotateRight = iconButton({
+			label: t('budgetcheck', 'Rotate right'),
+			caption: t('budgetcheck', 'Rotate right'),
+			hint: t('budgetcheck', 'Rotate 90° clockwise.'),
+			icon: 'rotate-cw',
+			className: 'bc-attach-gallery__tool',
+		});
+		const btnCrop = iconButton({
+			label: t('budgetcheck', 'Crop'),
+			caption: t('budgetcheck', 'Crop'),
+			hint: t('budgetcheck', 'Draw a crop box, then save to trim the image.'),
+			icon: 'crop',
+			className: 'bc-attach-gallery__tool',
+			toggle: true,
+		});
+		const btnReset = iconButton({
+			label: t('budgetcheck', 'Reset view'),
+			caption: t('budgetcheck', 'Reset view'),
+			hint: t('budgetcheck', 'Reset zoom, rotation, and crop.'),
+			icon: 'refresh-cw',
+			className: 'bc-attach-gallery__tool',
+		});
 		const btnSave = iconButton({
 			label: t('budgetcheck', 'Save changes'),
+			hint: t('budgetcheck', 'Save edited image to the server.'),
 			icon: 'check',
 			text: t('budgetcheck', 'Save'),
 			className: 'bc-attach-gallery__tool bc-attach-gallery__tool--primary',
 		});
-		const btnDownload = iconButton({ label: t('budgetcheck', 'Download'), icon: 'download', className: 'bc-attach-gallery__tool' });
-		const btnDelete = iconButton({ label: t('budgetcheck', 'Remove'), icon: 'trash', className: 'bc-attach-gallery__tool bc-attach-gallery__tool--danger' });
+		const btnDownload = iconButton({
+			label: t('budgetcheck', 'Download'),
+			caption: t('budgetcheck', 'Download'),
+			hint: t('budgetcheck', 'Download a copy of this file.'),
+			icon: 'download',
+			className: 'bc-attach-gallery__tool',
+		});
+		const btnDelete = iconButton({
+			label: t('budgetcheck', 'Remove'),
+			caption: t('budgetcheck', 'Remove'),
+			hint: t('budgetcheck', 'Remove this file from the transaction.'),
+			icon: 'trash',
+			className: 'bc-attach-gallery__tool bc-attach-gallery__tool--danger',
+		});
 
-		btnSave.hidden = true;
+		const groupView = toolbarGroup(t('budgetcheck', 'View controls'), [btnZoomOut, btnZoomIn, btnReset]);
+		const groupEdit = toolbarGroup(t('budgetcheck', 'Edit image'), [btnRotateLeft, btnRotateRight, btnCrop, btnSave]);
+		const groupFile = toolbarGroup(t('budgetcheck', 'File actions'), [btnDownload, btnDelete]);
 
-		toolbar.append(
-			btnZoomOut, btnZoomIn, btnRotateLeft, btnRotateRight,
-			btnCrop, btnReset, btnSave, btnDownload, btnDelete,
-		);
+		toolbar.append(groupView, groupEdit, groupFile);
 
 		header.append(titleWrap, closeBtn);
 		dialog.append(header, stage, toolbar, statusEl);
@@ -306,15 +356,33 @@
 		document.body.appendChild(overlay);
 		document.body.classList.add('bc-modal-open');
 
+		function toolbarGroup(label, buttons) {
+			const group = C.createElement('div', {
+				class: 'bc-attach-gallery__tool-group',
+				attrs: { role: 'group', 'aria-label': label },
+			});
+			const labelEl = C.createElement('p', {
+				class: 'bc-attach-gallery__tool-group-label',
+				text: label,
+			});
+			const row = C.createElement('div', { class: 'bc-attach-gallery__tool-group-row' });
+			buttons.forEach((btn) => {
+				if (btn) row.appendChild(btn);
+			});
+			group.append(labelEl, row);
+			return group;
+		}
+
 		function iconButton(options) {
 			const opts = options || {};
 			const label = opts.label || '';
+			const hint = opts.hint || label;
+			const wrap = C.createElement('span', { class: 'bc-attach-gallery__tool-wrap' });
 			const btn = C.createElement('button', {
 				type: 'button',
 				class: opts.className || 'bc-attach-gallery__tool',
 				attrs: {
 					'aria-label': label,
-					title: label,
 				},
 			});
 			if (opts.toggle) {
@@ -323,7 +391,9 @@
 			if (Icons && typeof Icons.render === 'function' && opts.icon) {
 				const iconEl = Icons.render(opts.icon);
 				if (iconEl) {
-					btn.appendChild(iconEl);
+					const iconWrap = C.createElement('span', { class: 'bc-attach-gallery__tool-icon' });
+					iconWrap.appendChild(iconEl);
+					btn.appendChild(iconWrap);
 				}
 			}
 			if (opts.text) {
@@ -331,8 +401,90 @@
 					class: 'bc-attach-gallery__tool-label',
 					text: opts.text,
 				}));
+			} else if (opts.caption) {
+				btn.appendChild(C.createElement('span', {
+					class: 'bc-attach-gallery__tool-caption',
+					text: opts.caption,
+				}));
 			}
-			return btn;
+			if (hint) {
+				const tip = C.createElement('span', {
+					class: 'bc-attach-gallery__tool-tip',
+					attrs: { 'aria-hidden': 'true' },
+					text: hint,
+				});
+				wrap.append(btn, tip);
+			} else {
+				wrap.appendChild(btn);
+			}
+			return wrap;
+		}
+
+		function toolButton(wrap) {
+			return wrap ? wrap.querySelector('button') : null;
+		}
+
+		const elZoomOut = toolButton(btnZoomOut);
+		const elZoomIn = toolButton(btnZoomIn);
+		const elRotateLeft = toolButton(btnRotateLeft);
+		const elRotateRight = toolButton(btnRotateRight);
+		const elCrop = toolButton(btnCrop);
+		const elReset = toolButton(btnReset);
+		const elSave = toolButton(btnSave);
+		const elDownload = toolButton(btnDownload);
+		const elDelete = toolButton(btnDelete);
+		setWrapHidden(btnSave, true);
+
+		function setWrapHidden(wrap, hidden) {
+			if (!wrap) return;
+			wrap.hidden = !!hidden;
+		}
+
+		function exitCropMode() {
+			if (!imageState.cropMode) return false;
+			imageState.cropMode = false;
+			cropOverlay.hidden = true;
+			elCrop.setAttribute('aria-pressed', 'false');
+			elCrop.setAttribute('aria-label', t('budgetcheck', 'Crop'));
+			updateToolbarControls();
+			announce(t('budgetcheck', 'Crop cancelled.'));
+			return true;
+		}
+
+		function updateToolbarControls() {
+			const item = currentItem();
+			const kind = itemKind(item);
+			const isImage = kind === 'image';
+			const busy = saving || loadingMedia || loadingXml;
+			const bounds = zoomBounds();
+			const atMinZoom = imageState.scale <= bounds.min * 1.001;
+			const atMaxZoom = imageState.scale >= bounds.max * 0.999;
+
+			groupView.hidden = !isImage;
+			groupEdit.hidden = !isImage || readOnly;
+			groupFile.hidden = false;
+
+			if (elZoomOut) elZoomOut.disabled = !isImage || busy || imageState.cropMode || atMinZoom;
+			if (elZoomIn) elZoomIn.disabled = !isImage || busy || imageState.cropMode || atMaxZoom;
+			if (elReset) elReset.disabled = !isImage || busy || imageState.cropMode;
+			if (elRotateLeft) elRotateLeft.disabled = !isImage || readOnly || busy || imageState.cropMode;
+			if (elRotateRight) elRotateRight.disabled = !isImage || readOnly || busy || imageState.cropMode;
+			if (elCrop) {
+				elCrop.disabled = !isImage || readOnly || busy;
+				elCrop.setAttribute(
+					'aria-label',
+					imageState.cropMode ? t('budgetcheck', 'Exit crop mode') : t('budgetcheck', 'Crop'),
+				);
+			}
+			if (elSave) {
+				const showSave = isImage && !readOnly && imageState.dirty;
+				setWrapHidden(btnSave, !showSave);
+				elSave.disabled = busy || !showSave;
+			}
+			if (elDownload) elDownload.disabled = busy || !item;
+			if (elDelete) elDelete.disabled = busy || readOnly || !item;
+			prevBtn.disabled = busy || index <= 0;
+			nextBtn.disabled = busy || index >= items.length - 1;
 		}
 
 		function currentItem() {
@@ -383,8 +535,9 @@
 			imageState.dirty = false;
 			imageState.cropRect = null;
 			cropOverlay.hidden = true;
-			btnCrop.setAttribute('aria-pressed', 'false');
-			btnSave.hidden = true;
+			elCrop.setAttribute('aria-pressed', 'false');
+			elCrop.setAttribute('aria-label', t('budgetcheck', 'Crop'));
+			setWrapHidden(btnSave, true);
 			applyImageTransform();
 		}
 
@@ -400,6 +553,7 @@
 			imageState.panX = 0;
 			imageState.panY = 0;
 			applyImageTransform();
+			updateToolbarControls();
 		}
 
 		function applyImageTransform() {
@@ -408,32 +562,24 @@
 			const py = imageState.panY;
 			const s = imageState.scale;
 			imgEl.style.transform = 'translate(calc(-50% + ' + px + 'px), calc(-50% + ' + py + 'px)) scale(' + s + ') rotate(' + (rot * 90) + 'deg)';
+			updateToolbarControls();
 		}
 
 		function markDirty() {
 			if (readOnly) return;
 			imageState.dirty = true;
-			btnSave.hidden = false;
+			updateToolbarControls();
 		}
 
 		function updateCounter() {
 			counterEl.textContent = t('budgetcheck', '{current} of {total}')
 				.replace('{current}', String(index + 1))
 				.replace('{total}', String(items.length));
-			prevBtn.disabled = index <= 0;
-			nextBtn.disabled = index >= items.length - 1;
+			updateToolbarControls();
 		}
 
 		function setToolbarForKind(kind) {
-			const isImage = kind === 'image';
-			btnZoomOut.hidden = !isImage;
-			btnZoomIn.hidden = !isImage;
-			btnRotateLeft.hidden = !isImage || readOnly;
-			btnRotateRight.hidden = !isImage || readOnly;
-			btnCrop.hidden = !isImage || readOnly;
-			btnReset.hidden = !isImage;
-			btnSave.hidden = !isImage || readOnly || !imageState.dirty;
-			btnDelete.hidden = readOnly;
+			updateToolbarControls();
 		}
 
 		function setStageStatus(message, isError) {
@@ -485,6 +631,8 @@
 		}
 
 		async function loadImageItem(item, seq) {
+			loadingMedia = true;
+			updateToolbarControls();
 			setStageStatus(t('budgetcheck', 'Loading…'), false);
 			imgEl.removeAttribute('src');
 			imgEl.alt = item.fileName || t('budgetcheck', 'Attachment');
@@ -511,10 +659,17 @@
 			} catch (err) {
 				if (seq !== loadSeq) return;
 				setStageStatus(err.message || t('budgetcheck', 'Image could not be loaded.'), true);
+			} finally {
+				if (seq === loadSeq) {
+					loadingMedia = false;
+					updateToolbarControls();
+				}
 			}
 		}
 
 		async function loadPdfItem(item, seq) {
+			loadingMedia = true;
+			updateToolbarControls();
 			setStageStatus(t('budgetcheck', 'Loading…'), false);
 			pdfFrame.removeAttribute('src');
 			try {
@@ -538,6 +693,11 @@
 			} catch (err) {
 				if (seq !== loadSeq) return;
 				setStageStatus(err.message || t('budgetcheck', 'Could not load document.'), true);
+			} finally {
+				if (seq === loadSeq) {
+					loadingMedia = false;
+					updateToolbarControls();
+				}
 			}
 		}
 
@@ -576,6 +736,7 @@
 				setStageStatus(err.message || t('budgetcheck', 'Could not load document.'), true);
 			} finally {
 				loadingXml = false;
+				updateToolbarControls();
 			}
 		}
 
@@ -612,6 +773,7 @@
 
 		function goTo(nextIndex) {
 			if (nextIndex < 0 || nextIndex >= items.length || nextIndex === index) return;
+			if (saving || loadingMedia || loadingXml) return;
 			index = nextIndex;
 			renderCurrent();
 		}
@@ -622,7 +784,7 @@
 			if (!item || itemKind(item) !== 'image') return;
 
 			saving = true;
-			btnSave.disabled = true;
+			updateToolbarControls();
 			announce(t('budgetcheck', 'Saving changes…'));
 
 			try {
@@ -682,7 +844,7 @@
 				Msg.handleApiError(err, { reloadOnConflict: false });
 			} finally {
 				saving = false;
-				btnSave.disabled = false;
+				updateToolbarControls();
 			}
 		}
 
@@ -741,46 +903,49 @@
 			a.remove();
 		}
 
-		btnZoomIn.addEventListener('click', () => {
+		elZoomIn.addEventListener('click', () => {
 			const bounds = zoomBounds();
 			imageState.scale = clamp(imageState.scale + ZOOM_STEP * imageState.fitScale, bounds.min, bounds.max);
 			applyImageTransform();
 		});
-		btnZoomOut.addEventListener('click', () => {
+		elZoomOut.addEventListener('click', () => {
 			const bounds = zoomBounds();
 			imageState.scale = clamp(imageState.scale - ZOOM_STEP * imageState.fitScale, bounds.min, bounds.max);
 			applyImageTransform();
 		});
-		btnRotateLeft.addEventListener('click', () => {
+		elRotateLeft.addEventListener('click', () => {
 			imageState.rotationSteps -= 1;
 			applyImageTransform();
 			markDirty();
 		});
-		btnRotateRight.addEventListener('click', () => {
+		elRotateRight.addEventListener('click', () => {
 			imageState.rotationSteps += 1;
 			applyImageTransform();
 			markDirty();
 		});
-		btnReset.addEventListener('click', () => {
+		elReset.addEventListener('click', () => {
 			resetImageState();
 			fitImageToViewport();
 		});
-		btnCrop.addEventListener('click', () => {
-			imageState.cropMode = !imageState.cropMode;
-			btnCrop.setAttribute('aria-pressed', imageState.cropMode ? 'true' : 'false');
-			cropOverlay.hidden = !imageState.cropMode;
+		elCrop.addEventListener('click', () => {
 			if (imageState.cropMode) {
-				imageState.panX = 0;
-				imageState.panY = 0;
-				imageState.rotationSteps = normalizeRotationSteps(imageState.rotationSteps);
-				fitImageToViewport();
-				window.requestAnimationFrame(() => initCropBox());
-				markDirty();
+				exitCropMode();
+				return;
 			}
+			imageState.cropMode = true;
+			elCrop.setAttribute('aria-pressed', 'true');
+			cropOverlay.hidden = false;
+			imageState.panX = 0;
+			imageState.panY = 0;
+			imageState.rotationSteps = normalizeRotationSteps(imageState.rotationSteps);
+			fitImageToViewport();
+			window.requestAnimationFrame(() => initCropBox());
+			markDirty();
+			updateToolbarControls();
 		});
-		btnSave.addEventListener('click', () => saveImageEdits());
-		btnDownload.addEventListener('click', () => downloadCurrent());
-		btnDelete.addEventListener('click', () => deleteCurrent());
+		elSave.addEventListener('click', () => saveImageEdits());
+		elDownload.addEventListener('click', () => downloadCurrent());
+		elDelete.addEventListener('click', () => deleteCurrent());
 		prevBtn.addEventListener('click', () => goTo(index - 1));
 		nextBtn.addEventListener('click', () => goTo(index + 1));
 		closeBtn.addEventListener('click', () => instance.close(false));
@@ -883,6 +1048,9 @@
 			if (event.key === 'Escape') {
 				event.preventDefault();
 				event.stopPropagation();
+				if (exitCropMode()) {
+					return;
+				}
 				instance.close(false);
 				return;
 			}
