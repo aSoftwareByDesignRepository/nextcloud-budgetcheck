@@ -12,6 +12,8 @@
 	let periodPicker = null;
 	let includeSpecials = false;
 	const SpecialsView = window.BudgetCheckSpecialsView;
+	let includeSpecialsToggle = null;
+	let loadSeq = 0;
 	/** @type {{ id: number, type: string, currencyCode: string } | null} */
 	let ws = null;
 
@@ -20,11 +22,25 @@
 		if (!ws || ws.type !== 'household') return; // PageController also redirects, but be safe.
 		if (SpecialsView) {
 			includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+			const toggleHost = document.querySelector('[data-bc-month-budget-include-specials-toggle]');
+			if (toggleHost) {
+				includeSpecialsToggle = SpecialsView.mountToggle(toggleHost, {
+					workspaceId: ws.id,
+					alwaysShow: true,
+					inputId: 'bc-include-specials-monthly-budget',
+					onChange: (saved) => {
+						includeSpecials = saved;
+						void load();
+					},
+				});
+			}
 			void SpecialsView.migrateLegacyLocalStorage(ws.id).then(() => {
 				includeSpecials = SpecialsView.getIncludeSpecials(ws.id);
+				if (includeSpecialsToggle?.input) {
+					includeSpecialsToggle.input.checked = includeSpecials;
+				}
 				if (state.summary) {
-					const grid = document.querySelector('[data-bc-summary-grid]');
-					renderSummary(grid, state.summary);
+					void load();
 				}
 			});
 		}
@@ -65,14 +81,15 @@
 			const next = SpecialsView.refreshIncludeSpecials(ws.id, includeSpecials);
 			if (next === includeSpecials) return;
 			includeSpecials = next;
-			const grid = document.querySelector('[data-bc-summary-grid]');
-			if (grid && state.summary) {
-				renderSummary(grid, state.summary);
+			if (includeSpecialsToggle?.input) {
+				includeSpecialsToggle.input.checked = includeSpecials;
 			}
+			if (state.summary) void load();
 		});
 	}
 
 	async function load() {
+		const seq = ++loadSeq;
 		const grid = document.querySelector('[data-bc-summary-grid]');
 		const period = document.querySelector('[data-bc-summary-period]');
 		const status = document.querySelector('[data-bc-month-status]');
@@ -87,6 +104,7 @@
 		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			if (seq !== loadSeq) return; // Stale response; ignore and let the latest request win.
 			state.summary = data.summary;
 			renderSummary(grid, state.summary);
 			if (period) period.textContent = Dates.formatYearMonth(state.summary.yearMonth, Ws.htmlLang);
@@ -111,8 +129,10 @@
 		} catch (err) {
 			Msg.handleApiError(err);
 		} finally {
-			grid?.setAttribute('aria-busy', 'false');
-			activityGrid?.setAttribute('aria-busy', 'false');
+			if (seq === loadSeq) {
+				grid?.setAttribute('aria-busy', 'false');
+				activityGrid?.setAttribute('aria-busy', 'false');
+			}
 		}
 	}
 

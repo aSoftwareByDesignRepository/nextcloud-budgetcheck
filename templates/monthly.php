@@ -79,13 +79,14 @@ $canManage = !empty($_['canManageWorkspace']);
 				<h2 id="bc-month-budget-title"><?php p($l->t('Category consumption')); ?></h2>
 				<p class="bc-section__sub"><?php p($l->t('How each category is performing against its plan this month.')); ?></p>
 			</div>
-			<?php if ($canManage): ?>
-				<div class="bc-section__controls">
+			<div class="bc-section__controls bc-section__controls--stack">
+				<?php if ($canManage): ?>
 					<button type="button" class="button primary" data-bc-action="open-month-budget-overrides">
 						<?php p($l->t('Edit monthly overrides')); ?>
 					</button>
-				</div>
-			<?php endif; ?>
+				<?php endif; ?>
+				<div class="bc-specials-toggle-wrap" data-bc-month-budget-include-specials-toggle></div>
+			</div>
 		</header>
 		<div class="bc-table-scroll" role="region" aria-label="<?php p($l->t('Category consumption')); ?>" tabindex="0">
 			<table class="bc-table bc-budget-table">

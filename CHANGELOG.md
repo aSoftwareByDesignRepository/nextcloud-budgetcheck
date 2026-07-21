@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 2026-07-21
+
+### Fixed
+
+- Monatsübersicht (`Kategorieverbrauch`): Der „Include one-off (special) transactions“-Schalter wird jetzt für die geplanten-vs.-tatsächlichen Kategorien korrekt angewendet, damit die Anzeige verständlich und konsistent ist.
+- Audit-Härtung: Monatsabschluss-Snapshots (Close/Reopen) bleiben weiterhin kanonisch und unabhängig von der persönlichen Anzeige-Einstellung für „special“; dadurch bleibt der Berechnungs-Hash deterministisch.
+- Robustheit: Wechseln der Anzeige-Einstellung lädt die Monatsdaten konsistent neu und ignoriert veraltete Antworten (vermeidet UI-Race-Conditions).
+
 ## [1.0.28] - 2026-07-15
 
 ### Changed

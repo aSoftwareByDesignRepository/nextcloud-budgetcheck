@@ -1306,15 +1306,29 @@
 	background: color-mix(in srgb, var(--bc-bg-card) 96%, var(--color-main-text, #1d1d1d) 4%);
 }
 .bc-table__col--num { text-align: right; }
+/* Shared action columns (categories, recurring, booking statuses): keep buttons usable. */
+.bc-table-actions-cell,
 .bc-recurring-actions-cell {
 	/* Mobile: narrower actions column inside horizontal scroll; desktop widens at 1024px. */
 	min-width: 14rem;
 }
+.bc-table-actions,
 .bc-recurring-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--bc-space-2);
 	align-items: center;
+}
+.bc-table-actions .button,
+.bc-recurring-actions .button,
+.bc-app .bc-table-actions .button,
+.bc-app .bc-recurring-actions .button {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+/* Categories: many columns + long tax labels — scroll instead of crushing cells (incl. ≥1024px). */
+.bc-table-scroll .bc-categories-table {
+	min-width: 56rem;
 }
 
 /* Specific-dates (schedule) editor inside the recurring-rule modal */
@@ -3132,6 +3146,11 @@ button.bc-dash-action {
 	.bc-table-scroll table {
 		min-width: 0;
 	}
+	/* Keep wide settings tables scrollable; do not inherit the desktop min-width: 0 reset. */
+	.bc-table-scroll .bc-categories-table {
+		min-width: 56rem;
+	}
+	.bc-table-actions-cell,
 	.bc-recurring-actions-cell {
 		min-width: 17rem;
 	}

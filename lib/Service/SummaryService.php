@@ -45,11 +45,14 @@ class SummaryService
 	 * Household monthly summary. Rejects project workspaces with a marker
 	 * exception code that the controller maps to HTTP 422 + `NOT_APPLICABLE_FOR_WORKSPACE_TYPE`.
 	 */
-	public function household(int $workspaceId, string $userId, string $yearMonth): array
+	public function household(int $workspaceId, string $userId, string $yearMonth, ?bool $includeSpecialsInTotals = null): array
 	{
 		$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 		if ($workspace['type'] !== WorkspaceService::TYPE_HOUSEHOLD) {
 			throw new WorkspaceTypeMismatchException('household', $workspace['type'], 'monthly_summary');
+		}
+		if ($includeSpecialsInTotals !== null) {
+			$workspace['includeSpecialsInTotals'] = $includeSpecialsInTotals;
 		}
 		$ym = $this->validateYearMonth($yearMonth);
 		[$start, $end] = $this->monthBounds($ym);
@@ -984,7 +987,13 @@ class SummaryService
 
 	private function excludeSpecialsFromPlanningTotals(array $workspace): bool
 	{
-		return ($workspace['type'] ?? '') === WorkspaceService::TYPE_HOUSEHOLD;
+		// Household workspaces can opt-in to including one-off "special" transactions
+		// in planning totals (and therefore in the monthly category consumption table).
+		// For projects we always include specials (no per-user toggle exists).
+		if (($workspace['type'] ?? '') !== WorkspaceService::TYPE_HOUSEHOLD) {
+			return false;
+		}
+		return !(bool)($workspace['includeSpecialsInTotals'] ?? false);
 	}
 
 	/**

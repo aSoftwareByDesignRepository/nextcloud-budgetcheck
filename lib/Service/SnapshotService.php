@@ -48,7 +48,9 @@ class SnapshotService
 		// before opening the transaction because it issues read queries that
 		// don't need to participate in the snapshot insert and would otherwise
 		// hold locks longer than necessary.
-		$summary = $this->summary->household($workspaceId, $userId, $ym);
+		// Snapshots must stay canonical and user-independent, so monthly close
+		// always uses the baseline planning view with specials excluded.
+		$summary = $this->summary->household($workspaceId, $userId, $ym, false);
 		$canonical = $this->canonicaliseForHash($summary);
 		$hash = hash('sha256', $canonical);
 		$now = $this->utcNow();

@@ -607,15 +607,20 @@
 		tr.appendChild(C.createElement('td', { text: String(status.sortOrder) }));
 		tr.appendChild(C.createElement('td', { text: status.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
 		if (Ws.canManage) {
-			const actions = C.createElement('td');
+			const actions = C.createElement('td', { class: 'bc-table-actions-cell' });
+			const actionsGroup = C.createElement('div', {
+				class: 'bc-table-actions',
+				attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for {title}').replace('{title}', status.name) },
+			});
 			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
 			edit.addEventListener('click', () => openBookingStatusModal(status));
-			actions.appendChild(edit);
+			actionsGroup.appendChild(edit);
 			if (status.isActive) {
 				const deactivate = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
 				deactivate.addEventListener('click', () => deactivateBookingStatus(status));
-				actions.appendChild(deactivate);
+				actionsGroup.appendChild(deactivate);
 			}
+			actions.appendChild(actionsGroup);
 			tr.appendChild(actions);
 		}
 		return tr;
@@ -708,16 +713,21 @@
 		tr.appendChild(C.createElement('td', { text: taxHandlingModeLabel(cat.taxHandlingMode) }));
 		tr.appendChild(C.createElement('td', { text: cat.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
 		if (Ws.canManage) {
-			const actions = C.createElement('td');
+			const actions = C.createElement('td', { class: 'bc-table-actions-cell' });
+			const actionsGroup = C.createElement('div', {
+				class: 'bc-table-actions',
+				attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for {title}').replace('{title}', cat.name) },
+			});
 			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
 			edit.addEventListener('click', () => { void openCategoryModal(cat); });
-			actions.appendChild(edit);
+			actionsGroup.appendChild(edit);
 			const canDeactivate = cat.isActive && cat.groupKey !== INTERNAL_UNCATEGORIZED_GROUP;
 			if (canDeactivate) {
 				const off = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
 				off.addEventListener('click', () => deactivateCategory(cat));
-				actions.appendChild(off);
+				actionsGroup.appendChild(off);
 			}
+			actions.appendChild(actionsGroup);
 			tr.appendChild(actions);
 		}
 		return tr;

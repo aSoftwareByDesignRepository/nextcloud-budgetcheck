@@ -19,6 +19,7 @@ final class SummarySpecialExclusionTest extends TestCase
 
 		$workspace = [
 			'type' => WorkspaceService::TYPE_HOUSEHOLD,
+			'includeSpecialsInTotals' => false,
 			'taxModeEnabled' => false,
 			'taxBudgetBasis' => 'gross',
 		];
@@ -40,6 +41,38 @@ final class SummarySpecialExclusionTest extends TestCase
 		$this->assertSame(200_000_00, $out['specialIncomeMinor']);
 		$this->assertSame(180_000_00, $out['specialExpenseMinor']);
 		$this->assertSame(5_000_00, $out['budgetedActualMinor']);
+	}
+
+	public function testHouseholdIncludesSpecialsInTotalsWhenEnabled(): void
+	{
+		$service = $this->summaryService();
+		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
+		$method->setAccessible(true);
+
+		$workspace = [
+			'type' => WorkspaceService::TYPE_HOUSEHOLD,
+			'includeSpecialsInTotals' => true,
+			'taxModeEnabled' => false,
+			'taxBudgetBasis' => 'gross',
+		];
+		$rows = [
+			$this->row('income', 30_000_00, false, 1, 'Salary'),
+			$this->row('expense', 5_000_00, false, 2, 'Groceries'),
+			$this->row('income', 200_000_00, true, 3, 'Sold car'),
+			$this->row('expense', 180_000_00, true, 4, 'Bought car'),
+		];
+
+		/** @var array<string,mixed> $out */
+		$out = $method->invoke($service, $workspace, $rows, [], []);
+
+		$this->assertSame(230_000_00, $out['totalIncomeMinor']);
+		$this->assertSame(185_000_00, $out['totalExpenseMinor']);
+		$this->assertSame(45_000_00, $out['netResultMinor']);
+		$this->assertSame(230_000_00, $out['ledgerIncomeMinor']);
+		$this->assertSame(185_000_00, $out['ledgerExpenseMinor']);
+		$this->assertSame(200_000_00, $out['specialIncomeMinor']);
+		$this->assertSame(180_000_00, $out['specialExpenseMinor']);
+		$this->assertSame(185_000_00, $out['budgetedActualMinor']);
 	}
 
 	public function testProjectStillIncludesSpecialsInTotals(): void
