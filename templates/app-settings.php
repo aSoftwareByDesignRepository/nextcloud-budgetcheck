@@ -104,6 +104,15 @@ $canAdminApp = !empty($_['canAdminApp']);
 			</div>
 		</form>
 	</section>
+	<?php
+	// Support & Us — informational CTAs only; never gates AGPL use.
+	$supportUsLanguageCode = method_exists($l, 'getLanguageCode') ? (string)$l->getLanguageCode() : 'en';
+	$supportUsCssPrefix = 'bc';
+	$supportUsBtnPrimaryClass = 'button primary';
+	$supportUsBtnSecondaryClass = 'button';
+	$supportUsLinks = new \OCA\BudgetCheck\Support\SupportUsLinks('BudgetCheck', false, null);
+	include __DIR__ . '/parts/support-us-section.php';
+	?>
 <?php endif; ?>
 
 <?php include __DIR__ . '/common/page-end.php'; ?>
