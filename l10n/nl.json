@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Geld dat deze maand is uitgegeven. Speciale categorieën zoals huur of verzekeringen worden afzonderlijk bijgehouden voor limietwaarschuwingen.",
         "Month": "Maand",
         "Month closed and snapshot stored.": "Maand afgesloten en momentopname opgeslagen.",
+        "Month currently shown on this page": "Maand die momenteel op deze pagina wordt getoond",
         "Month is closed. Reopen it before generating planned entries.": "Month is closed. Reopen it before generating planned entries.",
         "Month reopened.": "Maand heropend.",
         "Month slice (optional)": "Maandsegment (optioneel)",
@@ -1138,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "Indien ingeschakeld, springt de volgende vervaldatum bij het opslaan naar de eerste geplande datum op of na deze dag.",
         "This transaction already has the maximum of 10 attachments.": "Deze transactie heeft al het maximum van 10 bijlagen.",
         "No receipts attached.": "Geen bonnen bijgevoegd.",
-        "A schedule can include at most {count} dates.": "Een planning kan maximaal {count} datums bevatten."
+        "A schedule can include at most {count} dates.": "Een planning kan maximaal {count} datums bevatten.",
+        "Month changed while confirming. Close was cancelled — try again.": "Month changed while confirming. Close was cancelled — try again.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Month changed while confirming. Reopen was cancelled — try again.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Month changed while editing. Save was cancelled — reopen the overrides for the month you want."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

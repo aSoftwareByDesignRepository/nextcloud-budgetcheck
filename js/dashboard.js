@@ -10,6 +10,8 @@
 
 	const dashState = { yearMonth: Dates.currentYearMonth() };
 	const LEDGER_PREVIEW_LIMIT = 8;
+	/** Guards against a slow response for a previously selected month overwriting the latest one. */
+	let dashLoadSeq = 0;
 	/** Set on DOMContentLoaded after #app-content exists (see lazy workspace.js). */
 	let ws = null;
 	let isHousehold = false;
@@ -256,6 +258,7 @@
 	}
 
 	async function loadAndRender(yearMonth) {
+		const seq = ++dashLoadSeq;
 		const grid = document.querySelector('[data-bc-summary-grid]');
 		const periodLabel = document.querySelector('[data-bc-summary-period]');
 		const warningsSection = document.querySelector('[data-bc-warnings]');
@@ -269,6 +272,7 @@
 			const data = isHousehold
 				? await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: yearMonth || Dates.currentYearMonth() })
 				: await Api.get('/apps/budgetcheck/api/project-period-summary', { workspaceId: ws.id });
+			if (seq !== dashLoadSeq) return; // Stale response; the latest request wins.
 			const summary = data.summary;
 			renderSummaryGrid(grid, summary);
 			if (periodLabel) periodLabel.textContent = formatSummaryPeriod(summary);
@@ -284,6 +288,7 @@
 			}
 			renderWarnings(warningsSection, warningsList, summary.warnings || []);
 		} catch (err) {
+			if (seq !== dashLoadSeq) return;
 			Msg.handleApiError(err);
 			if (C) {
 				grid.replaceChildren(C.createElement('p', { class: 'bc-loading', text: t('budgetcheck', 'Could not load the summary.') }));
@@ -292,7 +297,12 @@
 				renderHouseholdMonthLedger(null, yearMonth || Dates.currentYearMonth());
 			}
 		} finally {
-			grid.setAttribute('aria-busy', 'false');
+			if (seq === dashLoadSeq) {
+				grid.setAttribute('aria-busy', 'false');
+				if (isHousehold) {
+					setHouseholdLedgerBusy(false);
+				}
+			}
 		}
 	}
 
@@ -495,7 +505,7 @@
 		const o = opts || {};
 		return C.createElement('div', { class: 'bc-summary-tile' + (o.primary ? ' bc-summary-tile--primary' : '') }, [
 			C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-			C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
+			C.createElement('div', { class: 'bc-summary-tile__value' }, C.moneyTileValue(env, Ws.htmlLang)),
 			o.hint ? C.createElement('div', { class: 'bc-summary-tile__hint', text: o.hint }) : null,
 		]);
 	}

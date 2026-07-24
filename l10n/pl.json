@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Pieniądze wychodzące w tym miesiącu. Kategorie specjalne, takie jak czynsz lub ubezpieczenie, są śledzone osobno dla ostrzeżeń o limitach.",
         "Month": "Miesiąc",
         "Month closed and snapshot stored.": "Miesiąc zamknięty i snapshot zapisany.",
+        "Month currently shown on this page": "Miesiąc aktualnie wyświetlany na tej stronie",
         "Month is closed. Reopen it before generating planned entries.": "Month is closed. Reopen it before generating planned entries.",
         "Month reopened.": "Miesiąc otwarty ponownie.",
         "Month slice (optional)": "Wycinek miesiąca (opcjonalnie)",
@@ -1138,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "Po włączeniu następny termin płatności przeskoczy przy zapisie do pierwszej zaplanowanej daty w tym dniu lub później.",
         "This transaction already has the maximum of 10 attachments.": "Ta transakcja ma już maksymalną liczbę 10 załączników.",
         "No receipts attached.": "Brak załączonych paragonów.",
-        "A schedule can include at most {count} dates.": "Harmonogram może zawierać co najwyżej {count} dat."
+        "A schedule can include at most {count} dates.": "Harmonogram może zawierać co najwyżej {count} dat.",
+        "Month changed while confirming. Close was cancelled — try again.": "Month changed while confirming. Close was cancelled — try again.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Month changed while confirming. Reopen was cancelled — try again.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Month changed while editing. Save was cancelled — reopen the overrides for the month you want."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

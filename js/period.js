@@ -43,15 +43,16 @@
 		if (!grid) return;
 		grid.replaceChildren();
 		const totals = summary.totals || {};
+		const makeTile = (label, env, primary) => C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
+			C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
+			C.createElement('div', { class: 'bc-summary-tile__value' }, C.moneyTileValue(env, Ws.htmlLang)),
+		]);
 		[
 			[t('budgetcheck', 'Income'), totals.income],
 			[t('budgetcheck', 'Expenses'), totals.expense],
 			[t('budgetcheck', 'Net result'), totals.netResult, true],
 		].forEach(([label, env, primary]) => {
-			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
-				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-				C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
-			]));
+			grid.appendChild(makeTile(label, env, primary));
 		});
 		if (totals.tax && totals.taxBasis) {
 			[
@@ -59,26 +60,14 @@
 				[t('budgetcheck', 'Tax VAT total'), totals.tax.vat],
 				[t('budgetcheck', 'Tax gross total'), totals.tax.gross],
 			].forEach(([label, env]) => {
-				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-					C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-					C.createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, Ws.htmlLang) : '—' }),
-				]));
+				grid.appendChild(makeTile(label, env));
 			});
 		}
 		if (summary.allTime) {
-			grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-				C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'All-time spend') }),
-				C.createElement('div', { class: 'bc-summary-tile__value', text: Money.formatEnvelope(summary.allTime.expense, Ws.htmlLang) }),
-			]));
+			grid.appendChild(makeTile(t('budgetcheck', 'All-time spend'), summary.allTime.expense));
 			if (summary.allTime.cap) {
-				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-					C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Project cap') }),
-					C.createElement('div', { class: 'bc-summary-tile__value', text: Money.formatEnvelope(summary.allTime.cap, Ws.htmlLang) }),
-				]));
-				grid.appendChild(C.createElement('div', { class: 'bc-summary-tile' }, [
-					C.createElement('div', { class: 'bc-summary-tile__label', text: t('budgetcheck', 'Remaining headroom') }),
-					C.createElement('div', { class: 'bc-summary-tile__value', text: Money.formatEnvelope(summary.allTime.remainingHeadroom, Ws.htmlLang) }),
-				]));
+				grid.appendChild(makeTile(t('budgetcheck', 'Project cap'), summary.allTime.cap));
+				grid.appendChild(makeTile(t('budgetcheck', 'Remaining headroom'), summary.allTime.remainingHeadroom));
 			}
 		}
 	}

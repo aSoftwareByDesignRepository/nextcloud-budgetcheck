@@ -127,6 +127,7 @@
 			}
 			updateActionButtons(state.summary.isClosed);
 		} catch (err) {
+			if (seq !== loadSeq) return; // Stale request failure; a newer load owns the UI.
 			Msg.handleApiError(err);
 		} finally {
 			if (seq === loadSeq) {
@@ -225,7 +226,7 @@
 				text: remainingMinor === null
 					? '—'
 					: Money.formatEnvelope(
-						row.remaining || { minor: remainingMinor, currency: ws.currencyCode, decimals: ws.currencyDecimals || 2 },
+						row.remaining || { minor: remainingMinor, currency: ws.currencyCode, decimals: activeDecimals() },
 						Ws.htmlLang
 					),
 			}));
@@ -309,13 +310,16 @@
 			Msg.announce(t('budgetcheck', 'This month is closed. Reopen it to make changes.'), 'warning');
 			return;
 		}
+		// Freeze the month for fetch + submit so a picker change cannot save
+		// overrides into a different month than the one shown in the modal.
+		const yearMonth = state.yearMonth;
 		let categories = [];
 		let budgets = [];
 		let defaults = [];
 		try {
 			const data = await Promise.all([
 				Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id }),
-				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth }),
+				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth }),
 				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: ws.id }),
 			]);
 			categories = window.BudgetCheckConstants.budgetableCategories(data[0]?.categories || []);
@@ -450,6 +454,11 @@
 				return form;
 			},
 			onSubmit: async ({ close, body }) => {
+				if (state.yearMonth !== yearMonth) {
+					Msg.announce(t('budgetcheck', 'Month changed while editing. Save was cancelled — reopen the overrides for the month you want.'), 'warning');
+					close(false);
+					return false;
+				}
 				const form = body;
 				const rows = form && form._collect ? form._collect() : [];
 				if (!rows.length) {
@@ -460,7 +469,7 @@
 				try {
 					await Api.post('/apps/budgetcheck/api/budgets/bulk-upsert', {
 						workspaceId: ws.id,
-						yearMonth: state.yearMonth,
+						yearMonth,
 						rows,
 					});
 					Msg.announce(t('budgetcheck', 'Monthly overrides saved.'), 'success');
@@ -495,15 +504,22 @@
 
 	async function closeMonth() {
 		if (!ws) return;
+		// Freeze the month before the confirm dialog — the picker stays live and
+		// must not redirect a close to a different month than the user confirmed.
+		const yearMonth = state.yearMonth;
 		const ok = await C.confirmDialog({
 			title: t('budgetcheck', 'Close this month?'),
-			body: t('budgetcheck', 'Closing locks the ledger for {month} and stores an immutable snapshot. Reopening requires a manager.').replace('{month}', Dates.formatYearMonth(state.yearMonth, Ws.htmlLang)),
+			body: t('budgetcheck', 'Closing locks the ledger for {month} and stores an immutable snapshot. Reopening requires a manager.').replace('{month}', Dates.formatYearMonth(yearMonth, Ws.htmlLang)),
 			confirmLabel: t('budgetcheck', 'Yes, close month'),
 			danger: true,
 		});
 		if (!ok) return;
+		if (state.yearMonth !== yearMonth) {
+			Msg.announce(t('budgetcheck', 'Month changed while confirming. Close was cancelled — try again.'), 'warning');
+			return;
+		}
 		try {
-			await Api.post('/apps/budgetcheck/api/monthly-close', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			await Api.post('/apps/budgetcheck/api/monthly-close', { workspaceId: ws.id, yearMonth });
 			Msg.announce(t('budgetcheck', 'Month closed and snapshot stored.'), 'success');
 			load();
 		} catch (err) {
@@ -513,6 +529,7 @@
 
 	async function reopenMonth() {
 		if (!ws) return;
+		const yearMonth = state.yearMonth;
 		const ok = await C.confirmDialog({
 			title: t('budgetcheck', 'Reopen this month?'),
 			body: t('budgetcheck', 'Reopening removes the snapshot and re-enables edits. The action is logged.'),
@@ -520,8 +537,12 @@
 			danger: true,
 		});
 		if (!ok) return;
+		if (state.yearMonth !== yearMonth) {
+			Msg.announce(t('budgetcheck', 'Month changed while confirming. Reopen was cancelled — try again.'), 'warning');
+			return;
+		}
 		try {
-			await Api.post('/apps/budgetcheck/api/monthly-reopen', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			await Api.post('/apps/budgetcheck/api/monthly-reopen', { workspaceId: ws.id, yearMonth });
 			Msg.announce(t('budgetcheck', 'Month reopened.'), 'success');
 			load();
 		} catch (err) {

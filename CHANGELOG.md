@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.37] - 2026-07-24
+
+### Fixed
+
+- **Transaction dialog horizontal scrollbar:** the modal mounts on `document.body` (outside the app shell). The dialog now uses a dedicated body scrollport with `overflow-x: clip` (and `hidden` fallback), `scrollbar-gutter: stable`, and a `width:0; min-width:100%` form shrink so the receipt dropzone cannot expand past the dialog. Overlay padding replaces `100vw`-based max-width (which ignored padding and could be 1–2rem too wide). Focus rings on the dropzone stay inset so they do not inflate `scrollWidth`.
+
+## [1.0.33] - 2026-07-24
+
+### Fixed
+
+- **Transaction dialog no longer grows a horizontal scrollbar:** the booking modal is mounted on `document.body` (outside the app shell), so long receipt-dropzone copy and `width: 100%` controls without a `min-width: 0` / border-box chain could expand past the dialog. Modal and gallery overlays now use border-box throughout; the receipt picker wraps its file-type line; dialogs clip horizontal overflow and only scroll vertically.
+
+## [1.0.32] - 2026-07-24
+
+### Fixed
+
+- **Money envelopes include `decimals`:** API money envelopes now carry the currency's decimal places (including `0` for JPY). Clients and the yearly Excel export no longer assume 2 decimals and mis-scale amounts by 100×.
+- **`parseHuman(…, 0)` no longer treats zero as missing:** budget and savings absolute amounts for zero-decimal currencies were stored 100× too large because `decimals || 2` coerced `0` to `2`.
+- **Close / reopen / monthly overrides freeze the month:** confirming a close or reopen (or saving overrides) after changing the month picker can no longer apply the action to the newly selected month.
+- **Budgets / savings mutation lock:** save and generate actions ignore double-clicks and only refresh when the month/load sequence is still current.
+- **Import commit locks validate + file input** so a second validate cannot replace rows mid-commit.
+- **Attachment gallery XML loads** clear the busy flag only for the latest request (same as image/PDF).
+- **Settings `currencyChangeAllowed`** is passed into the template so the currency field locks after the first transaction instead of looking editable and failing on save.
+- **Transactions scope strip** resets to the workspace active month for non-month filter ranges; ledger receipt patches update `items` (not a non-existent `transactions` field).
+- **Dashboard ledger `aria-busy`** is cleared in `finally` even when a load returns early.
+
+## [1.0.31] - 2026-07-24
+
+### Fixed
+
+- **Header month now follows the selected month:** the workspace scope strip (workspace name · type · month · currency) kept showing the current calendar month (e.g. "July") after switching the dashboard, monthly plan, budgets, or transactions view to another month (e.g. "August"). It now always shows the month the page is displaying, with an updated tooltip when it differs from the active calendar month.
+- **Stale-response guards:** the dashboard, budgets, and yearly views now ignore out-of-date API responses when the month/year is switched quickly, so a slow response for the previous selection can no longer overwrite the newly selected period (the monthly view already had this guard).
+- **Zero-decimal currencies:** amounts in currencies without decimal places (e.g. JPY) were divided by 100 in the client-side formatter; envelopes with `decimals: 0` now render correctly.
+- **Frontend lint:** attachment gallery media loads go through the central API client (`Api.media`) instead of raw `fetch()`.
+
+### Changed
+
+- **Calmer summary tiles:** summary tiles on the dashboard, monthly plan, yearly overview, project period, and transactions (ledger KPI) views show plain locale-formatted amounts without the currency symbol — the workspace currency is already visible in the header scope strip. Screen readers still announce the currency via a visually hidden suffix; tables and detail lists keep the full currency format.
+- **Removed forked `-v106` assets:** the transactions page previously loaded duplicated copies of the ledger script, workspace helper, and stylesheets (`transactions-v106.js`, `common/workspace-v106.js`, `transactions-v106.css`, `import-v106.css`) that had drifted from the canonical files — the transactions page was missing newer workspace helpers, and fixes applied to the canonical files never reached it. All pages now load the single canonical `js/transactions.js`, `js/common/workspace.js`, `css/transactions.css`, and `css/import.css`; the receipt-gallery features that only existed in the fork were merged back into the canonical ledger script. Nextcloud's `?v=` cache-busting makes the filename suffix unnecessary.
+
 ## [1.0.29] - 2026-07-21
 
 ### Fixed

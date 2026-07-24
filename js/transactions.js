@@ -760,10 +760,22 @@
 		if (stateEl) { stateEl.hidden = true; stateEl.replaceChildren(); }
 		if (scroll) scroll.hidden = false;
 
-		// Window subline.
+		// Window subline. When the ledger shows a full calendar month, keep the
+		// header scope strip in sync so it never contradicts the content below.
+		// For non-month scopes (all time / multi-month custom), reset the strip
+		// to the workspace's active calendar month so it never looks "stuck".
 		const windowEl = document.querySelector('[data-bc-tx-window]');
+		const scopeYm = resolveViewYearMonth();
+		if (Ws && typeof Ws.setScopeMonth === 'function') {
+			if (scopeYm) {
+				Ws.setScopeMonth(scopeYm);
+			} else {
+				const active = document.querySelector('[data-bc-scope-month]')?.getAttribute('data-bc-scope-month-active');
+				if (active) Ws.setScopeMonth(active);
+			}
+		}
 		if (windowEl) {
-			const viewYm = resolveViewYearMonth();
+			const viewYm = scopeYm;
 			if (viewYm) {
 				windowEl.textContent = t('budgetcheck', 'Month: {month}')
 					.replace('{month}', Dates.formatYearMonth(viewYm, Ws.htmlLang));
@@ -854,7 +866,9 @@
 
 		const netMinor = net ? Number(net.minor || 0) : 0;
 		const netVariant = netMinor > 0 ? 'bc-tx-kpi-tile--net-positive' : (netMinor < 0 ? 'bc-tx-kpi-tile--net-negative' : '');
-		const fmt = (env) => env ? Money.formatEnvelope(env, Ws.htmlLang) : '—';
+		// Tile values omit the currency symbol (the workspace currency sits in
+		// the header); a visually hidden code keeps screen readers unambiguous.
+		const fmt = (env) => C.moneyTileValue(env, Ws.htmlLang);
 
 		const tileNodes = [
 			kpiTile({
@@ -894,9 +908,10 @@
 				value: plannedCount === 1
 					? t('budgetcheck', '1 entry')
 					: t('budgetcheck', '{count} entries').replace('{count}', String(plannedCount)),
+				// Sub-line keeps the full currency format like tables do.
 				sub: t('budgetcheck', 'In {income} · Out {expense}')
-					.replace('{income}', fmt(planned.income))
-					.replace('{expense}', fmt(planned.expense)),
+					.replace('{income}', planned.income ? Money.formatEnvelope(planned.income, Ws.htmlLang) : '—')
+					.replace('{expense}', planned.expense ? Money.formatEnvelope(planned.expense, Ws.htmlLang) : '—'),
 			}));
 		}
 
@@ -906,9 +921,12 @@
 
 	function kpiTile({ modifier, label, value, sub, primary }) {
 		const cls = 'bc-summary-tile bc-tx-kpi-tile ' + (primary ? 'bc-summary-tile--primary ' : '') + (modifier || '');
+		const valueEl = Array.isArray(value)
+			? C.createElement('div', { class: 'bc-summary-tile__value' }, value)
+			: C.createElement('div', { class: 'bc-summary-tile__value', text: value });
 		const children = [
 			C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-			C.createElement('div', { class: 'bc-summary-tile__value', text: value }),
+			valueEl,
 		];
 		if (sub) children.push(C.createElement('div', { class: 'bc-tx-kpi-tile__sub', text: sub }));
 		return C.createElement('div', { class: cls.trim() }, children);
@@ -926,7 +944,7 @@
 	function renderRow(tx) {
 		const cat = state.categoryById.get(tx.categoryId) || null;
 		const isProject = Ws.workspace && Ws.workspace.type === 'project';
-		const tr = C.createElement('tr');
+		const tr = C.createElement('tr', { attrs: { 'data-bc-tx-id': String(tx.id) } });
 
 		// Date
 		tr.appendChild(C.createElement('td', {
@@ -952,6 +970,17 @@
 		}
 		if (tx.notes) {
 			titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-notes', text: String(tx.notes).slice(0, 280) }));
+		}
+		if (tx.hasAttachments || (tx.attachmentCount && tx.attachmentCount > 0)) {
+			const count = Number(tx.attachmentCount) || 0;
+			const receiptLabel = count === 1
+				? t('budgetcheck', '1 receipt attached')
+				: t('budgetcheck', '{count} receipts attached').replace('{count}', String(count));
+			titleTd.appendChild(C.createElement('span', {
+				class: 'bc-tx-row-receipts',
+				attrs: { role: 'status' },
+				text: receiptLabel,
+			}));
 		}
 		tr.appendChild(titleTd);
 
@@ -1029,6 +1058,9 @@
 
 	function collectTagPills(tx) {
 		const out = [];
+		if (tx.hasAttachments || (tx.attachmentCount && tx.attachmentCount > 0)) {
+			out.push({ cls: 'bc-tx-tag-pill bc-tx-tag-pill--receipt', text: t('budgetcheck', 'Receipt') });
+		}
 		if (tx.isPlanned) out.push({ cls: 'bc-tx-tag-pill bc-tx-tag-pill--planned', text: t('budgetcheck', 'Planned') });
 		if (tx.isSpecial) out.push({ cls: 'bc-tx-tag-pill bc-tx-tag-pill--special', text: t('budgetcheck', 'Special') });
 		if (tx.entryAmountBasis === 'gross') out.push({ cls: 'bc-tx-tag-pill', text: t('budgetcheck', 'Gross') });
@@ -1560,11 +1592,62 @@
 		openEditModal(null, { bookingDate: defaultBookingDateForNew() });
 	}
 
+	function patchLedgerReceiptCount(transactionId, count) {
+		const txId = Number(transactionId);
+		if (!txId) return;
+		const n = Math.max(0, Number(count) || 0);
+		if (state.lastResponse && Array.isArray(state.lastResponse.items)) {
+			const tx = state.lastResponse.items.find((entry) => Number(entry.id) === txId);
+			if (tx && window.BudgetCheckTransactionList) {
+				window.BudgetCheckTransactionList.applyReceiptCount(tx, n);
+			}
+		}
+		const tr = document.querySelector('[data-bc-tx-rows] [data-bc-tx-id="' + txId + '"]');
+		if (!tr) return;
+
+		const titleTd = tr.querySelector('[data-cell="title"]');
+		if (titleTd) {
+			let receiptEl = titleTd.querySelector('.bc-tx-row-receipts');
+			if (n <= 0) {
+				if (receiptEl) receiptEl.remove();
+			} else {
+				const receiptLabel = n === 1
+					? t('budgetcheck', '1 receipt attached')
+					: t('budgetcheck', '{count} receipts attached').replace('{count}', String(n));
+				if (!receiptEl) {
+					receiptEl = C.createElement('span', {
+						class: 'bc-tx-row-receipts',
+						attrs: { role: 'status' },
+					});
+					titleTd.appendChild(receiptEl);
+				}
+				receiptEl.textContent = receiptLabel;
+			}
+		}
+
+		const tagsRow = tr.querySelector('[data-cell="tags"] .bc-tx-row-tags');
+		if (tagsRow) {
+			let pill = tagsRow.querySelector('.bc-tx-tag-pill--receipt');
+			if (n <= 0) {
+				if (pill) pill.remove();
+			} else if (!pill) {
+				tagsRow.appendChild(C.createElement('span', {
+					class: 'bc-tx-tag-pill bc-tx-tag-pill--receipt',
+					text: t('budgetcheck', 'Receipt'),
+				}));
+			}
+		}
+	}
+
 	function openEditModal(tx, opts) {
 		window.BudgetCheckTransactionEditor.open({
 			tx: tx || null,
 			bookingDate: opts && opts.bookingDate ? opts.bookingDate : undefined,
 			onSaved: () => loadAndRender(),
+			onAttachmentsChanged: (payload) => {
+				if (!payload || !payload.transactionId) return;
+				patchLedgerReceiptCount(payload.transactionId, payload.attachmentCount);
+			},
 		});
 	}
 

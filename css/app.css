@@ -1052,6 +1052,9 @@
 }
 .bc-input {
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
 	min-height: 44px;
 	padding: var(--bc-space-2) var(--bc-space-3);
 	border-radius: var(--bc-radius-sm);
@@ -1123,6 +1126,9 @@
 /* Transaction modal: one column so every field is the same width */
 .bc-form-grid.bc-modal__form--transaction {
 	grid-template-columns: minmax(0, 1fr);
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 }
 /* Title + amount share one row with equal width on tablet+ */
 .bc-form-grid > .bc-tx-title-amount-row {
@@ -1269,7 +1275,7 @@
 .bc-table-scroll table {
 	min-width: 540px;
 }
-/* Transactions ledger card layout (<768px) must not inherit table min-width (see transactions-v106.css). */
+/* Transactions ledger card layout (<768px) must not inherit table min-width (see transactions.css). */
 .bc-table-scroll .bc-tx-table {
 	min-width: 0;
 	max-width: 100%;
@@ -1620,6 +1626,15 @@
 	background: var(--bc-bg-soft);
 	color: var(--bc-muted);
 	text-align: center;
+	box-sizing: border-box;
+	max-width: 100%;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.bc-tx-attachments__picker-wrap {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 }
 .bc-tx-attachments__card {
 	display: flex;
@@ -1734,15 +1749,23 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--bc-space-2);
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
 }
 .bc-tx-attachments .bc-file-picker__surface {
 	position: relative;
-	display: flex;
-	align-items: center;
-	gap: var(--bc-space-4);
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: start;
+	gap: var(--bc-space-3);
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
 	min-height: 72px;
-	padding: var(--bc-space-3) var(--bc-space-4);
+	padding: var(--bc-space-3);
 	border: 2px dashed var(--bc-border-strong);
 	border-radius: var(--bc-radius-md);
 	background: var(--bc-bg-soft);
@@ -1767,8 +1790,9 @@
 	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 6%, var(--bc-bg-soft) 94%);
 }
 .bc-tx-attachments .bc-file-picker__surface:has(.bc-file-picker__input:focus-visible) {
+	/* Inset ring — outline-offset outside the box can inflate scrollWidth. */
 	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
-	outline-offset: 2px;
+	outline-offset: -3px;
 	border-color: var(--color-primary-element, #0082c9);
 }
 .bc-tx-attachments .bc-file-picker.is-dragover .bc-file-picker__surface {
@@ -1794,14 +1818,20 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--bc-space-1);
+	flex: 1 1 auto;
 	min-width: 0;
+	max-width: 100%;
 }
 .bc-tx-attachments .bc-file-picker__title {
 	font-weight: 600;
+	overflow-wrap: anywhere;
 }
 .bc-tx-attachments .bc-file-picker__sub {
 	font-size: var(--bc-fs-sm, 0.875rem);
 	color: var(--bc-muted);
+	overflow-wrap: anywhere;
+	/* Prefer soft wraps at spaces/· before mid-word breaks. */
+	word-break: normal;
 }
 @media (max-width: 480px) {
 	.bc-tx-attachments__grid {
@@ -1825,7 +1855,7 @@
 	outline-offset: 2px;
 }
 
-/* Receipt gallery lightbox */
+/* Receipt gallery lightbox (also mounted on document.body) */
 .bc-attach-gallery {
 	position: fixed;
 	inset: 0;
@@ -1835,6 +1865,13 @@
 	justify-content: center;
 	padding: var(--bc-space-3);
 	background: color-mix(in srgb, var(--color-main-text, #000) 55%, transparent);
+	box-sizing: border-box;
+}
+.bc-attach-gallery,
+.bc-attach-gallery *,
+.bc-attach-gallery *::before,
+.bc-attach-gallery *::after {
+	box-sizing: border-box;
 }
 .bc-attach-gallery [hidden] {
 	display: none !important;
@@ -2791,16 +2828,35 @@ button.bc-dash-action {
 .bc-cap--critical .bc-cap__bar-fill { background: var(--color-error, #cc4646); }
 .bc-cap__legend { display: flex; gap: var(--bc-space-4); margin-top: var(--bc-space-2); font-size: var(--bc-fs-sm); color: var(--bc-muted); }
 
-/* Modal */
+/* Modal
+ *
+ * Dialogs are mounted on document.body (outside #app-content.bc-app), so they do
+ * not inherit the shell’s layout constraints. Everything below must be self-
+ * contained: border-box sizing, min-width:0 through the form chain, and no
+ * horizontal scrollbar for long labels (receipt dropzone, boolean copy, hints).
+ */
+body.bc-modal-open {
+	overflow: hidden;
+}
 .bc-modal {
 	position: fixed;
 	inset: 0;
 	display: grid;
 	place-items: center;
+	/* Never let the overlay itself grow a page-level scrollbar. */
+	overflow: hidden;
+	padding: var(--bc-space-4);
+	box-sizing: border-box;
 	background: color-mix(in srgb, var(--color-main-text, #000) 60%, transparent);
 	/* Keep dialogs above Nextcloud app/navigation chrome. */
 	z-index: 10000;
 	color: var(--color-main-text, #1d1d1d);
+}
+.bc-modal,
+.bc-modal *,
+.bc-modal *::before,
+.bc-modal *::after {
+	box-sizing: border-box;
 }
 .bc-modal .bc-input,
 .bc-modal select.bc-input,
@@ -2818,22 +2874,39 @@ button.bc-dash-action {
 }
 .bc-modal .bc-field__hint {
 	color: var(--bc-muted);
+	overflow-wrap: anywhere;
 }
 .bc-modal .bc-boolean-control {
 	background: var(--color-main-background, var(--bc-bg-card));
 	color: var(--color-main-text, #1d1d1d);
+	max-width: 100%;
+	min-width: 0;
+}
+.bc-modal .bc-boolean-control__text {
+	overflow-wrap: anywhere;
 }
 .bc-modal__dialog {
 	background: var(--bc-bg-card);
 	border-radius: var(--bc-radius-md);
 	box-shadow: var(--bc-shadow-md);
-	/* Mobile: inset from viewport edges; capped width from tablet up. */
-	max-width: min(640px, calc(100vw - 2 * var(--bc-space-4)));
+	/*
+	 * Width is relative to the overlay’s content box (overlay already pads
+	 * from the viewport). Avoid 100vw here — it ignores overlay padding and
+	 * can make the dialog 1–2rem wider than the overlay, causing a horizontal bar.
+	 */
+	max-width: min(640px, 100%);
 	width: 100%;
-	max-height: calc(100vh - 2 * var(--bc-space-4));
-	overflow: auto;
+	min-width: 0;
+	max-height: 100%;
+	/*
+	 * Header + actions stay put; only the body scrolls. Scrolling the whole
+	 * dialog made a vertical scrollbar steal width from 100%-wide fields and
+	 * reintroduce a horizontal bar (especially the receipt dropzone).
+	 */
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 	padding: var(--bc-space-4);
-	box-sizing: border-box;
 }
 .bc-modal__header {
 	display: flex;
@@ -2843,16 +2916,62 @@ button.bc-dash-action {
 	margin-bottom: var(--bc-space-4);
 	padding-bottom: var(--bc-space-3);
 	border-bottom: 1px solid var(--bc-border);
+	min-width: 0;
+	flex-shrink: 0;
 }
 .bc-modal__header h2 {
 	margin: 0;
 	font-size: var(--bc-fs-lg);
 	line-height: var(--bc-line-tight);
 	font-weight: 700;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 .bc-modal__body {
-	margin-bottom: var(--bc-space-4);
+	margin-bottom: 0;
+	padding-bottom: var(--bc-space-4);
 	min-width: 0;
+	max-width: 100%;
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+.bc-modal__body-scroll {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	width: 100%;
+	max-width: 100%;
+	/*
+	 * overflow-x: clip — not hidden. With overflow-y:auto, some engines still
+	 * promote overflow-x:hidden → auto and paint a horizontal scrollbar when a
+	 * child is ~scrollbar-width wider than the scrollport. clip never scrolls.
+	 * scrollbar-gutter:stable reserves the vertical-bar lane so 100%-wide
+	 * children never expand past the content box when the bar appears.
+	 */
+	/* hidden first for engines without clip; clip wins where supported. */
+	overflow-x: hidden;
+	overflow-x: clip;
+	overflow-y: auto;
+	scrollbar-gutter: stable;
+	overscroll-behavior: contain;
+}
+.bc-modal__body-scroll > .bc-form-grid,
+.bc-modal__body-scroll > form.bc-form-grid {
+	/*
+	 * Classic flex/grid overflow fix: width:0 + min-width:100% forces the form
+	 * to take the scrollport width and shrink children (receipt dropzone) instead
+	 * of expanding the scrollport and showing a horizontal bar.
+	 */
+	width: 0;
+	min-width: 100%;
+	max-width: 100%;
+}
+.bc-modal .bc-field {
+	min-width: 0;
+	max-width: 100%;
 }
 .bc-modal__close {
 	display: inline-flex;
@@ -2866,18 +2985,21 @@ button.bc-dash-action {
 	border-radius: var(--bc-radius-sm);
 	min-width: 44px;
 	min-height: 44px;
-	box-sizing: border-box;
+	flex-shrink: 0;
 	line-height: 1;
 	font: inherit;
 }
 .bc-modal__close:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent); }
 .bc-modal__dialog--wide {
-	max-width: min(1080px, 96vw);
+	max-width: min(1080px, 100%);
 }
 .bc-modal__actions {
 	padding-top: var(--bc-space-4);
 	border-top: 1px solid var(--bc-border);
 	justify-content: flex-end;
+	min-width: 0;
+	flex-wrap: wrap;
+	flex-shrink: 0;
 }
 
 /* Budget override modal: use available width, prevent clipped table columns */
@@ -3068,6 +3190,14 @@ button.bc-dash-action {
 	.bc-filter-grid {
 		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 	}
+	/* Modals are body-mounted and width-capped — never force a 220px floor that
+	   overflows the dialog. Transaction form stays single-column. */
+	.bc-modal .bc-form-grid {
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+	}
+	.bc-form-grid.bc-modal__form--transaction {
+		grid-template-columns: minmax(0, 1fr);
+	}
 	.bc-filter-bool-row {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -3075,12 +3205,14 @@ button.bc-dash-action {
 		grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 26rem);
 	}
 	.bc-modal__dialog {
-		max-width: min(640px, 92vw);
-		max-height: 90vh;
+		/* Stay within overlay padding — never use vw here (see .bc-modal rules). */
+		max-width: min(640px, 100%);
+		max-height: 100%;
 		padding: var(--bc-space-5);
+		overflow: hidden;
 	}
 	.bc-modal__dialog--wide {
-		max-width: min(1080px, 96vw);
+		max-width: min(1080px, 100%);
 	}
 }
 

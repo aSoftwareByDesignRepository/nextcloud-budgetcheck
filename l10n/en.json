@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.",
         "Month": "Month",
         "Month closed and snapshot stored.": "Month closed and snapshot stored.",
+        "Month currently shown on this page": "Month currently shown on this page",
         "Month is closed. Reopen it before generating planned entries.": "Month is closed. Reopen it before generating planned entries.",
         "Month reopened.": "Month reopened.",
         "Month slice (optional)": "Month slice (optional)",
@@ -859,7 +860,6 @@
         "Same start and end date?": "Same start and end date?",
         "Save": "Save",
         "Save app policy": "Save app policy",
-        "Save changes": "Save changes",
         "Save savings target": "Save savings target",
         "Save tax settings": "Save tax settings",
         "Save workspace": "Save workspace",
@@ -1042,7 +1042,6 @@
         "Validation passed. {count} rows are ready to import.": "Validation passed. {count} rows are ready to import.",
         "Validation passed. {count} rows ready; {skipped} duplicates will be skipped.": "Validation passed. {count} rows ready; {skipped} duplicates will be skipped.",
         "View and add entries in the ledger.": "View and add entries in the ledger.",
-        "View": "View",
         "View workspace details and set how planning totals appear for you.": "View workspace details and set how planning totals appear for you.",
         "Viewer": "Viewer",
         "Warning": "Warning",
@@ -1140,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.",
         "This transaction already has the maximum of 10 attachments.": "This transaction already has the maximum of 10 attachments.",
         "No receipts attached.": "No receipts attached.",
-        "A schedule can include at most {count} dates.": "A schedule can include at most {count} dates."
+        "A schedule can include at most {count} dates.": "A schedule can include at most {count} dates.",
+        "Month changed while confirming. Close was cancelled — try again.": "Month changed while confirming. Close was cancelled — try again.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Month changed while confirming. Reopen was cancelled — try again.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Month changed while editing. Save was cancelled — reopen the overrides for the month you want."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

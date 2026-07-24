@@ -96,7 +96,12 @@ final class MoneyServiceTest extends TestCase
 	public function testEnvelopeShape(): void
 	{
 		$out = $this->money->envelope(123_456, 'eur');
-		$this->assertSame(['minor' => 123_456, 'currency' => 'EUR', 'decimal' => '1234.56'], $out);
+		$this->assertSame([
+			'minor' => 123_456,
+			'currency' => 'EUR',
+			'decimal' => '1234.56',
+			'decimals' => 2,
+		], $out);
 	}
 
 	public function testEnvelopeForJpyHas0Decimals(): void
@@ -105,6 +110,7 @@ final class MoneyServiceTest extends TestCase
 		$this->assertSame('JPY', $out['currency']);
 		$this->assertSame(1_234, $out['minor']);
 		$this->assertSame('1234', $out['decimal']);
+		$this->assertSame(0, $out['decimals']);
 	}
 
 	public function testToDecimalStringHandlesNegativeAndSmallValues(): void

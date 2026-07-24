@@ -620,7 +620,7 @@
 			if (!url) {
 				throw new Error(t('budgetcheck', 'Attachment could not be loaded.'));
 			}
-			const response = await fetch(url, { credentials: 'same-origin' });
+			const response = await Api.media(url);
 			if (!response.ok) {
 				throw new Error(t('budgetcheck', 'Attachment could not be loaded.'));
 			}
@@ -717,8 +717,7 @@
 					text = await item.file.text();
 				} else {
 					const url = resolveMediaUrl(item.previewUrl || item.downloadUrl);
-					const response = await fetch(url, {
-						credentials: 'same-origin',
+					const response = await Api.media(url, {
 						headers: { Accept: 'text/xml, application/xml, text/plain, */*' },
 					});
 					if (!response.ok) {
@@ -735,8 +734,10 @@
 				if (seq !== loadSeq) return;
 				setStageStatus(err.message || t('budgetcheck', 'Could not load document.'), true);
 			} finally {
-				loadingXml = false;
-				updateToolbarControls();
+				if (seq === loadSeq) {
+					loadingXml = false;
+					updateToolbarControls();
+				}
 			}
 		}
 

@@ -6,7 +6,6 @@ namespace OCA\BudgetCheck\Tests\Unit\Repair;
 
 use OCA\BudgetCheck\Repair\UninstallDropTables;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;

@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Geld, das diesen Monat abgeflossen ist. Sonderkategorien wie Miete oder Versicherungen werden für Obergrenzen-Warnungen separat geführt.",
         "Month": "Monat",
         "Month closed and snapshot stored.": "Monat geschlossen und Abschluss gespeichert.",
+        "Month currently shown on this page": "Aktuell angezeigter Monat auf dieser Seite",
         "Month is closed. Reopen it before generating planned entries.": "Month is closed. Reopen it before generating planned entries.",
         "Month reopened.": "Monat wieder geöffnet.",
         "Month slice (optional)": "Monatsausschnitt (optional)",
@@ -1138,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "Wenn aktiviert, springt das nächste Fälligkeitsdatum beim Speichern auf den ersten geplanten Termin an oder nach diesem Tag.",
         "This transaction already has the maximum of 10 attachments.": "Diese Buchung hat bereits die maximale Anzahl von 10 Anhängen.",
         "No receipts attached.": "Keine Belege angehängt.",
-        "A schedule can include at most {count} dates.": "Ein Zeitplan kann höchstens {count} Termine enthalten."
+        "A schedule can include at most {count} dates.": "Ein Zeitplan kann höchstens {count} Termine enthalten.",
+        "Month changed while confirming. Close was cancelled — try again.": "Der Monat hat sich während der Bestätigung geändert. Der Abschluss wurde abgebrochen — bitte erneut versuchen.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Der Monat hat sich während der Bestätigung geändert. Das Wiederöffnen wurde abgebrochen — bitte erneut versuchen.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Der Monat hat sich während der Bearbeitung geändert. Speichern abgebrochen — öffne die Überschreibungen erneut für den gewünschten Monat."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

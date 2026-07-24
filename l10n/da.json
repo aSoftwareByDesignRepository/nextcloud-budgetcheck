@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Penge ud denne måned. Særkategorier som husleje eller forsikring følges separat til loftadvarsler.",
         "Month": "Måned",
         "Month closed and snapshot stored.": "Måned lukket og øjebliksbillede gemt.",
+        "Month currently shown on this page": "Måned, der vises på denne side",
         "Month is closed. Reopen it before generating planned entries.": "Måneden er lukket. Genåbn den, før du genererer planlagte posteringer.",
         "Month reopened.": "Måned genåbnet.",
         "Month slice (optional)": "Månedssnit (valgfrit)",
@@ -1138,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "Når aktiveret, springer næste forfaldsdato til den første planlagte dato på eller efter denne dag, når du gemmer.",
         "This transaction already has the maximum of 10 attachments.": "Denne postering har allerede det maksimale antal på 10 vedhæftninger.",
         "No receipts attached.": "Ingen kvitteringer vedhæftet.",
-        "A schedule can include at most {count} dates.": "En tidsplan kan højst indeholde {count} datoer."
+        "A schedule can include at most {count} dates.": "En tidsplan kan højst indeholde {count} datoer.",
+        "Month changed while confirming. Close was cancelled — try again.": "Month changed while confirming. Close was cancelled — try again.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Month changed while confirming. Reopen was cancelled — try again.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Month changed while editing. Save was cancelled — reopen the overrides for the month you want."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -589,6 +589,7 @@
         "Money that went out this month. Special categories like rent or insurance are tracked separately for cap warnings.": "Denaro uscito questo mese. Categorie speciali come affitto o assicurazione sono monitorate separatamente per gli avvisi di limite.",
         "Month": "Mese",
         "Month closed and snapshot stored.": "Mese chiuso e istantanea memorizzata.",
+        "Month currently shown on this page": "Mese attualmente mostrato in questa pagina",
         "Month is closed. Reopen it before generating planned entries.": "Month is closed. Reopen it before generating planned entries.",
         "Month reopened.": "Mese riaperto.",
         "Month slice (optional)": "Intervallo mensile (facoltativo)",
@@ -1138,7 +1139,10 @@
         "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": "Se abilitato, la prossima scadenza passa alla prima data pianificata in questo giorno o successiva al salvataggio.",
         "This transaction already has the maximum of 10 attachments.": "Questa transazione ha già il massimo di 10 allegati.",
         "No receipts attached.": "Nessuna ricevuta allegata.",
-        "A schedule can include at most {count} dates.": "Un calendario può includere al massimo {count} date."
+        "A schedule can include at most {count} dates.": "Un calendario può includere al massimo {count} date.",
+        "Month changed while confirming. Close was cancelled — try again.": "Month changed while confirming. Close was cancelled — try again.",
+        "Month changed while confirming. Reopen was cancelled — try again.": "Month changed while confirming. Reopen was cancelled — try again.",
+        "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": "Month changed while editing. Save was cancelled — reopen the overrides for the month you want."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

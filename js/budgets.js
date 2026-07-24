@@ -25,6 +25,10 @@
 	};
 
 	let periodPicker = null;
+	/** Guards against slow responses for a previously selected month overwriting the latest one. */
+	let loadSeq = 0;
+	/** Prevents double-submit on budget/savings writes and their unguarded reloads. */
+	let mutationInFlight = false;
 
 	document.addEventListener('DOMContentLoaded', () => {
 		ws = Ws.workspace;
@@ -68,7 +72,9 @@
 	});
 
 	async function loadAll() {
-		await Promise.all([loadCategories(), loadBudgets(), loadSummary(), loadSavings()]);
+		const seq = ++loadSeq;
+		await Promise.all([loadCategories(seq), loadBudgets(seq), loadSummary(seq), loadSavings(seq)]);
+		if (seq !== loadSeq) return; // A newer month was selected meanwhile; its loadAll() renders.
 		if (isHousehold && periodPicker && state.summary && state.summary.ledgerYearMonthSpan) {
 			periodPicker.refreshLedgerSpan(state.summary.ledgerYearMonthSpan);
 		}
@@ -76,6 +82,11 @@
 		renderRows();
 		renderLedgerHelp();
 		updateClosedControls();
+	}
+
+	/** True when the response belongs to a load that has since been superseded. */
+	function isStale(seq) {
+		return seq !== undefined && seq !== loadSeq;
 	}
 
 	function updateClosedControls() {
@@ -89,23 +100,26 @@
 		if (monthClosed) toggleSaveButton(false);
 	}
 
-	async function loadCategories() {
+	async function loadCategories(seq) {
 		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id });
+			if (isStale(seq)) return;
 			state.categories = (data.categories || []).filter((c) => c.isActive);
 		} catch (err) {
+			if (isStale(seq)) return;
 			Msg.handleApiError(err);
 		}
 	}
 
-	async function loadBudgets() {
+	async function loadBudgets(seq) {
 		if (!ws) return;
 		try {
 			const [data, defaults] = await Promise.all([
 				Api.get('/apps/budgetcheck/api/budgets', { workspaceId: ws.id, yearMonth: state.yearMonth }),
 				Api.get('/apps/budgetcheck/api/budget-defaults', { workspaceId: ws.id }),
 			]);
+			if (isStale(seq)) return;
 			state.budgets = data.budgets || [];
 			state.budgetDefaults = defaults.defaults || [];
 			state.projectLedger = null;
@@ -116,27 +130,32 @@
 				};
 			}
 		} catch (err) {
+			if (isStale(seq)) return;
 			Msg.handleApiError(err);
 		}
 	}
 
-	async function loadSummary() {
-		state.summary = null;
+	async function loadSummary(seq) {
 		if (!isHousehold || !ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			if (isStale(seq)) return;
 			state.summary = data.summary || null;
 		} catch (err) {
+			if (isStale(seq)) return;
+			state.summary = null;
 			if (Number(err.status) !== 422) Msg.handleApiError(err);
 		}
 	}
 
-	async function loadSavings() {
+	async function loadSavings(seq) {
 		if (!isHousehold || !ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/savings-target', { workspaceId: ws.id, yearMonth: state.yearMonth });
+			if (isStale(seq)) return;
 			renderSavings(data.savingsTarget || null);
 		} catch (err) {
+			if (isStale(seq)) return;
 			if (Number(err.status) !== 422) Msg.handleApiError(err);
 		}
 	}
@@ -249,7 +268,9 @@
 	}
 
 	async function saveBudgets() {
-		if (!ws || monthClosed) return;
+		if (!ws || monthClosed || mutationInFlight) return;
+		const yearMonth = state.yearMonth;
+		const seq = loadSeq;
 		const rows = [];
 		try {
 			state.dirty.forEach((value, categoryId) => {
@@ -265,19 +286,24 @@
 			return;
 		}
 		const generatePlanned = !!document.querySelector('[data-bc-generate-planned-on-save]')?.checked;
+		mutationInFlight = true;
+		toggleSaveButton(false);
 		try {
 			const res = await Api.post('/apps/budgetcheck/api/budgets/bulk-upsert', {
-				workspaceId: ws.id, yearMonth: state.yearMonth, rows, generatePlanned,
+				workspaceId: ws.id, yearMonth, rows, generatePlanned,
 			});
+			if (yearMonth !== state.yearMonth || seq !== loadSeq) return;
 			Msg.announce(t('budgetcheck', 'Budgets saved.'), 'success');
 			announcePlannedSync(res.plannedSync);
 			state.dirty.clear();
-			toggleSaveButton(false);
-			await loadBudgets();
-			await loadSummary();
-			renderRows();
+			await loadAll();
 		} catch (err) {
 			Msg.handleApiError(err);
+			if (yearMonth === state.yearMonth && seq === loadSeq && state.dirty.size > 0) {
+				toggleSaveButton(true);
+			}
+		} finally {
+			mutationInFlight = false;
 		}
 	}
 
@@ -301,21 +327,25 @@
 	}
 
 	async function generatePlannedFromBudgets() {
-		if (!ws || monthClosed) return;
+		if (!ws || monthClosed || mutationInFlight) return;
+		const yearMonth = state.yearMonth;
+		const seq = loadSeq;
 		const btn = document.querySelector('[data-bc-action="generate-planned-budgets"]');
 		btn?.setAttribute('aria-busy', 'true');
 		if (btn) btn.disabled = true;
+		mutationInFlight = true;
 		try {
 			const res = await Api.post('/apps/budgetcheck/api/budgets/generate-planned', {
 				workspaceId: ws.id,
-				yearMonth: state.yearMonth,
+				yearMonth,
 			});
+			if (yearMonth !== state.yearMonth || seq !== loadSeq) return;
 			announcePlannedSync(res.plannedSync);
-			await loadSummary();
-			renderRows();
+			await loadAll();
 		} catch (err) {
 			Msg.handleApiError(err);
 		} finally {
+			mutationInFlight = false;
 			btn?.setAttribute('aria-busy', 'false');
 			if (btn) btn.disabled = monthClosed;
 		}
@@ -350,9 +380,11 @@
 	}
 
 	async function saveSavingsTarget(form) {
-		if (!ws) return;
+		if (!ws || mutationInFlight) return;
+		const yearMonth = state.yearMonth;
+		const seq = loadSeq;
 		const mode = form.querySelector('input[name="targetMode"]:checked')?.value || 'percentage';
-		const payload = { workspaceId: ws.id, yearMonth: state.yearMonth, targetMode: mode };
+		const payload = { workspaceId: ws.id, yearMonth, targetMode: mode };
 		const percentRaw = form.querySelector('input[name="targetPercent"]').value.trim();
 		const absoluteRaw = form.querySelector('input[name="targetAmount"]').value.trim();
 		try {
@@ -370,12 +402,19 @@
 			Msg.announce(e.message, 'error');
 			return;
 		}
+		mutationInFlight = true;
+		const submitBtn = form.querySelector('[type="submit"]');
+		if (submitBtn) submitBtn.disabled = true;
 		try {
 			await Api.post('/apps/budgetcheck/api/savings-target', payload);
+			if (yearMonth !== state.yearMonth || seq !== loadSeq) return;
 			Msg.announce(t('budgetcheck', 'Savings target saved.'), 'success');
-			await loadSavings();
+			await loadAll();
 		} catch (err) {
 			Msg.handleApiError(err);
+		} finally {
+			mutationInFlight = false;
+			if (submitBtn) submitBtn.disabled = false;
 		}
 	}
 })();

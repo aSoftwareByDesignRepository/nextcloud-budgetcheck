@@ -423,6 +423,8 @@
 		const statusEl = document.querySelector('[data-bc-import-status]');
 		if (!form || !fileInput || !validateBtn || !commitBtn || !statusEl) return;
 
+		let commitInFlight = false;
+
 		const updateFileDisplay = () => {
 			const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
 			if (!filePicker || !fileNameEl) return;
@@ -501,6 +503,7 @@
 		});
 
 		validateBtn.addEventListener('click', async () => {
+			if (commitInFlight) return;
 			const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
 			if (!file) {
 				Msg.announce(t('budgetcheck', 'Please choose a CSV file first.'), 'error');
@@ -566,23 +569,32 @@
 					Msg.announce(err.message || t('budgetcheck', 'Validation failed.'), 'error');
 				}
 			} finally {
-				validateBtn.disabled = false;
+				if (!commitInFlight) {
+					validateBtn.disabled = false;
+				}
 			}
 		});
 
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
+			if (commitInFlight) return;
 			if (validatedRows.length === 0) {
 				Msg.announce(t('budgetcheck', 'Validate your CSV before importing.'), 'error');
 				return;
 			}
+			commitInFlight = true;
 			try {
 				commitBtn.disabled = true;
+				validateBtn.disabled = true;
+				fileInput.disabled = true;
+				const rowsForCommit = validatedRows.slice();
+				const defaultsForCommit = lockedImportDefaults || buildImportDefaults();
+				const optionsForCommit = lockedImportOptions || buildImportOptions();
 				const res = await Api.post('/apps/budgetcheck/api/transactions/import/commit', {
 					workspaceId: Ws.workspace.id,
-					defaults: lockedImportDefaults || buildImportDefaults(),
-					options: lockedImportOptions || buildImportOptions(),
-					rows: validatedRows,
+					defaults: defaultsForCommit,
+					options: optionsForCommit,
+					rows: rowsForCommit,
 				});
 				const result = res.result || {};
 				if (Number(result.errorCount || 0) > 0) {
@@ -592,6 +604,8 @@
 						: t('budgetcheck', 'Import failed.');
 					Msg.announce(first, 'error');
 					commitBtn.disabled = false;
+					validateBtn.disabled = false;
+					fileInput.disabled = false;
 					return;
 				}
 				saveImportPreferences();
@@ -613,7 +627,11 @@
 				window.location.href = Ws.withWorkspace(Ws.urls.transactions);
 			} catch (err) {
 				commitBtn.disabled = false;
+				validateBtn.disabled = false;
+				fileInput.disabled = false;
 				Msg.handleApiError(err);
+			} finally {
+				commitInFlight = false;
 			}
 		});
 	}

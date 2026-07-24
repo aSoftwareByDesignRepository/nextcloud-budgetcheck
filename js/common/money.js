@@ -14,10 +14,29 @@
 		return { minor: 0, currency: String(currency || 'EUR'), decimal: '0.00' };
 	}
 
+	/**
+	 * Resolve decimal places for an envelope. Prefer the explicit `decimals`
+	 * int (including 0 for JPY). Fall back to counting digits after the
+	 * server-provided `decimal` string so older envelopes without `decimals`
+	 * still scale correctly.
+	 */
+	function envelopeDecimals(e) {
+		const d = Number(e && e.decimals);
+		if (Number.isFinite(d) && d >= 0 && d <= 8) return d;
+		const decimal = e && typeof e.decimal === 'string' ? e.decimal : '';
+		const dot = decimal.lastIndexOf('.');
+		if (dot !== -1) {
+			const frac = decimal.length - dot - 1;
+			if (frac >= 0 && frac <= 8) return frac;
+		}
+		if (decimal !== '' && /^-?\d+$/.test(decimal)) return 0;
+		return 2;
+	}
+
 	function formatEnvelope(env, locale) {
 		const e = env && typeof env === 'object' ? env : envelopeOrZero('EUR');
 		const minor = Number(e.minor || 0);
-		const decimals = Number(e.decimals || 2);
+		const decimals = envelopeDecimals(e);
 		const code = String(e.currency || 'EUR').toUpperCase();
 		const amount = minor / Math.pow(10, decimals);
 		const lang = locale || (document.documentElement.lang || 'en');
@@ -33,8 +52,35 @@
 		}
 	}
 
+	/**
+	 * Locale-aware amount **without** currency symbol/code, for summary tiles where
+	 * the workspace currency is already shown in the page header. Screen-reader
+	 * callers should append the currency via a visually hidden element.
+	 */
+	function formatEnvelopeValue(env, locale) {
+		const e = env && typeof env === 'object' ? env : envelopeOrZero('EUR');
+		const minor = Number(e.minor || 0);
+		const decimals = envelopeDecimals(e);
+		const amount = minor / Math.pow(10, decimals);
+		const lang = locale || (document.documentElement.lang || 'en');
+		try {
+			return new Intl.NumberFormat(lang, {
+				minimumFractionDigits: decimals,
+				maximumFractionDigits: decimals,
+			}).format(amount);
+		} catch (_) {
+			return amount.toFixed(decimals);
+		}
+	}
+
+	function resolveDecimals(decimals) {
+		const d = Number(decimals);
+		return Number.isFinite(d) && d >= 0 && d <= 8 ? d : 2;
+	}
+
 	function parseHuman(value, decimals) {
-		const dec = Number(decimals || 2);
+		// `0` is valid (JPY) — never coerce with `decimals || 2`.
+		const dec = resolveDecimals(decimals);
 		if (typeof value === 'number') {
 			if (!Number.isFinite(value) || value < 0) {
 				throw new Error(t('budgetcheck', 'Amount must be a positive number.'));
@@ -97,5 +143,5 @@
 		return { net: amount, vat: 0, gross: amount };
 	}
 
-	window.BudgetCheckMoney = { formatEnvelope, parseHuman, formatMinor, convertTaxPreview };
+	window.BudgetCheckMoney = { formatEnvelope, formatEnvelopeValue, parseHuman, formatMinor, convertTaxPreview, envelopeDecimals };
 })();

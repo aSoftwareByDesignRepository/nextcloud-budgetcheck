@@ -170,7 +170,15 @@
 			return toYearMonth(y, mo);
 		}
 
+		function syncScopeStrip() {
+			const Ws = window.BudgetCheckWorkspace;
+			if (Ws && typeof Ws.setScopeMonth === 'function') {
+				Ws.setScopeMonth(currentYm());
+			}
+		}
+
 		function emit() {
+			syncScopeStrip();
 			onChangeCb(currentYm());
 		}
 
@@ -193,6 +201,7 @@
 			} else {
 				monthSel.selectedIndex = 0;
 			}
+			syncScopeStrip();
 		}
 
 		fillYears();
@@ -210,6 +219,7 @@
 				monthSel.value = pad2(init.m);
 			}
 		}
+		syncScopeStrip();
 
 		const onYear = () => {
 			const y = Number.parseInt(yearSel.value, 10);

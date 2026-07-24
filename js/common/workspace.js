@@ -67,6 +67,28 @@
 			const sep = url.indexOf('?') === -1 ? '?' : '&';
 			return url + sep + 'workspaceId=' + encodeURIComponent(w.id);
 		},
+		/**
+		 * Keep the header scope strip in sync with the month a page is showing.
+		 * Pages with a month picker call this whenever their selection changes so
+		 * the strip never contradicts the content below it (e.g. strip "July"
+		 * while the summary shows August).
+		 *
+		 * @param {string} ym YYYY-MM
+		 */
+		setScopeMonth(ym) {
+			const el = document.querySelector('[data-bc-scope-month]');
+			if (!el) return;
+			const value = String(ym || '');
+			if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return;
+			const D = window.BudgetCheckDates;
+			el.textContent = (D && typeof D.formatYearMonth === 'function')
+				? D.formatYearMonth(value, this.htmlLang)
+				: value;
+			const active = el.getAttribute('data-bc-scope-month-active') || '';
+			el.setAttribute('title', value === active
+				? t('budgetcheck', 'Active calendar month in the workspace timezone')
+				: t('budgetcheck', 'Month currently shown on this page'));
+		},
 		patchWorkspace(patch) {
 			if (!patch || typeof patch !== 'object') return;
 			const el = appRoot();

@@ -113,6 +113,30 @@
 	}
 
 	/**
+	 * GET an already-resolved same-origin media URL (attachment previews/blobs).
+	 * Unlike download(), the URL is used as-is — callers resolved it via
+	 * OC.generateUrl already. Returns the raw Response for blob()/text() reads.
+	 */
+	async function media(url, options) {
+		const opts = options || {};
+		let response;
+		try {
+			response = await fetch(url, {
+				method: 'GET',
+				credentials: 'same-origin',
+				headers: opts.headers || {},
+				signal: opts.signal,
+			});
+		} catch (e) {
+			const err = new Error(t('budgetcheck', 'Network error. Please retry.'));
+			err.status = 0;
+			err.cause = e;
+			throw err;
+		}
+		return response;
+	}
+
+	/**
 	 * POST multipart/form-data (file uploads). Do not set Content-Type — the browser
 	 * adds the boundary. CSRF token is always sent.
 	 */
@@ -163,6 +187,7 @@
 		put: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'PUT', body })),
 		del: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'DELETE', body })),
 		download,
+		media,
 		upload,
 		request,
 	};

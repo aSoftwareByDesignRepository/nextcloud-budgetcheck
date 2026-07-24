@@ -105,8 +105,25 @@
 			}),
 		]);
 		const bodyContainer = createElement('div', { class: 'bc-modal__body' });
+		// Dedicated scrollport: keeps overflow-x:hidden reliable when overflow-y
+		// is auto (some engines otherwise promote hidden→auto and show a
+		// horizontal scrollbar for slightly-wide children like the receipt dropzone).
+		const bodyScroll = createElement('div', { class: 'bc-modal__body-scroll' });
 		const userBody = opts.render({ close: (result) => instance.close(result) });
-		if (userBody) bodyContainer.appendChild(userBody);
+		if (userBody) bodyScroll.appendChild(userBody);
+		bodyContainer.appendChild(bodyScroll);
+		// Layout sanity (dev): horizontal overflow in the booking dialog is a
+		// regression — log once so it cannot slip past QA unnoticed.
+		requestAnimationFrame(() => {
+			try {
+				if (bodyScroll.scrollWidth > bodyScroll.clientWidth + 1) {
+					console.warn(
+						'[BudgetCheck] modal body horizontal overflow',
+						{ scrollWidth: bodyScroll.scrollWidth, clientWidth: bodyScroll.clientWidth }
+					);
+				}
+			} catch (_) { /* ignore */ }
+		});
 
 		const submitContext = () => ({
 			close: (r) => instance.close(r),
@@ -265,6 +282,30 @@
 		});
 	}
 
+	/**
+	 * Children for a summary tile's value: locale-formatted amount without the
+	 * currency symbol (the workspace currency already sits in the page header),
+	 * plus a visually hidden currency code so screen readers stay unambiguous.
+	 *
+	 * @returns {Array<Node|string>}
+	 */
+	function currencyDecimals(currency, decimalsHint) {
+		const d = Number(decimalsHint);
+		if (Number.isFinite(d) && d >= 0 && d <= 8) return d;
+		return String(currency || '').toUpperCase() === 'JPY' ? 0 : 2;
+	}
+
+	function moneyTileValue(env, htmlLang) {
+		const Money = window.BudgetCheckMoney;
+		if (!env || !Money) {
+			return ['—'];
+		}
+		return [
+			document.createTextNode(Money.formatEnvelopeValue(env, htmlLang)),
+			createElement('span', { class: 'bc-sr-only', text: '\u00A0' + String(env.currency || '').toUpperCase() }),
+		];
+	}
+
 	function renderHouseholdSummaryTiles(grid, summary, htmlLang, opts) {
 		const Money = window.BudgetCheckMoney;
 		const SpecialsView = window.BudgetCheckSpecialsView;
@@ -286,7 +327,7 @@
 			const o = tileOpts || {};
 			return createElement('div', { class: 'bc-summary-tile' + (o.primary ? ' bc-summary-tile--primary' : '') }, [
 				createElement('div', { class: 'bc-summary-tile__label', text: label }),
-				createElement('div', { class: 'bc-summary-tile__value', text: env ? Money.formatEnvelope(env, htmlLang) : '—' }),
+				createElement('div', { class: 'bc-summary-tile__value' }, moneyTileValue(env, htmlLang)),
 				o.hint ? createElement('div', { class: 'bc-summary-tile__hint', text: o.hint }) : null,
 			]);
 		};
@@ -491,12 +532,13 @@
 
 		if (budget) {
 			const saldoMinor = Number.parseInt(String(budget.remaining?.minor ?? 0), 10) || 0;
-			const unspentEnv = saldoMinor > 0
-				? budget.remaining
-				: { minor: 0, currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 };
+			const currency = totals.income?.currency || budget.remaining?.currency || 'EUR';
+			const decimals = currencyDecimals(currency, totals.income?.decimals ?? budget.remaining?.decimals);
+			const zeroEnv = { minor: 0, currency, decimals };
+			const unspentEnv = saldoMinor > 0 ? budget.remaining : zeroEnv;
 			const overspentEnv = saldoMinor < 0
-				? { minor: Math.abs(saldoMinor), currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 }
-				: { minor: 0, currency: totals.income?.currency || 'EUR', decimals: totals.income?.decimals || 2 };
+				? { minor: Math.abs(saldoMinor), currency, decimals }
+				: zeroEnv;
 			makeSection(
 				t('budgetcheck', 'Everyday spending budget'),
 				t('budgetcheck', 'Planned spending on groceries, housing, and similar—excluding savings transfers.'),
@@ -524,5 +566,5 @@
 		}
 	}
 
-	window.BudgetCheckComponents = { createElement, openModal, confirmDialog, renderMonthlyLedgerHelp, renderHouseholdSummaryTiles };
+	window.BudgetCheckComponents = { createElement, openModal, confirmDialog, renderMonthlyLedgerHelp, renderHouseholdSummaryTiles, moneyTileValue };
 })();

@@ -9,6 +9,8 @@
 	const Ws = window.BudgetCheckWorkspace;
 
 	const state = { year: new Date().getFullYear() };
+	/** Guards against a slow response for a previously selected year overwriting the latest one. */
+	let loadSeq = 0;
 	/** @type {{ id: number, type: string } | null} */
 	let ws = null;
 	/** @type {any | null} */
@@ -75,6 +77,7 @@
 	}
 
 	async function load() {
+		const seq = ++loadSeq;
 		const grid = document.querySelector('[data-bc-summary-grid]');
 		const period = document.querySelector('[data-bc-summary-period]');
 		const months = document.querySelector('[data-bc-month-cards]');
@@ -83,16 +86,20 @@
 		if (!ws) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/yearly-summary', { workspaceId: ws.id, year: state.year });
+			if (seq !== loadSeq) return; // Stale response; the latest request wins.
 			const summary = normalizeSummary(data && data.summary ? data.summary : null);
 			lastSummary = summary;
 			renderTotals(grid, summary);
 			if (period) period.textContent = String(summary.year);
 			renderMonths(months, summary);
 		} catch (err) {
+			if (seq !== loadSeq) return;
 			Msg.handleApiError(err);
 		} finally {
-			grid?.setAttribute('aria-busy', 'false');
-			months?.setAttribute('aria-busy', 'false');
+			if (seq === loadSeq) {
+				grid?.setAttribute('aria-busy', 'false');
+				months?.setAttribute('aria-busy', 'false');
+			}
 		}
 	}
 
@@ -124,7 +131,7 @@
 		const makeTile = (label, env, primary) => {
 			return C.createElement('div', { class: 'bc-summary-tile' + (primary ? ' bc-summary-tile--primary' : '') }, [
 				C.createElement('div', { class: 'bc-summary-tile__label', text: label }),
-				C.createElement('div', { class: 'bc-summary-tile__value', text: formatEnv(env) }),
+				C.createElement('div', { class: 'bc-summary-tile__value' }, C.moneyTileValue(env, Ws.htmlLang)),
 			]);
 		};
 
@@ -463,11 +470,16 @@
 		if (!Number.isFinite(minor)) return null;
 		const currency = String(env.currency || ws?.currencyCode || '').trim();
 		if (!currency) return null;
-		const decimals = Number.parseInt(String(env.decimals), 10);
+		const Money = window.BudgetCheckMoney;
+		// Prefer envelope.decimals (incl. 0); Money.envelopeDecimals also reads
+		// the decimal string so older envelopes without decimals stay correct.
+		const decimals = (Money && typeof Money.envelopeDecimals === 'function')
+			? Money.envelopeDecimals(env)
+			: (Number.isFinite(Number(env.decimals)) ? Number(env.decimals) : 2);
 		return {
 			minor,
 			currency,
-			decimals: Number.isFinite(decimals) && decimals >= 0 && decimals <= 8 ? decimals : 2,
+			decimals,
 		};
 	}
 

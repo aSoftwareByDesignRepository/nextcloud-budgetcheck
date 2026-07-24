@@ -130,7 +130,9 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 							?>
 						</span>
 					<?php elseif ($workspace['type'] === 'household' && !empty($workspace['activeCalendarYearMonth'])): ?>
-						<span class="bc-scope-strip__dates" title="<?php p($l->t('Active calendar month in the workspace timezone')); ?>">
+						<span class="bc-scope-strip__dates" data-bc-scope-month
+							data-bc-scope-month-active="<?php p((string)$workspace['activeCalendarYearMonth']); ?>"
+							title="<?php p($l->t('Active calendar month in the workspace timezone')); ?>">
 							<?php
 							$ymStrip = (string)$workspace['activeCalendarYearMonth'];
 							p($localeFormat !== null ? $localeFormat->formatYearMonth($ymStrip) : $ymStrip);

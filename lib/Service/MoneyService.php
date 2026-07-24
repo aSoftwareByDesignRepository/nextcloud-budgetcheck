@@ -200,9 +200,12 @@ class MoneyService
 	/**
 	 * Build the canonical money envelope used by every API response that exposes
 	 * a money field. Keeping it consistent guarantees that frontend code can
-	 * assume `{minor, currency, decimal}` everywhere.
+	 * assume `{minor, currency, decimal, decimals}` everywhere.
 	 *
-	 * @return array{minor:int, currency:string, decimal:string}
+	 * `decimals` is required for zero-decimal currencies (e.g. JPY): clients that
+	 * fall back to 2 when the field is missing would scale minors by 100×.
+	 *
+	 * @return array{minor:int, currency:string, decimal:string, decimals:int}
 	 */
 	public function envelope(int $minor, string $currencyCode): array
 	{
@@ -211,6 +214,7 @@ class MoneyService
 			'minor' => $minor,
 			'currency' => strtoupper($currencyCode),
 			'decimal' => $this->toDecimalString($minor, $decimals),
+			'decimals' => $decimals,
 		];
 	}
 

@@ -299,7 +299,7 @@ class PageController extends Controller
 		$navigation = $this->buildNavigation($template, $selected, $canAdminApp, $canManage);
 
 		$wsQuery = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
-		$response = new TemplateResponse($this->appName, $template, [
+		$params = [
 			'pageId' => $template,
 			'pageTitle' => $title,
 			'pageHelp' => $help,
@@ -327,7 +327,11 @@ class PageController extends Controller
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
-		]);
+		];
+		if (array_key_exists('currencyChangeAllowed', $ctx)) {
+			$params['currencyChangeAllowed'] = (bool)$ctx['currencyChangeAllowed'];
+		}
+		$response = new TemplateResponse($this->appName, $template, $params);
 		$this->registerFrontEndAssets($script);
 		return $response;
 	}
@@ -345,10 +349,10 @@ class PageController extends Controller
 	private function registerFrontEndAssets(string $pageScript): void {
 		Util::addStyle(Application::APP_ID, 'app');
 		if ($pageScript === 'transactions') {
-			Util::addStyle(Application::APP_ID, 'transactions-v106');
+			Util::addStyle(Application::APP_ID, 'transactions');
 		}
 		if ($pageScript === 'import') {
-			Util::addStyle(Application::APP_ID, 'import-v106');
+			Util::addStyle(Application::APP_ID, 'import');
 		}
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
@@ -358,7 +362,7 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/money');
-		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'common/workspace-v106' : 'common/workspace');
+		Util::addScript(Application::APP_ID, 'common/workspace');
 		if (in_array($pageScript, ['dashboard', 'transactions'], true)) {
 			Util::addScript(Application::APP_ID, 'common/attachment-gallery');
 			Util::addScript(Application::APP_ID, 'common/transaction-attachments');
@@ -374,7 +378,7 @@ class PageController extends Controller
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
 			Util::addScript(Application::APP_ID, 'common/entity-picker');
 		}
-		Util::addScript(Application::APP_ID, $pageScript === 'transactions' ? 'transactions-v106' : $pageScript);
+		Util::addScript(Application::APP_ID, $pageScript);
 	}
 
 	/**
