@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.40] - 2026-07-24
+
+### Added
+
+- **Billing paid state:** `BillingStatus::PAID` with `BillingWriteFacade::markItemsPaid` (invoiced→paid) and `reopenFromPaid` (paid→open) for InvoiceCheck full-payment / credit-note handshake
+
+## [1.0.39] - 2026-07-24
+
+### Added
+
+- `BillingReadFacade::listAccessibleWorkspaceIds` for sibling apps (InvoiceCheck list/view scope)
+
+## [1.0.38] - 2026-07-24
+
+### Added
+
+- **BC-F0 billing facades for InvoiceCheck:** `Public\BillingReadFacade` / `BillingWriteFacade` with `listBillableItems`, `markItemsInvoiced`, `reopenItems`, `setItemBillable`
+- Schema: `bc_transactions.is_billable` + `billing_status` (`open`/`invoiced`) — orthogonal to booking-status workflow and monthly close
+- Optimistic `updated_at` / `version` checks; fail-closed `requireFullSuccess`; `trustedSiblingApp` for server-side callers only
+- Mutation harness `tests/Mutation/run-billing-facade-mutations.php`
+
 ## [1.0.37] - 2026-07-24
 
 ### Fixed

@@ -168,6 +168,28 @@ class Application extends App implements IBootstrap
 			);
 		});
 
+		$context->registerService(\OCA\BudgetCheck\Service\TransactionBillingService::class, function ($c): \OCA\BudgetCheck\Service\TransactionBillingService {
+			return new \OCA\BudgetCheck\Service\TransactionBillingService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(\OCA\BudgetCheck\Public\BillingReadFacade::class, function ($c): \OCA\BudgetCheck\Public\BillingReadFacade {
+			return new \OCA\BudgetCheck\Public\BillingReadFacade(
+				$c->query(\OCA\BudgetCheck\Service\TransactionBillingService::class),
+				$c->query(IAppManager::class),
+			);
+		});
+
+		$context->registerService(\OCA\BudgetCheck\Public\BillingWriteFacade::class, function ($c): \OCA\BudgetCheck\Public\BillingWriteFacade {
+			return new \OCA\BudgetCheck\Public\BillingWriteFacade(
+				$c->query(\OCA\BudgetCheck\Service\TransactionBillingService::class),
+			);
+		});
+
 		$context->registerService(TransactionAttachmentService::class, function ($c): TransactionAttachmentService {
 			return new TransactionAttachmentService(
 				$c->query(\OCP\IDBConnection::class),
