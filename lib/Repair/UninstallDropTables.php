@@ -22,7 +22,6 @@ declare(strict_types=1);
  */
 namespace OCA\BudgetCheck\Repair;
 
-use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
@@ -116,10 +115,9 @@ final class UninstallDropTables implements IRepairStep
 		$this->config->deleteAppValues(self::APP_ID);
 
 		$this->purgeUpgradeBackupSnapshots($output);
-		$this->purgeTransactionAttachments($output);
 
 		$output->info(sprintf(
-			'budgetcheck: dropped %d of %d table(s); removed %d migration row(s), app config, and app-data snapshots.',
+			'budgetcheck: dropped %d of %d table(s); removed %d migration row(s), app config, and upgrade-backup snapshots.',
 			$dropped,
 			count(self::TABLES),
 			$migrationsRemoved,
@@ -172,27 +170,5 @@ final class UninstallDropTables implements IRepairStep
 
 		$node->delete();
 		$output->info('budgetcheck: removed upgrade-backup snapshots from app data.');
-	}
-
-	private function purgeTransactionAttachments(IOutput $output): void
-	{
-		$instanceId = (string)$this->config->getSystemValue('instanceid', '');
-		if ($instanceId === '') {
-			return;
-		}
-
-		$path = 'appdata_' . $instanceId . '/' . self::APP_ID . '/' . TransactionAttachmentService::APPDATA_ATTACHMENTS;
-		try {
-			$node = $this->rootFolder->get($path);
-		} catch (NotFoundException) {
-			return;
-		}
-
-		if (!$node instanceof Folder) {
-			return;
-		}
-
-		$node->delete();
-		$output->info('budgetcheck: removed transaction attachment files from app data.');
 	}
 }
