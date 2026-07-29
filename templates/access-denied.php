@@ -8,6 +8,7 @@
  * @var \OCP\IL10N $l
  */
 
+\OCP\Util::addStyle('budgetcheck', 'common/tokens');
 \OCP\Util::addStyle('budgetcheck', 'app');
 
 use OCA\BudgetCheck\Service\IconCatalog;

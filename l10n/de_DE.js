@@ -134,6 +134,7 @@ OC.L10N.register(
 	"amount, value, betrag (comma, semicolon, or tab-separated files are supported)" : "amount, value, betrag (comma, semicolon, or tab-separated files are supported)",
 	"amount, value, betrag (semicolon-separated files are supported)" : "amount, value, betrag (semicolon-separated files are supported)",
 	"Annual hour pack + priority response — details in the offer \/ on our site." : "Jahres-Stundenkontingent und priorisierte Antwort — Details im Angebot bzw. auf unserer Website.",
+	"Annual hour packs — Small, Standard, or Premium — with priority email for your organisation. This is invoiceable service — not a donation. See packages on our support page." : "Jährliche Stundenpakete — Small, Standard oder Premium — plus priorisierte E-Mail für Ihre Organisation. Verrechenbare Leistung, keine Spende. Pakete auf unserer Support-Seite.",
 	"Annual overview grid → use the yearly overview for the household story." : "Jahresübersicht → nutze die Jahresansicht für die Haushaltsbilanz.",
 	"Annual totals" : "Jahressummen",
 	"Annual totals explained" : "Jahressummen erklärt",
@@ -147,8 +148,6 @@ OC.L10N.register(
 	"Apply" : "Anwenden",
 	"Apply filters" : "Filter anwenden",
 	"Approaching project cap" : "Projekt-Obergrenze nahe",
-	"Archived" : "Archiviert",
-	"Archived workspace" : "Archivierter Arbeitsbereich",
 	"Are you sure?" : "Sind Sie sicher?",
 	"Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist." : "Bitte bitten Sie ein Mitglied mit Schreibrechten, Buchungen anzulegen. Aufschlüsselungen können Sie sich später trotzdem ansehen.",
 	"Ask a workspace manager to add categories in workspace settings." : "Bitte eine Arbeitsbereichsverwaltung, in den Arbeitsbereichseinstellungen Kategorien anzulegen.",
@@ -428,7 +427,6 @@ OC.L10N.register(
 	"Find group" : "Gruppe suchen",
 	"Find transactions" : "Buchungen finden",
 	"Find user" : "Benutzer suchen",
-	"Find workspaces fast, include archived ones when needed, and choose sidebar quick access." : "Arbeitsbereiche schnell finden, bei Bedarf archivierte einblenden und Schnellzugriff für die Seitenleiste festlegen.",
 	"First booking" : "Erste Buchung",
 	"First date when this rule can create a booking." : "Erstes Datum, an dem diese Regel eine Buchung erzeugen kann.",
 	"For projects, a reminder when all-time spend approaches or exceeds the optional cap." : "Bei Projekten ein Hinweis, wenn die Gesamtausgaben die optionale Obergrenze fast erreichen oder überschreiten.",
@@ -946,7 +944,6 @@ OC.L10N.register(
 	"Short label shown in filters and booking lists." : "Kurzer Name, der in Filtern und Buchungslisten angezeigt wird.",
 	"Short title shown in lists and reports (for example office supplies or client payment)." : "Kurzer Titel in Listen und Auswertungen (z. B. Büromaterial oder Kundenzahlung).",
 	"Show all time" : "Show all time",
-	"Show archived workspaces" : "Archivierte Arbeitsbereiche anzeigen",
 	"Show breakdowns" : "Aufschlüsselungen anzeigen",
 	"Showing the first {count} matches. Keep typing to narrow the list." : "Die ersten {count} Treffer werden angezeigt. Tippe weiter, um die Liste einzugrenzen.",
 	"Showing the first {shown} of {total} rows." : "Showing the first {shown} of {total} rows.",
@@ -1045,7 +1042,6 @@ OC.L10N.register(
 	"Treat every row as an expense" : "Treat every row as an expense",
 	"Treat every row as income" : "Treat every row as income",
 	"Try a wider date range, a different category, or clear the filters to see everything." : "Probiere einen größeren Zeitraum, eine andere Kategorie oder setze die Filter zurück, um alles zu sehen.",
-	"Try broadening your filters or include archived workspaces." : "Erweitere die Filter oder blende archivierte Arbeitsbereiche ein.",
 	"Type" : "Typ",
 	"Type (income or expense)" : "Typ (Einnahme oder Ausgabe)",
 	"Type at least two characters to search by user ID or display name." : "Mindestens zwei Zeichen eingeben, um nach Benutzer-ID oder Anzeigenamen zu suchen.",
@@ -1165,7 +1161,10 @@ OC.L10N.register(
 	"{count} transactions match these filters." : "{count} Buchungen entsprechen diesen Filtern.",
 	"{current} of {total}" : "{current} von {total}",
 	"{decimals} decimal places" : "{decimals} Dezimalstellen",
-	"“From” date must be before “To” date." : "„Von“-Datum muss vor „Bis“-Datum liegen."
+	"“From” date must be before “To” date." : "„Von“-Datum muss vor „Bis“-Datum liegen.",
+	"Category budgets and savings targets" : "Kategoriebudgets und Sparziele",
+	"Find workspaces fast and choose sidebar quick access." : "Arbeitsbereiche schnell finden und den Schnellzugriff in der Seitenleiste wählen.",
+	"Try broadening your filters." : "Versuchen Sie, Ihre Filter zu erweitern."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

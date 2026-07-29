@@ -28,7 +28,7 @@ The UI is **workspace-scoped** (household and project totals never mix), targets
 
 ## Requirements
 
-- Nextcloud 32–33
+- Nextcloud 32–34
 - PHP 8.2–8.4
 - MySQL or PostgreSQL
 	]]></description>
@@ -43,7 +43,7 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 
 ## Voraussetzungen
 
-- Nextcloud 32–33
+- Nextcloud 32–34
 - PHP 8.2–8.4
 - MySQL oder PostgreSQL
 	]]></description>
@@ -58,7 +58,7 @@ L'interface est **scopée par espace** (totaux foyer et projet ne se mélangent 
 
 ## Prérequis
 
-- Nextcloud 32–33
+- Nextcloud 32–34
 - PHP 8.2–8.4
 - MySQL ou PostgreSQL
 	]]></description>
@@ -73,7 +73,7 @@ Brugerfladen er **adskilt pr. arbejdsområde** (husholdning og projekt blandes i
 
 ## Krav
 
-- Nextcloud 32–33
+- Nextcloud 32–34
 - PHP 8.2–8.4
 - MySQL eller PostgreSQL
 	]]></description>
@@ -88,11 +88,11 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 
 ## Requisitos
 
-- Nextcloud 32–33
+- Nextcloud 32–34
 - PHP 8.2–8.4
 - MySQL o PostgreSQL
 	]]></description>
-	<version>1.0.40</version>
+	<version>1.1.1</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>BudgetCheck</namespace>

@@ -1,0 +1,117 @@
+/*
+ * BudgetCheck design tokens (--bc-*).
+ * Canonical Check-apps scale (ArbeitszeitCheck wins); colors derive from
+ * Nextcloud theme variables. No raw hex in feature CSS.
+ *
+ * Spacing/typography/breakpoints on :root.
+ * Theme-bound surfaces on body + themed app surfaces (.bc-app / .bc-modal /
+ * .bc-toasts) so body-mounted dialogs inherit the same mixes after theme switches.
+ */
+:root {
+	--bc-space-1: 4px;
+	--bc-space-2: 8px;
+	--bc-space-3: 12px;
+	--bc-space-4: 16px;
+	--bc-space-5: 24px;
+	--bc-space-6: 32px;
+	--bc-space-7: 48px;
+	--bc-space-8: 64px;
+
+	--bc-radius-sm: 6px;
+	--bc-radius-md: 12px;
+	--bc-radius-lg: 16px;
+
+	--bc-fs-xs: 0.75rem;
+	--bc-fs-sm: 0.875rem;
+	--bc-fs-md: 1rem;
+	--bc-fs-lg: 1.125rem;
+	--bc-fs-xl: 1.5rem;
+	--bc-fs-2xl: 1.875rem;
+	--bc-fs-3xl: 2.25rem;
+
+	--bc-line-tight: 1.2;
+	--bc-line-base: 1.45;
+
+	--bc-breakpoint-sm: 480px;
+	--bc-breakpoint-md: 768px;
+	--bc-breakpoint-lg: 1024px;
+
+	--bc-icon-sm: 1rem;
+	--bc-icon-md: 1.125rem;
+	--bc-icon-lg: 1.375rem;
+	--bc-icon-well: 2.25rem;
+	--bc-icon-stroke: 2;
+
+	--bc-tab-num: tabular-nums;
+}
+
+/*
+ * Theme-dependent tokens MUST resolve where Nextcloud sets --color-* (body /
+ * [data-theme-*]) and on themed app surfaces. Resolving color-mix only on
+ * :root can fall back to light surfaces while text inherits dark-theme ink.
+ */
+body,
+#app-content.bc-app,
+.bc-app,
+.bc-modal,
+.bc-toasts {
+	--bc-overlay-top: var(--header-height, 50px);
+	--bc-overlay-height: calc(100dvh - var(--header-height, 50px));
+
+	--bc-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
+	--bc-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--bc-shadow-lg: 0 1rem 3rem color-mix(in srgb, var(--color-main-text) 28%, transparent);
+
+	--bc-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
+	--bc-bg-card: var(--color-main-background);
+	--bc-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
+	--bc-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--bc-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+	--bc-muted: var(--color-text-maxcontrast);
+	--bc-text: var(--color-main-text);
+
+	/*
+	 * Mix INTO main-background (not transparent) so tints stay visible on every
+	 * Nextcloud theme, including high-contrast and custom accent branding.
+	 */
+	--bc-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--bc-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--bc-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--bc-tint-critical: var(--bc-tint-danger);
+	--bc-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+	--bc-tint-receipt: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
+
+	/* Workspace-type accents (aliases of semantic tints) */
+	--bc-tint-household: var(--bc-tint-success);
+	--bc-tint-project: var(--bc-tint-info);
+
+	/* Signed money surfaces — always mixed into main-background for AA contrast */
+	--bc-amount-income-surface: color-mix(in srgb, var(--color-success-text, var(--color-success)) 14%, var(--color-main-background));
+	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error-text, var(--color-error)) 14%, var(--color-main-background));
+	--bc-amount-income-line: var(--color-success-text, var(--color-success));
+	--bc-amount-expense-line: var(--color-error-text, var(--color-error));
+
+	/* Overlay scrims (gallery crop / modal backdrops) — theme ink, never #000 */
+	--bc-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+	--bc-scrim-strong: color-mix(in srgb, var(--color-main-text) 55%, transparent);
+	--bc-scrim-heavy: color-mix(in srgb, var(--color-main-text) 60%, transparent);
+
+	color: var(--color-main-text);
+}
+
+@media (prefers-contrast: more) {
+	:root {
+		--bc-icon-stroke: 2.25;
+	}
+
+	body,
+	#app-content.bc-app,
+	.bc-app,
+	.bc-modal,
+	.bc-toasts {
+		--bc-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
+		--bc-border-strong: color-mix(in srgb, var(--color-main-text) 40%, transparent);
+		--bc-shadow-sm: 0 0 0 1px var(--bc-border-strong);
+		--bc-shadow-md: 0 0 0 1px var(--bc-border-strong);
+	}
+}

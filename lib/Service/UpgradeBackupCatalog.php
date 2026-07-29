@@ -23,7 +23,7 @@ final class UpgradeBackupCatalog
 
 	/** @var list<string> App-data folder names (under appdata_<instance>/budgetcheck/) to include in snapshots. */
 	public const APPDATA_FOLDERS = [
-		TransactionAttachmentService::APPDATA_ATTACHMENTS,
+
 	];
 
 	public const CONFIG_MAX_SNAPSHOTS = 'upgrade_backup_max_snapshots';
@@ -41,6 +41,8 @@ final class UpgradeBackupCatalog
 		'bc_budget_defaults',
 		'bc_budgets',
 		'bc_categories',
+		'bc_idempotency',
+		'bc_mobile_push',
 		'bc_monthly_snapshots',
 		'bc_recurring_rules',
 		'bc_savings_targets',
@@ -58,6 +60,8 @@ final class UpgradeBackupCatalog
 		'bc_budget_defaults',
 		'bc_budgets',
 		'bc_categories',
+		'bc_idempotency',
+		'bc_mobile_push',
 		'bc_monthly_snapshots',
 		'bc_recurring_rules',
 		'bc_savings_targets',

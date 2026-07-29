@@ -1660,7 +1660,9 @@
 		});
 		if (!ok) return;
 		try {
-			await Api.del('/apps/budgetcheck/api/transactions/' + tx.id);
+			await Api.del('/apps/budgetcheck/api/transactions/' + tx.id, {
+				version: tx.version,
+			});
 			Msg.announce(t('budgetcheck', 'Transaction deleted.'), 'success');
 			loadAndRender();
 		} catch (err) {

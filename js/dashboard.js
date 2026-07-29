@@ -76,6 +76,9 @@
 	}
 
 	function initDashboard() {
+		if (!Ws || typeof Ws !== 'object') {
+			return;
+		}
 		ws = Ws.workspace;
 		if (!ws) {
 			return;
@@ -520,43 +523,7 @@
 	}
 
 	function renderWarnings(section, list, warnings) {
-		if (!section || !list) return;
-		if (!warnings.length) {
-			section.hidden = true;
-			list.replaceChildren();
-			return;
-		}
-		section.hidden = false;
-		list.replaceChildren();
-		warnings.forEach((w) => list.appendChild(renderWarning(w)));
-	}
-
-	function renderWarning(warning) {
-		const sev = warning.severity || 'info';
-		const severityLabel = sev === 'critical'
-			? t('budgetcheck', 'Critical')
-			: (sev === 'warning' ? t('budgetcheck', 'Warning') : t('budgetcheck', 'Info'));
-		const titleText = (warning.title || warning.code || '').trim();
-		const item = C.createElement('li', { class: 'bc-warning bc-warning--' + sev, attrs: { role: 'status' } });
-		item.appendChild(C.createElement('span', { 'aria-hidden': 'true', text: sev === 'critical' ? '!' : (sev === 'warning' ? '⚠' : 'i') }));
-		const body = C.createElement('div');
-		body.appendChild(C.createElement('div', { class: 'bc-warning__title', text: severityLabel + (titleText ? ': ' + titleText : '') }));
-		body.appendChild(C.createElement('div', { class: 'bc-warning__message', text: warning.message || '' }));
-		item.appendChild(body);
-		const recovery = warning.recovery;
-		if (recovery && recovery.screen && Ws.urls[recovery.screen]) {
-			let href = Ws.withWorkspace(Ws.urls[recovery.screen]);
-			const params = recovery.params || {};
-			Object.entries(params).forEach(([key, value]) => {
-				if (value === null || value === undefined || value === '') return;
-				href += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(String(value));
-			});
-			const link = C.createElement('a', { class: 'button', href, text: t('budgetcheck', 'Open') });
-			item.appendChild(C.createElement('div', { class: 'bc-warning__action' }, [link]));
-		} else {
-			item.appendChild(C.createElement('div'));
-		}
-		return item;
+		C.renderWarningsList(section, list, warnings, Ws);
 	}
 
 })();

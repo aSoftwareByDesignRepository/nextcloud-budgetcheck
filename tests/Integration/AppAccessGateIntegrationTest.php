@@ -69,8 +69,12 @@ final class AppAccessGateIntegrationTest extends TestCase
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
 		foreach ([self::ALLOWED, self::DENIED] as $uid) {
-			if ($userManager->userExists($uid)) {
-				$userManager->get($uid)?->delete();
+			try {
+				if ($userManager->userExists($uid)) {
+					$userManager->get($uid)?->delete();
+				}
+			} catch (\Throwable) {
+				// Sibling app user-deleted listeners must not fail tearDown.
 			}
 		}
 		/** @var IUserSession $session */
@@ -84,6 +88,8 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$userManager = \OC::$server->get(IUserManager::class);
 		$userManager->createUser(self::ALLOWED, self::PASSWORD);
 		$userManager->createUser(self::DENIED, self::PASSWORD);
+		$denied = $userManager->get(self::DENIED);
+		self::assertNotNull($denied);
 
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
@@ -95,13 +101,9 @@ final class AppAccessGateIntegrationTest extends TestCase
 		);
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::DENIED));
-
 		/** @var ApiController $controller */
 		$controller = \OC::$server->get(ApiController::class);
-		$middleware = $this->middlewareWithMockRequest();
+		$middleware = $this->middlewareWithUser($denied);
 
 		try {
 			$middleware->beforeController($controller, 'listWorkspaces');
@@ -127,6 +129,8 @@ final class AppAccessGateIntegrationTest extends TestCase
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
 		$userManager->createUser(self::ALLOWED, self::PASSWORD);
+		$allowed = $userManager->get(self::ALLOWED);
+		self::assertNotNull($allowed);
 
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
@@ -137,17 +141,13 @@ final class AppAccessGateIntegrationTest extends TestCase
 			json_encode([self::ALLOWED], JSON_THROW_ON_ERROR),
 		);
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::ALLOWED));
-
 		/** @var ApiController $controller */
 		$controller = \OC::$server->get(ApiController::class);
-		$this->middlewareWithMockRequest()->beforeController($controller, 'listWorkspaces');
+		$this->middlewareWithUser($allowed)->beforeController($controller, 'listWorkspaces');
 		$this->addToAssertionCount(1);
 	}
 
-	private function middlewareWithMockRequest(): AppAccessMiddleware
+	private function middlewareWithUser(\OCP\IUser $user): AppAccessMiddleware
 	{
 		$request = $this->createMock(IRequest::class);
 		$request->method('getPathInfo')->willReturn('/apps/budgetcheck/api/workspaces');
@@ -159,8 +159,11 @@ final class AppAccessGateIntegrationTest extends TestCase
 			},
 		);
 
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+
 		return new AppAccessMiddleware(
-			\OC::$server->get(IUserSession::class),
+			$session,
 			\OC::$server->get(AccessControlService::class),
 			$request,
 			\OC::$server->get(\OCP\IURLGenerator::class),

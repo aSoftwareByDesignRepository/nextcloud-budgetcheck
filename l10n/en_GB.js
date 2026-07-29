@@ -134,6 +134,7 @@ OC.L10N.register(
 	"amount, value, betrag (comma, semicolon, or tab-separated files are supported)" : "amount, value, betrag (comma, semicolon, or tab-separated files are supported)",
 	"amount, value, betrag (semicolon-separated files are supported)" : "amount, value, betrag (semicolon-separated files are supported)",
 	"Annual hour pack + priority response — details in the offer \/ on our site." : "Annual hour pack + priority response — details in the offer \/ on our site.",
+	"Annual hour packs — Small, Standard, or Premium — with priority email for your organisation. This is invoiceable service — not a donation. See packages on our support page." : "Annual hour packs — Small, Standard, or Premium — with priority email for your organisation. This is invoiceable service — not a donation. See packages on our support page.",
 	"Annual overview grid → use the yearly overview for the household story." : "Annual overview grid → use the yearly overview for the household story.",
 	"Annual totals" : "Annual totals",
 	"Annual totals explained" : "Annual totals explained",
@@ -147,8 +148,6 @@ OC.L10N.register(
 	"Apply" : "Apply",
 	"Apply filters" : "Apply filters",
 	"Approaching project cap" : "Approaching project cap",
-	"Archived" : "Archived",
-	"Archived workspace" : "Archived workspace",
 	"Are you sure?" : "Are you sure?",
 	"Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist." : "Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist.",
 	"Ask a workspace manager to add categories in workspace settings." : "Ask a workspace manager to add categories in workspace settings.",
@@ -428,7 +427,6 @@ OC.L10N.register(
 	"Find group" : "Find group",
 	"Find transactions" : "Find transactions",
 	"Find user" : "Find user",
-	"Find workspaces fast, include archived ones when needed, and choose sidebar quick access." : "Find workspaces fast, include archived ones when needed, and choose sidebar quick access.",
 	"First booking" : "First booking",
 	"First date when this rule can create a booking." : "First date when this rule can create a booking.",
 	"For projects, a reminder when all-time spend approaches or exceeds the optional cap." : "For projects, a reminder when all-time spend approaches or exceeds the optional cap.",
@@ -946,7 +944,6 @@ OC.L10N.register(
 	"Short label shown in filters and booking lists." : "Short label shown in filters and booking lists.",
 	"Short title shown in lists and reports (for example office supplies or client payment)." : "Short title shown in lists and reports (for example office supplies or client payment).",
 	"Show all time" : "Show all time",
-	"Show archived workspaces" : "Show archived workspaces",
 	"Show breakdowns" : "Show breakdowns",
 	"Showing the first {count} matches. Keep typing to narrow the list." : "Showing the first {count} matches. Keep typing to narrow the list.",
 	"Showing the first {shown} of {total} rows." : "Showing the first {shown} of {total} rows.",
@@ -1045,7 +1042,6 @@ OC.L10N.register(
 	"Treat every row as an expense" : "Treat every row as an expense",
 	"Treat every row as income" : "Treat every row as income",
 	"Try a wider date range, a different category, or clear the filters to see everything." : "Try a wider date range, a different category, or clear the filters to see everything.",
-	"Try broadening your filters or include archived workspaces." : "Try broadening your filters or include archived workspaces.",
 	"Type" : "Type",
 	"Type (income or expense)" : "Type (income or expense)",
 	"Type at least two characters to search by user ID or display name." : "Type at least two characters to search by user ID or display name.",
@@ -1165,7 +1161,10 @@ OC.L10N.register(
 	"{count} transactions match these filters." : "{count} transactions match these filters.",
 	"{current} of {total}" : "{current} of {total}",
 	"{decimals} decimal places" : "{decimals} decimal places",
-	"“From” date must be before “To” date." : "“From” date must be before “To” date."
+	"“From” date must be before “To” date." : "“From” date must be before “To” date.",
+	"Category budgets and savings targets" : "Category budgets and savings targets",
+	"Find workspaces fast and choose sidebar quick access." : "Find workspaces fast and choose sidebar quick access.",
+	"Try broadening your filters." : "Try broadening your filters."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

@@ -13,7 +13,6 @@
 			search: '',
 			type: 'all',
 			role: 'all',
-			showArchived: false,
 			onlyFavorites: false,
 		},
 	};
@@ -30,7 +29,6 @@
 			state.filters.search = String(root.querySelector('[data-bc-filter-search]')?.value || '').trim().toLowerCase();
 			state.filters.type = String(root.querySelector('[data-bc-filter-type]')?.value || 'all');
 			state.filters.role = String(root.querySelector('[data-bc-filter-role]')?.value || 'all');
-			state.filters.showArchived = !!root.querySelector('[data-bc-filter-show-archived]')?.checked;
 			state.filters.onlyFavorites = !!root.querySelector('[data-bc-filter-only-favorites]')?.checked;
 			loadAndRender();
 		};
@@ -42,12 +40,10 @@
 				const search = root.querySelector('[data-bc-filter-search]');
 				const type = root.querySelector('[data-bc-filter-type]');
 				const role = root.querySelector('[data-bc-filter-role]');
-				const archived = root.querySelector('[data-bc-filter-show-archived]');
 				const favorites = root.querySelector('[data-bc-filter-only-favorites]');
 				if (search) search.value = '';
 				if (type) type.value = 'all';
 				if (role) role.value = 'all';
-				if (archived) archived.checked = false;
 				if (favorites) favorites.checked = false;
 				syncAndReload();
 			});
@@ -59,9 +55,7 @@
 		if (!grid) return;
 		grid.setAttribute('aria-busy', 'true');
 		try {
-			const data = await Api.get('/apps/budgetcheck/api/workspaces', {
-				includeInactive: state.filters.showArchived ? '1' : '0',
-			});
+			const data = await Api.get('/apps/budgetcheck/api/workspaces');
 			state.workspaces = Array.isArray(data.workspaces) ? data.workspaces : [];
 			state.favorites = new Set(Array.isArray(data.favoriteWorkspaceIds) ? data.favoriteWorkspaceIds.map((v) => Number(v)) : []);
 			render();
@@ -83,7 +77,7 @@
 		if (rows.length === 0) {
 			grid.appendChild(C.createElement('article', { class: 'bc-workspace-card bc-workspace-card--empty' }, [
 				C.createElement('h3', { text: t('budgetcheck', 'No matching workspaces') }),
-				C.createElement('p', { text: t('budgetcheck', 'Try broadening your filters or include archived workspaces.') }),
+				C.createElement('p', { text: t('budgetcheck', 'Try broadening your filters.') }),
 			]));
 			return;
 		}
@@ -101,7 +95,8 @@
 		if (state.filters.role !== 'all' && workspace.role !== state.filters.role) {
 			return false;
 		}
-		if (!state.filters.showArchived && workspace.isActive === false) {
+		// Archive is post-v1 (§26.0); inactive rows must never appear as openable teasers.
+		if (workspace.isActive === false) {
 			return false;
 		}
 		if (state.filters.onlyFavorites && !state.favorites.has(Number(workspace.id))) {
@@ -113,13 +108,13 @@
 	function renderWorkspaceCard(workspace) {
 		const id = Number(workspace.id);
 		const isFavorite = state.favorites.has(id);
-		const isArchived = workspace.isActive === false;
+		// Inactive/archived workspaces are filtered out above (§26.0 — no deactivate API yet).
 		const roleLabel = workspace.role === 'manager'
 			? t('budgetcheck', 'Manager')
 			: (workspace.role === 'contributor'
 				? t('budgetcheck', 'Contributor')
 				: (workspace.role === 'viewer' ? t('budgetcheck', 'Viewer') : String(workspace.role || '')));
-		const card = C.createElement('article', { class: 'bc-workspace-card' + (isArchived ? ' is-archived' : '') });
+		const card = C.createElement('article', { class: 'bc-workspace-card' });
 		const openUrl = String((Ws.urls && Ws.urls.dashboard) || '/apps/budgetcheck/dashboard') + '?workspaceId=' + encodeURIComponent(String(id));
 		const favoriteButton = C.createElement('button', {
 			type: 'button',
@@ -131,10 +126,7 @@
 			},
 			text: isFavorite ? '★' : '☆',
 		});
-		favoriteButton.disabled = isArchived;
-		if (!isArchived) {
-			favoriteButton.addEventListener('click', () => toggleFavorite(id, favoriteButton));
-		}
+		favoriteButton.addEventListener('click', () => toggleFavorite(id, favoriteButton));
 
 		card.appendChild(C.createElement('div', { class: 'bc-workspace-card__top' }, [
 			C.createElement('div', { class: 'bc-workspace-card__name', text: String(workspace.name || '') }),
@@ -144,14 +136,12 @@
 			C.createElement('span', { class: 'bc-badge bc-badge--' + String(workspace.type || 'household'), text: workspace.type === 'project' ? t('budgetcheck', 'Project') : t('budgetcheck', 'Household') }),
 			C.createElement('span', { class: 'bc-pill', text: String(workspace.currencyCode || '') }),
 			C.createElement('span', { class: 'bc-pill', text: roleLabel }),
-			isArchived ? C.createElement('span', { class: 'bc-pill', text: t('budgetcheck', 'Archived') }) : null,
 		]));
 		card.appendChild(C.createElement('div', { class: 'bc-workspace-card__actions' }, [
 			C.createElement('a', {
-				class: 'button' + (isArchived ? '' : ' primary'),
-				href: isArchived ? '#' : openUrl,
-				attrs: isArchived ? { 'aria-disabled': 'true', tabindex: '-1' } : {},
-				text: isArchived ? t('budgetcheck', 'Archived workspace') : t('budgetcheck', 'Open workspace'),
+				class: 'button primary',
+				href: openUrl,
+				text: t('budgetcheck', 'Open workspace'),
 			}),
 		]));
 		return card;

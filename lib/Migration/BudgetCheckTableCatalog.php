@@ -21,6 +21,8 @@ final class BudgetCheckTableCatalog
 		'bc_budget_defaults',
 		'bc_budgets',
 		'bc_categories',
+		'bc_idempotency',
+		'bc_mobile_push',
 		'bc_monthly_snapshots',
 		'bc_recurring_rules',
 		'bc_savings_targets',

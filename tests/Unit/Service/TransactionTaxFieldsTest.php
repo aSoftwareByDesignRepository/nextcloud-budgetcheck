@@ -56,6 +56,64 @@ final class TransactionTaxFieldsTest extends TestCase
 		$this->assertSame(1900, $out['vatRateBp']);
 	}
 
+	public function testTaxEnabledNetEntryWithExplicitZeroRate(): void
+	{
+		$svc = self::newService();
+		$out = self::invokeResolveTaxFields(
+			$svc,
+			['entryAmountBasis' => 'net', 'vatRateBp' => 0],
+			['taxModeEnabled' => true, 'defaultVatRateBp' => 1900],
+			10_000
+		);
+		$this->assertSame('net', $out['basis']);
+		$this->assertSame(10_000, $out['net']);
+		$this->assertSame(0, $out['vat']);
+		$this->assertSame(10_000, $out['gross']);
+		$this->assertSame(0, $out['vatRateBp']);
+	}
+
+	public function testTaxEnabledNetEntryWithNineteenPercent(): void
+	{
+		$svc = self::newService();
+		$out = self::invokeResolveTaxFields(
+			$svc,
+			['entryAmountBasis' => 'net', 'vatRateBp' => 1900],
+			['taxModeEnabled' => true, 'defaultVatRateBp' => 1900],
+			10_000
+		);
+		$this->assertSame(10_000, $out['net']);
+		$this->assertSame(1_900, $out['vat']);
+		$this->assertSame(11_900, $out['gross']);
+	}
+
+	public function testTaxEnabledSimpleClearsSplitFields(): void
+	{
+		$svc = self::newService();
+		$out = self::invokeResolveTaxFields(
+			$svc,
+			['entryAmountBasis' => 'simple'],
+			['taxModeEnabled' => true, 'defaultVatRateBp' => 1900],
+			10_000
+		);
+		$this->assertSame('simple', $out['basis']);
+		$this->assertNull($out['net']);
+		$this->assertNull($out['vat']);
+		$this->assertNull($out['gross']);
+		$this->assertNull($out['vatRateBp']);
+	}
+
+	public function testTaxEnabledRejectsMissingRateWhenNoWorkspaceDefault(): void
+	{
+		$svc = self::newService();
+		$this->expectException(\InvalidArgumentException::class);
+		self::invokeResolveTaxFields(
+			$svc,
+			['entryAmountBasis' => 'gross'],
+			['taxModeEnabled' => true, 'defaultVatRateBp' => null],
+			11_900
+		);
+	}
+
 	private static function invokeResolveTaxFields(object $instance, array $payload, array $workspace, int $amount): array
 	{
 		$ref = new \ReflectionMethod(TransactionService::class, 'resolveTaxFields');

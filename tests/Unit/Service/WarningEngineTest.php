@@ -34,6 +34,8 @@ final class WarningEngineTest extends TestCase
 		$this->assertSame('budget_overspent', $out[0]['code']);
 		$this->assertSame(WarningEngine::SEV_WARNING, $out[0]['severity']);
 		$this->assertSame(5, $out[0]['meta']['categoryId']);
+		$this->assertSame('budgets', $out[0]['recovery']['screen'] ?? null);
+		$this->assertSame('2026-05', $out[0]['recovery']['params']['yearMonth'] ?? null);
 	}
 
 	public function testHouseholdIncomeOverTargetDoesNotWarn(): void

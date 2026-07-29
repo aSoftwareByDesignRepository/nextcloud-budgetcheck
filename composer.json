@@ -29,8 +29,10 @@
 		}
 	},
 	"scripts": {
-		"test": "phpunit --testsuite unit",
-		"test:unit": "phpunit --testsuite unit"
+		"test": "phpunit -c phpunit.xml",
+		"test:unit": "phpunit --testsuite unit",
+		"test:integration": "phpunit --testsuite integration",
+		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php"
 	},
 	"config": {
 		"optimize-autoloader": true,

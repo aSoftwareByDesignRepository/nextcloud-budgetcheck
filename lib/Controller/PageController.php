@@ -241,12 +241,11 @@ class PageController extends Controller
 	{
 		$userId = $this->access->currentUserId();
 		$workspaces = $this->workspaces->listForUser($userId);
-		$favoriteWorkspaceIds = $this->access->favoriteWorkspaceIds($userId);
+		// Prune stale favorite IDs in-memory only — never persist on GET (writes go through PUT /workspace-favorites).
 		$favoriteWorkspaceIds = array_values(array_map('intval', array_intersect(
-			$favoriteWorkspaceIds,
+			$this->access->favoriteWorkspaceIds($userId),
 			array_map(static fn (array $w): int => (int)$w['id'], $workspaces)
 		)));
-		$this->access->saveFavoriteWorkspaceIds($userId, $favoriteWorkspaceIds);
 		$selected = null;
 
 		$rawId = $this->request->getParam('workspaceId');
@@ -347,6 +346,7 @@ class PageController extends Controller
 	 * {@see Application::boot()}) avoids brittle request-path detection and fixes load order.
 	 */
 	private function registerFrontEndAssets(string $pageScript): void {
+		Util::addStyle(Application::APP_ID, 'common/tokens');
 		Util::addStyle(Application::APP_ID, 'app');
 		if ($pageScript === 'transactions') {
 			Util::addStyle(Application::APP_ID, 'transactions');
@@ -400,7 +400,7 @@ class PageController extends Controller
 			['id' => 'dashboard',    'label' => $this->l10n->t('Dashboard'),      'icon' => 'layout-grid',    'route' => 'budgetcheck.page.dashboard',    'show' => true,                                 'hint' => $this->l10n->t('Quick overview')],
 			['id' => 'transactions', 'label' => $this->l10n->t('Transactions'),   'icon' => 'list',           'route' => 'budgetcheck.page.transactions', 'show' => $workspace !== null,                  'hint' => $this->l10n->t('Income and expenses')],
 			['id' => 'import',       'label' => $this->l10n->t('Import'),         'icon' => 'upload',         'route' => 'budgetcheck.page.import',       'show' => $workspace !== null && $canContribute, 'hint' => $this->l10n->t('Guided CSV import with validation')],
-			['id' => 'budgets',      'label' => $this->l10n->t('Budgets'),        'icon' => 'wallet',         'route' => 'budgetcheck.page.budgets',      'show' => false,                                 'hint' => $this->l10n->t('Monthly planning')],
+			['id' => 'budgets',      'label' => $this->l10n->t('Budgets'),        'icon' => 'wallet',         'route' => 'budgetcheck.page.budgets',      'show' => $workspace !== null,                  'hint' => $this->l10n->t('Category budgets and savings targets')],
 			['id' => 'monthly',      'label' => $this->l10n->t('Monthly plan'),   'icon' => 'calendar-days',  'route' => 'budgetcheck.page.monthly',      'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Close and review months')],
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],

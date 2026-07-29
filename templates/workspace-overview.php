@@ -8,7 +8,7 @@
 	<header class="bc-section__header">
 		<div>
 			<h2 id="bc-workspaces-overview-title"><?php p($l->t('All workspaces')); ?></h2>
-			<p class="bc-section__sub"><?php p($l->t('Find workspaces fast, include archived ones when needed, and choose sidebar quick access.')); ?></p>
+			<p class="bc-section__sub"><?php p($l->t('Find workspaces fast and choose sidebar quick access.')); ?></p>
 		</div>
 	</header>
 
@@ -35,12 +35,6 @@
 			</select>
 		</label>
 		<div class="bc-filter-bool-row">
-			<label class="bc-field">
-				<span class="bc-boolean-control bc-boolean-control--filter-row">
-					<input type="checkbox" data-bc-filter-show-archived />
-					<span class="bc-boolean-control__text"><?php p($l->t('Show archived workspaces')); ?></span>
-				</span>
-			</label>
 			<label class="bc-field">
 				<span class="bc-boolean-control bc-boolean-control--filter-row">
 					<input type="checkbox" data-bc-filter-only-favorites />

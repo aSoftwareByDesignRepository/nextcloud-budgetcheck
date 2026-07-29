@@ -93,5 +93,21 @@ return [
 		// App-wide policy (admins): app admin uids, default tz/currency
 		['name' => 'api#getAppPolicy',       'url' => '/api/admin/policy',                  'verb' => 'GET'],
 		['name' => 'api#saveAppPolicy',      'url' => '/api/admin/policy',                  'verb' => 'POST'],
+
+		// Free BudgetCheck Mobile companion API (COMPANION-APP.md v2.0 — no license gates)
+		['name' => 'mobile_api#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],
+		['name' => 'mobile_api#listWorkspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
+		['name' => 'mobile_api#home', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/home', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#listCategories', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/categories', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#listBookingStatuses', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/booking-statuses', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#listTransactions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#getTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
+		['name' => 'mobile_api#createTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#updateTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
+		['name' => 'mobile_api#deleteTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
+		['name' => 'mobile_api#listRecurringSuggestions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#applyRecurringSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions/{ruleId}/apply', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'ruleId' => '\\d+']],
+		['name' => 'mobile_api#registerPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'POST'],
+		['name' => 'mobile_api#unregisterPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'DELETE'],
 	],
 ];

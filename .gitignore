@@ -5,6 +5,10 @@ node_modules/
 # PHPUnit / frontend checks
 .phpunit.result.cache
 test-results/
+playwright-report/
+.auth/
+e2e/.env
+tests/e2e/.env
 
 # Test coverage
 tests/coverage/

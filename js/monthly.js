@@ -142,22 +142,7 @@
 	}
 
 	function renderWarnings(section, list, warnings) {
-		if (!section || !list) return;
-		if (!warnings.length) {
-			section.hidden = true; list.replaceChildren(); return;
-		}
-		section.hidden = false;
-		list.replaceChildren();
-		warnings.forEach((w) => {
-			const item = C.createElement('li', { class: 'bc-warning bc-warning--' + (w.severity || 'info') });
-			item.appendChild(C.createElement('span', { 'aria-hidden': 'true', text: 'i' }));
-			const body = C.createElement('div');
-			body.appendChild(C.createElement('div', { class: 'bc-warning__title', text: w.title || w.code }));
-			body.appendChild(C.createElement('div', { class: 'bc-warning__message', text: w.message || '' }));
-			item.appendChild(body);
-			item.appendChild(C.createElement('div'));
-			list.appendChild(item);
-		});
+		C.renderWarningsList(section, list, warnings, Ws);
 	}
 
 	function renderConsumption(tbody, budget) {

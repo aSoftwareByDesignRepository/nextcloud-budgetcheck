@@ -109,11 +109,12 @@ class ApiController extends Controller
 			$includeInactive = $this->boolParam('includeInactive');
 			$workspaces = $this->workspaces->listForUser($userId, $includeInactive);
 			$workspaceIds = array_map(static fn (array $w): int => (int)$w['id'], $workspaces);
+			// GET is read-only (§11.2): intersect for the response only.
+			// Persist pruning via saveWorkspaceFavorites (PUT), never here.
 			$favoriteWorkspaceIds = array_values(array_map('intval', array_intersect(
 				$this->access->favoriteWorkspaceIds($userId),
 				$workspaceIds
 			)));
-			$this->access->saveFavoriteWorkspaceIds($userId, $favoriteWorkspaceIds);
 			return [
 				'workspaces' => $workspaces,
 				'lastUsedWorkspaceId' => $this->access->lastUsedWorkspace($userId),
@@ -135,11 +136,11 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId): array {
 			$activeIds = array_map(static fn (array $w): int => (int)$w['id'], $this->workspaces->listForUser($userId));
+			// Read-only prune for the response; do not write on GET (§11.2).
 			$favorites = array_values(array_map('intval', array_intersect(
 				$this->access->favoriteWorkspaceIds($userId),
 				$activeIds
 			)));
-			$this->access->saveFavoriteWorkspaceIds($userId, $favorites);
 			return ['favoriteWorkspaceIds' => $favorites];
 		});
 	}
@@ -553,7 +554,17 @@ class ApiController extends Controller
 			$workspaceId = $this->ownerWorkspaceForTransaction($id);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'transaction_write', 240, 300);
-			$this->transactions->delete($id, $userId, $workspace);
+			$payload = $this->payload();
+			$expectedVersion = null;
+			if (array_key_exists('version', $payload) && $payload['version'] !== null && $payload['version'] !== '') {
+				$expectedVersion = (int)$payload['version'];
+			} elseif ($this->request->getParam('version') !== null && $this->request->getParam('version') !== '') {
+				$expectedVersion = (int)$this->request->getParam('version');
+			}
+			if ($expectedVersion === null) {
+				throw new \InvalidArgumentException('version is required for deletes.');
+			}
+			$this->transactions->delete($id, $userId, $workspace, $expectedVersion);
 			return ['deleted' => true, 'id' => $id];
 		});
 	}

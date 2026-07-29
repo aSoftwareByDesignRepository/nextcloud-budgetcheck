@@ -566,5 +566,81 @@
 		}
 	}
 
-	window.BudgetCheckComponents = { createElement, openModal, confirmDialog, renderMonthlyLedgerHelp, renderHouseholdSummaryTiles, moneyTileValue };
+	/**
+	 * Warning row with optional recovery link (§6.4). Shared by dashboard,
+	 * monthly plan, and period overview so recovery never depends on hover-only UI.
+	 *
+	 * @param {{severity?:string,title?:string,code?:string,message?:string,recovery?:{screen?:string,params?:Record<string,unknown>}}} warning
+	 * @param {{urls?:Record<string,string>,withWorkspace?:(url:string)=>string}|null} workspace
+	 */
+	function renderWarningItem(warning, workspace) {
+		const sev = warning.severity || 'info';
+		const severityLabel = sev === 'critical'
+			? t('budgetcheck', 'Critical')
+			: (sev === 'warning' ? t('budgetcheck', 'Warning') : t('budgetcheck', 'Info'));
+		const titleText = (warning.title || warning.code || '').trim();
+		const item = createElement('li', {
+			class: 'bc-warning bc-warning--' + sev,
+			attrs: { role: 'status' },
+		});
+		item.appendChild(createElement('span', {
+			'aria-hidden': 'true',
+			text: sev === 'critical' ? '!' : (sev === 'warning' ? '⚠' : 'i'),
+		}));
+		const body = createElement('div');
+		body.appendChild(createElement('div', {
+			class: 'bc-warning__title',
+			text: severityLabel + (titleText ? ': ' + titleText : ''),
+		}));
+		body.appendChild(createElement('div', {
+			class: 'bc-warning__message',
+			text: warning.message || '',
+		}));
+		item.appendChild(body);
+		const recovery = warning.recovery;
+		const urls = workspace && workspace.urls ? workspace.urls : null;
+		const withWorkspace = workspace && typeof workspace.withWorkspace === 'function'
+			? workspace.withWorkspace
+			: null;
+		if (recovery && recovery.screen && urls && urls[recovery.screen] && withWorkspace) {
+			let href = withWorkspace(urls[recovery.screen]);
+			const params = recovery.params || {};
+			Object.entries(params).forEach(([key, value]) => {
+				if (value === null || value === undefined || value === '') return;
+				href += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(String(value));
+			});
+			const link = createElement('a', {
+				class: 'button',
+				href,
+				text: t('budgetcheck', 'Open'),
+			});
+			item.appendChild(createElement('div', { class: 'bc-warning__action' }, [link]));
+		} else {
+			item.appendChild(createElement('div'));
+		}
+		return item;
+	}
+
+	function renderWarningsList(section, list, warnings, workspace) {
+		if (!section || !list) return;
+		if (!warnings || !warnings.length) {
+			section.hidden = true;
+			list.replaceChildren();
+			return;
+		}
+		section.hidden = false;
+		list.replaceChildren();
+		warnings.forEach((w) => list.appendChild(renderWarningItem(w, workspace)));
+	}
+
+	window.BudgetCheckComponents = {
+		createElement,
+		openModal,
+		confirmDialog,
+		renderMonthlyLedgerHelp,
+		renderHouseholdSummaryTiles,
+		moneyTileValue,
+		renderWarningItem,
+		renderWarningsList,
+	};
 })();

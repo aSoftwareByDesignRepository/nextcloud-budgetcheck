@@ -143,4 +143,4 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 				</div>
 			<?php endif; ?>
 		</header>
-		<main id="bc-main-content" class="bc-main" tabindex="-1">
+		<main id="bc-main-content" class="bc-main" tabindex="-1" aria-labelledby="bc-page-title">

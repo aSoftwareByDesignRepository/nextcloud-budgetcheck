@@ -93,7 +93,7 @@ final class ClosedMonthWriteLockTest extends TestCase
 
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('closed month');
-		$svc->update(42, 'alice', ['title' => 'Changed'], self::WORKSPACE);
+		$svc->update(42, 'alice', ['title' => 'Changed', 'version' => 1], self::WORKSPACE);
 	}
 
 	public function testUpdateRejectedWhenMovingIntoClosedMonth(): void
@@ -110,7 +110,7 @@ final class ClosedMonthWriteLockTest extends TestCase
 
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('closed month');
-		$svc->update(42, 'alice', ['bookingDate' => '2026-08-15'], self::WORKSPACE);
+		$svc->update(42, 'alice', ['bookingDate' => '2026-08-15', 'version' => 1], self::WORKSPACE);
 	}
 
 	public function testBudgetBulkUpsertRejectedInClosedMonth(): void

@@ -7,8 +7,8 @@ $workspace = $_['workspace'] ?? null;
 <?php include __DIR__ . '/common/page-start.php'; ?>
 
 <?php if ($workspace === null): ?>
-	<section class="bc-card bc-empty">
-		<h2><?php p($l->t('Select a project workspace')); ?></h2>
+	<section class="bc-card bc-empty" aria-labelledby="bc-period-empty-title">
+		<h2 id="bc-period-empty-title"><?php p($l->t('Select a project workspace')); ?></h2>
 		<p><?php p($l->t('Pick a project from the sidebar.')); ?></p>
 	</section>
 <?php else: ?>

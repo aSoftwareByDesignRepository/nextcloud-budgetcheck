@@ -91,3 +91,13 @@ jobs:
 
       - name: PHPUnit
         run: ./vendor/bin/phpunit --testsuite unit
+
+      # Integration suite needs a bootstrapped Nextcloud (Docker). Local gate:
+      #   ../../docker/run-app-phpunit.sh budgetcheck --testsuite integration
+      # E2E (host, with e2e/.env): npm run e2e:smoke:safe
+
+      - name: Mutation gauntlets
+        run: |
+          php tests/Mutation/run-closeout-mutations.php
+          php tests/Mutation/run-epic-gate-mutations.php
+          php tests/Mutation/run-billing-facade-mutations.php

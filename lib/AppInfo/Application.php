@@ -7,6 +7,9 @@ namespace OCA\BudgetCheck\AppInfo;
 use OCP\Lock\ILockingProvider;
 use OCP\Files\IRootFolder;
 use OCP\App\IAppManager;
+use OCA\BudgetCheck\Capabilities;
+use OCA\BudgetCheck\Service\MobileIdempotencyService;
+use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\UpgradeBackupService;
 use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCA\BudgetCheck\Listener\GroupDeletedListener;
@@ -97,6 +100,9 @@ class Application extends App implements IBootstrap
 		});
 		$context->registerMiddleware(AppAccessMiddleware::class);
 
+		// Free companion capabilities (no license fields)
+		$context->registerCapability(Capabilities::class);
+
 		// --- Utility services -----------------------------------------------
 		$context->registerService(CurrencyCatalog::class, fn () => new CurrencyCatalog());
 		$context->registerService(TimezoneCatalog::class, fn () => new TimezoneCatalog());
@@ -165,6 +171,20 @@ class Application extends App implements IBootstrap
 				$c->query(CategoryService::class),
 				$c->query(BookingStatusService::class),
 				$c->query(TransactionAttachmentService::class),
+			);
+		});
+
+		$context->registerService(MobileIdempotencyService::class, function ($c): MobileIdempotencyService {
+			return new MobileIdempotencyService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+			);
+		});
+
+		$context->registerService(MobilePushService::class, function ($c): MobilePushService {
+			return new MobilePushService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 			);
 		});
 

@@ -563,9 +563,12 @@ class TransactionService
 			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before editing.');
 		}
 
-		// Optimistic locking.
-		$expectedVersion = isset($payload['version']) ? (int)$payload['version'] : null;
-		if ($expectedVersion !== null && $expectedVersion !== (int)$existing['version']) {
+		// Optimistic locking — clients must send the version they loaded.
+		if (!array_key_exists('version', $payload) || $payload['version'] === null || $payload['version'] === '') {
+			throw new \InvalidArgumentException('version is required for updates.');
+		}
+		$expectedVersion = (int)$payload['version'];
+		if ($expectedVersion !== (int)$existing['version']) {
 			throw new ConflictException();
 		}
 
@@ -705,7 +708,7 @@ class TransactionService
 		return $this->loadHydrated($transactionId, $workspace['currencyCode']);
 	}
 
-	public function delete(int $transactionId, string $userId, array $workspace): bool
+	public function delete(int $transactionId, string $userId, array $workspace, ?int $expectedVersion = null): bool
 	{
 		$existing = $this->loadRow($transactionId);
 		if ($existing === null || (int)$existing['workspace_id'] !== $workspace['id']) {
@@ -720,14 +723,26 @@ class TransactionService
 		if ($this->monthIsClosed($workspace['id'], $ym)) {
 			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before editing.');
 		}
+		$currentVersion = (int)$existing['version'];
+		if ($expectedVersion === null) {
+			throw new \InvalidArgumentException('version is required for deletes.');
+		}
+		if ($expectedVersion !== $currentVersion) {
+			throw new ConflictException();
+		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_transactions')
 			->set('deleted_at', $qb->createNamedParameter($this->utcNow()))
 			->set('updated_by', $qb->createNamedParameter($userId))
 			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
-			->set('version', $qb->createNamedParameter((int)$existing['version'] + 1, \PDO::PARAM_INT))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
+			->set('version', $qb->createNamedParameter($currentVersion + 1, \PDO::PARAM_INT))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter($currentVersion, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		$affected = $qb->executeStatement();
+		if ($affected === 0) {
+			throw new ConflictException();
+		}
 		$this->audit->record($userId, 'transaction_deleted', 'transaction', (string)$transactionId, [], $workspace['id']);
 		return true;
 	}

@@ -7,8 +7,8 @@ $workspace = $_['workspace'] ?? null;
 <?php include __DIR__ . '/common/page-start.php'; ?>
 
 <?php if ($workspace === null): ?>
-	<section class="bc-card bc-empty">
-		<h2><?php p($l->t('Select a household workspace')); ?></h2>
+	<section class="bc-card bc-empty" aria-labelledby="bc-yearly-empty-title">
+		<h2 id="bc-yearly-empty-title"><?php p($l->t('Select a household workspace')); ?></h2>
 		<p><?php p($l->t('Pick a household workspace from the sidebar.')); ?></p>
 	</section>
 <?php else: ?>

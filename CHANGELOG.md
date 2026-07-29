@@ -5,6 +5,89 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-29
+
+### Added
+
+- In-app **Support & Us** admin surface with Partner CTAs.
+- Public **billing facades** for InvoiceCheck (`BillingReadFacade` / `BillingWriteFacade`, including paid-state handshake).
+- Mobile companion API surface (`MobileApiController`, capabilities, idempotent mutations).
+- Playwright shell a11y smoke and epic-gate / closeout / billing mutation harnesses.
+
+### Security / integrity
+
+- Transaction **create/update/delete** optimistic locking (`version` required; CAS on update/delete).
+- CSRF-required mutation coverage; opaque AccessDenied IDOR gates.
+
+### Fixed
+
+- Budgets navigation restored; warning recovery actions aligned with Dashboard.
+- Money envelopes include `decimals` (zero-decimal currencies); header month follows selected month.
+- Transaction dialog horizontal scrollbar; GET favorites remain read-only.
+- Uninstall cleanup limited to upgrade-backup snapshots.
+
+### Changed
+
+- Nextcloud compatibility **32–34**; version sources aligned to **1.1.1**.
+- Stabilized money formatting; dropped versioned asset filename suffixes.
+
+## [1.0.43] - 2026-07-27
+
+### Security / integrity
+
+- Transaction **update** optimistic locking covered by behavioral PHPUnit twin of delete CAS (omit/null/empty/stale version + lost-race).
+- Closeout mutations require **both** update and delete `version is required` messages plus update SQL CAS predicate.
+- E2E global-setup **fails hard** when credentials are set but login fails (no false-green skip).
+
+### UX / hygiene
+
+- Removed dead archived-workspace card/CTA branches and orphan l10n keys (archive remains §26.0).
+- `info.xml` requirements text aligned to Nextcloud **32–34**.
+
+### Tests / CI
+
+- `TransactionUpdateCasTest` added; shell smoke throws when still on login with `E2E_USER` set.
+
+## [1.0.42] - 2026-07-27
+
+### Security / integrity
+
+- Transaction **update and delete require `version`** (422 if omitted) — no silent last-write-wins for API clients.
+- Page chrome no longer persists pruned favorites on GET; only `PUT /workspace-favorites` writes.
+- Removed dead “Show archived workspaces” teaser (archive is post-v1; no deactivate API).
+
+### Accessibility / UX
+
+- Period and yearly empty states use `aria-labelledby` like the dashboard empty card.
+- Workspace overview copy no longer promises archived filtering.
+
+### Tests / CI
+
+- Favorites read-only contract covers `PageController::resolveWorkspace`.
+- Epic-gate + closeout mutations assert version-required and no archived filter.
+- GitHub CI runs closeout, epic-gate, and billing mutation scripts after PHPUnit.
+
+## [1.0.41] - 2026-07-27
+
+### Fixed
+
+- **Budgets navigation restored** for household and project workspaces (was hardcoded off, leaving `/budgets` orphaned).
+- **Warning recovery actions** on Monthly plan and Period overview now match Dashboard (§6.4 Open affordance).
+- **GET favorites are read-only:** `listWorkspaces` / `getWorkspaceFavorites` no longer persist pruned IDs (writes stay on PUT `saveWorkspaceFavorites`).
+- Version sources aligned (`appinfo/version`, `info.xml`, `package.json`) to **1.0.41**.
+
+### Security / integrity
+
+- Transaction **delete** optimistic locking (`version` CAS + `deleted_at IS NULL`); client sends `version` on delete.
+- CSRF-required mutation attribute suite; opaque AccessDenied IDOR gates; frontend `requesttoken` on DELETE.
+
+### Tests
+
+- Savings target compute/mode unit suite; Snapshot project-type 422 gate; Budgets nav unit tests; GET favorites contract; WarningEngine recovery params.
+- Mutation gauntlet `tests/Mutation/run-epic-gate-mutations.php` (+ existing closeout/billing mutations).
+- Playwright shell a11y smoke (`npm run e2e:smoke:safe`).
+- l10n variant catalogs resynced to base languages.
+
 ## [1.0.40] - 2026-07-24
 
 ### Added
