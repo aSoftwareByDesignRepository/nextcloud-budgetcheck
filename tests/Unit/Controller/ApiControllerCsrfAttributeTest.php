@@ -36,6 +36,9 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 		'addMember',
 		'updateMember',
 		'removeMember',
+		'createReceiptSuggestion',
+		'acceptReceiptSuggestion',
+		'cancelReceiptSuggestion',
 	];
 
 	public function testMutationMethodsRequireCsrf(): void
@@ -59,7 +62,7 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 	public function testReadHelpersMaySkipCsrf(): void
 	{
 		$ref = new ReflectionClass(ApiController::class);
-		foreach (['listWorkspaces', 'monthlySummary', 'projectPeriodSummary', 'yearlySummary'] as $name) {
+		foreach (['listWorkspaces', 'monthlySummary', 'projectPeriodSummary', 'yearlySummary', 'getReceiptSuggestion'] as $name) {
 			self::assertTrue($ref->hasMethod($name), $name);
 			self::assertTrue(
 				$this->hasNoCsrf($ref->getMethod($name)),

@@ -32,6 +32,7 @@ use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -74,6 +75,7 @@ class ApiController extends Controller
 		private CategoryService $categories,
 		private TransactionService $transactions,
 		private TransactionAttachmentService $transactionAttachments,
+		private ReceiptSuggestServiceInterface $receiptSuggest,
 		private RecurringRuleService $recurring,
 		private BudgetService $budgets,
 		private BudgetPlannedService $budgetPlanned,
@@ -125,6 +127,8 @@ class ApiController extends Controller
 					'timezoneCatalog' => $this->timezoneCatalog->forApi(),
 					'defaultCurrency' => $this->access->getDefaultCurrency(),
 					'defaultTimezone' => $this->access->getDefaultTimezone(),
+					'receiptSuggest' => $this->receiptSuggest->isAvailable($userId),
+					'receiptSuggestModes' => $this->receiptSuggest->modesForUser($userId),
 				],
 			];
 		});
@@ -619,6 +623,58 @@ class ApiController extends Controller
 			}
 			$attachment = $this->transactionAttachments->replace($id, $userId, $_FILES['file']);
 			return ['attachment' => $attachment];
+		});
+	}
+
+	// ------------------------------------------------------------------
+	//  Receipt AI suggest (Task Processing — suggest, never auto-commit)
+	// ------------------------------------------------------------------
+
+	#[NoAdminRequired]
+	public function createReceiptSuggestion(int $workspaceId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$this->rateLimit->assertAllowed($userId, 'receipt_suggest', 30, 300);
+			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+				throw new \InvalidArgumentException('No file was uploaded.');
+			}
+			return $this->receiptSuggest->startFromUpload($workspaceId, $userId, $_FILES['file']);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		$jobId = $this->validateId($jobId);
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			return $this->receiptSuggest->poll($workspaceId, $userId, $jobId);
+		});
+	}
+
+	#[NoAdminRequired]
+	public function acceptReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		$jobId = $this->validateId($jobId);
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			$this->rateLimit->assertAllowed($userId, 'receipt_suggest_accept', 60, 300);
+			$payload = $this->payload();
+			$suggestion = is_array($payload['suggestion'] ?? null) ? $payload['suggestion'] : $payload;
+			return $this->receiptSuggest->accept($workspaceId, $userId, $jobId, $suggestion);
+		});
+	}
+
+	#[NoAdminRequired]
+	public function cancelReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		$workspaceId = $this->validateId($workspaceId);
+		$jobId = $this->validateId($jobId);
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			$this->receiptSuggest->cancelJob($workspaceId, $userId, $jobId);
+			return ['cancelled' => true, 'jobId' => $jobId];
 		});
 	}
 

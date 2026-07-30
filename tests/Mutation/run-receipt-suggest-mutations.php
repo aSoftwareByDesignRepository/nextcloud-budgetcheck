@@ -190,4 +190,85 @@ foreach ($mutations as $mut) {
 }
 
 fwrite(STDOUT, "\nResult: {$killed} killed, {$survived} survived of " . count($mutations) . "\n");
-exit($survived > 0 ? 1 : 0);
+
+// --- Web parity contracts (static + JS client-gate mutant) ---
+$webFailed = 0;
+$webAssert = static function (bool $ok, string $label) use (&$webFailed): void {
+	if ($ok) {
+		fwrite(STDOUT, "killed {$label}\n");
+		return;
+	}
+	fwrite(STDERR, "SURVIVED {$label}\n");
+	$webFailed++;
+};
+
+$routes = (string)file_get_contents($root . '/appinfo/routes.php');
+$api = (string)file_get_contents($root . '/lib/Controller/ApiController.php');
+$page = (string)file_get_contents($root . '/lib/Controller/PageController.php');
+$boot = (string)file_get_contents($root . '/js/common/bootstrap.js');
+$rsJs = (string)file_get_contents($root . '/js/common/receipt-suggest.js');
+$editor = (string)file_get_contents($root . '/js/common/transaction-editor.js');
+$attach = (string)file_get_contents($root . '/js/common/transaction-attachments.js');
+
+$webAssert(str_contains($routes, 'api#createReceiptSuggestion'), 'web_route_create_receipt_suggest');
+$webAssert(str_contains($routes, 'api#getReceiptSuggestion'), 'web_route_get_receipt_suggest');
+$webAssert(str_contains($routes, 'api#acceptReceiptSuggestion'), 'web_route_accept_receipt_suggest');
+$webAssert(str_contains($routes, 'api#cancelReceiptSuggestion'), 'web_route_cancel_receipt_suggest');
+$webAssert(str_contains($api, 'receipt_suggest'), 'web_rate_limit_receipt_suggest');
+$webAssert(str_contains($api, 'receipt_suggest_accept'), 'web_rate_limit_receipt_suggest_accept');
+$webAssert(
+	(bool)preg_match('/#\[NoAdminRequired\]\s*\n\s*public function createReceiptSuggestion\(/', $api),
+	'web_create_receipt_requires_csrf'
+);
+$webAssert(
+	(bool)preg_match('/#\[NoAdminRequired\]\s*\n\s*public function acceptReceiptSuggestion\(/', $api),
+	'web_accept_receipt_requires_csrf'
+);
+$webAssert(
+	(bool)preg_match('/#\[NoAdminRequired\]\s*\n\s*public function cancelReceiptSuggestion\(/', $api),
+	'web_cancel_receipt_requires_csrf'
+);
+$webAssert(str_contains($page, 'common/receipt-suggest'), 'page_registers_receipt_suggest_js');
+$webAssert(str_contains($boot, "ReceiptSuggest: 'BudgetCheckReceiptSuggest'"), 'bootstrap_registry_receipt_suggest');
+$webAssert(str_contains($rsJs, 'CONFIDENCE_SINGLE_MIN = 0.72'), 'js_single_confidence_threshold');
+$webAssert(str_contains($rsJs, 'CONFIDENCE_SPLIT_LINE_MIN = 0.78'), 'js_split_confidence_threshold');
+$webAssert(str_contains($editor, 'onPendingQueued'), 'editor_hooks_pending_queue');
+$webAssert(str_contains($editor, 'clearPending'), 'editor_clears_pending_on_accept');
+$webAssert(str_contains($attach, 'onPendingQueued'), 'attachments_emit_pending_queued');
+$webAssert(str_contains($attach, 'clearPending'), 'attachments_clear_pending');
+
+// JS mutant: drop single confidence gate — receipt-suggest.test.js must fail.
+$jsPath = $root . '/js/common/receipt-suggest.js';
+$jsOriginal = (string)file_get_contents($jsPath);
+$jsSearch = 'const CONFIDENCE_SINGLE_MIN = 0.72;';
+$jsReplace = 'const CONFIDENCE_SINGLE_MIN = 0.0;';
+if (!str_contains($jsOriginal, $jsSearch)) {
+	fwrite(STDERR, "SURVIVED js-single-confidence-mutant (search not found)\n");
+	$webFailed++;
+} else {
+	file_put_contents($jsPath, str_replace($jsSearch, $jsReplace, $jsOriginal));
+	$jsCmd = ['node', $root . '/tests/js/receipt-suggest.test.js'];
+	$descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+	$proc = proc_open($jsCmd, $descriptors, $pipes, $root);
+	if (!is_resource($proc)) {
+		file_put_contents($jsPath, $jsOriginal);
+		fwrite(STDERR, "SURVIVED js-single-confidence-mutant (proc_open failed)\n");
+		$webFailed++;
+	} else {
+		fclose($pipes[0]);
+		stream_get_contents($pipes[1]);
+		stream_get_contents($pipes[2]);
+		fclose($pipes[1]);
+		fclose($pipes[2]);
+		$code = proc_close($proc);
+		file_put_contents($jsPath, $jsOriginal);
+		if ($code === 0) {
+			fwrite(STDERR, "SURVIVED js-single-confidence-mutant\n");
+			$webFailed++;
+		} else {
+			fwrite(STDOUT, "Killed: js-single-confidence-mutant\n");
+		}
+	}
+}
+
+exit(($survived > 0 || $webFailed > 0) ? 1 : 0);

@@ -12,7 +12,7 @@ use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
-use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
@@ -259,10 +259,10 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
 	}
 
-	/** @return ReceiptSuggestService&\PHPUnit\Framework\MockObject\MockObject */
-	private function receiptSuggestMock(): ReceiptSuggestService
+	/** @return ReceiptSuggestServiceInterface&\PHPUnit\Framework\MockObject\MockObject */
+	private function receiptSuggestMock(): ReceiptSuggestServiceInterface
 	{
-		$mock = $this->createMock(ReceiptSuggestService::class);
+		$mock = $this->createMock(ReceiptSuggestServiceInterface::class);
 		$mock->method('isAvailable')->willReturn(false);
 		$mock->method('modesForUser')->willReturn([]);
 		return $mock;

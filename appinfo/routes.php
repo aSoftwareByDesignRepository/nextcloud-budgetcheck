@@ -62,6 +62,10 @@ return [
 		['name' => 'api#deleteTransactionAttachment', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'DELETE'],
 		['name' => 'api#replaceTransactionAttachment', 'url' => '/api/transaction-attachments/{id}/replace', 'verb' => 'POST'],
 		['name' => 'attachment#download', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'GET'],
+		['name' => 'api#createReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'api#getReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
+		['name' => 'api#acceptReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}/accept', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
+		['name' => 'api#cancelReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
 
 		// Recurring rules
 		['name' => 'api#listRecurringRules',     'url' => '/api/recurring-rules',                  'verb' => 'GET'],

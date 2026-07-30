@@ -46,6 +46,7 @@ use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAvailability;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestJobStore;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestPromptBuilder;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestStagingStore;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionPipeline;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionParser;
@@ -278,6 +279,7 @@ class Application extends App implements IBootstrap
 				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
+		$context->registerAlias(ReceiptSuggestServiceInterface::class, ReceiptSuggestService::class);
 
 		$context->registerService(TransactionImportService::class, function ($c): TransactionImportService {
 			return new TransactionImportService(

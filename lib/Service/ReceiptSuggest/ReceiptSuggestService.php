@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
  * Orchestrates receipt AI suggest: stage → Task Processing → quality gates → accept.
  * Never auto-posts to the ledger.
  */
-final class ReceiptSuggestService
+final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 {
 	public const PHASE_VISION = 'vision';
 	public const PHASE_OCR = 'ocr';

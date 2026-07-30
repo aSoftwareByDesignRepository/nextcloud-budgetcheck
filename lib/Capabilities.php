@@ -21,7 +21,7 @@ class Capabilities implements ICapability
 
 	public function __construct(
 		private readonly IAppManager $appManager,
-		private readonly ?\OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService $receiptSuggest = null,
+		private readonly ?\OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface $receiptSuggest = null,
 	) {
 	}
 

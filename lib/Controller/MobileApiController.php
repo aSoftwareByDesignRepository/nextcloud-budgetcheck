@@ -30,7 +30,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
-use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -66,7 +66,7 @@ class MobileApiController extends Controller
 		private readonly MobilePushService $push,
 		private readonly RateLimitService $rateLimit,
 		private readonly TransactionAttachmentService $attachments,
-		private readonly ReceiptSuggestService $receiptSuggest,
+		private readonly ReceiptSuggestServiceInterface $receiptSuggest,
 		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,

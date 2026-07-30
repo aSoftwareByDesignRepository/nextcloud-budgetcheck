@@ -46,6 +46,7 @@
 		TransactionList: 'BudgetCheckTransactionList',
 		TransactionAttachments: 'BudgetCheckTransactionAttachments',
 		AttachmentGallery: 'BudgetCheckAttachmentGallery',
+		ReceiptSuggest: 'BudgetCheckReceiptSuggest',
 		EntityPicker: 'BudgetCheckEntityPicker',
 		CatalogPickers: 'BudgetCheckCatalogPickers',
 	};

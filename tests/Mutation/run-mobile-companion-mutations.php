@@ -104,6 +104,7 @@ $assert(str_contains($caps, 'COMPANION_API = 3'), 'companion_api_v3');
 $assert(str_contains($caps, 'receiptSuggest'), 'capabilities_receipt_suggest');
 $assert(str_contains($mobile, "'receiptSuggest'"), 'bootstrap_receipt_suggest');
 $assert(str_contains($app, 'ReceiptSuggestService'), 'receipt_suggest_di');
+$assert(str_contains($app, 'ReceiptSuggestServiceInterface'), 'receipt_suggest_port_alias');
 $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');
 $assert(str_contains($idemp, 'IdempotencyMismatchException'), 'idempotency_mismatch');
