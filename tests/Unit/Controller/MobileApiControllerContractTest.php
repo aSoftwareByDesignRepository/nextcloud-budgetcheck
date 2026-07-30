@@ -79,6 +79,9 @@ final class MobileApiControllerContractTest extends TestCase
 		self::assertStringContainsString('NOT_FOUND', $src);
 		self::assertStringContainsString('NotFoundException', $src);
 		self::assertStringContainsString('Idempotency-Key', $src);
+		self::assertStringContainsString("\$list['items']", $src);
+		self::assertStringContainsString("'transactions' => \$enriched", $src);
+		self::assertStringContainsString("'hasBudget' => \$hasBudget", $src);
 		$errorCodes = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MobileErrorCodes.php');
 		self::assertStringContainsString('MONTH_CLOSED', $errorCodes);
 		self::assertStringContainsString('TAX_DISABLED', $errorCodes);
