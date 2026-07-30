@@ -40,6 +40,18 @@ use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\OcpReceiptTaskProcessingGateway;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAcceptGuard;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAvailability;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestJobStore;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestPromptBuilder;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestStagingStore;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionPipeline;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionParser;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionQualityGate;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestionValidator;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptTaskProcessingGateway;
 use OCA\BudgetCheck\Settings\AdminSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
@@ -219,6 +231,51 @@ class Application extends App implements IBootstrap
 				$c->query(WorkspaceService::class),
 				$c->query(AuditLogService::class),
 				$c->query(\OCP\IURLGenerator::class),
+			);
+		});
+
+		$context->registerService(ReceiptSuggestAvailability::class, fn () => new ReceiptSuggestAvailability());
+		$context->registerService(ReceiptSuggestionParser::class, fn () => new ReceiptSuggestionParser());
+		$context->registerService(ReceiptSuggestionValidator::class, function ($c): ReceiptSuggestionValidator {
+			return new ReceiptSuggestionValidator($c->query(MoneyService::class));
+		});
+		$context->registerService(ReceiptSuggestionQualityGate::class, fn () => new ReceiptSuggestionQualityGate());
+		$context->registerService(ReceiptSuggestionPipeline::class, function ($c): ReceiptSuggestionPipeline {
+			return new ReceiptSuggestionPipeline(
+				$c->query(ReceiptSuggestionParser::class),
+				$c->query(ReceiptSuggestionValidator::class),
+				$c->query(ReceiptSuggestionQualityGate::class),
+			);
+		});
+		$context->registerService(ReceiptSuggestPromptBuilder::class, fn () => new ReceiptSuggestPromptBuilder());
+		$context->registerService(ReceiptSuggestAcceptGuard::class, fn () => new ReceiptSuggestAcceptGuard());
+		$context->registerService(ReceiptSuggestJobStore::class, function ($c): ReceiptSuggestJobStore {
+			return new ReceiptSuggestJobStore($c->query(\OCP\IConfig::class));
+		});
+		$context->registerService(ReceiptSuggestStagingStore::class, function ($c): ReceiptSuggestStagingStore {
+			return new ReceiptSuggestStagingStore($c->query(\OCP\Files\IRootFolder::class));
+		});
+		$context->registerService(ReceiptTaskProcessingGateway::class, function ($c): ReceiptTaskProcessingGateway {
+			return new OcpReceiptTaskProcessingGateway(
+				$c->query(\OCP\TaskProcessing\IManager::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(ReceiptSuggestService::class, function ($c): ReceiptSuggestService {
+			return new ReceiptSuggestService(
+				$c->query(ReceiptTaskProcessingGateway::class),
+				$c->query(ReceiptSuggestAvailability::class),
+				$c->query(ReceiptSuggestStagingStore::class),
+				$c->query(ReceiptSuggestJobStore::class),
+				$c->query(ReceiptSuggestPromptBuilder::class),
+				$c->query(ReceiptSuggestionPipeline::class),
+				$c->query(ReceiptSuggestAcceptGuard::class),
+				$c->query(AccessControlService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(CategoryService::class),
+				$c->query(TransactionService::class),
+				$c->query(TransactionAttachmentService::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
 

@@ -30,6 +30,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -65,6 +66,7 @@ class MobileApiController extends Controller
 		private readonly MobilePushService $push,
 		private readonly RateLimitService $rateLimit,
 		private readonly TransactionAttachmentService $attachments,
+		private readonly ReceiptSuggestService $receiptSuggest,
 		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,
@@ -96,6 +98,8 @@ class MobileApiController extends Controller
 					'tax' => true,
 					'recurringSuggestions' => true,
 					'attachments' => true,
+					'receiptSuggest' => $this->receiptSuggest->isAvailable($userId),
+					'receiptSuggestModes' => $this->receiptSuggest->modesForUser($userId),
 				],
 			];
 		});
@@ -510,6 +514,60 @@ class MobileApiController extends Controller
 			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_write', 120, 300);
 			$this->attachments->delete($attachmentId, $userId);
 			return ['deleted' => true, 'id' => $attachmentId];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function createReceiptSuggestion(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->assertSafeMutationChannel();
+			$this->rateLimit->assertAllowed($userId, 'mobile_receipt_suggest', 30, 300);
+			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+				throw new \InvalidArgumentException('No file was uploaded.');
+			}
+			return $this->receiptSuggest->startFromUpload($workspaceId, $userId, $_FILES['file']);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$jobId = $this->validateId($jobId);
+			return $this->receiptSuggest->poll($workspaceId, $userId, $jobId);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function acceptReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$jobId = $this->validateId($jobId);
+			$this->assertSafeMutationChannel();
+			$this->rateLimit->assertAllowed($userId, 'mobile_receipt_suggest_accept', 60, 300);
+			$payload = $this->payload();
+			$suggestion = is_array($payload['suggestion'] ?? null) ? $payload['suggestion'] : $payload;
+			return $this->receiptSuggest->accept($workspaceId, $userId, $jobId, $suggestion);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function cancelReceiptSuggestion(int $workspaceId, int $jobId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $jobId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$jobId = $this->validateId($jobId);
+			$this->assertSafeMutationChannel();
+			$this->receiptSuggest->cancelJob($workspaceId, $userId, $jobId);
+			return ['cancelled' => true, 'jobId' => $jobId];
 		});
 	}
 
