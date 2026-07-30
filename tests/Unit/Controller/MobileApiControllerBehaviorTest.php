@@ -109,6 +109,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 				return '';
 			}
 		);
+		$this->request->method('passesCSRFCheck')->willReturn(false);
 		$this->request->method('getParam')->willReturn(null);
 		$this->request->method('getParams')->willReturn([]);
 
@@ -122,6 +123,25 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame('FORBIDDEN', $data['error']['code']);
 		self::assertSame('Access denied.', $data['message']);
 		self::assertSame('Access denied.', $data['error']['message']);
+	}
+
+	public function testForgedRequesttokenWithoutValidCsrfIsForbidden(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				return $name === 'requesttoken' ? 'forged-not-validated' : '';
+			}
+		);
+		$this->request->method('passesCSRFCheck')->willReturn(false);
+		$this->request->method('getParam')->willReturn('forged-not-validated');
+		$this->request->method('getParams')->willReturn([]);
+
+		$this->transactions->expects(self::never())->method('create');
+
+		$response = $this->controller->createTransaction(1);
+		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
 	}
 
 	public function testMissingTransactionReturnsJsonNotFound(): void
@@ -175,6 +195,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 	{
 		$this->access->method('currentUserId')->willReturn('alice');
 		$this->request->method('getHeader')->willReturn('');
+		$this->request->method('passesCSRFCheck')->willReturn(false);
 		$this->request->method('getParam')->willReturn(null);
 		$this->request->method('getParams')->willReturn(['version' => 1]);
 

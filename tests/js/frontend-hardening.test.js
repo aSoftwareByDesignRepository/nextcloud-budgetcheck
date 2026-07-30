@@ -253,6 +253,84 @@ function rel(file) {
 	assert(sandbox.window.BudgetCheck.get('Dates') === D, 'Dates registry survives window wipe');
 }
 
+// --- Messaging: closed-month copy stays warning-level (no destructive reload) ---
+{
+	const appContent = {
+		dataset: {
+			bcWorkspace: JSON.stringify({ id: 1, type: 'household', currencyCode: 'EUR' }),
+			bcWorkspaces: '[]',
+			bcUrls: '{}',
+			bcCanManage: '1',
+			bcCanContribute: '1',
+			bcCanAdmin: '0',
+			bcLocale: 'en',
+			bcTimezone: 'UTC',
+			bcPage: 'dashboard',
+		},
+	};
+	const announcements = [];
+	const sandbox = {
+		console,
+		t: (_a, s) => s,
+		document: {
+			querySelector() { return null; },
+			getElementById(id) {
+				if (id === 'app-content') return appContent;
+				if (id === 'bc-live-region' || id === 'bc-alert-region') {
+					return { textContent: '' };
+				}
+				return null;
+			},
+			createElement(tag) {
+				const el = {
+					tagName: String(tag).toUpperCase(),
+					className: '',
+					textContent: '',
+					childNodes: [],
+					setAttribute() {},
+					appendChild(child) { this.childNodes.push(child); return child; },
+					addEventListener() {},
+					remove() {},
+					parentNode: null,
+				};
+				return el;
+			},
+			body: {
+				appendChild(node) {
+					announcements.push(node);
+					return node;
+				},
+				contains() { return true; },
+			},
+			addEventListener() {},
+			documentElement: { lang: 'en' },
+		},
+		window: { setTimeout(fn) { fn(); }, location: { reload() { announcements.push('reload'); } } },
+		Date,
+		Math,
+		JSON,
+		String,
+		Number,
+		Array,
+		Object,
+	};
+	sandbox.window.document = sandbox.document;
+	sandbox.window.BudgetCheck = undefined;
+	sandbox.globalThis = sandbox;
+	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'bootstrap.js'), 'utf8'), sandbox, { filename: 'bootstrap.js' });
+	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'messaging.js'), 'utf8'), sandbox, { filename: 'messaging.js' });
+	const Msg = sandbox.window.BudgetCheck.get('Messaging');
+	assert(!!Msg && typeof Msg.handleApiError === 'function', 'Messaging.handleApiError exported');
+	Msg.handleApiError({ status: 400, message: 'This booking falls into a closed month. Reopen the month before adding transactions.' });
+	assert(!announcements.includes('reload'), 'closed-month errors must not force a full page reload');
+	const container = announcements.find((n) => n && typeof n.className === 'string' && n.className.indexOf('bc-toasts') !== -1);
+	assert(!!container, 'toast container created for closed-month warning');
+	const toast = container && Array.isArray(container.childNodes)
+		? container.childNodes.find((n) => n && typeof n.className === 'string' && n.className.indexOf('bc-toast--warning') !== -1)
+		: null;
+	assert(!!toast, 'closed-month errors surface as warning toasts');
+}
+
 if (failures > 0) {
 	process.stderr.write(failures + ' frontend-hardening test(s) failed\n');
 	process.exit(1);

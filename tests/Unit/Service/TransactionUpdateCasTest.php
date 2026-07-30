@@ -88,25 +88,31 @@ final class TransactionUpdateCasTest extends TestCase
 	{
 		$seen = [];
 		$setCols = [];
-		$qb = $this->createMock(IQueryBuilder::class);
+		$updateQb = $this->createMock(IQueryBuilder::class);
 		$expr = $this->createMock(IExpressionBuilder::class);
 		$expr->method('eq')->willReturnCallback(static function ($field) use (&$seen) {
 			$seen[] = 'eq:' . $field;
 			return 'eq:' . $field;
 		});
-		$qb->method('expr')->willReturn($expr);
-		$qb->method('update')->with('bc_transactions')->willReturnSelf();
-		$qb->method('set')->willReturnCallback(static function ($col) use (&$setCols, $qb) {
+		$updateQb->method('expr')->willReturn($expr);
+		$updateQb->method('update')->with('bc_transactions')->willReturnSelf();
+		$updateQb->method('set')->willReturnCallback(static function ($col) use (&$setCols, $updateQb) {
 			$setCols[] = $col;
-			return $qb;
+			return $updateQb;
 		});
-		$qb->method('createNamedParameter')->willReturnCallback(static fn ($v) => $v);
-		$qb->method('where')->willReturnSelf();
-		$qb->method('andWhere')->willReturnSelf();
-		$qb->expects($this->once())->method('executeStatement')->willReturn(1);
+		$updateQb->method('createNamedParameter')->willReturnCallback(static fn ($v) => $v);
+		$updateQb->method('where')->willReturnSelf();
+		$updateQb->method('andWhere')->willReturnSelf();
+		$updateQb->expects($this->once())->method('executeStatement')->willReturn(1);
 
 		$db = $this->createMock(IDBConnection::class);
-		$db->method('getQueryBuilder')->willReturn($qb);
+		$db->expects($this->once())->method('beginTransaction');
+		$db->expects($this->once())->method('commit');
+		$db->method('inTransaction')->willReturn(false);
+		$db->method('getQueryBuilder')->willReturnOnConsecutiveCalls(
+			$this->workspaceLockQueryBuilder(),
+			$updateQb,
+		);
 
 		$audit = $this->createMock(AuditLogService::class);
 		$audit->expects($this->once())->method('record');
@@ -129,19 +135,25 @@ final class TransactionUpdateCasTest extends TestCase
 
 	public function testLostRaceOnWriteThrowsConflict(): void
 	{
-		$qb = $this->createMock(IQueryBuilder::class);
+		$updateQb = $this->createMock(IQueryBuilder::class);
 		$expr = $this->createMock(IExpressionBuilder::class);
 		$expr->method('eq')->willReturn('eq');
-		$qb->method('expr')->willReturn($expr);
-		$qb->method('update')->willReturnSelf();
-		$qb->method('set')->willReturnSelf();
-		$qb->method('createNamedParameter')->willReturnCallback(static fn ($v) => $v);
-		$qb->method('where')->willReturnSelf();
-		$qb->method('andWhere')->willReturnSelf();
-		$qb->method('executeStatement')->willReturn(0);
+		$updateQb->method('expr')->willReturn($expr);
+		$updateQb->method('update')->willReturnSelf();
+		$updateQb->method('set')->willReturnSelf();
+		$updateQb->method('createNamedParameter')->willReturnCallback(static fn ($v) => $v);
+		$updateQb->method('where')->willReturnSelf();
+		$updateQb->method('andWhere')->willReturnSelf();
+		$updateQb->method('executeStatement')->willReturn(0);
 
 		$db = $this->createMock(IDBConnection::class);
-		$db->method('getQueryBuilder')->willReturn($qb);
+		$db->method('beginTransaction');
+		$db->method('rollBack');
+		$db->method('inTransaction')->willReturn(true);
+		$db->method('getQueryBuilder')->willReturnOnConsecutiveCalls(
+			$this->workspaceLockQueryBuilder(),
+			$updateQb,
+		);
 
 		$svc = $this->newService(self::ROW, $db);
 		$this->expectException(ConflictException::class);
@@ -197,6 +209,24 @@ final class TransactionUpdateCasTest extends TestCase
 		$this->inject($svc, 'timeFactory', $time);
 
 		return $svc;
+	}
+
+	private function workspaceLockQueryBuilder(): IQueryBuilder
+	{
+		$lockQb = $this->createMock(IQueryBuilder::class);
+		$expr = $this->createMock(IExpressionBuilder::class);
+		$expr->method('eq')->willReturn('eq');
+		$lockQb->method('expr')->willReturn($expr);
+		$lockQb->method('select')->willReturnSelf();
+		$lockQb->method('from')->with('bc_workspaces')->willReturnSelf();
+		$lockQb->method('where')->willReturnSelf();
+		$lockQb->method('forUpdate')->willReturnSelf();
+		$lockQb->method('createNamedParameter')->willReturnCallback(static fn ($v) => $v);
+		$result = $this->createMock(\OCP\DB\IResult::class);
+		$result->method('fetch')->willReturn(['id' => 3]);
+		$result->method('closeCursor');
+		$lockQb->method('executeQuery')->willReturn($result);
+		return $lockQb;
 	}
 
 	private function inject(object $instance, string $property, mixed $value): void

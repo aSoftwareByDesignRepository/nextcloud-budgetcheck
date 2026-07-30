@@ -33,6 +33,10 @@ $assert(str_contains($tx, '?int $expectedVersion'), 'delete_expected_version_par
 $assert((bool) preg_match('/function delete\([\s\S]*?eq\(\'version\'/', $tx), 'delete_version_cas_predicate');
 $assert((bool) preg_match('/function update\([\s\S]*?eq\(\'version\'/', $tx), 'update_version_cas_predicate');
 $assert(str_contains($tx, "isNull('deleted_at')"), 'delete_null_deleted_at_cas');
+$assert(str_contains($tx, 'WorkspaceRowLock::acquire'), 'workspace_lock_on_writes');
+$snap = (string) file_get_contents($root . '/lib/Service/SnapshotService.php');
+$assert(str_contains($snap, 'WorkspaceRowLock::acquire'), 'workspace_lock_on_close');
+$assert((bool) preg_match('/WorkspaceRowLock::acquire\([\s\S]*?summary->household\(/s', $snap), 'close_summary_under_lock');
 $assert(str_contains($api, 'expectedVersion'), 'api_delete_passes_version');
 $assert(str_contains($txJs, 'version: tx.version'), 'client_delete_sends_version');
 $assert(str_contains($jsApi, 'headers.requesttoken = token'), 'csrf_header_on_mutations');

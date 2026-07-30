@@ -274,18 +274,34 @@ class TransactionAttachmentService
 				throw new \InvalidArgumentException('Total attachment size for this transaction would exceed the limit.');
 			}
 
-			$this->overwriteStoredFile($transactionId, $storedName, $tmpPath);
-
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('bc_tx_attachments')
-				->set('mime_type', $qb->createNamedParameter($mimeType))
-				->set('file_size', $qb->createNamedParameter($newSize, \PDO::PARAM_INT))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter($attachmentId, \PDO::PARAM_INT)));
-			$qb->executeStatement();
-
-			$this->db->commit();
+			// Snapshot prior bytes so a failed DB update can restore the live
+			// object. Never leave disk ahead of durable metadata.
+			$previousContent = $this->readStoredFile($transactionId, $storedName);
+			$diskUpdated = false;
+			try {
+				$this->overwriteStoredFile($transactionId, $storedName, $tmpPath);
+				$diskUpdated = true;
+				$qb = $this->db->getQueryBuilder();
+				$qb->update('bc_tx_attachments')
+					->set('mime_type', $qb->createNamedParameter($mimeType))
+					->set('file_size', $qb->createNamedParameter($newSize, \PDO::PARAM_INT))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter($attachmentId, \PDO::PARAM_INT)));
+				$qb->executeStatement();
+				$this->db->commit();
+			} catch (\Throwable $writeError) {
+				if ($diskUpdated) {
+					try {
+						$this->writeStoredContent($transactionId, $storedName, $previousContent);
+					} catch (\Throwable) {
+						// Best-effort restore; original exception is rethrown below.
+					}
+				}
+				throw $writeError;
+			}
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
 			throw $e;
 		}
 
@@ -611,8 +627,16 @@ class TransactionAttachmentService
 	{
 		$row = $this->resolveReadableTransaction($transactionId, $userId);
 		$ym = substr((string)$row['booking_date'], 0, 7);
+		$closedMessage = 'This transaction belongs to a closed month. Reopen the month before adding or removing attachments.';
 		if ($this->monthIsClosed((int)$row['workspace_id'], $ym)) {
-			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before adding or removing attachments.');
+			throw new \InvalidArgumentException($closedMessage);
+		}
+		// Callers already hold an open transaction + transaction row lock.
+		// Take the workspace lock and re-check so a concurrent monthly close
+		// cannot race an attachment write into a just-closed month.
+		WorkspaceRowLock::acquire($this->db, (int)$row['workspace_id']);
+		if ($this->monthIsClosed((int)$row['workspace_id'], $ym)) {
+			throw new \InvalidArgumentException($closedMessage);
 		}
 		return $row;
 	}
@@ -731,15 +755,30 @@ class TransactionAttachmentService
 
 	private function overwriteStoredFile(int $transactionId, string $storedName, string $tmpPath): void
 	{
-		if ($storedName === '' || str_contains($storedName, '/') || str_contains($storedName, '\\')) {
-			throw new \InvalidArgumentException('Invalid stored file name.');
-		}
-
 		$content = file_get_contents($tmpPath);
 		if ($content === false) {
 			throw new \RuntimeException('Could not read uploaded file.');
 		}
+		$this->writeStoredContent($transactionId, $storedName, $content);
+	}
 
+	private function readStoredFile(int $transactionId, string $storedName): string
+	{
+		$node = $this->requireStoredFile($transactionId, $storedName);
+		return $node->getContent();
+	}
+
+	private function writeStoredContent(int $transactionId, string $storedName, string $content): void
+	{
+		$node = $this->requireStoredFile($transactionId, $storedName);
+		$node->putContent($content);
+	}
+
+	private function requireStoredFile(int $transactionId, string $storedName): File
+	{
+		if ($storedName === '' || str_contains($storedName, '/') || str_contains($storedName, '\\')) {
+			throw new \InvalidArgumentException('Invalid stored file name.');
+		}
 		$folder = $this->getTransactionFolder($transactionId, true);
 		if (!$folder->nodeExists($storedName)) {
 			throw new \RuntimeException('Attachment file is missing on disk.');
@@ -748,7 +787,7 @@ class TransactionAttachmentService
 		if (!$node instanceof File) {
 			throw new \RuntimeException('Attachment path is not a file.');
 		}
-		$node->putContent($content);
+		return $node;
 	}
 
 	private function deleteStoredFile(int $transactionId, string $storedName): void

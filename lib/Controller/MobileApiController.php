@@ -45,8 +45,8 @@ use Psr\Log\LoggerInterface;
  * Free BudgetCheck Mobile API (`/api/mobile/v1/*`).
  *
  * - No license / seat / payment-required gates (COMPANION-APP.md v2.0).
- * - Mutations: NoCSRFRequired for Basic app-password; cookie-only browsers
- *   still need a valid requesttoken (assertSafeMutationChannel).
+ * - Mutations: NoCSRFRequired for Basic/Bearer app-password; cookie sessions
+ *   must pass IRequest::passesCSRFCheck() (assertSafeMutationChannel).
  * - ACL, CAS version, closed-month, tax, IDOR: identical to web services.
  */
 class MobileApiController extends Controller
@@ -514,15 +514,14 @@ class MobileApiController extends Controller
 	}
 
 	/**
-	 * Mutations accept Basic/Bearer app-password OR a valid CSRF requesttoken.
-	 * Cookie-only sessions without a token are rejected (CSRF hardening).
+	 * Mutations accept Basic/Bearer app-password OR a cryptographically valid
+	 * CSRF requesttoken (IRequest::passesCSRFCheck). Cookie-only sessions
+	 * without a valid token — including forged non-empty strings — are rejected.
 	 */
 	private function assertSafeMutationChannel(): void
 	{
 		$auth = (string)$this->request->getHeader('Authorization');
-		$tokenHeader = (string)$this->request->getHeader('requesttoken');
-		$tokenParam = (string)($this->request->getParam('requesttoken') ?? '');
-		if (!MobileMutationChannel::isSafe($auth, $tokenHeader, $tokenParam)) {
+		if (!MobileMutationChannel::isSafe($auth, $this->request->passesCSRFCheck())) {
 			throw new AccessDeniedException();
 		}
 	}

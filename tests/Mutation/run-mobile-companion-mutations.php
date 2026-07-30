@@ -73,6 +73,9 @@ $assert(
 $assert(str_contains($mobile, 'MobileErrorCodes::fromInvalidArgument'), 'error_codes_helper_used');
 $channel = (string)file_get_contents($root . '/lib/Service/MobileMutationChannel.php');
 $assert(str_contains($channel, 'Basic|Bearer'), 'channel_allows_basic_bearer');
+$assert(str_contains($channel, 'bool $csrfPassed'), 'channel_requires_csrf_bool');
+$assert(!str_contains($channel, 'requestTokenHeader'), 'channel_no_raw_token_string_gate');
+$assert(str_contains($mobile, 'passesCSRFCheck()'), 'controller_validates_csrf_cryptographically');
 $codes = (string)file_get_contents($root . '/lib/Service/MobileErrorCodes.php');
 $assert(str_contains($codes, 'MONTH_CLOSED'), 'error_code_month_closed');
 $assert(str_contains($codes, 'TAX_DISABLED'), 'error_code_tax_disabled');

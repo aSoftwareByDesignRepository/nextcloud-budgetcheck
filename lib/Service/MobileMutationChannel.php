@@ -6,21 +6,24 @@ namespace OCA\BudgetCheck\Service;
 
 /**
  * CSRF / auth channel gate for mobile mutations.
- * Basic/Bearer app-password OR a non-empty requesttoken is required.
- * Cookie-only browsers without a token are rejected.
+ *
+ * Safe channels:
+ *  - Basic/Bearer Authorization (app-password / token clients), OR
+ *  - a cryptographically validated CSRF requesttoken ({@see IRequest::passesCSRFCheck()}).
+ *
+ * Cookie-only browsers without a *valid* token are rejected. A non-empty
+ * forged `requesttoken` string alone is never enough.
  */
 final class MobileMutationChannel
 {
 	public static function isSafe(
 		?string $authorizationHeader,
-		?string $requestTokenHeader,
-		?string $requestTokenParam,
+		bool $csrfPassed,
 	): bool {
 		$auth = trim((string)$authorizationHeader);
 		if ($auth !== '' && preg_match('/^(Basic|Bearer)\s+\S+/i', $auth) === 1) {
 			return true;
 		}
-		$token = trim((string)($requestTokenHeader ?: $requestTokenParam ?: ''));
-		return $token !== '';
+		return $csrfPassed;
 	}
 }

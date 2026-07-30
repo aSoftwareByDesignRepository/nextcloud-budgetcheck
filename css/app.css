@@ -89,12 +89,19 @@
 .bc-main {
 	flex: 1 1 auto;
 	min-width: 0;
+	max-width: 100%;
 	display: flex;
 	flex-direction: column;
 	gap: var(--bc-space-5);
 	outline: none;
 	/* Contain accidental horizontal overflow from nested grids on small viewports. */
 	overflow-x: clip;
+}
+.bc-card,
+.bc-section {
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
 }
 /* Keep the app shell itself from forcing horizontal scroll on phones (WCAG reflow). */
 #app-content.bc-app {
@@ -783,8 +790,28 @@
 }
 
 /* Empty / hint cards */
+/* Empty / onboarding */
+.bc-empty {
+	text-align: left;
+	padding: var(--bc-space-6);
+	border: 1px solid var(--color-border);
+	border-radius: var(--bc-radius-md);
+	background: var(--color-main-background);
+	box-shadow: none;
+}
 .bc-empty p, .bc-empty h2 { margin: 0 0 var(--bc-space-3); }
 .bc-empty p:last-child, .bc-empty h2:last-child { margin-bottom: 0; }
+.bc-empty h2 {
+	font-size: var(--bc-fs-xl, 1.35rem);
+	line-height: 1.3;
+	color: var(--color-main-text);
+}
+.bc-empty > p {
+	max-width: 42rem;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-md, 1rem);
+	line-height: 1.5;
+}
 
 .bc-callout {
 	display: flex;
@@ -1303,6 +1330,9 @@
 /* Tables */
 .bc-table-scroll {
 	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	max-width: 100%;
+	min-width: 0;
 	border-radius: var(--bc-radius-sm);
 	border: 1px solid var(--bc-border);
 }
@@ -1564,23 +1594,58 @@
 }
 
 /* Warnings */
-.bc-warnings { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--bc-space-3); }
+.bc-warnings {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+	min-width: 0;
+	max-width: 100%;
+}
 .bc-warning {
 	display: grid;
-	grid-template-columns: 24px 1fr auto;
+	/* minmax(0,1fr) is required so long titles wrap instead of widening the shell. */
+	grid-template-columns: 24px minmax(0, 1fr) auto;
 	gap: var(--bc-space-3);
 	align-items: start;
 	padding: var(--bc-space-3) var(--bc-space-4);
 	border-radius: var(--bc-radius-sm);
 	border-left: 4px solid var(--color-primary-element);
 	background: var(--bc-tint-info);
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+.bc-warning > div {
+	min-width: 0;
 }
 .bc-warning--info { border-left-color: var(--color-primary-element); background: var(--bc-tint-info); }
 .bc-warning--warning { border-left-color: var(--color-warning-text, var(--color-warning)); background: var(--bc-tint-warning); }
 .bc-warning--critical { border-left-color: var(--color-error-text, var(--color-error)); background: var(--bc-tint-critical); }
-.bc-warning__title { font-weight: 600; }
-.bc-warning__message { font-size: var(--bc-fs-sm); color: var(--color-main-text); }
+.bc-warning__title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+.bc-warning__message {
+	font-size: var(--bc-fs-sm);
+	color: var(--color-main-text);
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
 .bc-warning__action { align-self: center; }
+@media (max-width: 480px) {
+	.bc-warning {
+		grid-template-columns: 24px minmax(0, 1fr);
+	}
+	.bc-warning__action {
+		grid-column: 2;
+		justify-self: start;
+		margin-top: var(--bc-space-2);
+	}
+}
 
 /* Transaction list (mobile fallback) */
 .bc-tx-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--bc-space-2); }
@@ -2709,13 +2774,41 @@ button.bc-dash-action {
 	text-align: center;
 }
 @media (max-width: 767px) {
-	.bc-dash-ledger-table thead {
-		/* Compact ledger on phones: list-style cards are in activity grid; table is scroll-only fallback. */
-		font-size: var(--bc-fs-xs);
+	/* Keep the ledger scroll region inside the card — never widen #app-content. */
+	[data-bc-dash-month-ledger] {
+		min-width: 0;
+		max-width: 100%;
+		overflow-x: clip;
 	}
 	[data-bc-dash-month-ledger] .bc-table-scroll {
-		margin-inline: calc(-1 * var(--bc-space-3));
-		padding-inline: var(--bc-space-3);
+		margin-inline: 0;
+		padding-inline: 0;
+		width: 100%;
+		max-width: 100%;
+		overflow-x: auto;
+	}
+	.bc-table-scroll .bc-dash-ledger-table {
+		/* Fit the phone width (WCAG reflow). Amounts stay tabular; text wraps. */
+		table-layout: fixed;
+		min-width: 0;
+		width: 100%;
+	}
+	.bc-dash-ledger-table th,
+	.bc-dash-ledger-table td {
+		padding: var(--bc-space-2) var(--bc-space-2);
+		font-size: var(--bc-fs-xs);
+		word-break: break-word;
+		overflow-wrap: anywhere;
+		white-space: normal;
+	}
+	.bc-dash-ledger-table .bc-table__col--num {
+		width: 4.75rem;
+		white-space: nowrap;
+		overflow-wrap: normal;
+		word-break: normal;
+	}
+	.bc-dash-ledger-table thead {
+		font-size: var(--bc-fs-xs);
 	}
 }
 .bc-dash-ledger-footer__link {

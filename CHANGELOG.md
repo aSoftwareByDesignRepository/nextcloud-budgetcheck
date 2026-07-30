@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-07-30
+
+### Security / integrity
+
+- Mobile mutation channel now requires a **cryptographically valid** CSRF token (`IRequest::passesCSRFCheck()`); forged non-empty `requesttoken` strings are rejected. Basic/Bearer app-password clients are unaffected.
+- New exclusive **workspace row lock** (`SELECT … FOR UPDATE`) serializes monthly close/reopen against ledger writers: snapshot summary and hash are computed under the lock, and budget-target and attachment writes re-check closed state under the same lock (TOCTOU closed).
+- Budget upsert collapses historical duplicate `(workspace, month, category)` rows under the write lock (NULL `category_id` is not uniquely indexed on all engines).
+- Attachment overwrite (receipt crop bake) snapshots prior bytes and restores the stored file when the DB metadata update fails — disk never stays ahead of durable metadata.
+- Adding or removing attachments on a transaction of a **closed month** is rejected.
+
+### Fixed
+
+- Layout overflow hardening: cards, warnings list, and empty states wrap long titles instead of widening the app shell (`min-width: 0` / `max-width: 100%` grid constraints).
+
+### Tests
+
+- New snapshot-close serialization contract test; expanded update/delete CAS, mobile-channel, design-system CSS, and frontend-hardening suites; closeout and mobile-companion mutation harnesses cover the new gates.
+
 ## [1.1.1] - 2026-07-29
 
 ### Added

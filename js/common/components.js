@@ -584,13 +584,15 @@
 		const titleText = (warning.title || warning.code || '').trim();
 		const item = createElement('li', {
 			class: 'bc-warning bc-warning--' + sev,
-			attrs: { role: 'status' },
 		});
 		item.appendChild(createElement('span', {
 			'aria-hidden': 'true',
 			text: sev === 'critical' ? '!' : (sev === 'warning' ? '⚠' : 'i'),
 		}));
-		const body = createElement('div');
+		const body = createElement('div', {
+			// Keep role=status off <li> — axe/WCAG list rule requires listitem children.
+			attrs: { role: 'status' },
+		});
 		body.appendChild(createElement('div', {
 			class: 'bc-warning__title',
 			text: severityLabel + (titleText ? ': ' + titleText : ''),

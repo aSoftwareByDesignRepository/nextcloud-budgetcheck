@@ -456,12 +456,14 @@ class TransactionService
 		}
 		// Closed months are locked for every write (§12): planned placeholders
 		// and real bookings alike. Project workspaces never have snapshots, so
-		// this is a no-op for them.
+		// this is a no-op for them. Fast path rejects without taking a lock;
+		// the locked re-check below closes the close/write TOCTOU window.
 		$ym = substr($bookingDate->format('Y-m-d'), 0, 7);
+		$closedMessage = $isPlanned
+			? 'Month is closed. Reopen it before creating planned entries.'
+			: 'This booking falls into a closed month. Reopen the month before adding transactions.';
 		if ($this->monthIsClosed($workspaceId, $ym)) {
-			throw new \InvalidArgumentException($isPlanned
-				? 'Month is closed. Reopen it before creating planned entries.'
-				: 'This booking falls into a closed month. Reopen the month before adding transactions.');
+			throw new \InvalidArgumentException($closedMessage);
 		}
 		if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
 			throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
@@ -475,55 +477,76 @@ class TransactionService
 		$taxFields = $this->resolveTaxFields($payload, $workspace, $amount, $direction);
 
 		$now = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_transactions')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'category_id' => $qb->createNamedParameter($category['id'], \PDO::PARAM_INT),
-				'booking_date' => $qb->createNamedParameter($bookingDate->format('Y-m-d')),
-				'amount_minor' => $qb->createNamedParameter($amount, \PDO::PARAM_INT),
-				'direction' => $qb->createNamedParameter($direction),
-				'entry_amount_basis' => $qb->createNamedParameter($taxFields['basis']),
-				'net_amount_minor' => $qb->createNamedParameter($taxFields['net'], $taxFields['net'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'vat_rate_bp' => $qb->createNamedParameter($taxFields['vatRateBp'], $taxFields['vatRateBp'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'vat_amount_minor' => $qb->createNamedParameter($taxFields['vat'], $taxFields['vat'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'gross_amount_minor' => $qb->createNamedParameter($taxFields['gross'], $taxFields['gross'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'tax_calculation_locked' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
-				'title' => $qb->createNamedParameter($title),
-				'notes' => $qb->createNamedParameter($notes),
-				'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
-				'external_ref' => $qb->createNamedParameter($externalRef),
-				'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'recurring_rule_id' => $qb->createNamedParameter($recurringRuleId, $recurringRuleId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'budget_id' => $qb->createNamedParameter($budgetId, $budgetId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'is_planned' => $qb->createNamedParameter($isPlanned, \PDO::PARAM_BOOL),
-				'version' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
-				'created_by' => $qb->createNamedParameter($userId),
-				'updated_by' => $qb->createNamedParameter($userId),
-				'created_at' => $qb->createNamedParameter($now),
-				'updated_at' => $qb->createNamedParameter($now),
-				'deleted_at' => $qb->createNamedParameter(null, \PDO::PARAM_NULL),
-			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_transactions');
+		$id = 0;
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			if ($this->monthIsClosed($workspaceId, $ym)) {
+				throw new \InvalidArgumentException($closedMessage);
+			}
+			if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
+				throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
+			}
+			if ($isPlanned && $budgetId !== null && $this->hasLivePlannedForBudget($workspaceId, $budgetId)) {
+				throw new \InvalidArgumentException('A planned entry already exists for this budget target.');
+			}
+
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_transactions')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'category_id' => $qb->createNamedParameter($category['id'], \PDO::PARAM_INT),
+					'booking_date' => $qb->createNamedParameter($bookingDate->format('Y-m-d')),
+					'amount_minor' => $qb->createNamedParameter($amount, \PDO::PARAM_INT),
+					'direction' => $qb->createNamedParameter($direction),
+					'entry_amount_basis' => $qb->createNamedParameter($taxFields['basis']),
+					'net_amount_minor' => $qb->createNamedParameter($taxFields['net'], $taxFields['net'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'vat_rate_bp' => $qb->createNamedParameter($taxFields['vatRateBp'], $taxFields['vatRateBp'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'vat_amount_minor' => $qb->createNamedParameter($taxFields['vat'], $taxFields['vat'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'gross_amount_minor' => $qb->createNamedParameter($taxFields['gross'], $taxFields['gross'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'tax_calculation_locked' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
+					'title' => $qb->createNamedParameter($title),
+					'notes' => $qb->createNamedParameter($notes),
+					'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
+					'external_ref' => $qb->createNamedParameter($externalRef),
+					'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'recurring_rule_id' => $qb->createNamedParameter($recurringRuleId, $recurringRuleId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'budget_id' => $qb->createNamedParameter($budgetId, $budgetId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'is_planned' => $qb->createNamedParameter($isPlanned, \PDO::PARAM_BOOL),
+					'version' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
+					'created_by' => $qb->createNamedParameter($userId),
+					'updated_by' => $qb->createNamedParameter($userId),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+					'deleted_at' => $qb->createNamedParameter(null, \PDO::PARAM_NULL),
+				]);
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_transactions');
+			if (!$isPlanned) {
+				(new PlannedTransactionMatchService($this->db, $this->audit, $this->timeFactory))
+					->replaceMatchingPlanned(
+						$workspaceId,
+						$userId,
+						(int)$category['id'],
+						$direction,
+						$amount,
+						$bookingDate->format('Y-m-d'),
+						$id,
+					);
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		$this->audit->record($userId, 'transaction_created', 'transaction', (string)$id, [
 			'amountMinor' => $amount,
 			'direction' => $direction,
 			'date' => $bookingDate->format('Y-m-d'),
 			'isPlanned' => $isPlanned,
 		], $workspaceId);
-		if (!$isPlanned) {
-			(new PlannedTransactionMatchService($this->db, $this->audit, $this->timeFactory))
-				->replaceMatchingPlanned(
-					$workspaceId,
-					$userId,
-					(int)$category['id'],
-					$direction,
-					$amount,
-					$bookingDate->format('Y-m-d'),
-					$id,
-				);
-		}
 		return $this->loadHydrated($id, $workspace['currencyCode']);
 	}
 
@@ -558,9 +581,11 @@ class TransactionService
 		$this->access->ensureMinimumRole($workspace['id'], $userId, AccessControlService::ROLE_CONTRIBUTOR);
 
 		// The month-close lock covers edits as well as creates and deletes.
+		// Fast path, then exclusive workspace lock + re-check to close TOCTOU.
 		$currentYm = substr((string)$existing['booking_date'], 0, 7);
+		$closedEditMessage = 'This transaction belongs to a closed month. Reopen the month before editing.';
 		if ($this->monthIsClosed((int)$workspace['id'], $currentYm)) {
-			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before editing.');
+			throw new \InvalidArgumentException($closedEditMessage);
 		}
 
 		// Optimistic locking — clients must send the version they loaded.
@@ -687,22 +712,43 @@ class TransactionService
 		$updates['updated_by'] = $userId;
 		$updates['updated_at'] = $this->utcNow();
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_transactions');
-		foreach ($updates as $col => $value) {
-			$type = match (true) {
-				is_bool($value) => \PDO::PARAM_BOOL,
-				is_int($value) => \PDO::PARAM_INT,
-				$value === null => \PDO::PARAM_NULL,
-				default => \PDO::PARAM_STR,
-			};
-			$qb->set($col, $qb->createNamedParameter($value, $type));
-		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)));
-		$qb->andWhere($qb->expr()->eq('version', $qb->createNamedParameter((int)$existing['version'], \PDO::PARAM_INT)));
-		$affected = $qb->executeStatement();
-		if ($affected === 0) {
-			throw new ConflictException();
+		$targetYm = isset($updates['booking_date'])
+			? substr((string)$updates['booking_date'], 0, 7)
+			: $currentYm;
+
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, (int)$workspace['id']);
+			if ($this->monthIsClosed((int)$workspace['id'], $currentYm)) {
+				throw new \InvalidArgumentException($closedEditMessage);
+			}
+			if ($targetYm !== $currentYm && $this->monthIsClosed((int)$workspace['id'], $targetYm)) {
+				throw new \InvalidArgumentException('The new booking date falls into a closed month. Reopen that month first.');
+			}
+
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_transactions');
+			foreach ($updates as $col => $value) {
+				$type = match (true) {
+					is_bool($value) => \PDO::PARAM_BOOL,
+					is_int($value) => \PDO::PARAM_INT,
+					$value === null => \PDO::PARAM_NULL,
+					default => \PDO::PARAM_STR,
+				};
+				$qb->set($col, $qb->createNamedParameter($value, $type));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)));
+			$qb->andWhere($qb->expr()->eq('version', $qb->createNamedParameter((int)$existing['version'], \PDO::PARAM_INT)));
+			$affected = $qb->executeStatement();
+			if ($affected === 0) {
+				throw new ConflictException();
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
 		$this->audit->record($userId, 'transaction_updated', 'transaction', (string)$transactionId, $logChanges, $workspace['id']);
 		return $this->loadHydrated($transactionId, $workspace['currencyCode']);
@@ -720,8 +766,9 @@ class TransactionService
 		}
 		// Block deletes inside a closed month — the user must reopen first.
 		$ym = substr((string)$existing['booking_date'], 0, 7);
+		$closedDeleteMessage = 'This transaction belongs to a closed month. Reopen the month before editing.';
 		if ($this->monthIsClosed($workspace['id'], $ym)) {
-			throw new \InvalidArgumentException('This transaction belongs to a closed month. Reopen the month before editing.');
+			throw new \InvalidArgumentException($closedDeleteMessage);
 		}
 		$currentVersion = (int)$existing['version'];
 		if ($expectedVersion === null) {
@@ -730,18 +777,31 @@ class TransactionService
 		if ($expectedVersion !== $currentVersion) {
 			throw new ConflictException();
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_transactions')
-			->set('deleted_at', $qb->createNamedParameter($this->utcNow()))
-			->set('updated_by', $qb->createNamedParameter($userId))
-			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
-			->set('version', $qb->createNamedParameter($currentVersion + 1, \PDO::PARAM_INT))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter($currentVersion, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->isNull('deleted_at'));
-		$affected = $qb->executeStatement();
-		if ($affected === 0) {
-			throw new ConflictException();
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, (int)$workspace['id']);
+			if ($this->monthIsClosed($workspace['id'], $ym)) {
+				throw new \InvalidArgumentException($closedDeleteMessage);
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_transactions')
+				->set('deleted_at', $qb->createNamedParameter($this->utcNow()))
+				->set('updated_by', $qb->createNamedParameter($userId))
+				->set('updated_at', $qb->createNamedParameter($this->utcNow()))
+				->set('version', $qb->createNamedParameter($currentVersion + 1, \PDO::PARAM_INT))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)))
+				->andWhere($qb->expr()->eq('version', $qb->createNamedParameter($currentVersion, \PDO::PARAM_INT)))
+				->andWhere($qb->expr()->isNull('deleted_at'));
+			$affected = $qb->executeStatement();
+			if ($affected === 0) {
+				throw new ConflictException();
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
 		if ($this->attachments !== null) {
 			$this->attachments->purgeForTransaction($transactionId);

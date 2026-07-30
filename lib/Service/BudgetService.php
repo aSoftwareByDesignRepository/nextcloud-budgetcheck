@@ -87,8 +87,9 @@ class BudgetService
 		$ym = $this->validateYearMonth($yearMonth);
 		// The close snapshot hashes budget planned totals; editing targets of a
 		// closed month would silently invalidate that evidence.
+		$closedMessage = 'Month is closed. Reopen it before changing budget targets.';
 		if ($this->monthIsClosed($workspaceId, $ym)) {
-			throw new \InvalidArgumentException('Month is closed. Reopen it before changing budget targets.');
+			throw new \InvalidArgumentException($closedMessage);
 		}
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 		$now = $this->utcNow();
@@ -131,6 +132,10 @@ class BudgetService
 		$plannedUpdated = 0;
 		$this->db->beginTransaction();
 		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			if ($this->monthIsClosed($workspaceId, $ym)) {
+				throw new \InvalidArgumentException($closedMessage);
+			}
 			foreach ($normalised as $row) {
 				$existing = $this->loadExisting($workspaceId, $ym, $row['categoryId']);
 				if ($existing === null) {
@@ -353,10 +358,28 @@ class BudgetService
 		} else {
 			$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
 		}
+		$qb->orderBy('id', 'ASC');
 		$result = $qb->executeQuery();
-		$row = $result->fetch();
+		$keeper = null;
+		$duplicateIds = [];
+		while ($row = $result->fetch()) {
+			if ($keeper === null) {
+				$keeper = $row;
+				continue;
+			}
+			$duplicateIds[] = (int)$row['id'];
+		}
 		$result->closeCursor();
-		return $row === false ? null : $row;
+		// Historical races could leave duplicate (workspace, ym, category) rows
+		// because NULL category_id is not uniquely indexed on all engines.
+		// Collapse to the oldest row under the caller's workspace write lock.
+		foreach ($duplicateIds as $dupId) {
+			$del = $this->db->getQueryBuilder();
+			$del->delete('bc_budgets')
+				->where($del->expr()->eq('id', $del->createNamedParameter($dupId, \PDO::PARAM_INT)));
+			$del->executeStatement();
+		}
+		return $keeper;
 	}
 
 	private function loadExistingDefault(int $workspaceId, int $categoryId): ?array

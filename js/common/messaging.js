@@ -72,6 +72,13 @@
 			announce(t('budgetcheck', 'This action does not apply to this workspace type.'), 'warning');
 			return;
 		}
+		// Closed-month write rejections: keep the server message (already plain language)
+		// and nudge managers toward reopen without a hard reload that loses context.
+		const lower = message.toLowerCase();
+		if (lower.indexOf('closed month') !== -1 || lower.indexOf('month is closed') !== -1) {
+			announce(message, 'warning');
+			return;
+		}
 		announce(t('budgetcheck', message), 'error');
 	}
 

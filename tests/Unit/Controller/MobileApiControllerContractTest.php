@@ -84,6 +84,9 @@ final class MobileApiControllerContractTest extends TestCase
 		self::assertStringContainsString('TAX_DISABLED', $errorCodes);
 		$channel = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MobileMutationChannel.php');
 		self::assertStringContainsString('Basic|Bearer', $channel);
+		self::assertStringContainsString('bool $csrfPassed', $channel);
+		self::assertStringNotContainsString('requestTokenHeader', $channel);
+		self::assertStringContainsString('passesCSRFCheck()', $src);
 	}
 
 	public function testMutationChannelAndValidateIdAreInsideSafe(): void

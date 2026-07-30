@@ -43,23 +43,22 @@ class SnapshotService
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$ym = $this->validateYearMonth($yearMonth);
 
-		// Block double-close racing two managers: rely on the unique index plus
-		// a pre-flight check inside a transaction. We compute the summary
-		// before opening the transaction because it issues read queries that
-		// don't need to participate in the snapshot insert and would otherwise
-		// hold locks longer than necessary.
-		// Snapshots must stay canonical and user-independent, so monthly close
-		// always uses the baseline planning view with specials excluded.
-		$summary = $this->summary->household($workspaceId, $userId, $ym, false);
-		$canonical = $this->canonicaliseForHash($summary);
-		$hash = hash('sha256', $canonical);
+		// Serialize against ledger writers via an exclusive workspace row lock.
+		// Summary + hash MUST be computed under that lock so evidence matches
+		// the ledger that writers can no longer mutate for this month once
+		// the snapshot row is inserted (unique index still blocks double-close).
+		// Snapshots stay canonical and user-independent: specials excluded.
 		$now = $this->utcNow();
+		$hash = '';
 		$this->db->beginTransaction();
 		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			if ($this->loadSnapshotRow($workspaceId, $ym) !== null) {
-				$this->db->rollBack();
 				throw new \InvalidArgumentException('Month is already closed.');
 			}
+			$summary = $this->summary->household($workspaceId, $userId, $ym, false);
+			$canonical = $this->canonicaliseForHash($summary);
+			$hash = hash('sha256', $canonical);
 			$qb = $this->db->getQueryBuilder();
 			$qb->insert('bc_monthly_snapshots')
 				->values([
@@ -95,15 +94,27 @@ class SnapshotService
 		}
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$ym = $this->validateYearMonth($yearMonth);
-		$existing = $this->loadSnapshotRow($workspaceId, $ym);
-		if ($existing === null) {
-			throw new \InvalidArgumentException('Month is not closed.');
+		$existingHash = '';
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$existing = $this->loadSnapshotRow($workspaceId, $ym);
+			if ($existing === null) {
+				throw new \InvalidArgumentException('Month is not closed.');
+			}
+			$existingHash = (string)$existing['calc_hash'];
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('bc_monthly_snapshots')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete('bc_monthly_snapshots')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-		$qb->executeStatement();
-		$this->audit->record($userId, 'monthly_reopen', 'monthly_snapshot', $ym, ['hash' => (string)$existing['calc_hash']], $workspaceId);
+		$this->audit->record($userId, 'monthly_reopen', 'monthly_snapshot', $ym, ['hash' => $existingHash], $workspaceId);
 		return ['workspaceId' => $workspaceId, 'yearMonth' => $ym, 'reopened' => true];
 	}
 

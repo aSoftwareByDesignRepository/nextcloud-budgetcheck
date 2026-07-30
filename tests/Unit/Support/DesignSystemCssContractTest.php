@@ -100,6 +100,23 @@ final class DesignSystemCssContractTest extends TestCase {
 		self::assertStringContainsString('.bc-badge::before', $this->appCss);
 	}
 
+	public function testDashLedgerDoesNotForceFiveFortyOnMobile(): void {
+		self::assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\)[\s\S]*?\.bc-table-scroll \.bc-dash-ledger-table\s*\{[^}]*min-width:\s*0/s',
+			$this->appCss,
+			'Dashboard ledger must not force 540px min-width under 768px (WCAG reflow / shell overflow)',
+		);
+	}
+
+	public function testWarningGridAllowsTextShrink(): void {
+		self::assertStringContainsString('grid-template-columns: 24px minmax(0, 1fr)', $this->appCss);
+		self::assertStringContainsString('.bc-warning__title', $this->appCss);
+		self::assertMatchesRegularExpression(
+			'/\.bc-warning__title\s*\{[^}]*overflow-wrap:\s*anywhere/s',
+			$this->appCss,
+		);
+	}
+
 	public function testSafeAreaAndContrastGuardsExist(): void {
 		self::assertStringContainsString('env(safe-area-inset-top', $this->appCss);
 		self::assertStringContainsString('prefers-contrast: more', $this->appCss);
