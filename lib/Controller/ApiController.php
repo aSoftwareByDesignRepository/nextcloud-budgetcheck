@@ -9,6 +9,7 @@ use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCA\BudgetCheck\Exception\NotAuthenticatedException;
+use OCA\BudgetCheck\Exception\NotFoundException;
 use OCA\BudgetCheck\Exception\RateLimitExceededException;
 use OCA\BudgetCheck\Exception\ValidationException;
 use OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException;
@@ -1295,6 +1296,12 @@ class ApiController extends Controller
 		} catch (NotAuthenticatedException $e) {
 			$this->recordAccessDenied('not_authenticated');
 			return $this->error('Authentication required.', Http::STATUS_UNAUTHORIZED, 'not_authenticated');
+		} catch (NotFoundException $e) {
+			return $this->error(
+				$e->getMessage() !== '' ? $e->getMessage() : 'Resource not found.',
+				Http::STATUS_NOT_FOUND,
+				'NOT_FOUND',
+			);
 		} catch (AccessDeniedException $e) {
 			$this->recordAccessDenied('access_denied');
 			return $this->error('Access denied.', Http::STATUS_FORBIDDEN, 'access_denied');

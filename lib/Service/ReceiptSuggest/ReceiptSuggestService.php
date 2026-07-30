@@ -263,6 +263,10 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 			throw new \InvalidArgumentException('Suggestion is already being saved. Wait a moment.');
 		}
 
+		/** @var list<array<string,mixed>> $created */
+		$created = [];
+		$workspace = null;
+
 		try {
 			$meta = $this->jobs->get($userId, $jobId);
 			if ($meta === null || (int)$meta['workspaceId'] !== $workspaceId) {
@@ -291,24 +295,28 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 				throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
 			}
 
-			// Claim job meta before ledger writes so a second request cannot see it.
-			$this->jobs->delete($userId, $jobId, $workspaceId);
-
 			$bookingDate = $canonical->bookingDate ?? (new \DateTimeImmutable('today'))->format('Y-m-d');
-			$titleBase = $canonical->title ?? $canonical->merchant ?? 'Receipt';
-			$direction = $canonical->direction ?? ReceiptSuggestConstants::DIRECTION_EXPENSE;
+			// Preflight closed month BEFORE any ledger write so the job stays retryable.
+			$this->transactions->assertOpenMonthForBooking($workspaceId, $bookingDate);
 
-			$created = [];
-			$attachmentRows = [];
-			$content = $this->staging->readBytes($userId, (int)$meta['fileId']);
-
-			foreach ($canonical->lines as $index => $line) {
+			$resolvedCategories = [];
+			foreach ($canonical->lines as $line) {
 				$category = $this->categories->loadForWorkspace($line->categoryId, $workspaceId);
 				if ($category === null) {
-					$this->staging->delete($userId, (int)$meta['fileId']);
 					$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_REJECTED);
 					throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
 				}
+				$resolvedCategories[] = $category;
+			}
+
+			$content = $this->staging->readBytes($userId, (int)$meta['fileId']);
+			$titleBase = $canonical->title ?? $canonical->merchant ?? 'Receipt';
+			$direction = $canonical->direction ?? ReceiptSuggestConstants::DIRECTION_EXPENSE;
+			$attachmentRows = [];
+
+			// Keep job meta until all lines succeed — accept lock blocks double-submit.
+			foreach ($canonical->lines as $index => $line) {
+				$category = $resolvedCategories[$index];
 				$title = count($canonical->lines) === 1
 					? $titleBase
 					: ($titleBase . ' — ' . $line->label);
@@ -333,14 +341,45 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 				);
 			}
 
-			$this->staging->delete($userId, (int)$meta['fileId']);
+			$this->cleanupJob($meta, true);
 			$this->metrics->increment(ReceiptSuggestMetrics::ACCEPTED);
 			return [
 				'transactions' => $created,
 				'attachments' => $attachmentRows,
 			];
+		} catch (\Throwable $e) {
+			if ($created !== [] && is_array($workspace)) {
+				$this->compensateCreatedTransactions($created, $userId, $workspace);
+				$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_FAILED);
+			}
+			throw $e;
 		} finally {
 			$this->acceptLock->release($userId, $jobId);
+		}
+	}
+
+	/**
+	 * Soft-delete bookings created during a failed split accept (best-effort compensation).
+	 *
+	 * @param list<array<string,mixed>> $created
+	 * @param array<string,mixed> $workspace
+	 */
+	private function compensateCreatedTransactions(array $created, string $userId, array $workspace): void
+	{
+		foreach (array_reverse($created) as $tx) {
+			$id = (int)($tx['id'] ?? 0);
+			$version = isset($tx['version']) ? (int)$tx['version'] : null;
+			if ($id < 1 || $version === null) {
+				continue;
+			}
+			try {
+				$this->transactions->delete($id, $userId, $workspace, $version);
+			} catch (\Throwable) {
+				$this->logger->warning('BudgetCheck receipt suggest compensate-delete failed', [
+					'app' => Application::APP_ID,
+					'transactionId' => $id,
+				]);
+			}
 		}
 	}
 

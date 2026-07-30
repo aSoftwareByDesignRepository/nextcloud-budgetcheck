@@ -240,7 +240,18 @@ $webAssert(str_contains($apiSvc = (string)file_get_contents($root . '/lib/Servic
 $webAssert(str_contains($apiSvc, 'ReceiptSuggestMetrics'), 'metrics_wired');
 $webAssert(is_file($root . '/lib/Service/ReceiptSuggest/ReceiptSuggestAcceptLock.php'), 'accept_lock_file');
 $webAssert(is_file($root . '/lib/Service/ReceiptSuggest/ReceiptSuggestMetrics.php'), 'metrics_file');
+$webAssert(str_contains($apiSvc, 'assertOpenMonthForBooking'), 'accept_month_closed_preflight');
+$webAssert(str_contains($apiSvc, 'compensateCreatedTransactions'), 'accept_split_compensate');
+$webAssert(str_contains($apiSvc, 'ACCEPT_FAILED'), 'accept_failed_metric');
+$apiCtrl = (string)file_get_contents($root . '/lib/Controller/ApiController.php');
+$webAssert(str_contains($apiCtrl, 'catch (NotFoundException'), 'web_not_found_catch');
+$webAssert(
+	strpos($apiCtrl, 'catch (NotFoundException') < strpos($apiCtrl, 'catch (BudgetCheckException'),
+	'web_not_found_before_domain'
+);
 $webAssert(is_file($root . '/e2e/receipt-suggest.spec.js'), 'e2e_receipt_suggest');
+$webAssert(str_contains($rsJs, '__BC_E2E__'), 'e2e_capability_seam_gated');
+$webAssert(str_contains($rsJs, 'role: \'dialog\''), 'overlay_dialog_role');
 
 // JS mutant: drop single confidence gate — receipt-suggest.test.js must fail.
 $jsPath = $root . '/js/common/receipt-suggest.js';

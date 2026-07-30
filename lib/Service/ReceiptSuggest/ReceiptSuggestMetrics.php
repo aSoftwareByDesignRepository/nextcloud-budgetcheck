@@ -21,6 +21,7 @@ final class ReceiptSuggestMetrics implements ReceiptSuggestMetricsInterface
 	public const CANCELLED = 'rs_metric_cancelled';
 	public const ACCEPT_REJECTED = 'rs_metric_accept_rejected';
 	public const ACCEPT_BUSY = 'rs_metric_accept_busy';
+	public const ACCEPT_FAILED = 'rs_metric_accept_failed';
 
 	public function __construct(
 		private readonly IConfig $config,
@@ -71,6 +72,7 @@ final class ReceiptSuggestMetrics implements ReceiptSuggestMetricsInterface
 			self::CANCELLED,
 			self::ACCEPT_REJECTED,
 			self::ACCEPT_BUSY,
+			self::ACCEPT_FAILED,
 		];
 	}
 

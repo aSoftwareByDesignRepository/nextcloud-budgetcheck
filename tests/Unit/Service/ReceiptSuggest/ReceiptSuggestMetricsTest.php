@@ -44,6 +44,6 @@ final class ReceiptSuggestMetricsTest extends TestCase
 		$snap = $metrics->snapshot();
 		$this->assertSame(9, $snap[ReceiptSuggestMetrics::ACCEPTED]);
 		$this->assertSame(0, $snap[ReceiptSuggestMetrics::STARTED]);
-		$this->assertCount(8, $snap);
+		$this->assertCount(9, $snap);
 	}
 }

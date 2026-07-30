@@ -153,6 +153,14 @@ assert(
 	'attachments exposes clearPending for accept path'
 );
 
+{
+	const src = fs.readFileSync(path.join(ROOT, 'js', 'common', 'receipt-suggest.js'), 'utf8');
+	assert(src.includes("window.__BC_E2E__ !== true"), 'forceCapability gated on __BC_E2E__');
+	assert(src.includes("role: 'dialog'"), 'overlay uses dialog role');
+	assert(src.includes('aria-modal'), 'overlay marks aria-modal');
+	assert(src.includes('accepting'), 'overlay tracks accepting to block cancel');
+}
+
 if (failures > 0) {
 	process.stderr.write(failures + ' receipt-suggest test(s) failed\n');
 	process.exit(1);

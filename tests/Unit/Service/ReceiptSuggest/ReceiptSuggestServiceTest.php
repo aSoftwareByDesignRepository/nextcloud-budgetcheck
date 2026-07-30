@@ -273,7 +273,7 @@ final class ReceiptSuggestServiceTest extends TestCase
 		$service->accept(5, 'alice', 42, ['status' => 'ready']);
 	}
 
-	public function testAcceptClaimsJobBeforeCreate(): void
+	public function testAcceptCleansJobAfterSuccessfulCreates(): void
 	{
 		$payload = [
 			'status' => 'ready',
@@ -304,6 +304,7 @@ final class ReceiptSuggestServiceTest extends TestCase
 			'id' => 10, 'name' => 'Food', 'type' => 'expense', 'isActive' => true,
 		]);
 		$this->staging->method('readBytes')->willReturn('fakepng');
+		$this->transactions->expects($this->once())->method('assertOpenMonthForBooking');
 		$this->jobs->expects($this->once())->method('delete')->with('alice', 42, 5);
 		$this->transactions->expects($this->once())->method('create')->willReturn(['id' => 77, 'version' => 1]);
 		$this->attachments->expects($this->once())->method('attachFromBinary')->willReturn(['id' => 1]);
@@ -315,6 +316,89 @@ final class ReceiptSuggestServiceTest extends TestCase
 		$out = $this->service->accept(5, 'alice', 42, $payload);
 		$this->assertCount(1, $out['transactions']);
 		$this->assertSame(77, $out['transactions'][0]['id']);
+	}
+
+	public function testAcceptClosedMonthPrefLightsWithoutCreating(): void
+	{
+		$payload = [
+			'status' => 'ready',
+			'title' => 'REWE',
+			'merchant' => 'REWE',
+			'merchantConfidence' => 0.9,
+			'bookingDate' => '2026-01-15',
+			'currencyCode' => 'EUR',
+			'totalMinor' => 1234,
+			'direction' => 'expense',
+			'lines' => [[
+				'label' => 'Total',
+				'amountMinor' => 1234,
+				'categoryId' => 10,
+				'confidence' => 0.9,
+			]],
+		];
+		$this->jobs->method('get')->willReturn($this->sampleMeta());
+		$this->workspaces->method('getForUser')->willReturn([
+			'id' => 5,
+			'currencyCode' => 'EUR',
+			'type' => 'household',
+		]);
+		$this->categories->method('listForWorkspace')->willReturn([
+			['id' => 10, 'name' => 'Food', 'type' => 'expense', 'isActive' => true],
+		]);
+		$this->transactions->method('assertOpenMonthForBooking')
+			->willThrowException(new \InvalidArgumentException(
+				'This booking falls into a closed month. Reopen the month before adding transactions.'
+			));
+		$this->transactions->expects($this->never())->method('create');
+		$this->jobs->expects($this->never())->method('delete');
+		$this->staging->expects($this->never())->method('delete');
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('closed month');
+		$this->service->accept(5, 'alice', 42, $payload);
+	}
+
+	public function testAcceptSplitFailureCompensatesAndKeepsJob(): void
+	{
+		$payload = [
+			'status' => 'ready',
+			'mode' => 'split',
+			'title' => 'REWE',
+			'merchant' => 'REWE',
+			'merchantConfidence' => 0.9,
+			'bookingDate' => (new \DateTimeImmutable('today'))->modify('-1 day')->format('Y-m-d'),
+			'currencyCode' => 'EUR',
+			'totalMinor' => 5000,
+			'direction' => 'expense',
+			'lines' => [
+				['label' => 'A', 'amountMinor' => 2000, 'categoryId' => 10, 'confidence' => 0.9],
+				['label' => 'B', 'amountMinor' => 3000, 'categoryId' => 10, 'confidence' => 0.9],
+			],
+		];
+		$workspace = ['id' => 5, 'currencyCode' => 'EUR', 'type' => 'household'];
+		$this->jobs->method('get')->willReturn($this->sampleMeta());
+		$this->workspaces->method('getForUser')->willReturn($workspace);
+		$this->categories->method('listForWorkspace')->willReturn([
+			['id' => 10, 'name' => 'Food', 'type' => 'expense', 'isActive' => true],
+		]);
+		$this->categories->method('loadForWorkspace')->willReturn([
+			'id' => 10, 'name' => 'Food', 'type' => 'expense', 'isActive' => true,
+		]);
+		$this->staging->method('readBytes')->willReturn('fakepng');
+		$this->transactions->method('assertOpenMonthForBooking');
+		$this->transactions->expects($this->exactly(2))->method('create')
+			->willReturnOnConsecutiveCalls(
+				['id' => 70, 'version' => 1],
+				$this->throwException(new \RuntimeException('attach boom')),
+			);
+		$this->attachments->expects($this->once())->method('attachFromBinary')->willReturn(['id' => 1]);
+		$this->transactions->expects($this->once())->method('delete')->with(70, 'alice', $workspace, 1);
+		$this->jobs->expects($this->never())->method('delete');
+		$this->metrics->expects($this->once())->method('increment')->with(ReceiptSuggestMetrics::ACCEPT_FAILED);
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('attach boom');
+		$this->service->accept(5, 'alice', 42, $payload);
 	}
 
 	/** @return array<string, mixed> */

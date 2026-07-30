@@ -91,4 +91,25 @@ final class SecurityCloseoutContractTest extends TestCase
 		self::assertStringContainsString("MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])", $src);
 		self::assertStringContainsString('Missing CSRF request token', $src);
 	}
+
+	public function testNotFoundMapsToHttp404BeforeGenericDomainCatch(): void
+	{
+		$src = (string) file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/ApiController.php');
+		self::assertMatchesRegularExpression(
+			'/catch \(NotFoundException \$e\) \{\s*\n\s*return \$this->error\(/',
+			$src,
+			'NotFoundException must map to a dedicated error response',
+		);
+		$notFoundPos = strpos($src, 'catch (NotFoundException $e)');
+		$budgetPos = strpos($src, 'catch (BudgetCheckException $e)');
+		self::assertNotFalse($notFoundPos);
+		self::assertNotFalse($budgetPos);
+		self::assertLessThan(
+			$budgetPos,
+			$notFoundPos,
+			'NotFoundException must be caught before BudgetCheckException (otherwise 500)',
+		);
+		self::assertStringContainsString('Http::STATUS_NOT_FOUND', $src);
+		self::assertStringContainsString("'NOT_FOUND'", $src);
+	}
 }

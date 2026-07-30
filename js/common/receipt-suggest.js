@@ -157,15 +157,78 @@
 		let jobId = null;
 		let suggestion = null;
 		let destroyed = false;
+		let accepting = false;
+		let editBtn = null;
+		let cancelBtns = [];
 		const ac = new AbortController();
 
 		const overlay = BC.Components.createElement('div', {
 			class: 'bc-receipt-suggest',
-			attrs: { role: 'region', 'aria-label': t('Receipt suggestion') },
+			attrs: {
+				role: 'dialog',
+				'aria-modal': 'true',
+				'aria-label': t('Receipt suggestion'),
+				tabindex: '-1',
+			},
 		});
 		const panel = BC.Components.createElement('div', { class: 'bc-receipt-suggest__panel' });
 		overlay.appendChild(panel);
 		host.appendChild(overlay);
+
+		function setUnderlyingInert(on) {
+			Array.from(host.children).forEach((child) => {
+				if (child === overlay) return;
+				if (on) {
+					child.setAttribute('inert', '');
+					child.setAttribute('aria-hidden', 'true');
+				} else {
+					child.removeAttribute('inert');
+					child.removeAttribute('aria-hidden');
+				}
+			});
+		}
+		setUnderlyingInert(true);
+
+		function focusablesInOverlay() {
+			return Array.from(overlay.querySelectorAll(
+				'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+			)).filter((node) => node.offsetParent !== null);
+		}
+
+		function onDocKeyDown(event) {
+			if (!overlay.parentNode) return;
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				if (accepting) return;
+				void dismiss();
+				return;
+			}
+			if (event.key !== 'Tab') return;
+			const list = focusablesInOverlay();
+			if (list.length === 0) {
+				event.preventDefault();
+				overlay.focus();
+				return;
+			}
+			const first = list[0];
+			const last = list[list.length - 1];
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			} else if (!overlay.contains(document.activeElement)) {
+				event.preventDefault();
+				first.focus();
+			}
+		}
+		document.addEventListener('keydown', onDocKeyDown, true);
+		requestAnimationFrame(() => {
+			const list = focusablesInOverlay();
+			(list[0] || overlay).focus();
+		});
 
 		function setPanel(nodes) {
 			while (panel.firstChild) panel.removeChild(panel.firstChild);
@@ -178,7 +241,7 @@
 		}
 
 		async function cancelRemote() {
-			if (jobId == null) return;
+			if (jobId == null || accepting) return;
 			const id = jobId;
 			jobId = null;
 			try {
@@ -186,11 +249,21 @@
 			} catch (_) { /* ignore */ }
 		}
 
-		function destroy() {
+		async function dismiss() {
+			if (accepting || destroyed) return;
+			await cancelRemote();
+			destroy(true);
+			opts.onDismiss();
+		}
+
+		function destroy(force) {
 			if (destroyed) return;
+			if (accepting && !force) return;
 			destroyed = true;
 			ac.abort();
-			if (jobId != null) {
+			document.removeEventListener('keydown', onDocKeyDown, true);
+			setUnderlyingInert(false);
+			if (jobId != null && !accepting) {
 				void cancelRemote();
 			}
 			if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -210,11 +283,7 @@
 						class: 'button',
 						text: t('Cancel'),
 						on: {
-							click: async () => {
-								await cancelRemote();
-								destroy();
-								opts.onDismiss();
-							},
+							click: () => { void dismiss(); },
 						},
 					}),
 				]),
@@ -239,8 +308,9 @@
 						text: t('Enter manually'),
 						on: {
 							click: async () => {
+								if (accepting) return;
 								await cancelRemote();
-								destroy();
+								destroy(true);
 								opts.onEdit(suggestion || { status: 'low_quality' });
 							},
 						},
@@ -250,11 +320,7 @@
 						class: 'button',
 						text: t('Cancel'),
 						on: {
-							click: async () => {
-								await cancelRemote();
-								destroy();
-								opts.onDismiss();
-							},
+							click: () => { void dismiss(); },
 						},
 					}),
 				]),
@@ -327,8 +393,24 @@
 				class: 'primary',
 				text: t('Save'),
 			});
+			editBtn = BC.Components.createElement('button', {
+				type: 'button',
+				class: 'button',
+				text: t('Edit fields'),
+			});
+			const cancelBtn = BC.Components.createElement('button', {
+				type: 'button',
+				class: 'button button--flat',
+				text: t('Cancel'),
+			});
+			cancelBtns = [cancelBtn];
+
 			saveBtn.addEventListener('click', async () => {
+				if (accepting) return;
+				accepting = true;
 				saveBtn.disabled = true;
+				if (editBtn) editBtn.disabled = true;
+				cancelBtns.forEach((b) => { b.disabled = true; });
 				try {
 					const result = await BC.Api.post(
 						'/apps/budgetcheck/api/workspaces/' + workspaceId + '/receipt-suggestions/' + jobId + '/accept',
@@ -336,43 +418,32 @@
 					);
 					const count = Array.isArray(result.transactions) ? result.transactions.length : 1;
 					jobId = null;
-					destroy();
+					accepting = false;
+					destroy(true);
 					opts.onAccepted(count);
 				} catch (err) {
+					accepting = false;
 					errorEl.hidden = false;
 					errorEl.textContent = t('Could not save the suggestion. Try again or enter manually.');
 					saveBtn.disabled = false;
+					if (editBtn) editBtn.disabled = false;
+					cancelBtns.forEach((b) => { b.disabled = false; });
 					if (BC.Messaging && typeof BC.Messaging.handleApiError === 'function') {
 						BC.Messaging.handleApiError(err);
 					}
 				}
 			});
+			editBtn.addEventListener('click', async () => {
+				if (accepting) return;
+				await cancelRemote();
+				destroy(true);
+				opts.onEdit(payload);
+			});
+			cancelBtn.addEventListener('click', () => { void dismiss(); });
 
 			children.push(saveBtn);
-			children.push(BC.Components.createElement('button', {
-				type: 'button',
-				class: 'button',
-				text: t('Edit fields'),
-				on: {
-					click: async () => {
-						await cancelRemote();
-						destroy();
-						opts.onEdit(payload);
-					},
-				},
-			}));
-			children.push(BC.Components.createElement('button', {
-				type: 'button',
-				class: 'button button--flat',
-				text: t('Cancel'),
-				on: {
-					click: async () => {
-						await cancelRemote();
-						destroy();
-						opts.onDismiss();
-					},
-				},
-			}));
+			children.push(editBtn);
+			children.push(cancelBtn);
 
 			setPanel([BC.Components.createElement('div', { class: 'bc-receipt-suggest__review' }, children)]);
 		}
@@ -427,6 +498,9 @@
 		 * @param {string[]} [modes]
 		 */
 		forceCapabilityForTests: function (enabled, modes) {
+			if (window.__BC_E2E__ !== true) {
+				return;
+			}
 			capabilityCache = {
 				receiptSuggest: enabled === true,
 				receiptSuggestModes: Array.isArray(modes) ? modes : (enabled ? ['analyze-images'] : []),

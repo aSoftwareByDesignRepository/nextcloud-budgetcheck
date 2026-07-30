@@ -99,6 +99,7 @@ test.describe('Receipt AI suggest web parity', () => {
 		await expect(page.locator('#bc-main-content')).toBeVisible({ timeout: 20_000 });
 
 		await page.evaluate(() => {
+			window.__BC_E2E__ = true;
 			const RS = window.BudgetCheck.get('ReceiptSuggest');
 			RS.forceCapabilityForTests(false);
 		});
@@ -189,6 +190,7 @@ test.describe('Receipt AI suggest web parity', () => {
 		await expect(page.locator('#bc-main-content')).toBeVisible({ timeout: 20_000 });
 
 		await page.evaluate(() => {
+			window.__BC_E2E__ = true;
 			const RS = window.BudgetCheck.get('ReceiptSuggest');
 			RS.forceCapabilityForTests(true, ['analyze-images']);
 		});
