@@ -6,17 +6,16 @@
         "db:naming-check": "bash scripts/check-db-naming.sh",
         "lint": "node scripts/check-frontend.js",
         "test": "node scripts/check-frontend.js && npm run test:js && npm run l10n:check",
-		"test:js": "node tests/js/bootstrap.test.js && node tests/js/workspace-withWorkspace.test.js && node tests/js/warning-recovery-dom.test.js && node tests/js/frontend-hardening.test.js && node tests/js/receipt-suggest.test.js",
+		"test:js": "node tests/js/bootstrap.test.js && node tests/js/workspace-withWorkspace.test.js && node tests/js/warning-recovery-dom.test.js && node tests/js/frontend-hardening.test.js",
         "l10n": "node scripts/build-l10n-js.js",
         "l10n:variants": "php scripts/sync-l10n-variants.php && php scripts/regenerate-l10n-js.php",
         "l10n:check": "php scripts/check-l10n-parity.php && php scripts/check-l10n-placeholders.php && php scripts/sync-l10n-variants.php --check",
         "e2e": "playwright test",
         "e2e:smoke:safe": "bash ./e2e/run-safe.sh",
         "test:a11y": "playwright test tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
-		"test:ui:gauntlet": "playwright test e2e/shell-a11y-smoke.spec.js e2e/dashboard-warnings-summary.spec.js e2e/receipt-suggest.spec.js tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
+		"test:ui:gauntlet": "playwright test e2e/shell-a11y-smoke.spec.js e2e/dashboard-warnings-summary.spec.js tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
         "mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
-        "mutate:epic": "php tests/Mutation/run-epic-gate-mutations.php",
-        "mutate:receipt-suggest": "php tests/Mutation/run-receipt-suggest-mutations.php"
+        "mutate:epic": "php tests/Mutation/run-epic-gate-mutations.php"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.10.2",

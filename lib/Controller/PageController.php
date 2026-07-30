@@ -369,7 +369,6 @@ class PageController extends Controller
 		if (in_array($pageScript, ['dashboard', 'transactions'], true)) {
 			Util::addScript(Application::APP_ID, 'common/attachment-gallery');
 			Util::addScript(Application::APP_ID, 'common/transaction-attachments');
-			Util::addScript(Application::APP_ID, 'common/receipt-suggest');
 			Util::addScript(Application::APP_ID, 'common/transaction-editor');
 		}
 		if ($pageScript === 'dashboard') {

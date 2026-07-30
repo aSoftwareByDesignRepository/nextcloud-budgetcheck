@@ -123,7 +123,7 @@
 	}
 
 	/**
-	 * @param {{transactionId?: number|null, readOnly?: boolean, closedMonth?: boolean, onChange?: function(): void, onAttachmentsChanged?: function(object): void, onPendingQueued?: function(Array): void}} options
+	 * @param {{transactionId?: number|null, readOnly?: boolean, closedMonth?: boolean, onChange?: function(): void, onAttachmentsChanged?: function(object): void}} options
 	 */
 	function mountSection(container, options) {
 		const opts = options || {};
@@ -532,7 +532,6 @@
 			let count = totalFileCount();
 			let bytes = totalByteSize();
 			const existingPending = new Set(state.pendingItems.map((item) => item.dedupeKey));
-			const newlyQueued = [];
 
 			for (const file of files) {
 				const validation = validateClientFile(file, count, bytes);
@@ -547,7 +546,6 @@
 				}
 				const pending = createPendingItem(file);
 				state.pendingItems.push(pending);
-				newlyQueued.push(pending);
 				existingPending.add(pending.dedupeKey);
 				count += 1;
 				bytes += Number(file.size) || 0;
@@ -565,9 +563,6 @@
 				renderGrid();
 				buildPicker();
 				notifyChange();
-				if (typeof opts.onPendingQueued === 'function') {
-					opts.onPendingQueued(newlyQueued.slice());
-				}
 			}
 		}
 

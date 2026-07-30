@@ -12,7 +12,6 @@ use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
-use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
@@ -72,7 +71,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
-			$this->receiptSuggestMock(),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -160,7 +158,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
-			$this->receiptSuggestMock(),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -242,7 +239,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
-			$this->receiptSuggestMock(),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -257,14 +253,5 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		// Channel passed; ACL denied → still JSON 403 (proves channel did not reject first)
 		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
-	}
-
-	/** @return ReceiptSuggestServiceInterface&\PHPUnit\Framework\MockObject\MockObject */
-	private function receiptSuggestMock(): ReceiptSuggestServiceInterface
-	{
-		$mock = $this->createMock(ReceiptSuggestServiceInterface::class);
-		$mock->method('isAvailable')->willReturn(false);
-		$mock->method('modesForUser')->willReturn([]);
-		return $mock;
 	}
 }

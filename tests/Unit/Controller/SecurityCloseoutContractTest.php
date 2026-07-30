@@ -36,9 +36,6 @@ final class SecurityCloseoutContractTest extends TestCase
 			'updateBookingStatus',
 			'updateMember',
 			'updateGroupMember',
-			'createReceiptSuggestion',
-			'acceptReceiptSuggestion',
-			'cancelReceiptSuggestion',
 		];
 		foreach ($methods as $method) {
 			self::assertMatchesRegularExpression(

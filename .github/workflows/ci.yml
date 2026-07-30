@@ -101,4 +101,3 @@ jobs:
           php tests/Mutation/run-closeout-mutations.php
           php tests/Mutation/run-epic-gate-mutations.php
           php tests/Mutation/run-billing-facade-mutations.php
-          php tests/Mutation/run-receipt-suggest-mutations.php

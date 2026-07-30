@@ -62,10 +62,6 @@ return [
 		['name' => 'api#deleteTransactionAttachment', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'DELETE'],
 		['name' => 'api#replaceTransactionAttachment', 'url' => '/api/transaction-attachments/{id}/replace', 'verb' => 'POST'],
 		['name' => 'attachment#download', 'url' => '/api/transaction-attachments/{id}', 'verb' => 'GET'],
-		['name' => 'api#createReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+']],
-		['name' => 'api#getReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
-		['name' => 'api#acceptReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}/accept', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
-		['name' => 'api#cancelReceiptSuggestion', 'url' => '/api/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
 
 		// Recurring rules
 		['name' => 'api#listRecurringRules',     'url' => '/api/recurring-rules',                  'verb' => 'GET'],
@@ -116,9 +112,5 @@ return [
 		['name' => 'mobile_api#listTransactionAttachments', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#uploadTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#deleteTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
-		['name' => 'mobile_api#createReceiptSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/receipt-suggestions', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+']],
-		['name' => 'mobile_api#getReceiptSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
-		['name' => 'mobile_api#acceptReceiptSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/receipt-suggestions/{jobId}/accept', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
-		['name' => 'mobile_api#cancelReceiptSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/receipt-suggestions/{jobId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'jobId' => '\\d+']],
 	],
 ];

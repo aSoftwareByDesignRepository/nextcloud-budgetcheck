@@ -136,7 +136,6 @@ function rel(file) {
 		'common/catalog-pickers.js',
 		'common/attachment-gallery.js',
 		'common/transaction-attachments.js',
-		'common/receipt-suggest.js',
 		'common/transaction-editor.js',
 	];
 	for (const relPath of sharedLiveConsumers) {
@@ -167,11 +166,10 @@ function rel(file) {
 		['transaction-list.js', 'TransactionList'],
 		['transaction-attachments.js', 'TransactionAttachments'],
 		['attachment-gallery.js', 'AttachmentGallery'],
-		['receipt-suggest.js', 'ReceiptSuggest'],
 		['entity-picker.js', 'EntityPicker'],
 		['catalog-pickers.js', 'CatalogPickers'],
 	];
-	const bareAssign = /window\.BudgetCheck(?:Api|Messaging|Components|Money|Dates|Workspace|Constants|Icons|SpecialsView|HouseholdPeriod|TransactionEditor|TransactionList|TransactionAttachments|AttachmentGallery|ReceiptSuggest|EntityPicker|CatalogPickers)\s*=/;
+	const bareAssign = /window\.BudgetCheck(?:Api|Messaging|Components|Money|Dates|Workspace|Constants|Icons|SpecialsView|HouseholdPeriod|TransactionEditor|TransactionList|TransactionAttachments|AttachmentGallery|EntityPicker|CatalogPickers)\s*=/;
 	for (const [file, shortName] of producers) {
 		const text = fs.readFileSync(path.join(JS_DIR, 'common', file), 'utf8');
 		assert(

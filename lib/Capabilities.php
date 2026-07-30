@@ -17,11 +17,11 @@ use OCP\Capabilities\ICapability;
 class Capabilities implements ICapability
 {
 	public const COMPANION_MIN = 1;
+	/** Companion API major: 3 = attachments; receipt AI suggest was removed (no Task Processing dependency). */
 	public const COMPANION_API = 3;
 
 	public function __construct(
 		private readonly IAppManager $appManager,
-		private readonly ?\OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface $receiptSuggest = null,
 	) {
 	}
 
@@ -31,7 +31,6 @@ class Capabilities implements ICapability
 	public function getCapabilities(): array
 	{
 		$version = $this->appManager->getAppVersion(Application::APP_ID, false);
-		$modes = $this->receiptSuggest?->modesForUser(null) ?? [];
 		return [
 			'budgetcheck' => [
 				'version' => $version,
@@ -42,8 +41,6 @@ class Capabilities implements ICapability
 					'api' => self::COMPANION_API,
 					'licensed' => false,
 					'free' => true,
-					'receiptSuggest' => $modes !== [],
-					'receiptSuggestModes' => $modes,
 				],
 			],
 		];

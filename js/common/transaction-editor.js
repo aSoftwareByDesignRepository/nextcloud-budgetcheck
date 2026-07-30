@@ -28,57 +28,6 @@
 		return window.BudgetCheckTransactionAttachments;
 	}
 
-	function receiptSuggestApi() {
-		if (window.BudgetCheck && typeof window.BudgetCheck.get === 'function') {
-			return window.BudgetCheck.get('ReceiptSuggest');
-		}
-		return window.BudgetCheckReceiptSuggest || null;
-	}
-
-	function minorToAmountInput(minor, decimals) {
-		const scale = Math.pow(10, decimals);
-		const abs = Math.abs(Number(minor) || 0);
-		const whole = Math.floor(abs / scale);
-		const frac = String(abs % scale).padStart(decimals, '0');
-		const raw = decimals > 0 ? (whole + '.' + frac) : String(whole);
-		return raw.replace('.', ',');
-	}
-
-	function applyReceiptSuggestionToForm(suggestion, fields) {
-		if (!suggestion || suggestion.status !== 'ready' || !fields) return;
-		const title = suggestion.title || suggestion.merchant;
-		if (title && fields.titleInput) {
-			fields.titleInput.value = String(title);
-		}
-		if (suggestion.bookingDate && fields.dateInput && BC.Dates && BC.Dates.isIsoCalendarDay(String(suggestion.bookingDate))) {
-			fields.dateInput.value = String(suggestion.bookingDate);
-		}
-		if (suggestion.direction === 'income' || suggestion.direction === 'expense') {
-			if (fields.directionSelect) {
-				fields.directionSelect.value = suggestion.direction;
-			}
-		}
-		if (typeof fields.filterCategories === 'function') {
-			fields.filterCategories();
-		}
-		const line = Array.isArray(suggestion.lines) ? suggestion.lines[0] : null;
-		if (line && fields.catSelect && line.categoryId) {
-			fields.catSelect.value = String(line.categoryId);
-		}
-		const amountMinor = suggestion.totalMinor != null
-			? suggestion.totalMinor
-			: (line ? line.amountMinor : null);
-		if (amountMinor != null && fields.amountInput) {
-			fields.amountInput.value = minorToAmountInput(amountMinor, activeDecimals());
-		}
-		if (typeof fields.syncTitlePlaceholder === 'function') {
-			fields.syncTitlePlaceholder();
-		}
-		if (typeof fields.syncTaxControls === 'function') {
-			fields.syncTaxControls();
-		}
-	}
-
 	function Ws() {
 		return window.BudgetCheckWorkspace;
 	}
@@ -207,13 +156,7 @@
 		if (!ctx || !ctx.workspace) return;
 		let activeTx = tx ? Object.assign({}, tx) : null;
 		let attachmentsController = null;
-		let receiptSuggestCtl = null;
-		let receiptSuggestBusy = false;
 		const isEdit = !!tx;
-		const RS = receiptSuggestApi();
-		if (!isEdit && RS && typeof RS.ensureEnabled === 'function') {
-			void RS.ensureEnabled();
-		}
 		const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 		const currencyCode = ctx.workspace.currencyCode || '';
 		const amountLabel = currencyCode
@@ -473,77 +416,6 @@
 								modalOpts.onAttachmentsChanged(payload);
 							}
 						},
-						onPendingQueued: (newlyQueued) => {
-							if (isEdit || receiptSuggestBusy || !ctx.canContribute) return;
-							if (directionSelect.value !== 'expense') return;
-							const suggest = receiptSuggestApi();
-							if (!suggest || typeof suggest.mountOverlay !== 'function') return;
-							const candidate = (newlyQueued || []).find((item) => suggest.isSuggestableFile(item.file));
-							if (!candidate) return;
-							// Lock synchronously so multi-file drops cannot spawn parallel jobs.
-							receiptSuggestBusy = true;
-							void (async () => {
-								const enabled = await suggest.ensureEnabled();
-								if (!enabled) {
-									receiptSuggestBusy = false;
-									return;
-								}
-								const dialog = form.closest('.bc-modal__dialog');
-								if (!dialog) {
-									receiptSuggestBusy = false;
-									return;
-								}
-								const primaryBtn = dialog.querySelector('.bc-modal__actions .button.primary');
-								if (primaryBtn) primaryBtn.disabled = true;
-								const endSuggest = () => {
-									receiptSuggestBusy = false;
-									receiptSuggestCtl = null;
-									if (primaryBtn) primaryBtn.disabled = false;
-								};
-								receiptSuggestCtl = suggest.mountOverlay({
-									host: dialog,
-									workspaceId: ctx.workspace.id,
-									file: candidate.file,
-									categories: catalog.categories,
-									currencyCode: currencyCode,
-									htmlLang: ctx.htmlLang,
-									onAccepted: (count) => {
-										endSuggest();
-										if (attachmentsController && typeof attachmentsController.clearPending === 'function') {
-											attachmentsController.clearPending();
-										}
-										if (attachmentsController && typeof attachmentsController.destroy === 'function') {
-											attachmentsController.destroy();
-										}
-										attachmentsController = null;
-										const msg = count > 1
-											? t('budgetcheck', '{count} bookings created from your receipt.').replace('{count}', String(count))
-											: t('budgetcheck', '1 booking created from your receipt.');
-										BC.Messaging.announce(msg, 'success');
-										if (typeof modalOpts.onSaved === 'function') {
-											modalOpts.onSaved();
-										}
-										close(true);
-									},
-									onEdit: (suggestion) => {
-										endSuggest();
-										applyReceiptSuggestionToForm(suggestion, {
-											titleInput,
-											dateInput,
-											directionSelect,
-											catSelect,
-											amountInput,
-											filterCategories,
-											syncTitlePlaceholder,
-											syncTaxControls,
-										});
-									},
-									onDismiss: () => {
-										endSuggest();
-									},
-								});
-							})();
-						},
 					});
 				}
 
@@ -624,19 +496,11 @@
 				return form;
 			},
 			onCancel: () => {
-				if (receiptSuggestCtl && typeof receiptSuggestCtl.destroy === 'function') {
-					receiptSuggestCtl.destroy();
-				}
-				receiptSuggestCtl = null;
-				receiptSuggestBusy = false;
 				if (attachmentsController && typeof attachmentsController.destroy === 'function') {
 					attachmentsController.destroy();
 				}
 			},
 			onSubmit: async ({ close, body, dialog }) => {
-				if (receiptSuggestBusy) {
-					return false;
-				}
 				const form = body;
 				const primaryBtn = dialog ? dialog.querySelector('.bc-modal__actions .button.primary') : null;
 				const modalTitle = dialog ? dialog.querySelector('.bc-modal__header h2') : null;

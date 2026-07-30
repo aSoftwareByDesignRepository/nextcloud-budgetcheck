@@ -35,10 +35,6 @@ $assert(str_contains($routes, 'mobile_api#deleteTransaction'), 'route_delete_tx'
 $assert(str_contains($routes, 'mobile_api#listTransactionAttachments'), 'route_list_attachments');
 $assert(str_contains($routes, 'mobile_api#uploadTransactionAttachment'), 'route_upload_attachments');
 $assert(str_contains($routes, 'mobile_api#deleteTransactionAttachment'), 'route_delete_attachments');
-$assert(str_contains($routes, 'mobile_api#createReceiptSuggestion'), 'route_create_receipt_suggest');
-$assert(str_contains($routes, 'mobile_api#getReceiptSuggestion'), 'route_get_receipt_suggest');
-$assert(str_contains($routes, 'mobile_api#acceptReceiptSuggestion'), 'route_accept_receipt_suggest');
-$assert(str_contains($routes, 'mobile_api#cancelReceiptSuggestion'), 'route_cancel_receipt_suggest');
 $assert(str_contains($mobile, 'assertSafeMutationChannel'), 'mutation_channel_guard');
 $assert(str_contains($mobile, 'MobileMutationChannel::isSafe'), 'mutation_channel_helper_used');
 // Channel + validateId must run INSIDE safe() so failures become JSON 403/422, not uncaught throws.
@@ -51,9 +47,6 @@ foreach ([
 	'unregisterPushToken',
 	'uploadTransactionAttachment',
 	'deleteTransactionAttachment',
-	'createReceiptSuggestion',
-	'acceptReceiptSuggestion',
-	'cancelReceiptSuggestion',
 ] as $mut) {
 	$assert(
 		(bool)preg_match(
@@ -101,11 +94,6 @@ $assert(!str_contains($mobile, 'NO_MOBILE_SEAT'), 'no_seat_code');
 $assert(str_contains($caps, "'free' => true"), 'capabilities_free');
 $assert(str_contains($caps, 'companion.min'), 'capabilities_min');
 $assert(str_contains($caps, 'COMPANION_API = 3'), 'companion_api_v3');
-$assert(str_contains($caps, 'receiptSuggest'), 'capabilities_receipt_suggest');
-$assert(str_contains($mobile, "'receiptSuggest'"), 'bootstrap_receipt_suggest');
-$assert(str_contains($app, 'ReceiptSuggestService'), 'receipt_suggest_di');
-$assert(str_contains($app, 'ReceiptSuggestServiceInterface'), 'receipt_suggest_port_alias');
-$assert(str_contains($app, 'registerServiceAlias'), 'uses_register_service_alias');
 $assert(!str_contains($app, 'registerAlias('), 'no_invalid_register_alias');
 $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');

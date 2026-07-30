@@ -1100,24 +1100,6 @@ class TransactionService
 		];
 	}
 
-	/**
-	 * Fail closed before ledger writes: closed months cannot receive new bookings.
-	 *
-	 * @throws \InvalidArgumentException when the booking month is closed
-	 */
-	public function assertOpenMonthForBooking(int $workspaceId, string $bookingDateYmd): void
-	{
-		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDateYmd)) {
-			throw new \InvalidArgumentException('Invalid calendar date.');
-		}
-		$ym = substr($bookingDateYmd, 0, 7);
-		if ($this->monthIsClosed($workspaceId, $ym)) {
-			throw new \InvalidArgumentException(
-				'This booking falls into a closed month. Reopen the month before adding transactions.'
-			);
-		}
-	}
-
 	protected function monthIsClosed(int $workspaceId, string $yearMonth): bool
 	{
 		if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
