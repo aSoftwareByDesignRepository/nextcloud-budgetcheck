@@ -420,6 +420,19 @@
 		passesClientGate: passesClientGate,
 		mountOverlay: mountOverlay,
 		refreshCapability: refreshCapability,
+		/**
+		 * Test/E2E seam: force capability cache without hitting the API.
+		 * Production UI never calls this.
+		 * @param {boolean} enabled
+		 * @param {string[]} [modes]
+		 */
+		forceCapabilityForTests: function (enabled, modes) {
+			capabilityCache = {
+				receiptSuggest: enabled === true,
+				receiptSuggestModes: Array.isArray(modes) ? modes : (enabled ? ['analyze-images'] : []),
+				loaded: true,
+			};
+		},
 		CONFIDENCE_SINGLE_MIN: CONFIDENCE_SINGLE_MIN,
 		CONFIDENCE_SPLIT_LINE_MIN: CONFIDENCE_SPLIT_LINE_MIN,
 	});

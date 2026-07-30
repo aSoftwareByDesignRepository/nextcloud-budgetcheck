@@ -105,6 +105,8 @@ $assert(str_contains($caps, 'receiptSuggest'), 'capabilities_receipt_suggest');
 $assert(str_contains($mobile, "'receiptSuggest'"), 'bootstrap_receipt_suggest');
 $assert(str_contains($app, 'ReceiptSuggestService'), 'receipt_suggest_di');
 $assert(str_contains($app, 'ReceiptSuggestServiceInterface'), 'receipt_suggest_port_alias');
+$assert(str_contains($app, 'registerServiceAlias'), 'uses_register_service_alias');
+$assert(!str_contains($app, 'registerAlias('), 'no_invalid_register_alias');
 $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');
 $assert(str_contains($idemp, 'IdempotencyMismatchException'), 'idempotency_mismatch');

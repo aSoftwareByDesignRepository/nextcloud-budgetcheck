@@ -13,7 +13,7 @@
         "e2e": "playwright test",
         "e2e:smoke:safe": "bash ./e2e/run-safe.sh",
         "test:a11y": "playwright test tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
-        "test:ui:gauntlet": "playwright test e2e/shell-a11y-smoke.spec.js e2e/dashboard-warnings-summary.spec.js tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
+		"test:ui:gauntlet": "playwright test e2e/shell-a11y-smoke.spec.js e2e/dashboard-warnings-summary.spec.js e2e/receipt-suggest.spec.js tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
         "mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
         "mutate:epic": "php tests/Mutation/run-epic-gate-mutations.php",
         "mutate:receipt-suggest": "php tests/Mutation/run-receipt-suggest-mutations.php"

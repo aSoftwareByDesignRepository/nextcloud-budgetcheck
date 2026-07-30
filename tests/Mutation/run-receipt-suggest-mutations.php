@@ -236,6 +236,11 @@ $webAssert(str_contains($editor, 'onPendingQueued'), 'editor_hooks_pending_queue
 $webAssert(str_contains($editor, 'clearPending'), 'editor_clears_pending_on_accept');
 $webAssert(str_contains($attach, 'onPendingQueued'), 'attachments_emit_pending_queued');
 $webAssert(str_contains($attach, 'clearPending'), 'attachments_clear_pending');
+$webAssert(str_contains($apiSvc = (string)file_get_contents($root . '/lib/Service/ReceiptSuggest/ReceiptSuggestService.php'), 'ReceiptSuggestAcceptLock'), 'accept_lock_wired');
+$webAssert(str_contains($apiSvc, 'ReceiptSuggestMetrics'), 'metrics_wired');
+$webAssert(is_file($root . '/lib/Service/ReceiptSuggest/ReceiptSuggestAcceptLock.php'), 'accept_lock_file');
+$webAssert(is_file($root . '/lib/Service/ReceiptSuggest/ReceiptSuggestMetrics.php'), 'metrics_file');
+$webAssert(is_file($root . '/e2e/receipt-suggest.spec.js'), 'e2e_receipt_suggest');
 
 // JS mutant: drop single confidence gate — receipt-suggest.test.js must fail.
 $jsPath = $root . '/js/common/receipt-suggest.js';

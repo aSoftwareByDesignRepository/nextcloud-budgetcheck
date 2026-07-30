@@ -42,8 +42,12 @@ use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Service\ReceiptSuggest\OcpReceiptTaskProcessingGateway;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAcceptGuard;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAcceptLock;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAcceptLockInterface;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestAvailability;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestJobStore;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestMetrics;
+use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestMetricsInterface;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestPromptBuilder;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestService;
 use OCA\BudgetCheck\Service\ReceiptSuggest\ReceiptSuggestServiceInterface;
@@ -276,10 +280,18 @@ class Application extends App implements IBootstrap
 				$c->query(CategoryService::class),
 				$c->query(TransactionService::class),
 				$c->query(TransactionAttachmentService::class),
+				$c->query(ReceiptSuggestAcceptLock::class),
+				$c->query(ReceiptSuggestMetrics::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
-		$context->registerAlias(ReceiptSuggestServiceInterface::class, ReceiptSuggestService::class);
+		$context->registerServiceAlias(ReceiptSuggestServiceInterface::class, ReceiptSuggestService::class);
+		$context->registerService(ReceiptSuggestAcceptLockInterface::class, function ($c): ReceiptSuggestAcceptLockInterface {
+			return $c->query(ReceiptSuggestAcceptLock::class);
+		});
+		$context->registerService(ReceiptSuggestMetricsInterface::class, function ($c): ReceiptSuggestMetricsInterface {
+			return $c->query(ReceiptSuggestMetrics::class);
+		});
 
 		$context->registerService(TransactionImportService::class, function ($c): TransactionImportService {
 			return new TransactionImportService(

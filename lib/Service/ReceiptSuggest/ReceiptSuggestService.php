@@ -37,6 +37,8 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 		private readonly CategoryService $categories,
 		private readonly TransactionService $transactions,
 		private readonly TransactionAttachmentService $attachments,
+		private readonly ReceiptSuggestAcceptLockInterface $acceptLock,
+		private readonly ReceiptSuggestMetricsInterface $metrics,
 		private readonly LoggerInterface $logger,
 	) {
 	}
@@ -146,6 +148,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 			'customId' => $customId,
 		];
 		$this->jobs->save($meta);
+		$this->metrics->increment(ReceiptSuggestMetrics::STARTED);
 
 		return [
 			'jobId' => $taskId,
@@ -166,6 +169,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 
 		if ((time() - (int)$meta['createdAt']) > ReceiptSuggestConstants::CLIENT_POLL_TIMEOUT_SEC) {
 			$this->cleanupJob($meta, true);
+			$this->metrics->increment(ReceiptSuggestMetrics::FAILED);
 			return ReceiptSuggestionResult::failed($meta['source'], 'timeout')->toArray() + ['jobId' => $jobId];
 		}
 
@@ -183,6 +187,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 
 		if ($status === Task::STATUS_CANCELLED) {
 			$this->cleanupJob($meta, false);
+			$this->metrics->increment(ReceiptSuggestMetrics::FAILED);
 			return ReceiptSuggestionResult::failed($meta['source'], 'cancelled')->toArray() + ['jobId' => $jobId];
 		}
 
@@ -193,6 +198,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 				// Do not log model output / receipt text.
 			]);
 			$this->cleanupJob($meta, true);
+			$this->metrics->increment(ReceiptSuggestMetrics::FAILED);
 			return ReceiptSuggestionResult::failed($meta['source'], 'task_failed')->toArray() + ['jobId' => $jobId];
 		}
 
@@ -220,8 +226,12 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 		$result = $this->pipeline->process($rawText, $context);
 		// Keep staging file until accept/cancel — only clear active lock on terminal non-ready? Keep job meta for accept.
 		if ($result->isReady()) {
+			$firstReady = (($meta['phase'] ?? '') !== 'ready');
 			$meta['phase'] = 'ready';
 			$this->jobs->save($meta);
+			if ($firstReady) {
+				$this->metrics->increment(ReceiptSuggestMetrics::READY);
+			}
 			$payload = $result->toArray();
 			$payload['jobId'] = $jobId;
 			$payload['fileName'] = $meta['fileName'];
@@ -230,6 +240,11 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 		}
 
 		$this->cleanupJob($meta, true);
+		if ($result->status === 'low_quality') {
+			$this->metrics->increment(ReceiptSuggestMetrics::LOW_QUALITY);
+		} else {
+			$this->metrics->increment(ReceiptSuggestMetrics::FAILED);
+		}
 		$payload = $result->toArray();
 		$payload['jobId'] = $jobId;
 		return $payload;
@@ -242,73 +257,91 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 	public function accept(int $workspaceId, string $userId, int $jobId, array $accepted): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
-		$meta = $this->jobs->get($userId, $jobId);
-		if ($meta === null || (int)$meta['workspaceId'] !== $workspaceId) {
-			throw new NotFoundException('Suggestion job not found.');
+
+		if (!$this->acceptLock->tryAcquire($userId, $jobId)) {
+			$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_BUSY);
+			throw new \InvalidArgumentException('Suggestion is already being saved. Wait a moment.');
 		}
 
-		$workspace = $this->workspaces->getForUser($workspaceId, $userId);
-		$catalog = $this->expenseCategoryCatalog($workspaceId, $userId);
-		$context = new ReceiptSuggestContext(
-			$catalog['ids'],
-			(string)$workspace['currencyCode'],
-			new \DateTimeImmutable('today'),
-			$meta['source'],
-		);
+		try {
+			$meta = $this->jobs->get($userId, $jobId);
+			if ($meta === null || (int)$meta['workspaceId'] !== $workspaceId) {
+				throw new NotFoundException('Suggestion job not found.');
+			}
 
-		$guard = $this->acceptGuard->assertAcceptable($accepted, $context);
-		if ($guard['ok'] !== true) {
-			throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
-		}
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$catalog = $this->expenseCategoryCatalog($workspaceId, $userId);
+			$context = new ReceiptSuggestContext(
+				$catalog['ids'],
+				(string)$workspace['currencyCode'],
+				new \DateTimeImmutable('today'),
+				$meta['source'],
+			);
 
-		// Re-process to get canonical lines (after collapse etc.).
-		$canonical = $this->pipeline->process(json_encode($accepted, JSON_THROW_ON_ERROR), $context);
-		if (!$canonical->isReady()) {
-			throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
-		}
-
-		$bookingDate = $canonical->bookingDate ?? (new \DateTimeImmutable('today'))->format('Y-m-d');
-		$titleBase = $canonical->title ?? $canonical->merchant ?? 'Receipt';
-		$direction = $canonical->direction ?? ReceiptSuggestConstants::DIRECTION_EXPENSE;
-
-		$created = [];
-		$attachmentRows = [];
-		$content = $this->staging->readBytes($userId, (int)$meta['fileId']);
-
-		foreach ($canonical->lines as $index => $line) {
-			$category = $this->categories->loadForWorkspace($line->categoryId, $workspaceId);
-			if ($category === null) {
+			$guard = $this->acceptGuard->assertAcceptable($accepted, $context);
+			if ($guard['ok'] !== true) {
+				$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_REJECTED);
 				throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
 			}
-			$title = count($canonical->lines) === 1
-				? $titleBase
-				: ($titleBase . ' — ' . $line->label);
-			$payload = [
-				'direction' => $direction,
-				'title' => mb_substr($title, 0, ReceiptSuggestConstants::MAX_TITLE_LEN),
-				'bookingDate' => $bookingDate,
-				'amountMinor' => $line->amountMinor,
-				'categoryId' => $line->categoryId,
-				'notes' => null,
-			];
-			$tx = $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, null);
-			$created[] = $tx;
-			$txId = (int)$tx['id'];
-			// Attach receipt to every booking in a split so each row has the proof.
-			$attachmentRows[] = $this->attachments->attachFromBinary(
-				$txId,
-				$userId,
-				$content,
-				(string)$meta['fileName'],
-				(string)$meta['mimeType'],
-			);
-		}
 
-		$this->cleanupJob($meta, true);
-		return [
-			'transactions' => $created,
-			'attachments' => $attachmentRows,
-		];
+			// Re-process to get canonical lines (after collapse etc.).
+			$canonical = $this->pipeline->process(json_encode($accepted, JSON_THROW_ON_ERROR), $context);
+			if (!$canonical->isReady()) {
+				$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_REJECTED);
+				throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
+			}
+
+			// Claim job meta before ledger writes so a second request cannot see it.
+			$this->jobs->delete($userId, $jobId, $workspaceId);
+
+			$bookingDate = $canonical->bookingDate ?? (new \DateTimeImmutable('today'))->format('Y-m-d');
+			$titleBase = $canonical->title ?? $canonical->merchant ?? 'Receipt';
+			$direction = $canonical->direction ?? ReceiptSuggestConstants::DIRECTION_EXPENSE;
+
+			$created = [];
+			$attachmentRows = [];
+			$content = $this->staging->readBytes($userId, (int)$meta['fileId']);
+
+			foreach ($canonical->lines as $index => $line) {
+				$category = $this->categories->loadForWorkspace($line->categoryId, $workspaceId);
+				if ($category === null) {
+					$this->staging->delete($userId, (int)$meta['fileId']);
+					$this->metrics->increment(ReceiptSuggestMetrics::ACCEPT_REJECTED);
+					throw new \InvalidArgumentException('Suggestion is no longer valid. Enter the booking manually.');
+				}
+				$title = count($canonical->lines) === 1
+					? $titleBase
+					: ($titleBase . ' — ' . $line->label);
+				$payload = [
+					'direction' => $direction,
+					'title' => mb_substr($title, 0, ReceiptSuggestConstants::MAX_TITLE_LEN),
+					'bookingDate' => $bookingDate,
+					'amountMinor' => $line->amountMinor,
+					'categoryId' => $line->categoryId,
+					'notes' => null,
+				];
+				$tx = $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, null);
+				$created[] = $tx;
+				$txId = (int)$tx['id'];
+				// Attach receipt to every booking in a split so each row has the proof.
+				$attachmentRows[] = $this->attachments->attachFromBinary(
+					$txId,
+					$userId,
+					$content,
+					(string)$meta['fileName'],
+					(string)$meta['mimeType'],
+				);
+			}
+
+			$this->staging->delete($userId, (int)$meta['fileId']);
+			$this->metrics->increment(ReceiptSuggestMetrics::ACCEPTED);
+			return [
+				'transactions' => $created,
+				'attachments' => $attachmentRows,
+			];
+		} finally {
+			$this->acceptLock->release($userId, $jobId);
+		}
 	}
 
 	public function cancelJob(int $workspaceId, string $userId, int $jobId): void
@@ -319,6 +352,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 			throw new NotFoundException('Suggestion job not found.');
 		}
 		$this->cleanupJob($meta, true);
+		$this->metrics->increment(ReceiptSuggestMetrics::CANCELLED);
 	}
 
 	/**
@@ -343,6 +377,7 @@ final class ReceiptSuggestService implements ReceiptSuggestServiceInterface
 		}
 		if (trim($ocrText) === '') {
 			$this->cleanupJob($meta, true);
+			$this->metrics->increment(ReceiptSuggestMetrics::LOW_QUALITY);
 			return ReceiptSuggestionResult::lowQuality($meta['source'], 'ocr_empty')->toArray()
 				+ ['jobId' => $meta['jobId']];
 		}
