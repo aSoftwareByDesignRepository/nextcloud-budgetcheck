@@ -277,8 +277,27 @@ class MobileApiController extends Controller
 				'limit' => (int)$this->request->getParam('limit', 50),
 				'offset' => (int)$this->request->getParam('offset', 0),
 			];
+			// Companion contract: `transactions` is a row array. Never nest the web
+			// pagination envelope here — clients call .map and would hard-fail.
+			$list = $this->transactions->listForWorkspace($workspaceId, $userId, $filters, $workspace);
+			$items = is_array($list['items'] ?? null) ? $list['items'] : [];
+			$categoryNames = $this->categoryNameMap($workspaceId, $userId);
+			$enriched = [];
+			foreach ($items as $row) {
+				if (!is_array($row)) {
+					continue;
+				}
+				$cid = (int)($row['categoryId'] ?? 0);
+				if ($cid > 0 && !isset($row['categoryName']) && isset($categoryNames[$cid])) {
+					$row['categoryName'] = $categoryNames[$cid];
+				}
+				$enriched[] = $row;
+			}
 			return [
-				'transactions' => $this->transactions->listForWorkspace($workspaceId, $userId, $filters, $workspace),
+				'transactions' => $enriched,
+				'total' => (int)($list['total'] ?? count($enriched)),
+				'limit' => (int)($list['limit'] ?? 50),
+				'offset' => (int)($list['offset'] ?? 0),
 			];
 		});
 	}
@@ -707,6 +726,9 @@ class MobileApiController extends Controller
 	}
 
 	/**
+	 * Month/period category overview for mobile Home.
+	 * Includes budgeted categories and expense categories with spend (even without a plan).
+	 *
 	 * @param array<string, mixed> $summary
 	 * @return list<array<string, mixed>>
 	 */
@@ -722,23 +744,50 @@ class MobileApiController extends Controller
 			if (!is_array($row)) {
 				continue;
 			}
-			if (!(bool)($row['hasBudget'] ?? false)) {
+			$hasBudget = (bool)($row['hasBudget'] ?? false);
+			$planned = $hasBudget ? $this->envelopeMinor($row['planned'] ?? null) : 0;
+			$actual = $this->envelopeMinor($row['actual'] ?? null);
+			$direction = (string)($row['direction'] ?? 'expense');
+			// Skip income-only / empty rows without a budget — Home is a spend overview.
+			if (!$hasBudget && ($direction !== 'expense' || $actual <= 0)) {
 				continue;
 			}
-			$planned = $this->envelopeMinor($row['planned'] ?? null);
-			$actual = $this->envelopeMinor($row['actual'] ?? null);
 			$chips[] = [
 				'categoryId' => (int)($row['categoryId'] ?? 0),
 				'categoryName' => (string)($row['name'] ?? ''),
 				'plannedMinor' => $planned,
 				'actualMinor' => $actual,
-				'leftMinor' => $planned - $actual,
+				'leftMinor' => $hasBudget ? ($planned - $actual) : 0,
+				'hasBudget' => $hasBudget,
 			];
-			if (count($chips) >= 12) {
-				break;
+		}
+		usort($chips, static function (array $a, array $b): int {
+			$overA = !empty($a['hasBudget']) && (int)$a['actualMinor'] > (int)$a['plannedMinor'] ? 1 : 0;
+			$overB = !empty($b['hasBudget']) && (int)$b['actualMinor'] > (int)$b['plannedMinor'] ? 1 : 0;
+			if ($overA !== $overB) {
+				return $overB <=> $overA;
+			}
+			return (int)$b['actualMinor'] <=> (int)$a['actualMinor'];
+		});
+		return array_slice($chips, 0, 24);
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function categoryNameMap(int $workspaceId, string $userId): array
+	{
+		$map = [];
+		foreach ($this->categories->listForWorkspace($workspaceId, $userId, true) as $cat) {
+			if (!is_array($cat)) {
+				continue;
+			}
+			$id = (int)($cat['id'] ?? 0);
+			if ($id > 0) {
+				$map[$id] = (string)($cat['name'] ?? '');
 			}
 		}
-		return $chips;
+		return $map;
 	}
 
 	private function envelopeMinor(mixed $envelope): int
