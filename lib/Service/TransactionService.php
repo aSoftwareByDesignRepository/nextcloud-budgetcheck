@@ -743,6 +743,9 @@ class TransactionService
 		if ($affected === 0) {
 			throw new ConflictException();
 		}
+		if ($this->attachments !== null) {
+			$this->attachments->purgeForTransaction($transactionId);
+		}
 		$this->audit->record($userId, 'transaction_deleted', 'transaction', (string)$transactionId, [], $workspace['id']);
 		return true;
 	}

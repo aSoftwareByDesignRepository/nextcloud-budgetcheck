@@ -128,6 +128,7 @@ final class TransactionDeleteCasTest extends TestCase
 		$this->inject($svc, 'money', new MoneyService());
 		$this->inject($svc, 'db', $db ?? $this->createMock(IDBConnection::class));
 		$this->inject($svc, 'audit', $audit ?? $this->createMock(AuditLogService::class));
+		$this->inject($svc, 'attachments', null);
 		$time = $this->createMock(\OCP\AppFramework\Utility\ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-27 12:00:00', new \DateTimeZone('UTC')));
 		$this->inject($svc, 'timeFactory', $time);

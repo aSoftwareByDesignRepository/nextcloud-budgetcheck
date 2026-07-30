@@ -23,6 +23,7 @@ final class SecurityCloseoutContractTest extends TestCase
 			'deleteTransaction',
 			'uploadTransactionAttachment',
 			'deleteTransactionAttachment',
+			'replaceTransactionAttachment',
 			'createCategory',
 			'updateCategory',
 			'saveSavingsTarget',

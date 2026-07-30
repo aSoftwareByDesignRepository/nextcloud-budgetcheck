@@ -147,6 +147,7 @@ class TransactionAttachmentService
 
 		$transaction = null;
 		$attachmentId = 0;
+		$persistedName = null;
 		$this->db->beginTransaction();
 		try {
 			$transaction = $this->resolveWritableTransaction($transactionId, $userId);
@@ -166,6 +167,7 @@ class TransactionAttachmentService
 			}
 
 			$this->persistFile((int)$transaction['id'], $storedName, $tmpPath);
+			$persistedName = $storedName;
 
 			try {
 				$now = $this->utcNow();
@@ -184,12 +186,16 @@ class TransactionAttachmentService
 				$attachmentId = (int)$qb->getLastInsertId();
 			} catch (\Throwable $dbError) {
 				$this->deleteStoredFile((int)$transaction['id'], $storedName);
+				$persistedName = null;
 				throw $dbError;
 			}
 
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			$this->db->rollBack();
+			if ($persistedName !== null) {
+				$this->deleteStoredFile($transactionId, $persistedName);
+			}
 			throw $e;
 		}
 
@@ -306,29 +312,85 @@ class TransactionAttachmentService
 
 	public function delete(int $attachmentId, string $userId): void
 	{
+		$this->deleteInWorkspace($attachmentId, $userId, null);
+	}
+
+	/**
+	 * Delete an attachment and optionally require it to belong to $workspaceId (mobile IDOR bind).
+	 */
+	public function deleteInWorkspace(int $attachmentId, string $userId, ?int $workspaceId): void
+	{
 		$row = $this->loadRowById($attachmentId);
 		if ($row === null) {
 			throw new AccessDeniedException();
 		}
 
-		$transaction = $this->resolveWritableTransaction((int)$row['transaction_id'], $userId);
-		$this->access->ensureMinimumRole((int)$transaction['workspace_id'], $userId, AccessControlService::ROLE_CONTRIBUTOR);
+		$transactionId = (int)$row['transaction_id'];
+		$storedName = (string)$row['stored_name'];
+		$txWorkspaceId = 0;
 
-		$this->deleteStoredFile((int)$row['transaction_id'], (string)$row['stored_name']);
+		$this->db->beginTransaction();
+		try {
+			$transaction = $this->resolveWritableTransaction($transactionId, $userId);
+			$txWorkspaceId = (int)$transaction['workspace_id'];
+			if ($workspaceId !== null && $txWorkspaceId !== $workspaceId) {
+				throw new AccessDeniedException();
+			}
+			$this->access->ensureMinimumRole($txWorkspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+			$this->lockTransactionRow($transactionId);
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete('bc_tx_attachments')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($attachmentId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
+			// Delete DB row first so a failed disk wipe cannot leave a live row pointing at a missing file.
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('bc_tx_attachments')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($attachmentId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
+
+		$this->deleteStoredFile($transactionId, $storedName);
 
 		$this->audit->record(
 			$userId,
 			'transaction_attachment_deleted',
 			'transaction_attachment',
 			(string)$attachmentId,
-			['transactionId' => (int)$row['transaction_id']],
-			(int)$transaction['workspace_id'],
+			['transactionId' => $transactionId],
+			$txWorkspaceId,
 		);
+	}
+
+	/**
+	 * Remove all attachment rows + files for a transaction (used after soft-delete).
+	 * Best-effort: DB rows are removed even if some files are already gone.
+	 */
+	public function purgeForTransaction(int $transactionId): void
+	{
+		if ($transactionId < 1 || !$this->db->tableExists('bc_tx_attachments')) {
+			return;
+		}
+
+		$rows = $this->loadRowsForTransaction($transactionId);
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('bc_tx_attachments')
+			->where($qb->expr()->eq('transaction_id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
+
+		foreach ($rows as $row) {
+			$this->deleteStoredFile($transactionId, (string)$row['stored_name']);
+		}
+
+		try {
+			$folder = $this->getTransactionFolder($transactionId, false);
+			$folder->delete();
+		} catch (NotFoundException) {
+			// Already gone.
+		} catch (\Throwable) {
+			// Best-effort privacy cleanup — do not fail the ledger soft-delete.
+		}
 	}
 
 	/**
@@ -506,7 +568,13 @@ class TransactionAttachmentService
 
 	private function validateEInvoiceXmlContent(string $tmpPath): bool
 	{
-		$head = @file_get_contents($tmpPath, false, null, 0, 8192);
+		$size = @filesize($tmpPath);
+		if ($size === false || $size < 1) {
+			return false;
+		}
+		// Scan the whole upload (already capped by MAX_FILE_SIZE) so ENTITY/php
+		// payloads past the first 8KB cannot bypass the gate.
+		$head = @file_get_contents($tmpPath, false, null, 0, self::MAX_FILE_SIZE);
 		if (!is_string($head) || $head === '') {
 			return false;
 		}

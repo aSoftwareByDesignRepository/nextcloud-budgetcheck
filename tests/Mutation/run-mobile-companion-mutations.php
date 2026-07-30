@@ -103,6 +103,13 @@ $assert(str_contains($mig, 'bc_mobile_push'), 'migration_push');
 $assert(str_contains($catalog, 'bc_idempotency'), 'catalog_idempotency');
 $assert(str_contains($uninstall, 'bc_idempotency'), 'uninstall_idempotency');
 $assert(str_contains($uninstall, 'bc_mobile_push'), 'uninstall_push');
+$assert(str_contains($uninstall, 'purgeTransactionAttachmentFiles'), 'uninstall_purges_tx_attachments');
+$assert(str_contains($uninstall, 'tx-attachments'), 'uninstall_tx_attachments_path');
+$attach = (string)file_get_contents($root . '/lib/Service/TransactionAttachmentService.php');
+$assert(str_contains($attach, 'purgeForTransaction'), 'attach_purge_on_tx_delete');
+$assert(str_contains($attach, 'deleteInWorkspace'), 'attach_workspace_bound_delete');
+$assert(str_contains($mobile, 'deleteInWorkspace($attachmentId, $userId, $workspaceId)'), 'mobile_delete_binds_workspace');
+$assert(!preg_match('/#\[NoCSRFRequired\]\s*\n\s*public function replaceTransactionAttachment\(/', $api), 'web_replace_attachment_still_csrf');
 // Web mutations must still require CSRF
 $assert(!preg_match('/#\[NoCSRFRequired\]\s*\n\s*public function createTransaction\(/', $api), 'web_create_still_csrf');
 $assert(!preg_match('/#\[NoCSRFRequired\]\s*\n\s*public function deleteTransaction\(/', $api), 'web_delete_still_csrf');

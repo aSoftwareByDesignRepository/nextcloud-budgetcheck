@@ -218,8 +218,8 @@
 			if (typeof opts.onAttachmentsChanged === 'function') {
 				opts.onAttachmentsChanged({
 					transactionId: state.transactionId,
-					attachmentCount: state.items.length,
-					hasAttachments: state.items.length > 0,
+					attachmentCount: state.items.length + state.pendingItems.length,
+					hasAttachments: (state.items.length + state.pendingItems.length) > 0,
 				});
 			}
 		}

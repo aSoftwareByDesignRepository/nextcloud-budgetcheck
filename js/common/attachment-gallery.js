@@ -187,7 +187,7 @@
 		if (items.length === 0) return null;
 
 		if (openInstance) {
-			openInstance.close(false);
+			openInstance.close(false, true);
 		}
 
 		const previousFocus = document.activeElement;
@@ -762,7 +762,7 @@
 		function renderCurrent() {
 			const item = currentItem();
 			if (!item) {
-				instance.close(false);
+				instance.close(false, true);
 				return;
 			}
 
@@ -793,8 +793,40 @@
 		function goTo(nextIndex) {
 			if (nextIndex < 0 || nextIndex >= items.length || nextIndex === index) return;
 			if (saving || loadingMedia || loadingXml) return;
+			if (!confirmDiscardDirty()) return;
 			index = nextIndex;
 			renderCurrent();
+		}
+
+		function confirmDiscardDirty() {
+			if (readOnly || !imageState.dirty) {
+				return true;
+			}
+			return window.confirm(t('budgetcheck', 'Discard unsaved image changes?'));
+		}
+
+		/**
+		 * Bake CSS/canvas rotation into the bitmap so crop maps in natural coords.
+		 * Rotate-then-crop without this saves the wrong region.
+		 */
+		async function bakeRotationIntoImage() {
+			const steps = normalizeRotationSteps(imageState.rotationSteps);
+			if (steps === 0) {
+				return;
+			}
+			const blob = await exportEditedImage(imgEl, steps, null);
+			const objectUrl = URL.createObjectURL(blob);
+			trackBlobUrl(objectUrl);
+			await new Promise((resolve, reject) => {
+				imgEl.onload = () => resolve();
+				imgEl.onerror = () => reject(new Error(t('budgetcheck', 'Image could not be loaded.')));
+				imgEl.src = objectUrl;
+			});
+			imageState.rotationSteps = 0;
+			imageState.panX = 0;
+			imageState.panY = 0;
+			markDirty();
+			fitImageToViewport();
 		}
 
 		async function saveImageEdits() {
@@ -895,7 +927,7 @@
 				}
 
 				if (items.length === 0) {
-					instance.close(true);
+					instance.close(true, true);
 					return;
 				}
 				if (index >= items.length) index = items.length - 1;
@@ -947,20 +979,27 @@
 			fitImageToViewport();
 		});
 		elCrop.addEventListener('click', () => {
-			if (imageState.cropMode) {
-				exitCropMode();
-				return;
-			}
-			imageState.cropMode = true;
-			elCrop.setAttribute('aria-pressed', 'true');
-			cropOverlay.hidden = false;
-			imageState.panX = 0;
-			imageState.panY = 0;
-			imageState.rotationSteps = normalizeRotationSteps(imageState.rotationSteps);
-			fitImageToViewport();
-			window.requestAnimationFrame(() => initCropBox());
-			markDirty();
-			updateToolbarControls();
+			void (async () => {
+				if (imageState.cropMode) {
+					exitCropMode();
+					return;
+				}
+				if (readOnly || saving || loadingMedia) return;
+				try {
+					await bakeRotationIntoImage();
+					imageState.cropMode = true;
+					elCrop.setAttribute('aria-pressed', 'true');
+					cropOverlay.hidden = false;
+					imageState.panX = 0;
+					imageState.panY = 0;
+					fitImageToViewport();
+					window.requestAnimationFrame(() => initCropBox());
+					markDirty();
+					updateToolbarControls();
+				} catch (err) {
+					BC.Messaging.handleApiError(err, { reloadOnConflict: false });
+				}
+			})();
 		});
 		elSave.addEventListener('click', () => saveImageEdits());
 		elDownload.addEventListener('click', () => downloadCurrent());
@@ -1132,8 +1171,9 @@
 		}
 
 		const instance = {
-			close(result) {
+			close(result, force) {
 				if (!instance._open) return;
+				if (!force && !confirmDiscardDirty()) return;
 				instance._open = false;
 				loadSeq += 1;
 				if (viewportResizeObs) {
@@ -1170,5 +1210,8 @@
 		itemKind,
 		fileLabel,
 		resolveMediaUrl,
+		cropRectToNatural,
+		exportEditedImage,
+		normalizeRotationSteps,
 	});
 })();

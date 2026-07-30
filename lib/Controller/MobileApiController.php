@@ -508,7 +508,7 @@ class MobileApiController extends Controller
 			$this->assertSafeMutationChannel();
 			$this->workspaces->getForUser($workspaceId, $userId);
 			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_write', 120, 300);
-			$this->attachments->delete($attachmentId, $userId);
+			$this->attachments->deleteInWorkspace($attachmentId, $userId, $workspaceId);
 			return ['deleted' => true, 'id' => $attachmentId];
 		});
 	}

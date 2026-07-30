@@ -75,6 +75,18 @@ final class TransactionAttachmentUploadValidationTest extends TestCase
 		$this->assertFalse($result['success']);
 	}
 
+	public function testRejectsXmlWithEntityPastFirst8Kilobytes(): void
+	{
+		$payload = '<?xml version="1.0"?>' . str_repeat(' ', 9000) . '<!DOCTYPE foo [<!ENTITY xxe "test">]><Invoice></Invoice>';
+		$path = $this->tempFile('padded-bad.xml', $payload);
+		$result = self::service()->validateUploadedFile([
+			'name' => 'padded-bad.xml',
+			'size' => filesize($path),
+			'tmp_name' => $path,
+		]);
+		$this->assertFalse($result['success'], 'ENTITY after 8KB must still be rejected');
+	}
+
 	private function tempFile(string $name, string $contents): string
 	{
 		$path = sys_get_temp_dir() . '/' . $name;
