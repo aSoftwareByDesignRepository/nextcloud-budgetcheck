@@ -391,8 +391,9 @@
 				class: 'bc-callout__hint',
 				text: t('budgetcheck', 'Mark one expense category as Savings transfer to track money you set aside toward your target.'),
 			}));
-			const settingsHref = Ws && Ws.urls && Ws.urls.settings
-				? Ws.withWorkspace(Ws.urls.settings) + '#bc-categories-title'
+			const settingsUrl = Ws && Ws.urls ? Ws.urls.settings : null;
+			const settingsHref = settingsUrl
+				? Ws.withWorkspace(settingsUrl) + '#bc-categories-title'
 				: null;
 			if (settingsHref) {
 				const actions = createElement('div', { class: 'bc-summary-callout__actions' });
@@ -435,8 +436,9 @@
 			}
 			if (parts.length) {
 				const Ws = window.BudgetCheckWorkspace;
-				const settingsHref = Ws && Ws.urls && Ws.urls.settings
-					? Ws.withWorkspace(Ws.urls.settings)
+				const settingsUrl = Ws && Ws.urls ? Ws.urls.settings : null;
+				const settingsHref = settingsUrl
+					? Ws.withWorkspace(settingsUrl)
 					: null;
 				cashFlowFooter = [
 					makeInfoCallout(
@@ -482,8 +484,9 @@
 				);
 			}
 			const Ws = window.BudgetCheckWorkspace;
-			const ledgerHref = Ws && Ws.urls && Ws.urls.transactions && summary.yearMonth
-				? Ws.withWorkspace(Ws.urls.transactions) + '&yearMonth=' + encodeURIComponent(String(summary.yearMonth))
+			const txUrl = Ws && Ws.urls ? Ws.urls.transactions : null;
+			const ledgerHref = txUrl && summary.yearMonth
+				? Ws.withWorkspace(txUrl) + '&yearMonth=' + encodeURIComponent(String(summary.yearMonth))
 				: null;
 			const plannedFooter = plannedEntryCount > 0 && ledgerHref
 				? [makeInfoCallout(
@@ -599,11 +602,17 @@
 		item.appendChild(body);
 		const recovery = warning.recovery;
 		const urls = workspace && workspace.urls ? workspace.urls : null;
-		const withWorkspace = workspace && typeof workspace.withWorkspace === 'function'
-			? workspace.withWorkspace
-			: null;
-		if (recovery && recovery.screen && urls && urls[recovery.screen] && withWorkspace) {
-			let href = withWorkspace(urls[recovery.screen]);
+		const canBuildRecovery = !!(
+			recovery
+			&& recovery.screen
+			&& urls
+			&& urls[recovery.screen]
+			&& workspace
+			&& typeof workspace.withWorkspace === 'function'
+		);
+		if (canBuildRecovery) {
+			// Call as a method (preserve `this`) — never extract/unbind withWorkspace.
+			let href = workspace.withWorkspace(urls[recovery.screen]);
 			const params = recovery.params || {};
 			Object.entries(params).forEach(([key, value]) => {
 				if (value === null || value === undefined || value === '') return;
@@ -633,7 +642,10 @@
 		warnings.forEach((w) => list.appendChild(renderWarningItem(w, workspace)));
 	}
 
-	window.BudgetCheckComponents = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Components cannot register');
+	}
+	window.BudgetCheck.define('Components', {
 		createElement,
 		openModal,
 		confirmDialog,
@@ -642,5 +654,5 @@
 		moneyTileValue,
 		renderWarningItem,
 		renderWarningsList,
-	};
+	});
 })();

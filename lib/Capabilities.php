@@ -17,7 +17,7 @@ use OCP\Capabilities\ICapability;
 class Capabilities implements ICapability
 {
 	public const COMPANION_MIN = 1;
-	public const COMPANION_API = 1;
+	public const COMPANION_API = 2;
 
 	public function __construct(
 		private readonly IAppManager $appManager,

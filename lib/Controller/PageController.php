@@ -354,6 +354,9 @@ class PageController extends Controller
 		if ($pageScript === 'import') {
 			Util::addStyle(Application::APP_ID, 'import');
 		}
+		// Bootstrap first: page modules resolve deps via BudgetCheck.require/onReady
+		// and must never snapshot window.BudgetCheck* at IIFE evaluation time.
+		Util::addScript(Application::APP_ID, 'common/bootstrap');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
 		Util::addScript(Application::APP_ID, 'common/dates');

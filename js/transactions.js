@@ -27,13 +27,21 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
-	const BcConst = window.BudgetCheckConstants;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+	/** @type {any} */
+	let BcConst;
+
 
 	const PAGE_SIZE = 50;
 	const SEARCH_DEBOUNCE_MS = 250;
@@ -181,8 +189,8 @@
 	// ---------------------------------------------------------------
 	//  Bootstrap
 	// ---------------------------------------------------------------
-	document.addEventListener('DOMContentLoaded', () => {
-		if (!Ws.workspace) return;
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object' || !Ws.workspace) return;
 		hydrateFromUrl();
 		wireFilterForm();
 		wireMoreToggle();
@@ -202,7 +210,7 @@
 		render(); // initial paint of chips + advanced visibility
 		loadAndRender();
 		maybeOpenNewTransactionFromUrl();
-	});
+	}
 
 	function resolveViewYearMonth() {
 		// Active date filters win over a stale URL month so the header always matches the ledger scope.
@@ -1698,4 +1706,30 @@
 		});
 		return svg;
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		BcConst = deps.Constants;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		if (typeof dashState !== 'undefined' && dashState && Object.prototype.hasOwnProperty.call(dashState, 'yearMonth') && dashState.yearMonth == null && typeof initialYearMonth === 'function') {
+			dashState.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace', 'Constants'],
+		optional: [],
+	});
+
 })();

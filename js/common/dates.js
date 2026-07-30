@@ -44,6 +44,15 @@
 		return d.getFullYear() + '-' + pad(d.getMonth() + 1);
 	}
 
+	/**
+	 * Same as currentYearMonth. Prefer calling via
+	 * `window.BudgetCheckDates && window.BudgetCheckDates.currentYearMonthSafe()`
+	 * from page modules so a missing Dates global never throws on property read.
+	 */
+	function currentYearMonthSafe() {
+		return currentYearMonth();
+	}
+
 	function clampYearMonth(value, min, max) {
 		if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(String(value || ''))) {
 			return null;
@@ -332,10 +341,14 @@
 		return { spanLine: spanLine, monthLine: monthLine };
 	}
 
-	window.BudgetCheckDates = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Dates cannot register');
+	}
+	window.BudgetCheck.define('Dates', {
 		normalizeLang,
 		isoDate,
 		currentYearMonth,
+		currentYearMonthSafe,
 		clampYearMonth,
 		formatYearMonth,
 		formatDisplayDate,
@@ -351,5 +364,5 @@
 		compareYearMonth,
 		yearMonthFromDateRange,
 		monthlyLedgerHelpLines,
-	};
+	});
 })();

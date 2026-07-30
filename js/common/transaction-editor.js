@@ -1,11 +1,28 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Api', 'Messaging', 'Components', 'Money', 'Dates'])
+		: (function () {
+			const fallback = {};
+			const map = {'Api': 'BudgetCheckApi', 'Messaging': 'BudgetCheckMessaging', 'Components': 'BudgetCheckComponents', 'Money': 'BudgetCheckMoney', 'Dates': 'BudgetCheckDates'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	function attachmentsApi() {
 		return window.BudgetCheckTransactionAttachments;
@@ -38,18 +55,18 @@
 			String(labelExtraClass).split(/\s+/).filter(Boolean).forEach((c) => labelClasses.push(c));
 		}
 		const parts = [
-			C.createElement('span', { class: 'bc-field__label', text: labelText }),
+			BC.Components.createElement('span', { class: 'bc-field__label', text: labelText }),
 			control,
 		];
 		if (hintText) {
 			const hintId = uid('bc-field-hint');
-			parts.push(C.createElement('span', { id: hintId, class: 'bc-field__hint', text: hintText }));
+			parts.push(BC.Components.createElement('span', { id: hintId, class: 'bc-field__hint', text: hintText }));
 			if (control && typeof control.setAttribute === 'function') {
 				const cur = control.getAttribute('aria-describedby');
 				control.setAttribute('aria-describedby', cur ? (cur + ' ' + hintId) : hintId);
 			}
 		}
-		parent.appendChild(C.createElement('label', { class: labelClasses.join(' ') }, parts));
+		parent.appendChild(BC.Components.createElement('label', { class: labelClasses.join(' ') }, parts));
 	}
 
 	async function ensureCatalog() {
@@ -65,7 +82,7 @@
 			return catalog.loading;
 		}
 		catalog.loading = (async () => {
-			const catData = await Api.get('/apps/budgetcheck/api/categories', {
+			const catData = await BC.Api.get('/apps/budgetcheck/api/categories', {
 				workspaceId: wsId,
 				includeInactive: '1',
 			});
@@ -73,7 +90,7 @@
 			catalog.categories = catData.categories || [];
 			catalog.statuses = [];
 			if (ctx.workspace.type === 'project') {
-				const statusData = await Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: wsId });
+				const statusData = await BC.Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: wsId });
 				catalog.statuses = statusData.statuses || [];
 			}
 			catalog.loading = null;
@@ -89,7 +106,7 @@
 		const ctx = Ws();
 		if (!ctx || !ctx.workspace || !ctx.canContribute) return Promise.resolve();
 		return ensureCatalog().catch((err) => {
-			Msg.handleApiError(err);
+			BC.Messaging.handleApiError(err);
 		});
 	}
 
@@ -101,17 +118,17 @@
 		const ctx = Ws();
 		if (!ctx || !ctx.workspace) return;
 		if (!ctx.canContribute) {
-			Msg.announce(t('budgetcheck', 'You are not authorized to perform that action.'), 'error');
+			BC.Messaging.announce(t('budgetcheck', 'You are not authorized to perform that action.'), 'error');
 			return;
 		}
 		try {
 			await ensureCatalog();
 		} catch (err) {
-			Msg.handleApiError(err);
+			BC.Messaging.handleApiError(err);
 			return;
 		}
 		if (!catalog.categories.some((c) => c.isActive)) {
-			Msg.announce(t('budgetcheck', 'Add income or expense categories first.'), 'error');
+			BC.Messaging.announce(t('budgetcheck', 'Add income or expense categories first.'), 'error');
 			return;
 		}
 		openModal(opts.tx || null, opts);
@@ -146,15 +163,15 @@
 			? (t('budgetcheck', 'Amount') + ' (' + currencyCode + ')')
 			: t('budgetcheck', 'Amount');
 
-		C.openModal({
+		BC.Components.openModal({
 			title: isEdit ? t('budgetcheck', 'Edit transaction') : t('budgetcheck', 'New transaction'),
 			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add transaction'),
 			render: ({ close }) => {
-				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form bc-modal__form--transaction' });
+				const form = BC.Components.createElement('form', { class: 'bc-form-grid bc-modal__form bc-modal__form--transaction' });
 
-				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [
-					C.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense') }),
-					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
+				const directionSelect = BC.Components.createElement('select', { name: 'direction', class: 'bc-input' }, [
+					BC.Components.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense') }),
+					BC.Components.createElement('option', { value: 'income', text: t('budgetcheck', 'Income') }),
 				]);
 				directionSelect.value = tx ? tx.direction : 'expense';
 				wrapField(
@@ -165,13 +182,13 @@
 					'bc-field--full-width',
 				);
 
-				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
-				const categoryEmptyHint = C.createElement('p', {
+				const catSelect = BC.Components.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
+				const categoryEmptyHint = BC.Components.createElement('p', {
 					class: 'bc-field__hint bc-field__hint--block',
 					attrs: { role: 'status', hidden: true },
 				});
 
-				const amountInput = C.createElement('input', {
+				const amountInput = BC.Components.createElement('input', {
 					name: 'amount',
 					type: 'text',
 					inputmode: 'decimal',
@@ -181,17 +198,17 @@
 				});
 				amountInput.value = tx ? String(tx.amount.minor / Math.pow(10, activeDecimals())).replace('.', ',') : '';
 
-				const dateInput = C.createElement('input', {
+				const dateInput = BC.Components.createElement('input', {
 					name: 'bookingDate',
 					type: 'date',
 					class: 'bc-input',
 					autocomplete: 'off',
 					required: true,
-					value: tx ? String(tx.bookingDate) : (modalOpts.bookingDate || Dates.isoDate(new Date())),
+					value: tx ? String(tx.bookingDate) : (modalOpts.bookingDate || BC.Dates.isoDate(new Date())),
 					attrs: { lang: ctx.htmlLang },
 				});
 
-				const titleInput = C.createElement('input', {
+				const titleInput = BC.Components.createElement('input', {
 					name: 'title',
 					type: 'text',
 					class: 'bc-input',
@@ -222,7 +239,7 @@
 						const label = c.isActive
 							? c.name
 							: c.name + ' (' + t('budgetcheck', 'Inactive') + ')';
-						catSelect.appendChild(C.createElement('option', { value: String(c.id), text: label }));
+						catSelect.appendChild(BC.Components.createElement('option', { value: String(c.id), text: label }));
 					});
 					if (previousId) {
 						const keep = Array.from(catSelect.options).find((o) => o.value === previousId);
@@ -254,7 +271,7 @@
 				);
 				form.appendChild(categoryEmptyHint);
 
-				const titleAmountRow = C.createElement('div', { class: 'bc-tx-title-amount-row' });
+				const titleAmountRow = BC.Components.createElement('div', { class: 'bc-tx-title-amount-row' });
 				wrapField(
 					titleAmountRow,
 					t('budgetcheck', 'Custom title (optional)'),
@@ -278,11 +295,11 @@
 				let vatCustomInput = null;
 				let taxPreviewEl = null;
 				if (taxModeEnabled) {
-					form.appendChild(C.createElement('hr', { class: 'bc-form-grid__divider' }));
-					entryBasisSelect = C.createElement('select', { name: 'entryAmountBasis', class: 'bc-input' }, [
-						C.createElement('option', { value: 'simple', text: t('budgetcheck', 'No tax split') }),
-						C.createElement('option', { value: 'gross', text: t('budgetcheck', 'Gross') }),
-						C.createElement('option', { value: 'net', text: t('budgetcheck', 'Net') }),
+					form.appendChild(BC.Components.createElement('hr', { class: 'bc-form-grid__divider' }));
+					entryBasisSelect = BC.Components.createElement('select', { name: 'entryAmountBasis', class: 'bc-input' }, [
+						BC.Components.createElement('option', { value: 'simple', text: t('budgetcheck', 'No tax split') }),
+						BC.Components.createElement('option', { value: 'gross', text: t('budgetcheck', 'Gross') }),
+						BC.Components.createElement('option', { value: 'net', text: t('budgetcheck', 'Net') }),
 					]);
 					entryBasisSelect.value = tx ? (tx.entryAmountBasis || 'simple') : (ctx.workspace.taxBudgetBasis || 'gross');
 					wrapField(
@@ -293,18 +310,18 @@
 						'bc-field--full-width',
 					);
 
-					vatPresetSelect = C.createElement('select', { name: 'vatPreset', class: 'bc-input' }, [
-						C.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)') }),
-						C.createElement('option', { value: '500', text: t('budgetcheck', '5 %') }),
-						C.createElement('option', { value: '700', text: t('budgetcheck', '7 %') }),
-						C.createElement('option', { value: '1000', text: t('budgetcheck', '10 %') }),
-						C.createElement('option', { value: '1300', text: t('budgetcheck', '13 %') }),
-						C.createElement('option', { value: '1500', text: t('budgetcheck', '15 %') }),
-						C.createElement('option', { value: '1900', text: t('budgetcheck', '19 %') }),
-						C.createElement('option', { value: '2000', text: t('budgetcheck', '20 %') }),
-						C.createElement('option', { value: '2100', text: t('budgetcheck', '21 %') }),
-						C.createElement('option', { value: '2500', text: t('budgetcheck', '25 %') }),
-						C.createElement('option', { value: 'custom', text: t('budgetcheck', 'Custom…') }),
+					vatPresetSelect = BC.Components.createElement('select', { name: 'vatPreset', class: 'bc-input' }, [
+						BC.Components.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)') }),
+						BC.Components.createElement('option', { value: '500', text: t('budgetcheck', '5 %') }),
+						BC.Components.createElement('option', { value: '700', text: t('budgetcheck', '7 %') }),
+						BC.Components.createElement('option', { value: '1000', text: t('budgetcheck', '10 %') }),
+						BC.Components.createElement('option', { value: '1300', text: t('budgetcheck', '13 %') }),
+						BC.Components.createElement('option', { value: '1500', text: t('budgetcheck', '15 %') }),
+						BC.Components.createElement('option', { value: '1900', text: t('budgetcheck', '19 %') }),
+						BC.Components.createElement('option', { value: '2000', text: t('budgetcheck', '20 %') }),
+						BC.Components.createElement('option', { value: '2100', text: t('budgetcheck', '21 %') }),
+						BC.Components.createElement('option', { value: '2500', text: t('budgetcheck', '25 %') }),
+						BC.Components.createElement('option', { value: 'custom', text: t('budgetcheck', 'Custom…') }),
 					]);
 					const initialRate = tx && Number.isFinite(tx.vatRateBp) ? String(tx.vatRateBp) : String(ctx.workspace.defaultVatRateBp ?? 0);
 					const presetValues = new Set(Array.from(vatPresetSelect.options).map((o) => o.value));
@@ -317,25 +334,25 @@
 						'bc-field--full-width',
 					);
 
-					vatCustomInput = C.createElement('input', { name: 'vatRateBpCustom', type: 'number', min: '0', max: '5000', step: '1', class: 'bc-input' });
+					vatCustomInput = BC.Components.createElement('input', { name: 'vatRateBpCustom', type: 'number', min: '0', max: '5000', step: '1', class: 'bc-input' });
 					vatCustomInput.value = vatPresetSelect.value === 'custom' ? initialRate : '';
-					vatCustomWrap = C.createElement('label', { class: 'bc-field bc-field--full-width', attrs: { 'data-bc-vat-custom-wrap': '1' } }, [
-						C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom VAT (basis points)') }),
+					vatCustomWrap = BC.Components.createElement('label', { class: 'bc-field bc-field--full-width', attrs: { 'data-bc-vat-custom-wrap': '1' } }, [
+						BC.Components.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom VAT (basis points)') }),
 						vatCustomInput,
-						C.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%') }),
+						BC.Components.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%') }),
 					]);
 					form.appendChild(vatCustomWrap);
 
-					taxPreviewEl = C.createElement('p', { class: 'bc-field__hint bc-field__hint--block', attrs: { role: 'status' } });
+					taxPreviewEl = BC.Components.createElement('p', { class: 'bc-field__hint bc-field__hint--block', attrs: { role: 'status' } });
 					form.appendChild(taxPreviewEl);
 				}
 
 				let bookingStatusSelect = null;
 				if (ctx.workspace && ctx.workspace.type === 'project') {
-					bookingStatusSelect = C.createElement('select', { name: 'bookingStatusId', class: 'bc-input' });
-					bookingStatusSelect.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'No status') }));
+					bookingStatusSelect = BC.Components.createElement('select', { name: 'bookingStatusId', class: 'bc-input' });
+					bookingStatusSelect.appendChild(BC.Components.createElement('option', { value: '', text: t('budgetcheck', 'No status') }));
 					catalog.statuses.filter((status) => status.isActive).forEach((status) => {
-						bookingStatusSelect.appendChild(C.createElement('option', { value: String(status.id), text: status.name }));
+						bookingStatusSelect.appendChild(BC.Components.createElement('option', { value: String(status.id), text: status.name }));
 					});
 					if (tx && tx.bookingStatusId) {
 						bookingStatusSelect.value = String(tx.bookingStatusId);
@@ -349,7 +366,7 @@
 					);
 				}
 
-				const notesArea = C.createElement('textarea', { name: 'notes', class: 'bc-input', maxlength: 4000, rows: 3 });
+				const notesArea = BC.Components.createElement('textarea', { name: 'notes', class: 'bc-input', maxlength: 4000, rows: 3 });
 				notesArea.value = tx && tx.notes ? tx.notes : '';
 				wrapField(
 					form,
@@ -359,16 +376,16 @@
 					'bc-field--full-width',
 				);
 
-				const specialOuter = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
-				specialOuter.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Special') }));
-				const specialRow = C.createElement('span', { class: 'bc-boolean-control' });
-				const specialInput = C.createElement('input', { type: 'checkbox', name: 'isSpecial', value: '1' });
+				const specialOuter = BC.Components.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
+				specialOuter.appendChild(BC.Components.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Special') }));
+				const specialRow = BC.Components.createElement('span', { class: 'bc-boolean-control' });
+				const specialInput = BC.Components.createElement('input', { type: 'checkbox', name: 'isSpecial', value: '1' });
 				specialInput.checked = !!(tx && tx.isSpecial);
 				specialRow.appendChild(specialInput);
-				specialRow.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special (large/unusual entry)') }));
+				specialRow.appendChild(BC.Components.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Mark as special (large/unusual entry)') }));
 				specialOuter.appendChild(specialRow);
 				const specialHintId = uid('bc-field-hint');
-				specialOuter.appendChild(C.createElement('span', {
+				specialOuter.appendChild(BC.Components.createElement('span', {
 					id: specialHintId,
 					class: 'bc-field__hint',
 					text: t('budgetcheck', 'Use for unusually large or one-off entries. They stay in the ledger but are excluded from everyday monthly totals unless you include them in workspace settings.'),
@@ -376,8 +393,8 @@
 				specialInput.setAttribute('aria-describedby', specialHintId);
 				form.appendChild(specialOuter);
 
-				const attachmentsHost = C.createElement('div', { class: 'bc-field bc-field--full-width bc-tx-attachments-host' });
-				form.appendChild(C.createElement('hr', { class: 'bc-form-grid__divider' }));
+				const attachmentsHost = BC.Components.createElement('div', { class: 'bc-field bc-field--full-width bc-tx-attachments-host' });
+				form.appendChild(BC.Components.createElement('hr', { class: 'bc-form-grid__divider' }));
 				form.appendChild(attachmentsHost);
 				if (attachmentsApi() && typeof attachmentsApi().mountSection === 'function') {
 					attachmentsController = attachmentsApi().mountSection(attachmentsHost, {
@@ -415,7 +432,7 @@
 					}
 					let amountMinor = null;
 					try {
-						amountMinor = Money.parseHuman(amountInput.value || '', activeDecimals());
+						amountMinor = BC.Money.parseHuman(amountInput.value || '', activeDecimals());
 					} catch (_) {
 						taxPreviewEl.textContent = t('budgetcheck', 'Enter an amount to preview net/VAT/gross.');
 						return;
@@ -435,11 +452,11 @@
 						taxPreviewEl.textContent = t('budgetcheck', 'VAT rate must be between 0 and 5000 basis points.');
 						return;
 					}
-					const converted = Money.convertTaxPreview(amountMinor, bp, basis);
+					const converted = BC.Money.convertTaxPreview(amountMinor, bp, basis);
 					taxPreviewEl.textContent = t('budgetcheck', 'Preview: Net {net} · VAT {vat} · Gross {gross}')
-						.replace('{net}', Money.formatMinor(converted.net, ctx.workspace.currencyCode, ctx.htmlLang))
-						.replace('{vat}', Money.formatMinor(converted.vat, ctx.workspace.currencyCode, ctx.htmlLang))
-						.replace('{gross}', Money.formatMinor(converted.gross, ctx.workspace.currencyCode, ctx.htmlLang));
+						.replace('{net}', BC.Money.formatMinor(converted.net, ctx.workspace.currencyCode, ctx.htmlLang))
+						.replace('{vat}', BC.Money.formatMinor(converted.vat, ctx.workspace.currencyCode, ctx.htmlLang))
+						.replace('{gross}', BC.Money.formatMinor(converted.gross, ctx.workspace.currencyCode, ctx.htmlLang));
 				}
 				if (taxModeEnabled && entryBasisSelect && vatPresetSelect && vatCustomInput) {
 					entryBasisSelect.addEventListener('change', syncTaxControls);
@@ -505,7 +522,7 @@
 				const payload = form && form._collect ? form._collect() : null;
 				if (!payload) return false;
 				if (!payload.categoryId || payload.categoryId < 1) {
-					Msg.announce(t('budgetcheck', 'Choose a category.'), 'error');
+					BC.Messaging.announce(t('budgetcheck', 'Choose a category.'), 'error');
 					if (typeof form._focusFirstInvalid === 'function') {
 						form._focusFirstInvalid();
 					}
@@ -513,7 +530,7 @@
 				}
 				const selectedCategory = categoryById(payload.categoryId);
 				if (selectedCategory && !selectedCategory.isActive) {
-					Msg.announce(t('budgetcheck', 'Category deactivated.'), 'error');
+					BC.Messaging.announce(t('budgetcheck', 'Category deactivated.'), 'error');
 					const catField = form.querySelector('[name="categoryId"]');
 					if (catField && typeof catField.focus === 'function') {
 						catField.focus();
@@ -521,14 +538,14 @@
 					return false;
 				}
 				if (String(payload.amount || '').trim() === '') {
-					Msg.announce(t('budgetcheck', 'Amount is required.'), 'error');
+					BC.Messaging.announce(t('budgetcheck', 'Amount is required.'), 'error');
 					if (form.querySelector('[name="amount"]')) {
 						form.querySelector('[name="amount"]').focus();
 					}
 					return false;
 				}
-				if (!Dates.isIsoCalendarDay(String(payload.bookingDate || '').trim())) {
-					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
+				if (!BC.Dates.isIsoCalendarDay(String(payload.bookingDate || '').trim())) {
+					BC.Messaging.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
 					if (form.querySelector('[name="bookingDate"]')) {
 						form.querySelector('[name="bookingDate"]').focus();
 					}
@@ -536,9 +553,9 @@
 				}
 				payload.bookingDate = String(payload.bookingDate).trim();
 				try {
-					Money.parseHuman(payload.amount, activeDecimals());
+					BC.Money.parseHuman(payload.amount, activeDecimals());
 				} catch (e) {
-					Msg.announce(e.message, 'error');
+					BC.Messaging.announce(e.message, 'error');
 					if (form.querySelector('[name="amount"]')) {
 						form.querySelector('[name="amount"]').focus();
 					}
@@ -551,7 +568,7 @@
 						if (payload.vatPreset === 'custom') {
 							const raw = String(payload.vatRateBpCustom || '').trim();
 							if (!/^\d+$/.test(raw)) {
-								Msg.announce(t('budgetcheck', 'Enter a valid VAT rate in basis points.'), 'error');
+								BC.Messaging.announce(t('budgetcheck', 'Enter a valid VAT rate in basis points.'), 'error');
 								return false;
 							}
 							bp = Number.parseInt(raw, 10);
@@ -559,7 +576,7 @@
 							bp = Number.parseInt(String(payload.vatPreset || ''), 10);
 						}
 						if (!Number.isInteger(bp) || bp < 0 || bp > 5000) {
-							Msg.announce(t('budgetcheck', 'VAT rate must be between 0 and 5000 basis points.'), 'error');
+							BC.Messaging.announce(t('budgetcheck', 'VAT rate must be between 0 and 5000 basis points.'), 'error');
 							return false;
 						}
 						payload.vatRateBp = bp;
@@ -572,18 +589,18 @@
 					const txId = activeTx && activeTx.id ? activeTx.id : null;
 					let savedTx = null;
 					if (txId) {
-						const updated = await Api.put('/apps/budgetcheck/api/transactions/' + txId, payload);
+						const updated = await BC.Api.put('/apps/budgetcheck/api/transactions/' + txId, payload);
 						savedTx = updated && updated.transaction ? updated.transaction : activeTx;
 						activeTx = savedTx;
-						Msg.announce(t('budgetcheck', 'Transaction updated.'), 'success');
+						BC.Messaging.announce(t('budgetcheck', 'Transaction updated.'), 'success');
 					} else {
-						const created = await Api.post('/apps/budgetcheck/api/transactions', payload);
+						const created = await BC.Api.post('/apps/budgetcheck/api/transactions', payload);
 						savedTx = created && created.transaction ? created.transaction : null;
 						if (!savedTx || !savedTx.id) {
 							throw new Error(t('budgetcheck', 'Could not save transaction.'));
 						}
 						activeTx = savedTx;
-						Msg.announce(t('budgetcheck', 'Transaction created.'), 'success');
+						BC.Messaging.announce(t('budgetcheck', 'Transaction created.'), 'success');
 					}
 
 					if (attachmentsController && typeof attachmentsController.hasPending === 'function' && attachmentsController.hasPending()) {
@@ -615,7 +632,7 @@
 					}
 					close(true);
 				} catch (err) {
-					Msg.handleApiError(err, { reloadOnConflict: false });
+					BC.Messaging.handleApiError(err, { reloadOnConflict: false });
 					return false;
 				}
 			},
@@ -623,13 +640,16 @@
 	}
 
 	function defaultBookingDateForRange(from, to) {
-		if (!from || !to) return Dates.isoDate(new Date());
-		const today = Dates.isoDate(new Date());
+		if (!from || !to) return BC.Dates.isoDate(new Date());
+		const today = BC.Dates.isoDate(new Date());
 		if (today >= from && today <= to) return today;
 		return from;
 	}
 
-	window.BudgetCheckTransactionEditor = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — TransactionEditor cannot register');
+	}
+	window.BudgetCheck.define('TransactionEditor', {
 		open,
 		preload,
 		defaultBookingDateForRange,
@@ -639,5 +659,5 @@
 			catalog.statuses = [];
 			catalog.loading = null;
 		},
-	};
+	});
 })();

@@ -143,5 +143,8 @@
 		return { net: amount, vat: 0, gross: amount };
 	}
 
-	window.BudgetCheckMoney = { formatEnvelope, formatEnvelopeValue, parseHuman, formatMinor, convertTaxPreview, envelopeDecimals };
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Money cannot register');
+	}
+	window.BudgetCheck.define('Money', { formatEnvelope, formatEnvelopeValue, parseHuman, formatMinor, convertTaxPreview, envelopeDecimals });
 })();

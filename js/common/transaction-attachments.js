@@ -1,9 +1,28 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Api', 'Messaging', 'Components'])
+		: (function () {
+			const fallback = {};
+			const map = {'Api': 'BudgetCheckApi', 'Messaging': 'BudgetCheckMessaging', 'Components': 'BudgetCheckComponents'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf,text/xml,application/xml,.jpg,.jpeg,.png,.gif,.webp,.pdf,.xml';
 
@@ -122,26 +141,26 @@
 		let loadSeq = 0;
 		let destroyed = false;
 
-		const section = C.createElement('section', {
+		const section = BC.Components.createElement('section', {
 			class: 'bc-tx-attachments',
 			attrs: { 'aria-labelledby': headingId },
 		});
-		const introEl = C.createElement('p', {
+		const introEl = BC.Components.createElement('p', {
 			class: 'bc-field__hint bc-field__hint--block bc-tx-attachments__intro',
 		});
-		section.appendChild(C.createElement('h3', {
+		section.appendChild(BC.Components.createElement('h3', {
 			id: headingId,
 			class: 'bc-tx-attachments__heading',
 			text: t('budgetcheck', 'Receipts & images'),
 		}));
 		section.appendChild(introEl);
 
-		const statusEl = C.createElement('p', {
+		const statusEl = BC.Components.createElement('p', {
 			class: 'bc-field__hint bc-field__hint--block',
 			attrs: { role: 'status', 'aria-live': 'polite', hidden: true },
 		});
-		const grid = C.createElement('ul', { class: 'bc-tx-attachments__grid', attrs: { role: 'list' } });
-		const pickerWrap = C.createElement('div', { class: 'bc-tx-attachments__picker-wrap', attrs: { hidden: true } });
+		const grid = BC.Components.createElement('ul', { class: 'bc-tx-attachments__grid', attrs: { role: 'list' } });
+		const pickerWrap = BC.Components.createElement('div', { class: 'bc-tx-attachments__picker-wrap', attrs: { hidden: true } });
 
 		section.appendChild(statusEl);
 		section.appendChild(grid);
@@ -285,7 +304,7 @@
 			const label = Gallery && typeof Gallery.fileLabel === 'function'
 				? Gallery.fileLabel(item)
 				: (item.isPdf ? 'PDF' : (item.isXml ? t('budgetcheck', 'E-invoice') : t('budgetcheck', 'File')));
-			return C.createElement('div', {
+			return BC.Components.createElement('div', {
 				class: 'bc-tx-attachments__thumb bc-tx-attachments__thumb--file',
 				attrs: { 'aria-hidden': 'true' },
 				text: label,
@@ -296,9 +315,9 @@
 			const cardClasses = ['bc-tx-attachments__card'];
 			if (isPending) cardClasses.push('bc-tx-attachments__card--pending');
 
-			const card = C.createElement('article', { class: cardClasses.join(' ') });
+			const card = BC.Components.createElement('article', { class: cardClasses.join(' ') });
 
-			const thumbBtn = C.createElement('button', {
+			const thumbBtn = BC.Components.createElement('button', {
 				type: 'button',
 				class: 'bc-tx-attachments__thumb-btn',
 				attrs: {
@@ -308,7 +327,7 @@
 			});
 
 			if (item.isPreviewable && item.previewUrl) {
-				thumbBtn.appendChild(C.createElement('img', {
+				thumbBtn.appendChild(BC.Components.createElement('img', {
 					class: 'bc-tx-attachments__thumb',
 					attrs: {
 						src: item.previewUrl,
@@ -322,25 +341,25 @@
 			}
 			card.appendChild(thumbBtn);
 
-			const meta = C.createElement('div', { class: 'bc-tx-attachments__meta' });
-			meta.appendChild(C.createElement('span', {
+			const meta = BC.Components.createElement('div', { class: 'bc-tx-attachments__meta' });
+			meta.appendChild(BC.Components.createElement('span', {
 				class: 'bc-tx-attachments__name',
 				text: item.fileName || t('budgetcheck', 'Attachment'),
 			}));
-			meta.appendChild(C.createElement('span', {
+			meta.appendChild(BC.Components.createElement('span', {
 				class: 'bc-tx-attachments__size',
 				text: formatFileSize(item.fileSize),
 			}));
 			if (isPending) {
-				meta.appendChild(C.createElement('span', {
+				meta.appendChild(BC.Components.createElement('span', {
 					class: 'bc-tx-attachments__badge',
 					text: t('budgetcheck', 'Ready to upload'),
 				}));
 			}
 			card.appendChild(meta);
 
-			const actions = C.createElement('div', { class: 'bc-tx-attachments__actions' });
-			actions.appendChild(C.createElement('button', {
+			const actions = BC.Components.createElement('div', { class: 'bc-tx-attachments__actions' });
+			actions.appendChild(BC.Components.createElement('button', {
 				type: 'button',
 				class: 'button bc-tx-attachments__action',
 				text: t('budgetcheck', 'View'),
@@ -350,7 +369,7 @@
 				on: { click: () => openGallery(item) },
 			}));
 			if (!state.readOnly) {
-				actions.appendChild(C.createElement('button', {
+				actions.appendChild(BC.Components.createElement('button', {
 					type: 'button',
 					class: 'button bc-tx-attachments__action bc-tx-attachments__action--danger',
 					text: t('budgetcheck', 'Remove'),
@@ -373,7 +392,7 @@
 			grid.replaceChildren();
 			syncBusyState();
 			if (state.loading) {
-				grid.appendChild(C.createElement('li', {
+				grid.appendChild(BC.Components.createElement('li', {
 					class: 'bc-tx-attachments__empty',
 					attrs: { role: 'status' },
 					text: t('budgetcheck', 'Loading attachments…'),
@@ -381,7 +400,7 @@
 				return;
 			}
 			if (totalFileCount() === 0) {
-				grid.appendChild(C.createElement('li', {
+				grid.appendChild(BC.Components.createElement('li', {
 					class: 'bc-tx-attachments__empty',
 					attrs: { role: 'status' },
 					text: emptyGridMessage(),
@@ -389,12 +408,12 @@
 				return;
 			}
 			state.items.forEach((item) => {
-				const li = C.createElement('li', { class: 'bc-tx-attachments__item' });
+				const li = BC.Components.createElement('li', { class: 'bc-tx-attachments__item' });
 				li.appendChild(renderAttachmentCard(item, false));
 				grid.appendChild(li);
 			});
 			state.pendingItems.forEach((item) => {
-				const li = C.createElement('li', { class: 'bc-tx-attachments__item' });
+				const li = BC.Components.createElement('li', { class: 'bc-tx-attachments__item' });
 				li.appendChild(renderAttachmentCard(item, true));
 				grid.appendChild(li);
 			});
@@ -408,9 +427,9 @@
 			}
 			pickerWrap.hidden = false;
 
-			picker = C.createElement('div', { class: 'bc-file-picker bc-tx-attachments__picker' });
-			const surface = C.createElement('label', { class: 'bc-file-picker__surface' });
-			fileInput = C.createElement('input', {
+			picker = BC.Components.createElement('div', { class: 'bc-file-picker bc-tx-attachments__picker' });
+			const surface = BC.Components.createElement('label', { class: 'bc-file-picker__surface' });
+			fileInput = BC.Components.createElement('input', {
 				class: 'bc-file-picker__input',
 				attrs: {
 					type: 'file',
@@ -421,19 +440,19 @@
 				},
 			});
 			surface.appendChild(fileInput);
-			surface.appendChild(C.createElement('span', {
+			surface.appendChild(BC.Components.createElement('span', {
 				class: 'bc-file-picker__icon',
 				attrs: { 'aria-hidden': 'true' },
 				text: '+',
 			}));
-			const copy = C.createElement('span', { class: 'bc-file-picker__copy' });
-			copy.appendChild(C.createElement('span', {
+			const copy = BC.Components.createElement('span', { class: 'bc-file-picker__copy' });
+			copy.appendChild(BC.Components.createElement('span', {
 				class: 'bc-file-picker__title',
 				text: state.uploading
 					? t('budgetcheck', 'Uploading receipts…')
 					: t('budgetcheck', 'Add receipt or image'),
 			}));
-			copy.appendChild(C.createElement('span', {
+			copy.appendChild(BC.Components.createElement('span', {
 				id: pickerHintId,
 				class: 'bc-file-picker__sub',
 				text: t('budgetcheck', 'JPEG, PNG, GIF, WebP, PDF, or XML e-invoice · up to 5 MB each · max 10 files'),
@@ -488,7 +507,7 @@
 			state.loading = true;
 			renderGrid();
 			try {
-				const data = await Api.get('/apps/budgetcheck/api/transactions/' + state.transactionId + '/attachments');
+				const data = await BC.Api.get('/apps/budgetcheck/api/transactions/' + state.transactionId + '/attachments');
 				if (seq !== loadSeq || destroyed) return;
 				state.items = data.attachments || [];
 				setStatus('', false);
@@ -588,7 +607,7 @@
 				const formData = new FormData();
 				formData.append('file', pending.file, pending.fileName);
 				try {
-					const data = await Api.upload(
+					const data = await BC.Api.upload(
 						'/apps/budgetcheck/api/transactions/' + state.transactionId + '/attachments',
 						formData,
 					);
@@ -630,7 +649,7 @@
 				setStatus('', false);
 			} else {
 				if (lastError) {
-					Msg.handleApiError(lastError, { reloadOnConflict: false });
+					BC.Messaging.handleApiError(lastError, { reloadOnConflict: false });
 				}
 				setStatus(
 					failed === 1
@@ -645,7 +664,7 @@
 
 		async function removeAttachment(item) {
 			if (!item || !item.id || state.readOnly) return;
-			const ok = await C.confirmDialog({
+			const ok = await BC.Components.confirmDialog({
 				title: t('budgetcheck', 'Remove attachment?'),
 				body: t('budgetcheck', 'This permanently deletes the file from this transaction.'),
 				confirmLabel: t('budgetcheck', 'Remove'),
@@ -653,14 +672,14 @@
 			});
 			if (!ok) return;
 			try {
-				await Api.del('/apps/budgetcheck/api/transaction-attachments/' + item.id);
+				await BC.Api.del('/apps/budgetcheck/api/transaction-attachments/' + item.id);
 				state.items = state.items.filter((entry) => String(entry.id) !== String(item.id));
 				renderGrid();
 				buildPicker();
-				Msg.announce(t('budgetcheck', 'Attachment removed.'), 'success');
+				BC.Messaging.announce(t('budgetcheck', 'Attachment removed.'), 'success');
 				notifyChange();
 			} catch (err) {
-				Msg.handleApiError(err, { reloadOnConflict: false });
+				BC.Messaging.handleApiError(err, { reloadOnConflict: false });
 			}
 		}
 
@@ -711,8 +730,11 @@
 		};
 	}
 
-	window.BudgetCheckTransactionAttachments = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — TransactionAttachments cannot register');
+	}
+	window.BudgetCheck.define('TransactionAttachments', {
 		mountSection,
-	};
+	});
 
 })();

@@ -1,10 +1,15 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Ws = window.BudgetCheckWorkspace;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Ws;
+
 
 	const state = {
 		workspaces: [],
@@ -17,10 +22,13 @@
 		},
 	};
 
-	document.addEventListener('DOMContentLoaded', () => {
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object') {
+			return;
+		}
 		wireFilters();
 		loadAndRender();
-	});
+	}
 
 	function wireFilters() {
 		const root = document.querySelector('[data-bc-workspace-filters]');
@@ -199,7 +207,8 @@
 			return;
 		}
 
-		const activeId = Ws.workspace && Ws.workspace.id ? Number(Ws.workspace.id) : null;
+		const activeWorkspace = Ws && Ws.workspace ? Ws.workspace : null;
+		const activeId = activeWorkspace && activeWorkspace.id ? Number(activeWorkspace.id) : null;
 		const group = C.createElement('div', { class: 'bc-switcher__group' });
 		const titleId = 'bc-switcher-favorites';
 		group.appendChild(C.createElement('p', { class: 'bc-switcher__group-title', id: titleId, text: t('budgetcheck', 'Quick access') }));
@@ -259,4 +268,24 @@
 			// Ignore dataset sync failures; sidebar sync already updated visible UI.
 		}
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Ws = deps.Workspace;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Workspace'],
+		optional: [],
+	});
+
 })();

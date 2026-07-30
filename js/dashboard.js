@@ -1,14 +1,42 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
+	/**
+	 * Deps are assigned in boot() via BudgetCheck.onReady — never snapshot
+	 * window.BudgetCheck* at IIFE evaluation time.
+	 * @type {any}
+	 */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+	/** @type {any} */
+	let SpecialsView;
 
-	const dashState = { yearMonth: Dates.currentYearMonth() };
+	const Editor = () => {
+		const BC = window.BudgetCheck;
+		return (BC && typeof BC.get === 'function')
+			? BC.get('TransactionEditor')
+			: (window.BudgetCheckTransactionEditor || null);
+	};
+
+	/** Never throw if Dates failed to load (script-order edge case). */
+	function initialYearMonth() {
+		if (Dates && typeof Dates.currentYearMonthSafe === 'function') return Dates.currentYearMonthSafe();
+		if (Dates && typeof Dates.currentYearMonth === 'function') return Dates.currentYearMonth();
+		const d = new Date();
+		const m = d.getMonth() + 1;
+		return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m;
+	}
+
+	const dashState = { yearMonth: null };
 	const LEDGER_PREVIEW_LIMIT = 8;
 	/** Guards against a slow response for a previously selected month overwriting the latest one. */
 	let dashLoadSeq = 0;
@@ -18,8 +46,6 @@
 	let dashPeriodPicker = null;
 	let lastSummary = null;
 	let includeSpecials = false;
-	const SpecialsView = window.BudgetCheckSpecialsView;
-	const Editor = () => window.BudgetCheckTransactionEditor;
 
 	function pad2(n) {
 		return n < 10 ? '0' + n : String(n);
@@ -45,7 +71,9 @@
 		const txId = Number(transactionId);
 		if (!txId) return;
 		const n = Math.max(0, Number(count) || 0);
-		const TxList = window.BudgetCheckTransactionList;
+		const TxList = (window.BudgetCheck && window.BudgetCheck.get)
+			? window.BudgetCheck.get('TransactionList')
+			: window.BudgetCheckTransactionList;
 		const item = document.querySelector('[data-bc-tx-list] [data-bc-tx-id="' + txId + '"]');
 		if (!item) return;
 		let receiptEl = item.querySelector('.bc-tx-list__receipt');
@@ -100,7 +128,9 @@
 		}
 		const summarySection = document.querySelector('[data-bc-summary]');
 		const box = summarySection?.querySelector('[data-bc-household-period]');
-		const Period = window.BudgetCheckHouseholdPeriod;
+		const Period = (window.BudgetCheck && window.BudgetCheck.get)
+			? window.BudgetCheck.get('HouseholdPeriod')
+			: window.BudgetCheckHouseholdPeriod;
 		if (isHousehold && box && Period && typeof Period.wire === 'function') {
 			dashPeriodPicker = Period.wire(box, {
 				workspace: ws,
@@ -125,12 +155,6 @@
 		wireIncludeSpecialsRefresh();
 	}
 
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initDashboard);
-	} else {
-		initDashboard();
-	}
-
 	function wireIncludeSpecialsRefresh() {
 		if (!isHousehold || !SpecialsView || !ws) return;
 		window.addEventListener('pageshow', (event) => {
@@ -146,9 +170,10 @@
 	}
 
 	function transactionsUrlForMonth(yearMonth) {
-		if (!Ws.urls.transactions) return '#';
-		const ym = String(yearMonth || Dates.currentYearMonth());
-		return Ws.withWorkspace(Ws.urls.transactions)
+		if (!Ws || !Ws.urls || !Ws.urls.transactions) return '#';
+		const txUrl = Ws.urls.transactions;
+		const ym = String(yearMonth || (Dates && Dates.currentYearMonth ? Dates.currentYearMonth() : initialYearMonth()));
+		return Ws.withWorkspace(txUrl)
 			+ '&yearMonth=' + encodeURIComponent(ym);
 	}
 
@@ -188,12 +213,13 @@
 	}
 
 	function quickActionHrefs(yearMonth) {
-		const ym = String(yearMonth || dashState.yearMonth || Dates.currentYearMonth());
+		const ym = String(yearMonth || dashState.yearMonth || initialYearMonth());
+		const urls = (Ws && Ws.urls) || {};
 		return {
 			yearMonth: ym,
 			transactions: transactionsUrlForMonth(ym),
-			monthly: Ws.withWorkspace(Ws.urls.monthly || '#') + '&yearMonth=' + encodeURIComponent(ym),
-			yearly: Ws.withWorkspace(Ws.urls.yearly || '#'),
+			monthly: Ws.withWorkspace(urls.monthly || '#') + '&yearMonth=' + encodeURIComponent(ym),
+			yearly: Ws.withWorkspace(urls.yearly || '#'),
 		};
 	}
 
@@ -271,12 +297,13 @@
 		if (isHousehold) {
 			setHouseholdLedgerBusy(true);
 		}
+		let summary = null;
 		try {
 			const data = isHousehold
 				? await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: yearMonth || Dates.currentYearMonth() })
 				: await Api.get('/apps/budgetcheck/api/project-period-summary', { workspaceId: ws.id });
 			if (seq !== dashLoadSeq) return; // Stale response; the latest request wins.
-			const summary = data.summary;
+			summary = data.summary;
 			renderSummaryGrid(grid, summary);
 			if (periodLabel) periodLabel.textContent = formatSummaryPeriod(summary);
 			const dashLedger = document.querySelector('[data-bc-dash-ledger-help]');
@@ -289,7 +316,6 @@
 			if (isHousehold) {
 				renderHouseholdMonthLedger(summary, yearMonth || Dates.currentYearMonth());
 			}
-			renderWarnings(warningsSection, warningsList, summary.warnings || []);
 		} catch (err) {
 			if (seq !== dashLoadSeq) return;
 			Msg.handleApiError(err);
@@ -304,6 +330,17 @@
 				grid.setAttribute('aria-busy', 'false');
 				if (isHousehold) {
 					setHouseholdLedgerBusy(false);
+				}
+			}
+		}
+		// Warnings are recovery UX — never let a link-building bug wipe a healthy summary.
+		if (summary && seq === dashLoadSeq) {
+			try {
+				renderWarnings(warningsSection, warningsList, summary.warnings || []);
+			} catch (warnErr) {
+				Msg.handleApiError(warnErr);
+				if (warningsSection) {
+					warningsSection.hidden = true;
 				}
 			}
 		}
@@ -433,7 +470,9 @@
 	}
 
 	function renderTxListItem(tx) {
-		const TxList = window.BudgetCheckTransactionList;
+		const TxList = (window.BudgetCheck && window.BudgetCheck.get)
+			? window.BudgetCheck.get('TransactionList')
+			: window.BudgetCheckTransactionList;
 		const meta = TxList
 			? TxList.recentListMeta(tx, Ws.htmlLang)
 			: { text: Dates.formatDisplayDate(tx.bookingDate, Ws.htmlLang), fullNote: null };
@@ -525,5 +564,25 @@
 	function renderWarnings(section, list, warnings) {
 		C.renderWarningsList(section, list, warnings, Ws);
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		SpecialsView = deps.SpecialsView || null;
+		dashState.yearMonth = initialYearMonth();
+		initDashboard();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: ['SpecialsView', 'TransactionEditor', 'TransactionList', 'HouseholdPeriod'],
+	});
 
 })();

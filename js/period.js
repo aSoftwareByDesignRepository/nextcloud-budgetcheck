@@ -1,14 +1,22 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
 
-	document.addEventListener('DOMContentLoaded', () => {
+
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object') return;
 		const ws = Ws.workspace;
 		if (!ws || ws.type !== 'project') return;
 		const exportBtn = document.querySelector('[data-bc-period-export]');
@@ -16,26 +24,35 @@
 			exportBtn.addEventListener('click', () => exportWorkbook(ws, exportBtn));
 		}
 		void load(ws);
-	});
+	}
 
 	async function load(ws) {
 		const grid = document.querySelector('[data-bc-summary-grid]');
 		const period = document.querySelector('[data-bc-summary-period]');
 		grid?.setAttribute('aria-busy', 'true');
+		let summary = null;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/project-period-summary', { workspaceId: ws.id });
-			const summary = data.summary;
+			summary = data.summary;
 			renderSummary(grid, summary);
 			if (period) period.textContent = formatPeriod(summary);
 			const ledgerEl = document.querySelector('[data-bc-period-ledger-help]');
 			C.renderMonthlyLedgerHelp(ledgerEl, summary, '', Ws.htmlLang);
 			renderCap(summary);
-			renderWarnings(summary.warnings || []);
 			renderSpecials(summary.specials || []);
 		} catch (err) {
 			Msg.handleApiError(err);
 		} finally {
 			grid?.setAttribute('aria-busy', 'false');
+		}
+		if (summary) {
+			try {
+				renderWarnings(summary.warnings || []);
+			} catch (warnErr) {
+				Msg.handleApiError(warnErr);
+				const section = document.querySelector('[data-bc-warnings]');
+				if (section) section.hidden = true;
+			}
 		}
 	}
 
@@ -174,4 +191,26 @@
 		const asciiMatch = cd.match(/filename="([^"]+)"/i);
 		return asciiMatch && asciiMatch[1] ? asciiMatch[1] : null;
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: [],
+	});
+
 })();

@@ -29,10 +29,11 @@
 		}
 	},
 	"scripts": {
-		"test": "phpunit -c phpunit.xml",
-		"test:unit": "phpunit --testsuite unit",
-		"test:integration": "phpunit --testsuite integration",
-		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php"
+		"test": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit -c phpunit.xml",
+		"test:unit": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit --testsuite unit",
+		"test:integration": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit --testsuite integration",
+		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
+		"mutate:receipt-suggest": "php tests/Mutation/run-receipt-suggest-mutations.php"
 	},
 	"config": {
 		"optimize-autoloader": true,

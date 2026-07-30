@@ -8,7 +8,7 @@
 	 */
 
 	/** @type {BudgetCheckConstants} */
-	window.BudgetCheckConstants = {
+	const Constants = {
 		/** Same as OCA\BudgetCheck\Service\CategoryService::GROUP_INTERNAL_UNCATEGORIZED */
 		GROUP_INTERNAL_UNCATEGORIZED: '_bc_internal_uncategorized',
 
@@ -17,7 +17,7 @@
 		 * @return {boolean}
 		 */
 		isInternalUncategorizedGroupKey(groupKey) {
-			return groupKey === window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
+			return groupKey === Constants.GROUP_INTERNAL_UNCATEGORIZED;
 		},
 
 		/**
@@ -30,7 +30,7 @@
 			if (!groupKey) {
 				return '—';
 			}
-			if (window.BudgetCheckConstants.isInternalUncategorizedGroupKey(groupKey)) {
+			if (Constants.isInternalUncategorizedGroupKey(groupKey)) {
 				return t('budgetcheck', 'Built-in (uncategorized)');
 			}
 			return String(groupKey);
@@ -43,7 +43,7 @@
 		 * @return {boolean}
 		 */
 		shouldShowCategoryGroupBadge(groupKey) {
-			return Boolean(groupKey) && !window.BudgetCheckConstants.isInternalUncategorizedGroupKey(groupKey);
+			return Boolean(groupKey) && !Constants.isInternalUncategorizedGroupKey(groupKey);
 		},
 
 		/**
@@ -54,7 +54,7 @@
 		 * @return {Array}
 		 */
 		budgetableCategories(categories) {
-			const hidden = window.BudgetCheckConstants.GROUP_INTERNAL_UNCATEGORIZED;
+			const hidden = Constants.GROUP_INTERNAL_UNCATEGORIZED;
 			return (categories || [])
 				.filter((c) => c && c.isActive && c.groupKey !== hidden)
 				.sort((a, b) => {
@@ -67,4 +67,9 @@
 				});
 		},
 	};
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Constants cannot register');
+	}
+	window.BudgetCheck.define('Constants', Constants);
 })();

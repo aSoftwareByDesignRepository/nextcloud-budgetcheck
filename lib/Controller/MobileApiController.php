@@ -27,6 +27,7 @@ use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
+use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
@@ -63,6 +64,7 @@ class MobileApiController extends Controller
 		private readonly MobileIdempotencyService $idempotency,
 		private readonly MobilePushService $push,
 		private readonly RateLimitService $rateLimit,
+		private readonly TransactionAttachmentService $attachments,
 		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,
@@ -93,6 +95,7 @@ class MobileApiController extends Controller
 					'push' => $pushAvailable,
 					'tax' => true,
 					'recurringSuggestions' => true,
+					'attachments' => true,
 				],
 			];
 		});
@@ -452,6 +455,61 @@ class MobileApiController extends Controller
 			$token = (string)($payload['pushToken'] ?? $payload['token'] ?? '');
 			$this->push->unregister($userId, $token);
 			return ['unregistered' => true];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listTransactionAttachments(int $workspaceId, int $txId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$txId = $this->validateId($txId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$tx = $this->transactions->loadForWorkspace($txId, $workspaceId);
+			if ($tx === null) {
+				throw new NotFoundException('Transaction not found.');
+			}
+			return [
+				'attachments' => $this->attachments->listForTransaction($txId, $userId),
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function uploadTransactionAttachment(int $workspaceId, int $txId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$txId = $this->validateId($txId);
+			$this->assertSafeMutationChannel();
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$tx = $this->transactions->loadForWorkspace($txId, $workspaceId);
+			if ($tx === null) {
+				throw new NotFoundException('Transaction not found.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_write', 120, 300);
+			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+				throw new \InvalidArgumentException('No file was uploaded.');
+			}
+			$attachment = $this->attachments->upload($txId, $userId, $_FILES['file']);
+			return ['attachment' => $attachment];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function deleteTransactionAttachment(int $workspaceId, int $attachmentId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId, $attachmentId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$attachmentId = $this->validateId($attachmentId);
+			$this->assertSafeMutationChannel();
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_write', 120, 300);
+			$this->attachments->delete($attachmentId, $userId);
+			return ['deleted' => true, 'id' => $attachmentId];
 		});
 	}
 

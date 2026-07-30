@@ -24,6 +24,8 @@ final class MobileApiControllerContractTest extends TestCase
 		'applyRecurringSuggestion',
 		'registerPushToken',
 		'unregisterPushToken',
+		'uploadTransactionAttachment',
+		'deleteTransactionAttachment',
 	];
 
 	/** @var list<string> */
@@ -36,6 +38,7 @@ final class MobileApiControllerContractTest extends TestCase
 		'getTransaction',
 		'listBookingStatuses',
 		'listRecurringSuggestions',
+		'listTransactionAttachments',
 	];
 
 	public function testMobileMutationsAllowNoCsrfForBasicAuth(): void

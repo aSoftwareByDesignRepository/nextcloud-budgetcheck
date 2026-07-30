@@ -96,6 +96,12 @@
 	/* Contain accidental horizontal overflow from nested grids on small viewports. */
 	overflow-x: clip;
 }
+/* Keep the app shell itself from forcing horizontal scroll on phones (WCAG reflow). */
+#app-content.bc-app {
+	max-width: 100%;
+	overflow-x: clip;
+	box-sizing: border-box;
+}
 
 /* Header + breadcrumb */
 #app-content.bc-app .bc-page-header,

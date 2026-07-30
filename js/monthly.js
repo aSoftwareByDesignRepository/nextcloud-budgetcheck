@@ -1,23 +1,40 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+	/** @type {any} */
+	let SpecialsView;
 
-	const state = { yearMonth: Dates.currentYearMonth(), summary: null };
+
+	function initialYearMonth() {
+		if (Dates && typeof Dates.currentYearMonthSafe === 'function') return Dates.currentYearMonthSafe();
+		if (Dates && typeof Dates.currentYearMonth === 'function') return Dates.currentYearMonth();
+		const d = new Date();
+		const m = d.getMonth() + 1;
+		return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m;
+	}
+
+	const state = { yearMonth: null, summary: null };
 	let periodPicker = null;
 	let includeSpecials = false;
-	const SpecialsView = window.BudgetCheckSpecialsView;
 	let includeSpecialsToggle = null;
 	let loadSeq = 0;
 	/** @type {{ id: number, type: string, currencyCode: string } | null} */
 	let ws = null;
 
-	document.addEventListener('DOMContentLoaded', () => {
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object') return;
 		ws = Ws.workspace;
 		if (!ws || ws.type !== 'household') return; // PageController also redirects, but be safe.
 		if (SpecialsView) {
@@ -72,7 +89,7 @@
 		if (budgetOverridesBtn) budgetOverridesBtn.addEventListener('click', () => openBudgetOverridesModal());
 		load();
 		wireIncludeSpecialsRefresh();
-	});
+	}
 
 	function wireIncludeSpecialsRefresh() {
 		if (!SpecialsView || !ws) return;
@@ -102,10 +119,12 @@
 		grid?.setAttribute('aria-busy', 'true');
 		activityGrid?.setAttribute('aria-busy', 'true');
 		if (!ws) return;
+		let loadedSummary = null;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/monthly-summary', { workspaceId: ws.id, yearMonth: state.yearMonth });
 			if (seq !== loadSeq) return; // Stale response; ignore and let the latest request win.
 			state.summary = data.summary;
+			loadedSummary = data.summary;
 			renderSummary(grid, state.summary);
 			if (period) period.textContent = Dates.formatYearMonth(state.summary.yearMonth, Ws.htmlLang);
 			if (status) status.textContent = state.summary.isClosed
@@ -116,7 +135,6 @@
 			}
 			const ledgerEl = document.querySelector('[data-bc-monthly-ledger-help]');
 			C.renderMonthlyLedgerHelp(ledgerEl, state.summary, state.yearMonth, Ws.htmlLang);
-			renderWarnings(warningsSection, warningsList, state.summary.warnings || []);
 			renderConsumption(tbody, state.summary.budget || {});
 			renderActivity(activityGrid, state.summary.activity || null);
 			renderMonthTransactions(txRows, state.summary.monthTransactions || []);
@@ -133,6 +151,14 @@
 			if (seq === loadSeq) {
 				grid?.setAttribute('aria-busy', 'false');
 				activityGrid?.setAttribute('aria-busy', 'false');
+			}
+		}
+		if (loadedSummary && seq === loadSeq) {
+			try {
+				renderWarnings(warningsSection, warningsList, loadedSummary.warnings || []);
+			} catch (warnErr) {
+				Msg.handleApiError(warnErr);
+				if (warningsSection) warningsSection.hidden = true;
 			}
 		}
 	}
@@ -534,4 +560,27 @@
 			Msg.handleApiError(err);
 		}
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		SpecialsView = deps.SpecialsView || null;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: ['SpecialsView', 'HouseholdPeriod'],
+	});
+
 })();

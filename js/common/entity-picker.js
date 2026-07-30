@@ -8,10 +8,28 @@
 (function () {
 	'use strict';
 
-	const C = window.BudgetCheckComponents;
-	if (!C) {
-		return;
-	}
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Components'])
+		: (function () {
+			const fallback = {};
+			const map = {'Components': 'BudgetCheckComponents'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	/**
 	 * @typedef {object} PickerItem
@@ -87,7 +105,7 @@
 				input.setAttribute('aria-controls', suggest.id);
 				const pe = errMsg(err) || ps.searchErrorServer || '';
 				if (pe) {
-					const perr = C.createElement('p', {
+					const perr = BC.Components.createElement('p', {
 						class: 'bc-entity-picker__noresult bc-entity-picker__noresult--err',
 						attrs: { role: 'alert' },
 						text: pe,
@@ -109,7 +127,7 @@
 				if ((items && items.length) || qv.length >= minLen) {
 					const nr = typeof ps.noResults === 'string' ? ps.noResults : '';
 					if (nr) {
-						suggest.appendChild(C.createElement('p', {
+						suggest.appendChild(BC.Components.createElement('p', {
 							class: 'bc-entity-picker__noresult',
 							attrs: { role: 'status' },
 							text: nr,
@@ -124,22 +142,22 @@
 				return;
 			}
 			const lbId = suggestId + '-lb';
-			const listbox = C.createElement('ul', {
+			const listbox = BC.Components.createElement('ul', {
 				class: 'bc-entity-picker__listbox',
 				attrs: { id: lbId, role: 'listbox' },
 			});
 			input.setAttribute('aria-controls', lbId);
 			pick.forEach((it, oi) => {
 				const oid = suggestId + '-o' + oi;
-				const li = C.createElement('li', {
+				const li = BC.Components.createElement('li', {
 					attrs: { role: 'option', id: oid, 'aria-selected': oi === 0 ? 'true' : 'false' },
 				});
 				const dn = it.displayName && String(it.displayName) !== String(it.id) ? String(it.displayName) : '';
 				if (dn) {
-					li.appendChild(C.createElement('div', { class: 'bc-entity-suggest__line', text: dn }));
-					li.appendChild(C.createElement('div', { class: 'bc-entity-suggest__id', text: String(it.id) }));
+					li.appendChild(BC.Components.createElement('div', { class: 'bc-entity-suggest__line', text: dn }));
+					li.appendChild(BC.Components.createElement('div', { class: 'bc-entity-suggest__id', text: String(it.id) }));
 				} else {
-					li.appendChild(C.createElement('div', { class: 'bc-entity-suggest__line', text: String(it.id) }));
+					li.appendChild(BC.Components.createElement('div', { class: 'bc-entity-suggest__line', text: String(it.id) }));
 				}
 				li.addEventListener('mousedown', (ev) => {
 					if (ev.button !== 0) return;
@@ -250,5 +268,8 @@
 		};
 	}
 
-	window.BudgetCheckEntityPicker = { bindCombobox };
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — EntityPicker cannot register');
+	}
+	window.BudgetCheck.define('EntityPicker', { bindCombobox });
 })();

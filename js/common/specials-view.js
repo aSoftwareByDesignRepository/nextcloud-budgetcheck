@@ -204,12 +204,15 @@
 		return typeof current === 'boolean' && next === current ? current : next;
 	}
 
-	window.BudgetCheckSpecialsView = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — SpecialsView cannot register');
+	}
+	window.BudgetCheck.define('SpecialsView', {
 		getIncludeSpecials,
 		setIncludeSpecials,
 		migrateLegacyLocalStorage,
 		resolveCashFlowTotals,
 		mountToggle,
 		refreshIncludeSpecials,
-	};
+	});
 })();

@@ -58,14 +58,21 @@
 			return dataset().bcPage || '';
 		},
 		role() {
-			const w = this.workspace;
+			// Prefer the closed-over `ctx` so extracted method refs stay safe in
+			// strict mode (unbound `this` would otherwise throw on `.workspace`).
+			const w = ctx.workspace;
 			return w ? w.role : null;
 		},
 		withWorkspace(url) {
-			const w = this.workspace;
-			if (!w) return url;
-			const sep = url.indexOf('?') === -1 ? '?' : '&';
-			return url + sep + 'workspaceId=' + encodeURIComponent(w.id);
+			// Use `ctx` (not `this`) so callers may pass `withWorkspace` around
+			// without losing workspace scope — a prior dashboard crash came from
+			// extracting this method and invoking it unbound.
+			const target = typeof url === 'string' ? url : '';
+			if (target === '') return target;
+			const w = ctx.workspace;
+			if (!w || w.id === undefined || w.id === null) return target;
+			const sep = target.indexOf('?') === -1 ? '?' : '&';
+			return target + sep + 'workspaceId=' + encodeURIComponent(String(w.id));
 		},
 		/**
 		 * Keep the header scope strip in sync with the month a page is showing.
@@ -82,7 +89,7 @@
 			if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return;
 			const D = window.BudgetCheckDates;
 			el.textContent = (D && typeof D.formatYearMonth === 'function')
-				? D.formatYearMonth(value, this.htmlLang)
+				? D.formatYearMonth(value, ctx.htmlLang)
 				: value;
 			const active = el.getAttribute('data-bc-scope-month-active') || '';
 			el.setAttribute('title', value === active
@@ -99,9 +106,9 @@
 			el.dataset.bcWorkspace = JSON.stringify(current);
 		},
 		navigateTo(name) {
-			const url = this.urls[name];
+			const url = ctx.urls[name];
 			if (!url) return;
-			window.location.href = this.withWorkspace(url);
+			window.location.href = ctx.withWorkspace(url);
 		},
 	};
 
@@ -325,7 +332,11 @@
 					Msg.announce(t('budgetcheck', 'Workspace created.'), 'success');
 					const newId = res.workspace && res.workspace.id;
 					if (newId) {
-						window.location.href = ctx.urls.dashboard + '?workspaceId=' + newId;
+						const dash = (ctx.urls && ctx.urls.dashboard)
+							? String(ctx.urls.dashboard)
+							: '/apps/budgetcheck/dashboard';
+						const sep = dash.indexOf('?') === -1 ? '?' : '&';
+						window.location.href = dash + sep + 'workspaceId=' + encodeURIComponent(String(newId));
 					} else {
 						window.location.reload();
 					}
@@ -377,5 +388,8 @@
 		form.appendChild(wrapper);
 	}
 
-	window.BudgetCheckWorkspace = ctx;
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Workspace cannot register');
+	}
+	window.BudgetCheck.define('Workspace', ctx);
 })();

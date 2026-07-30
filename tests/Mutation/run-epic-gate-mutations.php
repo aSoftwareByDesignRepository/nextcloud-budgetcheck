@@ -57,12 +57,95 @@ assert_true(str_contains($tx, 'version is required for deletes'), 'delete requir
 $components = (string)file_get_contents($root . '/js/common/components.js');
 assert_true(str_contains($components, 'function renderWarningsList'), 'shared warning recovery helper');
 assert_true(str_contains($components, 'renderWarningItem'), 'warning item with recovery link');
+assert_true(
+	(bool)preg_match('/workspace\.withWorkspace\s*\(/', $components),
+	'warning recovery calls withWorkspace as a method'
+);
+assert_true(
+	!preg_match('/const\s+withWorkspace\s*=\s*workspace\s*&&/', $components),
+	'warning recovery must not extract withWorkspace unbound'
+);
+
+$workspaceJs = (string)file_get_contents($root . '/js/common/workspace.js');
+assert_true(
+	(bool)preg_match('/withWorkspace\s*\(\s*url\s*\)\s*\{[^}]*ctx\.workspace/s', $workspaceJs),
+	'withWorkspace reads ctx.workspace (closure-safe)'
+);
+assert_true(
+	!preg_match('/withWorkspace\s*\(\s*url\s*\)\s*\{[^}]*this\.workspace/s', $workspaceJs),
+	'withWorkspace must not depend on this.workspace'
+);
+
+$dashboard = (string)file_get_contents($root . '/js/dashboard.js');
+assert_true(str_contains($dashboard, 'catch (warnErr)'), 'dashboard isolates warning render failures');
 $monthly = (string)file_get_contents($root . '/js/monthly.js');
 $period = (string)file_get_contents($root . '/js/period.js');
-$dashboard = (string)file_get_contents($root . '/js/dashboard.js');
 assert_true(str_contains($monthly, 'renderWarningsList'), 'monthly uses shared warnings');
 assert_true(str_contains($period, 'renderWarningsList'), 'period uses shared warnings');
 assert_true(str_contains($dashboard, 'renderWarningsList'), 'dashboard uses shared warnings');
+assert_true(str_contains($monthly, 'catch (warnErr)'), 'monthly isolates warning render failures');
+assert_true(str_contains($period, 'catch (warnErr)'), 'period isolates warning render failures');
+
+$datesJs = (string)file_get_contents($root . '/js/common/dates.js');
+assert_true(str_contains($datesJs, 'currentYearMonthSafe'), 'dates exports currentYearMonthSafe');
+$dashJs = (string)file_get_contents($root . '/js/dashboard.js');
+assert_true(str_contains($dashJs, 'function initialYearMonth'), 'dashboard safe year-month init');
+assert_true(
+	(bool)preg_match('/!Ws \|\| !Ws\.urls \|\| !Ws\.urls\.transactions/', $dashJs),
+	'dashboard null-guards Ws.urls.transactions'
+);
+$yearlyJs = (string)file_get_contents($root . '/js/yearly.js');
+assert_true(str_contains($yearlyJs, 'Ws.urls.monthly'), 'yearly references monthly url');
+assert_true(
+	(bool)preg_match('/Ws && Ws\.urls && Ws\.urls\.monthly/', $yearlyJs),
+	'yearly null-guards monthly url before withWorkspace'
+);
+$importJs = (string)file_get_contents($root . '/js/import.js');
+assert_true(
+	(bool)preg_match('/Ws\.urls && Ws\.urls\.transactions/', $importJs),
+	'import null-guards transactions url after commit'
+);
+$wsCreate = (string)file_get_contents($root . '/js/common/workspace.js');
+assert_true(
+	str_contains($wsCreate, "/apps/budgetcheck/dashboard"),
+	'workspace create has dashboard URL fallback'
+);
+$appCss = (string)file_get_contents($root . '/css/app.css');
+assert_true(
+	(bool)preg_match('/#app-content\.bc-app\s*\{[^}]*overflow-x:\s*clip/s', $appCss),
+	'app shell clips horizontal overflow'
+);
+
+$bootstrapJs = (string)file_get_contents($root . '/js/common/bootstrap.js');
+assert_true(str_contains($bootstrapJs, 'function onReady'), 'bootstrap onReady present');
+assert_true(str_contains($bootstrapJs, 'function live'), 'bootstrap live present');
+assert_true(str_contains($bootstrapJs, 'function define'), 'bootstrap define present');
+assert_true(str_contains($page, "Util::addScript(Application::APP_ID, 'common/bootstrap')"), 'PageController registers bootstrap');
+if (preg_match('/function registerFrontEndAssets\(string \$pageScript\): void \{(.*?)\n\t\}/s', $page, $mAssets)) {
+	assert_true(
+		(bool)preg_match('/^\s*Util::addScript\([^;]*common\/bootstrap/m', $mAssets[1]),
+		'bootstrap is first addScript in registerFrontEndAssets'
+	);
+} else {
+	assert_true(false, 'registerFrontEndAssets body readable');
+}
+foreach (['dashboard.js', 'monthly.js', 'period.js', 'transactions.js', 'import.js', 'settings.js'] as $pageFile) {
+	$src = (string)file_get_contents($root . '/js/' . $pageFile);
+	assert_true(str_contains($src, 'BudgetCheck.onReady'), $pageFile . ' boots via onReady');
+	assert_true(
+		!preg_match('/^\tconst\s+\w+\s*=\s*window\.BudgetCheck(?:Api|Workspace)\s*;/m', $src),
+		$pageFile . ' must not IIFE-snapshot BudgetCheckApi/Workspace'
+	);
+}
+$editorJs = (string)file_get_contents($root . '/js/common/transaction-editor.js');
+assert_true(str_contains($editorJs, 'BudgetCheck.live'), 'transaction-editor uses live deps');
+assert_true(str_contains($editorJs, "BudgetCheck.define('TransactionEditor'"), 'transaction-editor defines itself');
+$apiJs = (string)file_get_contents($root . '/js/common/api.js');
+assert_true(str_contains($apiJs, "BudgetCheck.define('Api'"), 'Api producer uses define');
+assert_true(!preg_match('/window\.BudgetCheckApi\s*=/', $apiJs), 'Api must not bare-assign window.BudgetCheckApi');
+$wsJs = (string)file_get_contents($root . '/js/common/workspace.js');
+assert_true(str_contains($wsJs, "BudgetCheck.define('Workspace'"), 'Workspace producer uses define');
+assert_true(!preg_match('/window\.BudgetCheckWorkspace\s*=/', $wsJs), 'Workspace must not bare-assign window');
 
 $svc = (new ReflectionClass(SavingsTargetService::class))->newInstanceWithoutConstructor();
 assert_true($svc->computeTargetValue([

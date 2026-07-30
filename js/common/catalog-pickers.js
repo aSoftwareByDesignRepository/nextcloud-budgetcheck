@@ -1,7 +1,28 @@
 (function () {
 	'use strict';
 
-	const C = window.BudgetCheckComponents;
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Components'])
+		: (function () {
+			const fallback = {};
+			const map = {'Components': 'BudgetCheckComponents'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	const TZ_MAX_VISIBLE = 80;
 
@@ -526,7 +547,7 @@
 	 * @param {{ idPrefix: string, name: string, label: string, defaultValue?: string }} opts
 	 */
 	function createPickerShell(kind, opts) {
-		if (!C) {
+		if (!BC.Components) {
 			return null;
 		}
 		const idPrefix = opts.idPrefix;
@@ -541,7 +562,7 @@
 			? t('budgetcheck', 'Clear timezone selection')
 			: t('budgetcheck', 'Clear currency selection');
 
-		const root = C.createElement('div', {
+		const root = BC.Components.createElement('div', {
 			class: `bc-catalog-picker bc-catalog-picker--${kind}`,
 		});
 		root.setAttribute(dataAttr, '');
@@ -551,7 +572,7 @@
 			root.setAttribute('data-default-currency', opts.defaultValue || 'EUR');
 		}
 
-		const select = C.createElement('select', {
+		const select = BC.Components.createElement('select', {
 			id: idPrefix,
 			name: opts.name,
 			class: 'bc-catalog-picker__native',
@@ -560,7 +581,7 @@
 		if (kind === 'currency' || kind === 'timezone') {
 			select.required = true;
 		}
-		const input = C.createElement('input', {
+		const input = BC.Components.createElement('input', {
 			id: idPrefix + '-input',
 			type: 'search',
 			class: 'bc-input bc-catalog-picker__input',
@@ -575,19 +596,19 @@
 				placeholder,
 			},
 		});
-		const clearBtn = C.createElement('button', {
+		const clearBtn = BC.Components.createElement('button', {
 			type: 'button',
 			class: 'bc-catalog-picker__clear button',
 			text: '×',
 			attrs: { hidden: true, 'aria-label': clearLabel },
 		});
-		const control = C.createElement('div', { class: 'bc-catalog-picker__control' }, [input, clearBtn]);
-		const results = C.createElement('ul', {
+		const control = BC.Components.createElement('div', { class: 'bc-catalog-picker__control' }, [input, clearBtn]);
+		const results = BC.Components.createElement('ul', {
 			id: idPrefix + '-results',
 			class: 'bc-catalog-picker__results',
 			attrs: { role: 'listbox', hidden: true },
 		});
-		const status = C.createElement('p', {
+		const status = BC.Components.createElement('p', {
 			id: idPrefix + '-status',
 			class: 'bc-catalog-picker__status',
 			attrs: { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', hidden: true },
@@ -597,16 +618,19 @@
 		root.appendChild(results);
 		root.appendChild(status);
 
-		const field = C.createElement('label', { class: 'bc-field bc-field--catalog' }, [
-			C.createElement('span', { class: 'bc-field__label', id: idPrefix + '-label', text: opts.label }),
+		const field = BC.Components.createElement('label', { class: 'bc-field bc-field--catalog' }, [
+			BC.Components.createElement('span', { class: 'bc-field__label', id: idPrefix + '-label', text: opts.label }),
 			root,
 		]);
 		return { field, root };
 	}
 
-	window.BudgetCheckCatalogPickers = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — CatalogPickers cannot register');
+	}
+	window.BudgetCheck.define('CatalogPickers', {
 		attachTimezone,
 		attachCurrency,
 		createPickerShell,
-	};
+	});
 })();

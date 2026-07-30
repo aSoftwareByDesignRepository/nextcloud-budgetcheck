@@ -75,5 +75,8 @@
 		announce(t('budgetcheck', message), 'error');
 	}
 
-	window.BudgetCheckMessaging = { announce, handleApiError };
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Messaging cannot register');
+	}
+	window.BudgetCheck.define('Messaging', { announce, handleApiError });
 })();

@@ -1,21 +1,28 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const EntityPicker = window.BudgetCheckEntityPicker;
-	const CatalogPickers = window.BudgetCheckCatalogPickers;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let EntityPicker;
+	/** @type {any} */
+	let CatalogPickers;
+
 
 	let capabilities = null;
 	let policyTimezonePicker = null;
 	let policyCurrencyPicker = null;
 
-	document.addEventListener('DOMContentLoaded', () => {
+	function pageInit() {
 		void bootstrap();
-	});
+	}
 
 	async function bootstrap() {
+		if (!Api || !Msg) return;
 		const form = document.querySelector('[data-bc-app-policy-form]');
 		if (!form) return;
 		try {
@@ -321,4 +328,25 @@
 		const el = form.querySelector('[name="' + name + '"]');
 		return el ? String(el.value || '') : '';
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		EntityPicker = deps.EntityPicker || null;
+		CatalogPickers = deps.CatalogPickers || null;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components'],
+		optional: ['EntityPicker', 'CatalogPickers'],
+	});
+
 })();

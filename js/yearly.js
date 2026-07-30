@@ -1,12 +1,21 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+	/** @type {any} */
+	let SpecialsView;
+
 
 	const state = { year: new Date().getFullYear() };
 	/** Guards against a slow response for a previously selected year overwriting the latest one. */
@@ -16,9 +25,9 @@
 	/** @type {any | null} */
 	let lastSummary = null;
 	let includeSpecials = false;
-	const SpecialsView = window.BudgetCheckSpecialsView;
 
-	document.addEventListener('DOMContentLoaded', () => {
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object') return;
 		ws = Ws.workspace;
 		if (!ws || ws.type !== 'household') return;
 		if (SpecialsView) {
@@ -58,7 +67,7 @@
 		}
 		load();
 		wireIncludeSpecialsRefresh();
-	});
+	}
 
 	function wireIncludeSpecialsRefresh() {
 		if (!SpecialsView || !ws) return;
@@ -238,7 +247,10 @@
 		container.replaceChildren();
 		(summary.months || []).forEach((m) => {
 			const display = resolveMonthTotals(m);
-			const url = Ws.withWorkspace(Ws.urls.monthly) + '&yearMonth=' + encodeURIComponent(m.yearMonth);
+			const monthlyBase = Ws && Ws.urls && Ws.urls.monthly ? String(Ws.urls.monthly) : '';
+			const url = monthlyBase
+				? (Ws.withWorkspace(monthlyBase) + '&yearMonth=' + encodeURIComponent(m.yearMonth))
+				: '#';
 			const monthLabel = Dates.formatYearMonth(m.yearMonth, Ws.htmlLang);
 			const klass = ['bc-month-card'];
 			if (m.overBudget) klass.push('bc-month-card--over');
@@ -493,4 +505,27 @@
 	function formatEnv(env) {
 		return env ? Money.formatEnvelope(env, Ws.htmlLang) : '—';
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		SpecialsView = deps.SpecialsView || null;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: ['SpecialsView', 'HouseholdPeriod'],
+	});
+
 })();

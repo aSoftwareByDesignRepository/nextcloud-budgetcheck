@@ -50,11 +50,14 @@
 		return tx;
 	}
 
-	window.BudgetCheckTransactionList = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — TransactionList cannot register');
+	}
+	window.BudgetCheck.define('TransactionList', {
 		recentListMeta,
 		hasReceipts,
 		receiptLabel,
 		applyReceiptCount,
 		NOTE_PREVIEW_MAX,
-	};
+	});
 })();

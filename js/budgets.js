@@ -1,12 +1,19 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
-	const Ws = window.BudgetCheckWorkspace;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+
 
 	/** @type {{ id: number, type: string, currencyCode: string, currencyDecimals?: number } | null} */
 	let ws = null;
@@ -14,8 +21,16 @@
 	let decimals = 2;
 	let monthClosed = false;
 
+	function initialYearMonth() {
+		if (Dates && typeof Dates.currentYearMonthSafe === 'function') return Dates.currentYearMonthSafe();
+		if (Dates && typeof Dates.currentYearMonth === 'function') return Dates.currentYearMonth();
+		const d = new Date();
+		const m = d.getMonth() + 1;
+		return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m;
+	}
+
 	const state = {
-		yearMonth: Dates.currentYearMonth(),
+		yearMonth: null,
 		categories: [],
 		budgets: [],
 		budgetDefaults: [],
@@ -30,7 +45,8 @@
 	/** Prevents double-submit on budget/savings writes and their unguarded reloads. */
 	let mutationInFlight = false;
 
-	document.addEventListener('DOMContentLoaded', () => {
+	function pageInit() {
+		if (!Ws || typeof Ws !== 'object') return;
 		ws = Ws.workspace;
 		if (!ws) return;
 		isHousehold = ws.type === 'household';
@@ -69,7 +85,7 @@
 			updateSavingsModeFields(savingsForm);
 		}
 		loadAll();
-	});
+	}
 
 	async function loadAll() {
 		const seq = ++loadSeq;
@@ -417,4 +433,26 @@
 			if (submitBtn) submitBtn.disabled = false;
 		}
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: ['HouseholdPeriod'],
+	});
+
 })();

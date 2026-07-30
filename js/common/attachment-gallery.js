@@ -1,10 +1,28 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Icons = window.BudgetCheckIcons;
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Api', 'Messaging', 'Components', 'Icons'])
+		: (function () {
+			const fallback = {};
+			const map = {'Api': 'BudgetCheckApi', 'Messaging': 'BudgetCheckMessaging', 'Components': 'BudgetCheckComponents', 'Icons': 'BudgetCheckIcons'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	const MIN_ZOOM = 0.25;
 	const MAX_ZOOM = 6;
@@ -205,16 +223,16 @@
 		let panStart = null;
 		const xmlCache = new Map();
 
-		const overlay = C.createElement('div', { class: 'bc-attach-gallery' });
-		const dialog = C.createElement('div', {
+		const overlay = BC.Components.createElement('div', { class: 'bc-attach-gallery' });
+		const dialog = BC.Components.createElement('div', {
 			class: 'bc-attach-gallery__dialog',
 			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
 		});
 
-		const header = C.createElement('div', { class: 'bc-attach-gallery__header' });
-		const titleWrap = C.createElement('div', { class: 'bc-attach-gallery__title-wrap' });
-		const titleEl = C.createElement('h2', { id: labelId, class: 'bc-attach-gallery__title' });
-		const counterEl = C.createElement('p', { class: 'bc-attach-gallery__counter', attrs: { 'aria-live': 'polite' } });
+		const header = BC.Components.createElement('div', { class: 'bc-attach-gallery__header' });
+		const titleWrap = BC.Components.createElement('div', { class: 'bc-attach-gallery__title-wrap' });
+		const titleEl = BC.Components.createElement('h2', { id: labelId, class: 'bc-attach-gallery__title' });
+		const counterEl = BC.Components.createElement('p', { class: 'bc-attach-gallery__counter', attrs: { 'aria-live': 'polite' } });
 		titleWrap.append(titleEl, counterEl);
 		const closeBtn = iconButton({
 			label: t('budgetcheck', 'Close gallery'),
@@ -222,38 +240,38 @@
 			className: 'bc-attach-gallery__close',
 		});
 
-		const stage = C.createElement('div', { class: 'bc-attach-gallery__stage' });
-		const stageStatus = C.createElement('p', {
+		const stage = BC.Components.createElement('div', { class: 'bc-attach-gallery__stage' });
+		const stageStatus = BC.Components.createElement('p', {
 			class: 'bc-attach-gallery__stage-status',
 			attrs: { role: 'status', 'aria-live': 'polite' },
 		});
 
-		const imagePanel = C.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--image' });
-		const imageViewport = C.createElement('div', { class: 'bc-attach-gallery__viewport' });
-		const imgEl = C.createElement('img', {
+		const imagePanel = BC.Components.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--image' });
+		const imageViewport = BC.Components.createElement('div', { class: 'bc-attach-gallery__viewport' });
+		const imgEl = BC.Components.createElement('img', {
 			class: 'bc-attach-gallery__image',
 			attrs: { alt: '', decoding: 'async' },
 		});
-		const cropOverlay = C.createElement('div', { class: 'bc-attach-gallery__crop-overlay' });
-		const cropBox = C.createElement('div', {
+		const cropOverlay = BC.Components.createElement('div', { class: 'bc-attach-gallery__crop-overlay' });
+		const cropBox = BC.Components.createElement('div', {
 			class: 'bc-attach-gallery__crop-box',
 			attrs: { tabindex: '0', 'aria-label': t('budgetcheck', 'Crop area. Drag to move.') },
 		});
-		const cropHandle = C.createElement('div', { class: 'bc-attach-gallery__crop-handle', attrs: { 'aria-hidden': 'true' } });
+		const cropHandle = BC.Components.createElement('div', { class: 'bc-attach-gallery__crop-handle', attrs: { 'aria-hidden': 'true' } });
 		cropBox.appendChild(cropHandle);
 		cropOverlay.appendChild(cropBox);
 		imageViewport.append(imgEl, cropOverlay);
 		imagePanel.appendChild(imageViewport);
 
-		const pdfPanel = C.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--pdf' });
-		const pdfFrame = C.createElement('iframe', {
+		const pdfPanel = BC.Components.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--pdf' });
+		const pdfFrame = BC.Components.createElement('iframe', {
 			class: 'bc-attach-gallery__pdf',
 			attrs: { title: t('budgetcheck', 'PDF preview') },
 		});
 		pdfPanel.appendChild(pdfFrame);
 
-		const xmlPanel = C.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--xml' });
-		const xmlPre = C.createElement('pre', { class: 'bc-attach-gallery__xml-content', attrs: { tabindex: '0' } });
+		const xmlPanel = BC.Components.createElement('div', { class: 'bc-attach-gallery__panel bc-attach-gallery__panel--xml' });
+		const xmlPre = BC.Components.createElement('pre', { class: 'bc-attach-gallery__xml-content', attrs: { tabindex: '0' } });
 		xmlPanel.appendChild(xmlPre);
 
 		const prevBtn = iconButton({
@@ -269,11 +287,11 @@
 
 		stage.append(stageStatus, imagePanel, pdfPanel, xmlPanel, prevBtn, nextBtn);
 
-		const toolbar = C.createElement('div', {
+		const toolbar = BC.Components.createElement('div', {
 			class: 'bc-attach-gallery__toolbar',
 			attrs: { role: 'toolbar', 'aria-label': t('budgetcheck', 'Receipt tools') },
 		});
-		const statusEl = C.createElement('p', {
+		const statusEl = BC.Components.createElement('p', {
 			id: statusId,
 			class: 'bc-attach-gallery__status bc-sr-only',
 			attrs: { role: 'status', 'aria-live': 'polite' },
@@ -357,15 +375,15 @@
 		document.body.classList.add('bc-modal-open');
 
 		function toolbarGroup(label, buttons) {
-			const group = C.createElement('div', {
+			const group = BC.Components.createElement('div', {
 				class: 'bc-attach-gallery__tool-group',
 				attrs: { role: 'group', 'aria-label': label },
 			});
-			const labelEl = C.createElement('p', {
+			const labelEl = BC.Components.createElement('p', {
 				class: 'bc-attach-gallery__tool-group-label',
 				text: label,
 			});
-			const row = C.createElement('div', { class: 'bc-attach-gallery__tool-group-row' });
+			const row = BC.Components.createElement('div', { class: 'bc-attach-gallery__tool-group-row' });
 			buttons.forEach((btn) => {
 				if (btn) row.appendChild(btn);
 			});
@@ -377,8 +395,8 @@
 			const opts = options || {};
 			const label = opts.label || '';
 			const hint = opts.hint || label;
-			const wrap = C.createElement('span', { class: 'bc-attach-gallery__tool-wrap' });
-			const btn = C.createElement('button', {
+			const wrap = BC.Components.createElement('span', { class: 'bc-attach-gallery__tool-wrap' });
+			const btn = BC.Components.createElement('button', {
 				type: 'button',
 				class: opts.className || 'bc-attach-gallery__tool',
 				attrs: {
@@ -388,27 +406,27 @@
 			if (opts.toggle) {
 				btn.setAttribute('aria-pressed', 'false');
 			}
-			if (Icons && typeof Icons.render === 'function' && opts.icon) {
-				const iconEl = Icons.render(opts.icon);
+			if (BC.Icons && typeof BC.Icons.render === 'function' && opts.icon) {
+				const iconEl = BC.Icons.render(opts.icon);
 				if (iconEl) {
-					const iconWrap = C.createElement('span', { class: 'bc-attach-gallery__tool-icon' });
+					const iconWrap = BC.Components.createElement('span', { class: 'bc-attach-gallery__tool-icon' });
 					iconWrap.appendChild(iconEl);
 					btn.appendChild(iconWrap);
 				}
 			}
 			if (opts.text) {
-				btn.appendChild(C.createElement('span', {
+				btn.appendChild(BC.Components.createElement('span', {
 					class: 'bc-attach-gallery__tool-label',
 					text: opts.text,
 				}));
 			} else if (opts.caption) {
-				btn.appendChild(C.createElement('span', {
+				btn.appendChild(BC.Components.createElement('span', {
 					class: 'bc-attach-gallery__tool-caption',
 					text: opts.caption,
 				}));
 			}
 			if (hint) {
-				const tip = C.createElement('span', {
+				const tip = BC.Components.createElement('span', {
 					class: 'bc-attach-gallery__tool-tip',
 					attrs: { 'aria-hidden': 'true' },
 					text: hint,
@@ -620,7 +638,7 @@
 			if (!url) {
 				throw new Error(t('budgetcheck', 'Attachment could not be loaded.'));
 			}
-			const response = await Api.media(url);
+			const response = await BC.Api.media(url);
 			if (!response.ok) {
 				throw new Error(t('budgetcheck', 'Attachment could not be loaded.'));
 			}
@@ -717,7 +735,7 @@
 					text = await item.file.text();
 				} else {
 					const url = resolveMediaUrl(item.previewUrl || item.downloadUrl);
-					const response = await Api.media(url, {
+					const response = await BC.Api.media(url, {
 						headers: { Accept: 'text/xml, application/xml, text/plain, */*' },
 					});
 					if (!response.ok) {
@@ -824,25 +842,25 @@
 					resetImageState();
 					const seq = ++loadSeq;
 					await loadImageItem(item, seq);
-					Msg.announce(t('budgetcheck', 'Changes saved locally. Save the transaction to upload.'), 'success');
+					BC.Messaging.announce(t('budgetcheck', 'Changes saved locally. Save the transaction to upload.'), 'success');
 				} else if (item.id) {
 					const formData = new FormData();
 					formData.append('file', blob, fileName);
-					const data = await Api.upload('/apps/budgetcheck/api/transaction-attachments/' + item.id + '/replace', formData);
+					const data = await BC.Api.upload('/apps/budgetcheck/api/transaction-attachments/' + item.id + '/replace', formData);
 					if (data && data.attachment) {
 						Object.assign(item, data.attachment);
 					}
 					resetImageState();
 					const seq = ++loadSeq;
 					await loadImageItem(item, seq);
-					Msg.announce(t('budgetcheck', 'Receipt image saved.'), 'success');
+					BC.Messaging.announce(t('budgetcheck', 'Receipt image saved.'), 'success');
 				}
 
 				if (typeof opts.onItemsChange === 'function') {
 					opts.onItemsChange(items, items.length);
 				}
 			} catch (err) {
-				Msg.handleApiError(err, { reloadOnConflict: false });
+				BC.Messaging.handleApiError(err, { reloadOnConflict: false });
 			} finally {
 				saving = false;
 				updateToolbarControls();
@@ -853,7 +871,7 @@
 			const item = currentItem();
 			if (!item || readOnly) return;
 
-			const ok = await C.confirmDialog({
+			const ok = await BC.Components.confirmDialog({
 				title: t('budgetcheck', 'Remove attachment?'),
 				body: t('budgetcheck', 'This permanently deletes the file from this transaction.'),
 				confirmLabel: t('budgetcheck', 'Remove'),
@@ -866,11 +884,11 @@
 					revokeBlobUrl(item.previewUrl);
 					revokeBlobUrl(item.downloadUrl);
 				} else if (item.id) {
-					await Api.del('/apps/budgetcheck/api/transaction-attachments/' + item.id);
+					await BC.Api.del('/apps/budgetcheck/api/transaction-attachments/' + item.id);
 				}
 
 				items.splice(index, 1);
-				Msg.announce(t('budgetcheck', 'Attachment removed.'), 'success');
+				BC.Messaging.announce(t('budgetcheck', 'Attachment removed.'), 'success');
 
 				if (typeof opts.onItemsChange === 'function') {
 					opts.onItemsChange(items, items.length);
@@ -883,7 +901,7 @@
 				if (index >= items.length) index = items.length - 1;
 				renderCurrent();
 			} catch (err) {
-				Msg.handleApiError(err, { reloadOnConflict: false });
+				BC.Messaging.handleApiError(err, { reloadOnConflict: false });
 			}
 		}
 
@@ -1144,10 +1162,13 @@
 		return instance;
 	}
 
-	window.BudgetCheckAttachmentGallery = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — AttachmentGallery cannot register');
+	}
+	window.BudgetCheck.define('AttachmentGallery', {
 		open,
 		itemKind,
 		fileLabel,
 		resolveMediaUrl,
-	};
+	});
 })();

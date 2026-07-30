@@ -95,10 +95,13 @@
 		return svg;
 	}
 
-	window.BudgetCheckIcons = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Icons cannot register');
+	}
+	window.BudgetCheck.define('Icons', {
 		render,
 		has(name) {
 			return Object.prototype.hasOwnProperty.call(ICONS, name);
 		},
-	};
+	});
 })();

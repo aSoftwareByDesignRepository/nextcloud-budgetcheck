@@ -13,6 +13,7 @@ use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
+use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
@@ -69,6 +70,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobileIdempotencyService::class),
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -155,6 +157,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobileIdempotencyService::class),
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -235,6 +238,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobileIdempotencyService::class),
 			$this->createMock(MobilePushService::class),
 			$rate,
+			$this->createMock(TransactionAttachmentService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),

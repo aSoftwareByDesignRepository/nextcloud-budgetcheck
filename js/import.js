@@ -5,12 +5,19 @@
 (function () {
 	'use strict';
 
-	const Api = window.BudgetCheckApi;
-	const Msg = window.BudgetCheckMessaging;
-	const C = window.BudgetCheckComponents;
-	const Ws = window.BudgetCheckWorkspace;
-	const Money = window.BudgetCheckMoney;
-	const Dates = window.BudgetCheckDates;
+	/** @type {any} */
+	let Api;
+	/** @type {any} */
+	let Msg;
+	/** @type {any} */
+	let C;
+	/** @type {any} */
+	let Money;
+	/** @type {any} */
+	let Dates;
+	/** @type {any} */
+	let Ws;
+
 
 	const MAX_ROWS = 500;
 	const PREVIEW_ROWS = 20;
@@ -44,8 +51,8 @@
 	let categoryByName = new Map();
 	let statusByName = new Map();
 
-	document.addEventListener('DOMContentLoaded', async () => {
-		if (!Ws.workspace || !Ws.canContribute) return;
+	async function pageInit() {
+		if (!Ws || typeof Ws !== 'object' || !Ws.workspace || !Ws.canContribute) return;
 		try {
 			await loadCatalogs();
 			await syncImportPreferencesFromServer();
@@ -58,7 +65,7 @@
 		} catch (err) {
 			Msg.handleApiError(err);
 		}
-	});
+	}
 
 	function isProjectWorkspace() {
 		return !!(Ws.workspace && Ws.workspace.type === 'project');
@@ -624,7 +631,15 @@
 						'success',
 					);
 				}
-				window.location.href = Ws.withWorkspace(Ws.urls.transactions);
+				const tx = Ws.urls && Ws.urls.transactions;
+				if (tx) {
+					const href = Ws.withWorkspace(tx);
+					if (href) {
+						window.location.href = href;
+						return;
+					}
+				}
+				window.location.reload();
 			} catch (err) {
 				commitBtn.disabled = false;
 				validateBtn.disabled = false;
@@ -1165,4 +1180,29 @@
 		anchor.remove();
 		window.setTimeout(() => URL.revokeObjectURL(url), 0);
 	}
+
+	function boot(deps) {
+		Api = deps.Api;
+		Msg = deps.Messaging;
+		C = deps.Components;
+		Money = deps.Money;
+		Dates = deps.Dates;
+		Ws = deps.Workspace;
+		if (typeof state !== 'undefined' && state && Object.prototype.hasOwnProperty.call(state, 'yearMonth') && state.yearMonth == null && typeof initialYearMonth === 'function') {
+			state.yearMonth = initialYearMonth();
+		}
+		if (typeof dashState !== 'undefined' && dashState && Object.prototype.hasOwnProperty.call(dashState, 'yearMonth') && dashState.yearMonth == null && typeof initialYearMonth === 'function') {
+			dashState.yearMonth = initialYearMonth();
+		}
+		pageInit();
+	}
+
+	if (!window.BudgetCheck || typeof window.BudgetCheck.onReady !== 'function') {
+		return;
+	}
+	window.BudgetCheck.onReady(boot, {
+		required: ['Api', 'Messaging', 'Components', 'Money', 'Dates', 'Workspace'],
+		optional: [],
+	});
+
 })();

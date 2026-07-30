@@ -109,5 +109,8 @@ return [
 		['name' => 'mobile_api#applyRecurringSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions/{ruleId}/apply', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'ruleId' => '\\d+']],
 		['name' => 'mobile_api#registerPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'POST'],
 		['name' => 'mobile_api#unregisterPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'DELETE'],
+		['name' => 'mobile_api#listTransactionAttachments', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
+		['name' => 'mobile_api#uploadTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
+		['name' => 'mobile_api#deleteTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
 	],
 ];

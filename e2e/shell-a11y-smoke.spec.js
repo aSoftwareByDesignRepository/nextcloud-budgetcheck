@@ -73,8 +73,15 @@ for (const vp of viewports) {
 			}
 
 			const overflow = await page.evaluate(() => {
-				const root = document.querySelector('#app-content') || document.body;
-				return root.scrollWidth > root.clientWidth + 2;
+				// scrollWidth alone is a false positive under overflow-x:clip/hidden
+				// (content may still report a larger scrollWidth). Detect whether the
+				// page can actually pan horizontally — that is the WCAG reflow failure.
+				const root = document.scrollingElement || document.documentElement;
+				const before = window.scrollX;
+				window.scrollTo(Math.max(root.scrollWidth, 2000), window.scrollY);
+				const canScrollX = window.scrollX > before + 1;
+				window.scrollTo(before, window.scrollY);
+				return canScrollX;
 			});
 			expect(overflow).toBeFalsy();
 		});

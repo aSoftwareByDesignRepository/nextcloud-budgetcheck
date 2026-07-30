@@ -1,7 +1,28 @@
 (function () {
 	'use strict';
 
-	const Dates = window.BudgetCheckDates;
+	/**
+	 * Live dependency bag (getters). Never snapshot window.BudgetCheck* at IIFE load.
+	 * @type {Record<string, any>}
+	 */
+	const BC = (window.BudgetCheck && typeof window.BudgetCheck.live === 'function')
+		? window.BudgetCheck.live(['Dates'])
+		: (function () {
+			const fallback = {};
+			const map = {'Dates': 'BudgetCheckDates'};
+			Object.keys(map).forEach(function (shortName) {
+				Object.defineProperty(fallback, shortName, {
+					enumerable: true,
+					configurable: false,
+					get: function () {
+						const v = window[map[shortName]];
+						return v === undefined ? null : v;
+					},
+				});
+			});
+			return fallback;
+		}());
+
 
 	function pad2(n) {
 		return n < 10 ? '0' + n : String(n);
@@ -78,8 +99,8 @@
 	}
 
 	function monthName(m, htmlLang) {
-		const lang = Dates && typeof Dates.resolveTemporalInputLang === 'function'
-			? Dates.resolveTemporalInputLang(htmlLang)
+		const lang = BC.Dates && typeof BC.Dates.resolveTemporalInputLang === 'function'
+			? BC.Dates.resolveTemporalInputLang(htmlLang)
 			: (htmlLang || 'en').replace('_', '-');
 		try {
 			return new Intl.DateTimeFormat(lang, { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, m - 1, 1)));
@@ -166,7 +187,12 @@
 		function currentYm() {
 			const y = Number.parseInt(yearSel.value, 10);
 			const mo = Number.parseInt(monthSel.value, 10);
-			if (!Number.isFinite(y) || !Number.isFinite(mo)) return opts.initialYearMonth || Dates.currentYearMonth();
+			if (!Number.isFinite(y) || !Number.isFinite(mo)) {
+				if (opts.initialYearMonth) return opts.initialYearMonth;
+				return (BC.Dates && typeof BC.Dates.currentYearMonth === 'function')
+					? BC.Dates.currentYearMonth()
+					: '';
+			}
 			return toYearMonth(y, mo);
 		}
 
@@ -205,7 +231,9 @@
 		}
 
 		fillYears();
-		const init = parseYm(opts.initialYearMonth) || parseYm(Dates.currentYearMonth());
+		const initYm = opts.initialYearMonth
+			|| ((BC.Dates && typeof BC.Dates.currentYearMonth === 'function') ? BC.Dates.currentYearMonth() : '');
+		const init = parseYm(initYm);
 		if (init) {
 			if (!Array.from(yearSel.options).some((o) => o.value === String(init.y))) {
 				const o = document.createElement('option');
@@ -247,5 +275,8 @@
 		};
 	}
 
-	window.BudgetCheckHouseholdPeriod = { wire: wire };
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — HouseholdPeriod cannot register');
+	}
+	window.BudgetCheck.define('HouseholdPeriod', { wire: wire });
 })();

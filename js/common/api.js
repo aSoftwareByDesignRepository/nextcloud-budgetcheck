@@ -181,7 +181,10 @@
 		return data;
 	}
 
-	window.BudgetCheckApi = {
+	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {
+		throw new Error('BudgetCheck bootstrap missing — Api cannot register');
+	}
+	window.BudgetCheck.define('Api', {
 		get: (path, params, options) => request(path, Object.assign({}, options || {}, { method: 'GET', params })),
 		post: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'POST', body })),
 		put: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'PUT', body })),
@@ -190,5 +193,5 @@
 		media,
 		upload,
 		request,
-	};
+	});
 })();

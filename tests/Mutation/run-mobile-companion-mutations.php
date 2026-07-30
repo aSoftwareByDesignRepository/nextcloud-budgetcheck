@@ -32,10 +32,22 @@ $uninstall = (string)file_get_contents($root . '/lib/Repair/UninstallDropTables.
 $assert(str_contains($routes, "/api/mobile/v1/bootstrap"), 'route_bootstrap');
 $assert(str_contains($routes, 'mobile_api#createTransaction'), 'route_create_tx');
 $assert(str_contains($routes, 'mobile_api#deleteTransaction'), 'route_delete_tx');
+$assert(str_contains($routes, 'mobile_api#listTransactionAttachments'), 'route_list_attachments');
+$assert(str_contains($routes, 'mobile_api#uploadTransactionAttachment'), 'route_upload_attachments');
+$assert(str_contains($routes, 'mobile_api#deleteTransactionAttachment'), 'route_delete_attachments');
 $assert(str_contains($mobile, 'assertSafeMutationChannel'), 'mutation_channel_guard');
 $assert(str_contains($mobile, 'MobileMutationChannel::isSafe'), 'mutation_channel_helper_used');
 // Channel + validateId must run INSIDE safe() so failures become JSON 403/422, not uncaught throws.
-foreach (['createTransaction', 'updateTransaction', 'deleteTransaction', 'applyRecurringSuggestion', 'registerPushToken', 'unregisterPushToken'] as $mut) {
+foreach ([
+	'createTransaction',
+	'updateTransaction',
+	'deleteTransaction',
+	'applyRecurringSuggestion',
+	'registerPushToken',
+	'unregisterPushToken',
+	'uploadTransactionAttachment',
+	'deleteTransactionAttachment',
+] as $mut) {
 	$assert(
 		(bool)preg_match(
 			'/public function ' . preg_quote($mut, '/') . '\([^)]*\): JSONResponse\s*\{\s*return \$this->safe\(/s',
