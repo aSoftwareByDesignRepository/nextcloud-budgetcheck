@@ -50,4 +50,14 @@ final class TransactionAttachmentLifecycleContractTest extends TestCase
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/MobileApiController.php');
 		self::assertStringContainsString('deleteInWorkspace($attachmentId, $userId, $workspaceId)', $src);
 	}
+
+	public function testMobileDownloadBindsWorkspace(): void
+	{
+		$svc = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/TransactionAttachmentService.php');
+		$ctrl = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/MobileApiController.php');
+		self::assertStringContainsString('function resolveForDeliveryInWorkspace(', $svc);
+		self::assertStringContainsString('resolveForDeliveryInWorkspace(', $ctrl);
+		self::assertStringContainsString('function downloadTransactionAttachment(', $ctrl);
+		self::assertStringContainsString('X-Content-Type-Options', $ctrl);
+	}
 }

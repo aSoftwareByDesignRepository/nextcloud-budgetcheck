@@ -438,6 +438,35 @@ class TransactionAttachmentService
 		];
 	}
 
+	/**
+	 * Mobile companion download: same as {@see resolveForDelivery} plus an explicit
+	 * workspace bind so a crafted attachment id from another workspace cannot leak.
+	 *
+	 * @return array{row: array<string, mixed>, filePath: string, disposition: string}
+	 */
+	public function resolveForDeliveryInWorkspace(
+		int $attachmentId,
+		string $userId,
+		int $workspaceId,
+		bool $requestInline,
+	): array {
+		if ($workspaceId < 1) {
+			throw new AccessDeniedException();
+		}
+
+		$resolved = $this->resolveForDelivery($attachmentId, $userId, $requestInline);
+		$transactionId = (int)$resolved['row']['transaction_id'];
+		$transaction = $this->loadTransactionRow($transactionId);
+		if ($transaction === null || $transaction['deleted_at'] !== null) {
+			throw new AccessDeniedException();
+		}
+		if ((int)$transaction['workspace_id'] !== $workspaceId) {
+			throw new AccessDeniedException();
+		}
+
+		return $resolved;
+	}
+
 	public static function isPreviewableImage(string $mimeType): bool
 	{
 		return in_array($mimeType, self::INLINE_IMAGE_MIMES, true);

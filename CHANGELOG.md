@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-07-31
+
+### Added
+
+- Mobile companion API v5: workspace-bound **attachment download/preview** endpoint (`GET /api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}/download`) streaming receipt bytes with `nosniff`, `no-store`, sanitized `Content-Disposition`, strict CSP for inline previews, and per-user rate limiting.
+- Mobile companion API v4: monthly/yearly/period **glance summaries** (`scope=month|year|all` with new household span aggregation) and **app-admin workspace creation** mirroring the web permission model.
+- Home category overview chips now carry a `direction` field and include income categories with activity, so the companion can split spending and income views.
+
+### Security / integrity
+
+- Attachment delivery for the companion is bound to the requested workspace (`resolveForDeliveryInWorkspace`): a crafted attachment id from another workspace, or from a deleted transaction, is rejected with an opaque access-denied error (IDOR closed).
+- Year/scope summary parameters are strictly validated (four-digit year window, whitelisted scopes) with 422 validation errors.
+
+### Fixed
+
+- Mobile transaction list shape normalized; home category overview no longer drops income rows with activity.
+
+### Tests
+
+- New behavior/contract suites for attachment download (workspace mismatch, deleted transaction, rate limit, header hygiene) and glance summaries; mobile-companion mutation harness extended (attachment workspace-bind and download mutations all killed).
+
 ## [1.1.2] - 2026-07-30
 
 ### Security / integrity

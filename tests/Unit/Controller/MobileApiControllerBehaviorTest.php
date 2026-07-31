@@ -582,4 +582,222 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame('WORKSPACE_TYPE_MISMATCH', $response->getData()['error']['code']);
 	}
 
+	public function testHomeYearScopeUsesHouseholdSpan(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static function (string $name, $default = null) {
+				return match ($name) {
+					'scope' => 'year',
+					'year' => '2025',
+					default => $default,
+				};
+			}
+		);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'manager',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+			'timezone' => 'UTC',
+			'taxModeEnabled' => false,
+			'activeCalendarYearMonth' => '2026-07',
+		]);
+		$this->access->method('rememberLastUsedWorkspace');
+
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('householdSpan')
+			->with(1, 'alice', '2025-01', '2025-12', true)
+			->willReturn([
+				'yearMonth' => null,
+				'fromYearMonth' => '2025-01',
+				'toYearMonth' => '2025-12',
+				'isClosed' => false,
+				'totals' => [
+					'income' => ['minor' => 10000],
+					'expense' => ['minor' => 4000],
+					'netResult' => ['minor' => 6000],
+					'availableAfterSavings' => ['minor' => 5000],
+				],
+				'budget' => [
+					'plannedTotal' => ['minor' => 0],
+					'actualTotal' => ['minor' => 0],
+					'remaining' => ['minor' => 0],
+					'byCategory' => [],
+				],
+				'warnings' => [],
+			]);
+		$summaries->expects(self::never())->method('household');
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->home(1);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertSame('year', $data['scope']['timeScope']);
+		self::assertSame(2025, $data['scope']['year']);
+		self::assertSame(5000, $data['dominantKpi']['amountMinor']);
+	}
+
+	public function testHomeAllScopeUsesLedgerBounds(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static function (string $name, $default = null) {
+				return $name === 'scope' ? 'all' : $default;
+			}
+		);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'manager',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+			'timezone' => 'UTC',
+			'taxModeEnabled' => false,
+			'activeCalendarYearMonth' => '2026-07',
+		]);
+		$this->access->method('rememberLastUsedWorkspace');
+
+		$this->transactions->expects(self::once())
+			->method('ledgerYearMonthBounds')
+			->with(1)
+			->willReturn(['firstYearMonth' => '2024-03', 'lastYearMonth' => '2026-02']);
+
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('householdSpan')
+			->with(1, 'alice', '2024-03', '2026-02', false)
+			->willReturn([
+				'yearMonth' => null,
+				'fromYearMonth' => '2024-03',
+				'toYearMonth' => '2026-02',
+				'isClosed' => false,
+				'totals' => [
+					'income' => ['minor' => 20000],
+					'expense' => ['minor' => 8000],
+					'netResult' => ['minor' => 12000],
+					'availableAfterSavings' => ['minor' => 12000],
+				],
+				'budget' => [
+					'plannedTotal' => ['minor' => 0],
+					'actualTotal' => ['minor' => 0],
+					'remaining' => ['minor' => 0],
+					'byCategory' => [],
+				],
+				'warnings' => [],
+			]);
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->home(1);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertSame('all', $data['scope']['timeScope']);
+		self::assertSame('2024-03', $data['scope']['fromYearMonth']);
+		self::assertSame('2026-02', $data['scope']['toYearMonth']);
+	}
+
+	public function testHomeRejectsMalformedYear(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static function (string $name, $default = null) {
+				return match ($name) {
+					'scope' => 'year',
+					'year' => '2025e0',
+					default => $default,
+				};
+			}
+		);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'manager',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+			'timezone' => 'UTC',
+			'taxModeEnabled' => false,
+			'activeCalendarYearMonth' => '2026-07',
+		]);
+		$this->access->method('rememberLastUsedWorkspace');
+
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::never())->method('householdSpan');
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->home(1);
+		self::assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		self::assertSame('VALIDATION', $response->getData()['error']['code']);
+	}
+
 }

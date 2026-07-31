@@ -470,6 +470,116 @@ class SummaryService
 	}
 
 	/**
+	 * Household Start-dashboard span (calendar year or all-time).
+	 * Returns the same envelope shape `budgetChipsFromSummary` expects from monthly home.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function householdSpan(int $workspaceId, string $userId, string $fromYearMonth, string $toYearMonth, bool $includeMonthlyPlans): array
+	{
+		$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+		if ($workspace['type'] !== WorkspaceService::TYPE_HOUSEHOLD) {
+			throw new WorkspaceTypeMismatchException('household', $workspace['type'], 'household_span');
+		}
+		$fromYm = $this->validateYearMonth($fromYearMonth);
+		$toYm = $this->validateYearMonth($toYearMonth);
+		if ($fromYm > $toYm) {
+			throw new \InvalidArgumentException('fromYearMonth must be on or before toYearMonth.');
+		}
+		[$start] = $this->monthBounds($fromYm);
+		[, $end] = $this->monthBounds($toYm);
+		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
+		$workspaceCategories = $this->workspaceCategoryMeta($workspaceId);
+		$savingsCategoryIds = $this->savingsTransferCategoryIds($workspaceCategories);
+		$rows = $this->loadTransactionsForRange($workspaceId, $start, $end);
+		$figures = $this->aggregateMonth($workspace, $rows, $uncatIds, $savingsCategoryIds);
+
+		$byMonth = [];
+		foreach ($rows as $row) {
+			$booking = (string)($row['booking_date'] ?? '');
+			if (strlen($booking) < 7) {
+				continue;
+			}
+			$ym = substr($booking, 0, 7);
+			$byMonth[$ym][] = $row;
+		}
+
+		$plannedMap = [];
+		$savingsTargetTotal = 0;
+		if ($includeMonthlyPlans) {
+			$cursor = $fromYm;
+			while ($cursor <= $toYm) {
+				$monthPlanned = $this->budgets->plannedMapForMonth($workspaceId, $cursor);
+				foreach ($monthPlanned as $cid => $amt) {
+					$cid = (int)$cid;
+					$plannedMap[$cid] = ($plannedMap[$cid] ?? 0) + (int)$amt;
+				}
+				$monthRows = $byMonth[$cursor] ?? [];
+				$monthFigures = $this->aggregateMonth($workspace, $monthRows, $uncatIds, $savingsCategoryIds);
+				$savingsRow = $this->savings->load($workspaceId, $userId, $cursor, $workspace['currencyCode']);
+				$savingsTargetTotal += $this->savings->computeTargetValue($savingsRow, $monthFigures['totalIncomeMinor']);
+				$next = \DateTimeImmutable::createFromFormat('Y-m-d', $cursor . '-01');
+				if ($next === false) {
+					break;
+				}
+				$cursor = $next->modify('first day of next month')->format('Y-m');
+			}
+		}
+
+		$consumption = $this->categoryConsumption($workspace, $rows, $plannedMap, $uncatIds, $savingsCategoryIds);
+		$plannedTotalMinor = 0;
+		foreach ($plannedMap as $cid => $plannedAmt) {
+			$cid = (int)$cid;
+			if ($cid <= 0 || in_array($cid, $uncatIds, true)) {
+				continue;
+			}
+			if (in_array($cid, $savingsCategoryIds, true)) {
+				continue;
+			}
+			if (($workspaceCategories[$cid]['type'] ?? '') !== CategoryService::TYPE_EXPENSE) {
+				continue;
+			}
+			$plannedTotalMinor += (int)$plannedAmt;
+		}
+		$figures['plannedTotalMinor'] = $plannedTotalMinor;
+		$availableAfterSavingsMinor = $figures['totalIncomeMinor'] - $figures['totalExpenseMinor'] - $savingsTargetTotal;
+
+		return [
+			'workspace' => $workspace,
+			'yearMonth' => $fromYm === $toYm ? $fromYm : null,
+			'fromYearMonth' => $fromYm,
+			'toYearMonth' => $toYm,
+			'isClosed' => false,
+			'totals' => [
+				'income' => $this->money->envelope($figures['totalIncomeMinor'], $workspace['currencyCode']),
+				'expense' => $this->money->envelope($figures['totalExpenseMinor'], $workspace['currencyCode']),
+				'netResult' => $this->money->envelope($figures['netResultMinor'], $workspace['currencyCode']),
+				'availableAfterSavings' => $this->money->envelope($availableAfterSavingsMinor, $workspace['currencyCode']),
+			],
+			'budget' => [
+				'plannedTotal' => $this->money->envelope($plannedTotalMinor, $workspace['currencyCode']),
+				'actualTotal' => $this->money->envelope($figures['budgetedActualMinor'], $workspace['currencyCode']),
+				'remaining' => $this->money->envelope($plannedTotalMinor - $figures['budgetedActualMinor'], $workspace['currencyCode']),
+				'byCategory' => array_values(array_map(fn ($row) => [
+					'categoryId' => $row['categoryId'],
+					'name' => $row['name'],
+					'direction' => $row['direction'],
+					'isSavingsTransfer' => (bool)($row['isSavingsTransfer'] ?? false),
+					'hasBudget' => $includeMonthlyPlans && $row['plannedMinor'] !== null && (int)$row['plannedMinor'] > 0,
+					'planned' => ($includeMonthlyPlans && $row['plannedMinor'] !== null)
+						? $this->money->envelope($row['plannedMinor'], $workspace['currencyCode'])
+						: null,
+					'actual' => $this->money->envelope($row['actualMinor'], $workspace['currencyCode']),
+					'remaining' => ($includeMonthlyPlans && $row['plannedMinor'] !== null)
+						? $this->money->envelope($row['plannedMinor'] - $row['actualMinor'], $workspace['currencyCode'])
+						: null,
+				], $consumption)),
+			],
+			'warnings' => [],
+		];
+	}
+
+	/**
 	 * Aggregate a list of transaction rows into the canonical figures bag used
 	 * by every monthly/period summary.
 	 *

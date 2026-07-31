@@ -35,7 +35,10 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\ContentSecurityPolicy;
+use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\StreamResponse;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserSession;
@@ -154,11 +157,53 @@ class MobileApiController extends Controller
 			$this->access->rememberLastUsedWorkspace($userId, $workspaceId);
 			$type = (string)$workspace['type'];
 			if ($type === WorkspaceService::TYPE_HOUSEHOLD) {
-				$ym = (string)$this->request->getParam('yearMonth', '');
-				if ($ym === '') {
-					$ym = (string)($workspace['activeCalendarYearMonth'] ?? date('Y-m'));
+				$timeScope = strtolower(trim((string)$this->request->getParam('scope', 'month')));
+				if ($timeScope === '') {
+					$timeScope = 'month';
 				}
-				$summary = $this->summaries->household($workspaceId, $userId, $ym);
+				if (!in_array($timeScope, ['month', 'year', 'all'], true)) {
+					throw new ValidationException('scope must be month, year, or all.');
+				}
+
+				$ym = null;
+				$year = null;
+				$fromYm = null;
+				$toYm = null;
+				if ($timeScope === 'month') {
+					$ym = (string)$this->request->getParam('yearMonth', '');
+					if ($ym === '') {
+						$ym = (string)($workspace['activeCalendarYearMonth'] ?? date('Y-m'));
+					}
+					$summary = $this->summaries->household($workspaceId, $userId, $ym);
+					$fromYm = $ym;
+					$toYm = $ym;
+				} elseif ($timeScope === 'year') {
+					$yearRaw = $this->request->getParam('year', date('Y'));
+					$yearStr = is_scalar($yearRaw) ? trim((string)$yearRaw) : '';
+					if ($yearStr === '') {
+						$yearStr = date('Y');
+					}
+					if (!preg_match('/^\d{4}$/', $yearStr)) {
+						throw new ValidationException('year must be a four-digit calendar year.');
+					}
+					$year = (int)$yearStr;
+					$maxYear = (int)date('Y') + 1;
+					if ($year < 1900 || $year > $maxYear) {
+						throw new ValidationException('year must be between 1900 and ' . $maxYear . '.');
+					}
+					$fromYm = sprintf('%04d-01', $year);
+					$toYm = sprintf('%04d-12', $year);
+					$summary = $this->summaries->householdSpan($workspaceId, $userId, $fromYm, $toYm, true);
+				} else {
+					$bounds = $this->transactions->ledgerYearMonthBounds($workspaceId);
+					$fromYm = $bounds['firstYearMonth'] ?? (string)($workspace['activeCalendarYearMonth'] ?? date('Y-m'));
+					$toYm = $bounds['lastYearMonth'] ?? $fromYm;
+					if ($fromYm > $toYm) {
+						$fromYm = $toYm;
+					}
+					$summary = $this->summaries->householdSpan($workspaceId, $userId, $fromYm, $toYm, false);
+				}
+
 				$summary['warnings'] = $this->localizeWarnings($summary['warnings'] ?? []);
 				$totals = is_array($summary['totals'] ?? null) ? $summary['totals'] : [];
 				$available = $this->envelopeMinor($totals['availableAfterSavings'] ?? null);
@@ -171,7 +216,11 @@ class MobileApiController extends Controller
 						'name' => (string)$workspace['name'],
 						'type' => $type,
 						'role' => (string)$workspace['role'],
+						'timeScope' => $timeScope,
 						'yearMonth' => $ym,
+						'year' => $year,
+						'fromYearMonth' => $fromYm,
+						'toYearMonth' => $toYm,
 						'timezone' => (string)$workspace['timezone'],
 						'currencyCode' => (string)$workspace['currencyCode'],
 						'currencyDecimals' => (int)($workspace['currencyDecimals'] ?? 2),
@@ -649,6 +698,65 @@ class MobileApiController extends Controller
 	}
 
 	/**
+	 * Stream attachment bytes for the companion (Basic/Bearer). Workspace-bound
+	 * to close IDOR across workspaces. Not a JSON envelope — binary body.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function downloadTransactionAttachment(int $workspaceId, int $attachmentId): StreamResponse|DataDisplayResponse
+	{
+		try {
+			$userId = $this->access->currentUserId();
+			$workspaceId = $this->validateId($workspaceId);
+			$attachmentId = $this->validateId($attachmentId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_read', 600, 300);
+			$requestInline = $this->request->getParam('inline') === '1'
+				|| $this->request->getParam('inline') === 'true';
+			$resolved = $this->attachments->resolveForDeliveryInWorkspace(
+				$attachmentId,
+				$userId,
+				$workspaceId,
+				$requestInline,
+			);
+			$row = $resolved['row'];
+			$safeName = $this->attachments->sanitizeContentDispositionFilename((string)$row['original_name']);
+
+			$response = new StreamResponse($resolved['filePath']);
+			$response->addHeader('Content-Type', (string)$row['mime_type']);
+			$response->addHeader('Content-Disposition', $resolved['disposition'] . '; filename="' . $safeName . '"');
+			$response->addHeader('Content-Length', (string)((int)$row['file_size']));
+			$response->addHeader('X-Content-Type-Options', 'nosniff');
+			$response->addHeader('Cache-Control', 'private, no-store, must-revalidate');
+			$response->addHeader('Pragma', 'no-cache');
+			if ($resolved['disposition'] === 'inline') {
+				$response->setContentSecurityPolicy(new ContentSecurityPolicy());
+			}
+			return $response;
+		} catch (\InvalidArgumentException $e) {
+			return $this->attachmentDownloadError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+		} catch (RateLimitExceededException) {
+			return $this->attachmentDownloadError(
+				'Too many requests. Please wait a moment and try again.',
+				Http::STATUS_TOO_MANY_REQUESTS,
+			);
+		} catch (NotAuthenticatedException) {
+			return $this->attachmentDownloadError('Authentication required.', Http::STATUS_UNAUTHORIZED);
+		} catch (AccessDeniedException) {
+			return $this->attachmentDownloadError('Access denied.', Http::STATUS_FORBIDDEN);
+		} catch (\Throwable) {
+			return $this->attachmentDownloadError('Attachment could not be loaded.', Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	private function attachmentDownloadError(string $message, int $status): DataDisplayResponse
+	{
+		$response = new DataDisplayResponse($message, $status);
+		$response->addHeader('X-Content-Type-Options', 'nosniff');
+		return $response;
+	}
+
+	/**
 	 * Mutations accept Basic/Bearer app-password OR a cryptographically valid
 	 * CSRF requesttoken (IRequest::passesCSRFCheck). Cookie-only sessions
 	 * without a valid token — including forged non-empty strings — are rejected.
@@ -870,8 +978,9 @@ class MobileApiController extends Controller
 	}
 
 	/**
-	 * Month/period category overview for mobile Home.
-	 * Includes budgeted categories and expense categories with spend (even without a plan).
+	 * Month/period category overview for mobile Home / Start dashboard.
+	 * Includes budgeted categories plus expense and income categories with activity
+	 * (even without a plan). `direction` lets the client filter spending vs income.
 	 *
 	 * @param array<string, mixed> $summary
 	 * @return list<array<string, mixed>>
@@ -891,9 +1000,10 @@ class MobileApiController extends Controller
 			$hasBudget = (bool)($row['hasBudget'] ?? false);
 			$planned = $hasBudget ? $this->envelopeMinor($row['planned'] ?? null) : 0;
 			$actual = $this->envelopeMinor($row['actual'] ?? null);
-			$direction = (string)($row['direction'] ?? 'expense');
-			// Skip income-only / empty rows without a budget — Home is a spend overview.
-			if (!$hasBudget && ($direction !== 'expense' || $actual <= 0)) {
+			$rawDirection = strtolower((string)($row['direction'] ?? 'expense'));
+			$direction = $rawDirection === 'income' ? 'income' : 'expense';
+			// Skip empty non-budgeted rows (no plan and no activity).
+			if (!$hasBudget && $actual <= 0) {
 				continue;
 			}
 			$chips[] = [
@@ -903,6 +1013,7 @@ class MobileApiController extends Controller
 				'actualMinor' => $actual,
 				'leftMinor' => $hasBudget ? ($planned - $actual) : 0,
 				'hasBudget' => $hasBudget,
+				'direction' => $direction,
 			];
 		}
 		usort($chips, static function (array $a, array $b): int {

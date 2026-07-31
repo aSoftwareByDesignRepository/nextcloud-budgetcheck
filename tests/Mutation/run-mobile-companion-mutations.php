@@ -35,6 +35,8 @@ $assert(str_contains($routes, 'mobile_api#deleteTransaction'), 'route_delete_tx'
 $assert(str_contains($routes, 'mobile_api#listTransactionAttachments'), 'route_list_attachments');
 $assert(str_contains($routes, 'mobile_api#uploadTransactionAttachment'), 'route_upload_attachments');
 $assert(str_contains($routes, 'mobile_api#deleteTransactionAttachment'), 'route_delete_attachments');
+$assert(str_contains($routes, 'mobile_api#downloadTransactionAttachment'), 'route_download_attachments');
+$assert(str_contains($routes, '/attachments/{attachmentId}/download'), 'route_download_attachments_path');
 $assert(str_contains($mobile, 'assertSafeMutationChannel'), 'mutation_channel_guard');
 $assert(str_contains($mobile, 'MobileMutationChannel::isSafe'), 'mutation_channel_helper_used');
 // Channel + validateId must run INSIDE safe() so failures become JSON 403/422, not uncaught throws.
@@ -92,6 +94,15 @@ $assert(str_contains($mobile, "\$list['items']"), 'list_tx_unwraps_items');
 $assert(str_contains($mobile, "'transactions' => \$enriched"), 'list_tx_returns_row_array');
 $assert(str_contains($mobile, 'categoryNameMap'), 'list_tx_enriches_category_names');
 $assert(str_contains($mobile, "'hasBudget' => \$hasBudget"), 'home_chips_include_has_budget');
+$assert(str_contains($mobile, "'direction' => \$direction"), 'home_chips_include_direction');
+$assert(str_contains($mobile, 'if (!$hasBudget && $actual <= 0)'), 'home_chips_include_income_activity');
+$assert(str_contains($mobile, 'householdSpan'), 'home_year_all_use_span');
+$assert(str_contains($mobile, "'timeScope' => \$timeScope"), 'home_exposes_time_scope');
+$assert(str_contains($mobile, "scope must be month, year, or all"), 'home_validates_scope');
+$assert(str_contains($mobile, 'year must be a four-digit calendar year'), 'home_validates_year_format');
+$assert(str_contains($mobile, "/^\\d{4}$/"), 'home_year_strict_digits');
+$summaryService = (string)file_get_contents($root . '/lib/Service/SummaryService.php');
+$assert(str_contains($summaryService, 'function householdSpan'), 'summary_household_span');
 $kpi = (string)file_get_contents($root . '/lib/Service/MobileHomeKpi.php');
 $assert(str_contains($kpi, 'available_after_savings'), 'household_kpi_key');
 $assert(str_contains($kpi, 'spend_vs_cap'), 'project_kpi_key');
@@ -101,7 +112,9 @@ $assert(!str_contains($mobile, 'LICENSE_REQUIRED'), 'no_license_required');
 $assert(!str_contains($mobile, 'NO_MOBILE_SEAT'), 'no_seat_code');
 $assert(str_contains($caps, "'free' => true"), 'capabilities_free');
 $assert(str_contains($caps, 'companion.min'), 'capabilities_min');
-$assert(str_contains($caps, 'COMPANION_API = 4'), 'companion_api_v4');
+$assert(str_contains($caps, 'COMPANION_API = 5'), 'companion_api_v5');
+$assert(str_contains($mobile, 'resolveForDeliveryInWorkspace'), 'mobile_download_binds_workspace');
+$assert(str_contains($mobile, 'function downloadTransactionAttachment'), 'mobile_download_method');
 $assert(str_contains($mobile, 'function monthlySummary'), 'monthly_summary_route_method');
 $assert(str_contains($mobile, 'function yearlySummary'), 'yearly_summary_route_method');
 $assert(str_contains($mobile, 'function periodSummary'), 'period_summary_route_method');
@@ -126,6 +139,8 @@ $assert(str_contains($uninstall, 'tx-attachments'), 'uninstall_tx_attachments_pa
 $attach = (string)file_get_contents($root . '/lib/Service/TransactionAttachmentService.php');
 $assert(str_contains($attach, 'purgeForTransaction'), 'attach_purge_on_tx_delete');
 $assert(str_contains($attach, 'deleteInWorkspace'), 'attach_workspace_bound_delete');
+$assert(str_contains($attach, 'function resolveForDeliveryInWorkspace'), 'attach_resolve_in_workspace');
+$assert(str_contains($attach, '(int)$transaction[\'workspace_id\'] !== $workspaceId'), 'attach_download_workspace_mismatch');
 $assert(str_contains($mobile, 'deleteInWorkspace($attachmentId, $userId, $workspaceId)'), 'mobile_delete_binds_workspace');
 $assert(!preg_match('/#\[NoCSRFRequired\]\s*\n\s*public function replaceTransactionAttachment\(/', $api), 'web_replace_attachment_still_csrf');
 // Web mutations must still require CSRF

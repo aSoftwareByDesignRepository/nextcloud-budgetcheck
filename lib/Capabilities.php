@@ -17,8 +17,8 @@ use OCP\Capabilities\ICapability;
 class Capabilities implements ICapability
 {
 	public const COMPANION_MIN = 1;
-	/** Companion API major: 4 = monthly/yearly/period summaries + create workspace. */
-	public const COMPANION_API = 4;
+	/** Companion API major: 5 = attachment download/preview (workspace-bound). */
+	public const COMPANION_API = 5;
 
 	public function __construct(
 		private readonly IAppManager $appManager,
