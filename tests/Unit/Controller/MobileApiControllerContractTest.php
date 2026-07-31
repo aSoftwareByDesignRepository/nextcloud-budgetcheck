@@ -26,6 +26,7 @@ final class MobileApiControllerContractTest extends TestCase
 		'unregisterPushToken',
 		'uploadTransactionAttachment',
 		'deleteTransactionAttachment',
+		'createWorkspace',
 	];
 
 	/** @var list<string> */
@@ -33,6 +34,9 @@ final class MobileApiControllerContractTest extends TestCase
 		'bootstrap',
 		'listWorkspaces',
 		'home',
+		'monthlySummary',
+		'yearlySummary',
+		'periodSummary',
 		'listCategories',
 		'listTransactions',
 		'getTransaction',

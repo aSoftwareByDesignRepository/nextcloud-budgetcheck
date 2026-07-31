@@ -17,8 +17,8 @@ use OCP\Capabilities\ICapability;
 class Capabilities implements ICapability
 {
 	public const COMPANION_MIN = 1;
-	/** Companion API major: 3 = attachments; receipt AI suggest was removed (no Task Processing dependency). */
-	public const COMPANION_API = 3;
+	/** Companion API major: 4 = monthly/yearly/period summaries + create workspace. */
+	public const COMPANION_API = 4;
 
 	public function __construct(
 		private readonly IAppManager $appManager,

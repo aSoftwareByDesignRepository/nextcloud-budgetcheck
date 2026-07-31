@@ -96,6 +96,8 @@ class MobileApiController extends Controller
 					'tax' => true,
 					'recurringSuggestions' => true,
 					'attachments' => true,
+					// Same gate as web ApiController::createWorkspace — app admin, not workspace manager.
+					'canCreateWorkspace' => $this->access->isAppAdmin($userId),
 				],
 			];
 		});
@@ -113,29 +115,31 @@ class MobileApiController extends Controller
 			$out = [];
 			foreach ($workspaces as $ws) {
 				$id = (int)$ws['id'];
-				$out[] = [
-					'id' => $id,
-					'name' => (string)$ws['name'],
-					'type' => (string)$ws['type'],
-					'currencyCode' => (string)$ws['currencyCode'],
-					'currencyDecimals' => (int)($ws['currencyDecimals'] ?? 2),
-					'timezone' => (string)$ws['timezone'],
-					'taxModeEnabled' => (bool)$ws['taxModeEnabled'],
-					'taxBudgetBasis' => (string)$ws['taxBudgetBasis'],
-					'defaultVatRateBp' => $ws['defaultVatRateBp'] ?? null,
-					'projectStartDate' => $ws['projectStartDate'] ?? null,
-					'projectEndDate' => $ws['projectEndDate'] ?? null,
-					'projectTotalCapMinor' => $ws['projectTotalCapMinor'] ?? null,
-					'activeCalendarYearMonth' => $ws['activeCalendarYearMonth'] ?? null,
-					'isFavorite' => isset($favSet[$id]),
-					'role' => (string)($ws['role'] ?? AccessControlService::ROLE_VIEWER),
-					'isActive' => (bool)($ws['isActive'] ?? true),
-				];
+				$out[] = $this->mobileWorkspaceRow($ws, isset($favSet[$id]));
 			}
 			return [
 				'workspaces' => $out,
 				'lastUsedWorkspaceId' => $this->access->lastUsedWorkspace($userId),
 				'favoriteWorkspaceIds' => $favorites,
+				'canCreateWorkspace' => $this->access->isAppAdmin($userId),
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function createWorkspace(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$this->assertSafeMutationChannel();
+			if (!$this->access->isAppAdmin($userId)) {
+				throw new AccessDeniedException();
+			}
+			$this->rateLimit->assertAllowed($userId, 'workspace_create', 10, 600);
+			$workspace = $this->workspaces->createWorkspace($userId, $this->payload());
+			return [
+				'workspace' => $this->mobileWorkspaceRow($workspace, false),
+				'canCreateWorkspace' => true,
 			];
 		});
 	}
@@ -231,6 +235,118 @@ class MobileApiController extends Controller
 				'budgetChips' => $this->budgetChipsFromSummary($summary),
 				'warnings' => $summary['warnings'],
 				'summary' => $summary,
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function monthlySummary(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$ym = (string)$this->request->getParam('yearMonth', '');
+			if ($ym === '') {
+				$ym = (string)($workspace['activeCalendarYearMonth'] ?? date('Y-m'));
+			}
+			$summary = $this->summaries->household($workspaceId, $userId, $ym);
+			$summary['warnings'] = $this->localizeWarnings($summary['warnings'] ?? []);
+			$totals = is_array($summary['totals'] ?? null) ? $summary['totals'] : [];
+			$budget = is_array($summary['budget'] ?? null) ? $summary['budget'] : [];
+			return [
+				'yearMonth' => (string)($summary['yearMonth'] ?? $ym),
+				'isClosed' => (bool)($summary['isClosed'] ?? false),
+				'currencyCode' => (string)$workspace['currencyCode'],
+				'currencyDecimals' => (int)($workspace['currencyDecimals'] ?? 2),
+				'incomeMinor' => $this->envelopeMinor($totals['income'] ?? null),
+				'expenseMinor' => $this->envelopeMinor($totals['expense'] ?? null),
+				'netMinor' => $this->envelopeMinor($totals['netResult'] ?? null),
+				'availableAfterSavingsMinor' => $this->envelopeMinor($totals['availableAfterSavings'] ?? null),
+				'budgetPlannedMinor' => $this->envelopeMinor($budget['plannedTotal'] ?? null),
+				'budgetActualMinor' => $this->envelopeMinor($budget['actualTotal'] ?? null),
+				'budgetRemainingMinor' => $this->envelopeMinor($budget['remaining'] ?? null),
+				'budgetChips' => $this->budgetChipsFromSummary($summary),
+				'warnings' => $summary['warnings'],
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function yearlySummary(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$yearParam = $this->request->getParam('year');
+			$year = is_numeric($yearParam) ? (int)$yearParam : (int)date('Y');
+			$summary = $this->summaries->yearly($workspaceId, $userId, $year);
+			$totals = is_array($summary['totals'] ?? null) ? $summary['totals'] : [];
+			$monthsIn = is_array($summary['months'] ?? null) ? $summary['months'] : [];
+			$months = [];
+			foreach ($monthsIn as $row) {
+				if (!is_array($row)) {
+					continue;
+				}
+				$months[] = [
+					'yearMonth' => (string)($row['yearMonth'] ?? ''),
+					'incomeMinor' => $this->envelopeMinor($row['income'] ?? null),
+					'expenseMinor' => $this->envelopeMinor($row['expense'] ?? null),
+					'netMinor' => $this->envelopeMinor($row['netResult'] ?? null),
+					'availableAfterSavingsMinor' => $this->envelopeMinor($row['availableAfterSavings'] ?? null),
+					'overBudget' => (bool)($row['overBudget'] ?? false),
+					'isClosed' => (bool)($row['isClosed'] ?? false),
+				];
+			}
+			return [
+				'year' => (int)($summary['year'] ?? $year),
+				'currencyCode' => (string)$workspace['currencyCode'],
+				'currencyDecimals' => (int)($workspace['currencyDecimals'] ?? 2),
+				'incomeMinor' => $this->envelopeMinor($totals['income'] ?? null),
+				'expenseMinor' => $this->envelopeMinor($totals['expense'] ?? null),
+				'netMinor' => $this->envelopeMinor($totals['netResult'] ?? null),
+				'overBudgetMonths' => (int)($totals['overBudgetMonths'] ?? 0),
+				'months' => $months,
+			];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function periodSummary(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$ym = $this->stringParam('yearMonth');
+			$summary = $this->summaries->projectPeriod($workspaceId, $userId, $ym);
+			$summary['warnings'] = $this->localizeWarnings($summary['warnings'] ?? []);
+			$totals = is_array($summary['totals'] ?? null) ? $summary['totals'] : [];
+			$allTime = is_array($summary['allTime'] ?? null) ? $summary['allTime'] : [];
+			$window = is_array($summary['window'] ?? null) ? $summary['window'] : [];
+			$cap = $workspace['projectTotalCapMinor'] ?? null;
+			$spend = $this->envelopeMinor($allTime['expense'] ?? null);
+			$headroom = $cap !== null ? ((int)$cap - $spend) : null;
+			return [
+				'yearMonth' => $summary['yearMonth'] ?? null,
+				'window' => [
+					'from' => (string)($window['from'] ?? ''),
+					'to' => (string)($window['to'] ?? ''),
+				],
+				'currencyCode' => (string)$workspace['currencyCode'],
+				'currencyDecimals' => (int)($workspace['currencyDecimals'] ?? 2),
+				'projectStartDate' => $workspace['projectStartDate'] ?? null,
+				'projectEndDate' => $workspace['projectEndDate'] ?? null,
+				'incomeMinor' => $this->envelopeMinor($totals['income'] ?? null),
+				'expenseMinor' => $this->envelopeMinor($totals['expense'] ?? null),
+				'netMinor' => $this->envelopeMinor($totals['netResult'] ?? null),
+				'allTimeIncomeMinor' => $this->envelopeMinor($allTime['income'] ?? null),
+				'allTimeExpenseMinor' => $spend,
+				'capMinor' => $cap !== null ? (int)$cap : null,
+				'headroomMinor' => $headroom,
+				'budgetChips' => $this->budgetChipsFromSummary($summary),
+				'warnings' => $summary['warnings'],
 			];
 		});
 	}
@@ -723,6 +839,34 @@ class MobileApiController extends Controller
 			throw new AccessDeniedException();
 		}
 		return $status;
+	}
+
+	/**
+	 * Stable companion workspace row (list + create).
+	 *
+	 * @param array<string, mixed> $ws
+	 * @return array<string, mixed>
+	 */
+	private function mobileWorkspaceRow(array $ws, bool $isFavorite): array
+	{
+		return [
+			'id' => (int)$ws['id'],
+			'name' => (string)$ws['name'],
+			'type' => (string)$ws['type'],
+			'currencyCode' => (string)$ws['currencyCode'],
+			'currencyDecimals' => (int)($ws['currencyDecimals'] ?? 2),
+			'timezone' => (string)$ws['timezone'],
+			'taxModeEnabled' => (bool)($ws['taxModeEnabled'] ?? false),
+			'taxBudgetBasis' => (string)($ws['taxBudgetBasis'] ?? 'gross'),
+			'defaultVatRateBp' => $ws['defaultVatRateBp'] ?? null,
+			'projectStartDate' => $ws['projectStartDate'] ?? null,
+			'projectEndDate' => $ws['projectEndDate'] ?? null,
+			'projectTotalCapMinor' => $ws['projectTotalCapMinor'] ?? null,
+			'activeCalendarYearMonth' => $ws['activeCalendarYearMonth'] ?? null,
+			'isFavorite' => $isFavorite,
+			'role' => (string)($ws['role'] ?? AccessControlService::ROLE_VIEWER),
+			'isActive' => (bool)($ws['isActive'] ?? true),
+		];
 	}
 
 	/**

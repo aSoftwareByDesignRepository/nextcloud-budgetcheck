@@ -47,6 +47,7 @@ foreach ([
 	'unregisterPushToken',
 	'uploadTransactionAttachment',
 	'deleteTransactionAttachment',
+	'createWorkspace',
 ] as $mut) {
 	$assert(
 		(bool)preg_match(
@@ -100,7 +101,17 @@ $assert(!str_contains($mobile, 'LICENSE_REQUIRED'), 'no_license_required');
 $assert(!str_contains($mobile, 'NO_MOBILE_SEAT'), 'no_seat_code');
 $assert(str_contains($caps, "'free' => true"), 'capabilities_free');
 $assert(str_contains($caps, 'companion.min'), 'capabilities_min');
-$assert(str_contains($caps, 'COMPANION_API = 3'), 'companion_api_v3');
+$assert(str_contains($caps, 'COMPANION_API = 4'), 'companion_api_v4');
+$assert(str_contains($mobile, 'function monthlySummary'), 'monthly_summary_route_method');
+$assert(str_contains($mobile, 'function yearlySummary'), 'yearly_summary_route_method');
+$assert(str_contains($mobile, 'function periodSummary'), 'period_summary_route_method');
+$assert(str_contains($mobile, 'function createWorkspace'), 'create_workspace_route_method');
+$assert(str_contains($mobile, 'canCreateWorkspace'), 'can_create_workspace_flag');
+$assert(str_contains($mobile, 'isAppAdmin'), 'create_workspace_app_admin_acl');
+$assert(str_contains($routes, 'monthly-summary'), 'route_monthly_summary');
+$assert(str_contains($routes, 'yearly-summary'), 'route_yearly_summary');
+$assert(str_contains($routes, 'period-summary'), 'route_period_summary');
+$assert(str_contains($routes, 'mobile_api#createWorkspace'), 'route_create_workspace');
 $assert(!str_contains($app, 'registerAlias('), 'no_invalid_register_alias');
 $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');

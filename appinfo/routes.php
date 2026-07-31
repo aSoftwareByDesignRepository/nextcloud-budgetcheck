@@ -97,7 +97,11 @@ return [
 		// Free BudgetCheck Mobile companion API (COMPANION-APP.md v2.0 — no license gates)
 		['name' => 'mobile_api#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],
 		['name' => 'mobile_api#listWorkspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
+		['name' => 'mobile_api#createWorkspace', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'POST'],
 		['name' => 'mobile_api#home', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/home', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#monthlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/monthly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#yearlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/yearly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#periodSummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/period-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listCategories', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/categories', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listBookingStatuses', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/booking-statuses', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listTransactions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],

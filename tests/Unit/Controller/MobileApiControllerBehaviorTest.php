@@ -98,6 +98,164 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertArrayNotHasKey('bdc2', $data);
 		self::assertSame('alice', $data['user']['uid']);
 		self::assertTrue($data['capabilities']['offlineCreate']);
+		self::assertArrayHasKey('canCreateWorkspace', $data['capabilities']);
+	}
+
+	public function testCreateWorkspaceRequiresAppAdmin(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->access->method('isAppAdmin')->with('alice')->willReturn(false);
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn(['name' => 'Nope', 'type' => 'household']);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects(self::never())->method('createWorkspace');
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->createWorkspace();
+		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
+	}
+
+	public function testMonthlySummaryMapsMinorUnits(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static function (string $name, $default = null) {
+				return $name === 'yearMonth' ? '2026-07' : $default;
+			}
+		);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'manager',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+			'activeCalendarYearMonth' => '2026-07',
+		]);
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('household')
+			->with(1, 'alice', '2026-07')
+			->willReturn([
+				'yearMonth' => '2026-07',
+				'isClosed' => false,
+				'totals' => [
+					'income' => ['minor' => 10000],
+					'expense' => ['minor' => 4000],
+					'netResult' => ['minor' => 6000],
+					'availableAfterSavings' => ['minor' => 5000],
+				],
+				'budget' => [
+					'plannedTotal' => ['minor' => 3000],
+					'actualTotal' => ['minor' => 2000],
+					'remaining' => ['minor' => 1000],
+					'byCategory' => [],
+				],
+				'warnings' => [],
+			]);
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->monthlySummary(1);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertTrue($data['ok']);
+		self::assertSame('2026-07', $data['yearMonth']);
+		self::assertSame(10000, $data['incomeMinor']);
+		self::assertSame(4000, $data['expenseMinor']);
+		self::assertSame(5000, $data['availableAfterSavingsMinor']);
+	}
+
+	public function testPeriodSummaryRejectsHouseholdViaService(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturn(null);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 2,
+			'name' => 'Home',
+			'type' => 'household',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+		]);
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('projectPeriod')
+			->willThrowException(new \OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException('project', 'household', 'project_period_summary'));
+
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->periodSummary(2);
+		self::assertSame(422, $response->getStatus());
+		self::assertSame('WORKSPACE_TYPE_MISMATCH', $response->getData()['error']['code']);
 	}
 
 	public function testCookieOnlyCreateReturnsJsonForbiddenNotUncaught(): void
@@ -275,4 +433,153 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
 	}
+	public function testYearlySummaryMapsMonths(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static function (string $name, $default = null) {
+				return $name === 'year' ? '2026' : $default;
+			}
+		);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+		]);
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('yearly')
+			->with(1, 'alice', 2026)
+			->willReturn([
+				'year' => 2026,
+				'totals' => [
+					'income' => ['minor' => 12000],
+					'expense' => ['minor' => 5000],
+					'netResult' => ['minor' => 7000],
+					'overBudgetMonths' => 1,
+				],
+				'months' => [[
+					'yearMonth' => '2026-01',
+					'income' => ['minor' => 1000],
+					'expense' => ['minor' => 400],
+					'netResult' => ['minor' => 600],
+					'availableAfterSavings' => ['minor' => 500],
+					'overBudget' => true,
+					'isClosed' => false,
+				]],
+			]);
+
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->yearlySummary(1);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertSame(2026, $data['year']);
+		self::assertSame(12000, $data['incomeMinor']);
+		self::assertCount(1, $data['months']);
+		self::assertTrue($data['months'][0]['overBudget']);
+	}
+
+	public function testCookieOnlyCreateWorkspaceReturnsJsonForbidden(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->access->method('isAppAdmin')->willReturn(true);
+		$this->request->method('getHeader')->willReturn('');
+		$this->request->method('passesCSRFCheck')->willReturn(false);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn(['name' => 'X', 'type' => 'household']);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects(self::never())->method('createWorkspace');
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->createWorkspace();
+		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
+	}
+
+	public function testMonthlySummaryRejectsProjectViaService(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturn('2026-07');
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 3,
+			'name' => 'Build',
+			'type' => 'project',
+			'currencyCode' => 'EUR',
+			'currencyDecimals' => 2,
+			'activeCalendarYearMonth' => null,
+		]);
+		$summaries = $this->createMock(SummaryService::class);
+		$summaries->expects(self::once())
+			->method('household')
+			->willThrowException(new \OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException('household', 'project', 'monthly_summary'));
+
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$summaries,
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->monthlySummary(3);
+		self::assertSame(422, $response->getStatus());
+		self::assertSame('WORKSPACE_TYPE_MISMATCH', $response->getData()['error']['code']);
+	}
+
 }
