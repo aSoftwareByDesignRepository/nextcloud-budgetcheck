@@ -571,7 +571,6 @@ OC.L10N.register(
 	"Member added." : "Mitglied hinzugefügt.",
 	"Member removed." : "Mitglied entfernt.",
 	"Members" : "Mitglieder",
-	"Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above." : "Mitglieder ohne eigene Einstellung übernehmen diesen Standard. Jede Person kann ihre Wahl oben unter „Ihre Planungsansicht“ ändern.",
 	"Members, categories, tax, and workspace details." : "Mitglieder, Kategorien, Steuern und Arbeitsbereichsdaten.",
 	"Minimum columns: date, title\/description, and amount. Category is optional when defaults are set." : "Minimum columns: date, title\/description, and amount. Category is optional when defaults are set.",
 	"Missing a date column (for example “date” or “bookingDate”)." : "Missing a date column (for example “date” or “bookingDate”).",
@@ -1025,7 +1024,7 @@ OC.L10N.register(
 	"This transaction already has the maximum of 10 attachments." : "Diese Buchung hat bereits die maximale Anzahl von 10 Anhängen.",
 	"This transaction belongs to a closed month. Reopen the month before editing." : "Diese Buchung gehört zu einem abgeschlossenen Monat. Öffne den Monat wieder, bevor Sie sie bearbeitest.",
 	"Three short steps to make this workspace useful." : "Drei kurze Schritte, um diesen Arbeitsbereich nutzbar zu machen.",
-	"Tight month" : "Enger Monat",
+	"Tight month" : "Knapper Monat",
 	"Timezone" : "Zeitzone",
 	"Title" : "Titel",
 	"Title or notes…" : "Titel oder Notizen …",
@@ -1175,6 +1174,7 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} von {total}",
 	"{decimals} decimal places" : "{decimals} Dezimalstellen",
 	"“From” date must be before “To” date." : "„Von“-Datum muss vor „Bis“-Datum liegen."
-	},
+		"Members who have not set a personal preference inherit this default. Each member can change their own choice on" : "Mitglieder ohne eigene Einstellung übernehmen diesen Standard. Jede Person kann ihre Wahl ändern unter",
+},
 	"nplurals=2; plural=(n != 1);"
 );

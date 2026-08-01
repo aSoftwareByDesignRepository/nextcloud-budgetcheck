@@ -345,6 +345,9 @@ class MobileApiController extends Controller
 					'netMinor' => $this->envelopeMinor($row['netResult'] ?? null),
 					'availableAfterSavingsMinor' => $this->envelopeMinor($row['availableAfterSavings'] ?? null),
 					'overBudget' => (bool)($row['overBudget'] ?? false),
+					'budgetOverspentMinor' => $this->envelopeMinor(
+						is_array($row['budget'] ?? null) ? (($row['budget']['overspent'] ?? null)) : null
+					),
 					'isClosed' => (bool)($row['isClosed'] ?? false),
 				];
 			}
@@ -1076,10 +1079,15 @@ class MobileApiController extends Controller
 					$planned = max(1, (int)($meta['plannedMinor'] ?? 1));
 					$actual = (int)($meta['actualMinor'] ?? 0);
 					$pct = ($actual / $planned) * 100.0;
+					$categoryId = (int)($meta['categoryId'] ?? 0);
 					$out[] = array_merge($w, [
 						'title' => $this->l10n->t('Over budget'),
 						'message' => $this->l10n->t('%1$s spent %2$.0f%% of its monthly budget.', [$name, $pct]),
-						'recovery' => ['action' => 'home', 'filter' => null],
+						'recovery' => [
+							'action' => 'transactions',
+							'filter' => null,
+							'categoryId' => $categoryId > 0 ? $categoryId : null,
+						],
 					]);
 					break;
 				case 'budget_near_limit':
@@ -1087,10 +1095,15 @@ class MobileApiController extends Controller
 					$planned = max(1, (int)($meta['plannedMinor'] ?? 1));
 					$actual = (int)($meta['actualMinor'] ?? 0);
 					$pct = ($actual / $planned) * 100.0;
+					$categoryId = (int)($meta['categoryId'] ?? 0);
 					$out[] = array_merge($w, [
 						'title' => $this->l10n->t('Near budget limit'),
 						'message' => $this->l10n->t('%1$s has reached %2$.0f%% of its monthly budget.', [$name, $pct]),
-						'recovery' => ['action' => 'home', 'filter' => null],
+						'recovery' => [
+							'action' => 'transactions',
+							'filter' => null,
+							'categoryId' => $categoryId > 0 ? $categoryId : null,
+						],
 					]);
 					break;
 				case 'uncategorized_expense':

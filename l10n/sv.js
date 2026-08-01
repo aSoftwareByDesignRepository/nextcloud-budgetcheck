@@ -571,7 +571,6 @@ OC.L10N.register(
 	"Member added." : "Medlem tillagd.",
 	"Member removed." : "Medlem borttagen.",
 	"Members" : "Medlemmar",
-	"Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above." : "Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above.",
 	"Members, categories, tax, and workspace details." : "Medlemmar, kategorier, skatt och arbetsytedetaljer.",
 	"Minimum columns: date, title\/description, and amount. Category is optional when defaults are set." : "Minimum columns: date, title\/description, and amount. Category is optional when defaults are set.",
 	"Missing a date column (for example “date” or “bookingDate”)." : "Missing a date column (for example “date” or “bookingDate”).",
@@ -1175,6 +1174,7 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} av {total}",
 	"{decimals} decimal places" : "{decimals} decimaler",
 	"“From” date must be before “To” date." : "Datumet ”Från” måste vara före datumet ”Till”."
-	},
+		"Members who have not set a personal preference inherit this default. Each member can change their own choice on" : "Members who have not set a personal preference inherit this default. Each member can change their own choice on",
+},
 	"nplurals=2; plural=(n != 1);"
 );

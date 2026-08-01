@@ -6,12 +6,15 @@ namespace OCA\BudgetCheck\Controller;
 
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Service\AccessControlService;
+use OCA\BudgetCheck\Service\AppSettingsSectionCatalog;
 use OCA\BudgetCheck\Service\LocaleFormatService;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\WorkspaceSettingsSectionCatalog;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\NotFoundResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IL10N;
@@ -41,6 +44,8 @@ class PageController extends Controller
 		private WorkspaceService $workspaces,
 		private LocaleFormatService $localeFormat,
 		private IL10N $l10n,
+		private AppSettingsSectionCatalog $appSettingsSections,
+		private WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -183,47 +188,160 @@ class PageController extends Controller
 		);
 	}
 
+	/**
+	 * Workspace settings index — redirects to the type-aware default sub-page
+	 * while preserving `?workspaceId=`. Any workspace member may open settings.
+	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function settings(): TemplateResponse|RedirectResponse
+	public function settings(): RedirectResponse
 	{
 		$ctx = $this->resolveWorkspace();
 		$selected = $ctx['workspace'];
 		if ($selected === null) {
 			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
 		}
+		$section = $this->workspaceSettingsSections->defaultSection((string)($selected['type'] ?? ''));
+		return new RedirectResponse($this->urlGenerator->linkToRoute(
+			'budgetcheck.page.settingsSection',
+			[
+				'section' => $section,
+				'workspaceId' => (int)$selected['id'],
+			],
+		));
+	}
+
+	/**
+	 * One Workspace settings sub-page per former section.
+	 *
+	 * The route requirement already restricts {section} to the allowlist; the
+	 * catalog check below is defense in depth. Sections that fail the
+	 * type/role visibility matrix redirect to the type-aware default — never
+	 * render manager-only partials to viewers.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function settingsSection(string $section): TemplateResponse|RedirectResponse|NotFoundResponse
+	{
+		$ctx = $this->resolveWorkspace();
+		$selected = $ctx['workspace'];
+		if ($selected === null) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
+		}
+
+		$section = strtolower(trim($section));
+		if (!$this->workspaceSettingsSections->isSection($section)) {
+			return new NotFoundResponse();
+		}
+
+		$workspaceType = (string)($selected['type'] ?? '');
 		$canManage = in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
+		if (!$this->workspaceSettingsSections->isVisible($section, $workspaceType, $canManage)) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute(
+				'budgetcheck.page.settingsSection',
+				[
+					'section' => $this->workspaceSettingsSections->defaultSection($workspaceType),
+					'workspaceId' => (int)$selected['id'],
+				],
+			));
+		}
+
 		$userId = $this->access->currentUserId();
 		$ctx['canAdminApp'] = $this->access->isAppAdmin($userId);
-		$ctx['currencyChangeAllowed'] = $this->workspaces->currencyChangeAllowed((int) $selected['id']);
+		$ctx['currencyChangeAllowed'] = $this->workspaces->currencyChangeAllowed((int)$selected['id']);
+		$ctx['settingsSection'] = $section;
 
-		$description = $canManage
-			? $this->l10n->t('Manage this workspace: details, tax mode, categories, members, and recurring rules.')
-			: $this->l10n->t('View workspace details and set how planning totals appear for you.');
+		$settingsSectionLabels = [];
+		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
+			if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage)) {
+				continue;
+			}
+			$settingsSectionLabels[$sectionId] = $this->workspaceSettingsSections->navLabel($this->l10n, $sectionId);
+		}
+		$ctx['settingsSectionLabels'] = $settingsSectionLabels;
 
-		return $this->page('settings', $this->l10n->t('Workspace settings'),
-			$description,
+		$ctx['breadcrumbParent'] = [
+			'label' => $this->l10n->t('Workspace settings'),
+			'url' => $this->urlGenerator->linkToRoute('budgetcheck.page.settings', [
+				'workspaceId' => (int)$selected['id'],
+			]),
+		];
+
+		return $this->page(
+			'settings',
+			$this->workspaceSettingsSections->label($this->l10n, $section),
+			$this->workspaceSettingsSections->help($this->l10n, $section),
 			$ctx,
-			'settings'
+			'settings',
 		);
 	}
 
+	/**
+	 * App settings index — redirects to the default sub-page while preserving
+	 * `?workspaceId=` when a workspace is resolved.
+	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function appSettings(): TemplateResponse|RedirectResponse
+	public function appSettings(): RedirectResponse
 	{
 		$userId = $this->access->currentUserId();
 		if (!$this->access->isAppAdmin($userId)) {
 			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
 		}
 		$ctx = $this->resolveWorkspace();
+		$params = ['section' => AppSettingsSectionCatalog::DEFAULT_SECTION];
+		if ($ctx['workspace'] !== null) {
+			$params['workspaceId'] = (int)$ctx['workspace']['id'];
+		}
+		return new RedirectResponse($this->urlGenerator->linkToRoute(
+			'budgetcheck.page.appSettingsSection',
+			$params,
+		));
+	}
+
+	/**
+	 * One App settings sub-page per former section (DeskCheck / DutyCheck pattern).
+	 *
+	 * The route requirement already restricts {section} to the allowlist; the
+	 * catalog check below is defense in depth so a route change can never open
+	 * an unvalidated template dispatch.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function appSettingsSection(string $section): TemplateResponse|RedirectResponse|NotFoundResponse
+	{
+		$userId = $this->access->currentUserId();
+		if (!$this->access->isAppAdmin($userId)) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute('budgetcheck.page.dashboard'));
+		}
+		$section = strtolower(trim($section));
+		if (!$this->appSettingsSections->isSection($section)) {
+			return new NotFoundResponse();
+		}
+
+		$ctx = $this->resolveWorkspace();
 		$ctx['canAdminApp'] = true;
 		$ctx['appPolicy'] = $this->access->getAppPolicy();
+		$ctx['settingsSection'] = $section;
 
-		return $this->page('app-settings', $this->l10n->t('App settings'),
-			$this->l10n->t('BudgetCheck-wide policy: who may open the app, delegated administrators, and defaults used when creating workspaces.'),
+		$appSettingsSectionLabels = [];
+		foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
+			$appSettingsSectionLabels[$sectionId] = $this->appSettingsSections->navLabel($this->l10n, $sectionId);
+		}
+		$ctx['appSettingsSectionLabels'] = $appSettingsSectionLabels;
+
+		$wsQuery = $ctx['workspace'] !== null ? ['workspaceId' => (int)$ctx['workspace']['id']] : [];
+		$ctx['breadcrumbParent'] = [
+			'label' => $this->l10n->t('App settings'),
+			'url' => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings', $wsQuery),
+		];
+
+		return $this->page(
+			'app-settings',
+			$this->appSettingsSections->label($this->l10n, $section),
+			$this->appSettingsSections->help($this->l10n, $section),
 			$ctx,
-			'app-settings'
+			'app-settings',
 		);
 	}
 
@@ -298,6 +416,51 @@ class PageController extends Controller
 		$navigation = $this->buildNavigation($template, $selected, $canAdminApp, $canManage);
 
 		$wsQuery = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
+		// Only emit app-settings section URLs to app admins — viewers must not
+		// see privileged paths in data-bc-urls.
+		$appSettingsSectionUrls = [];
+		if ($canAdminApp) {
+			foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
+				$appSettingsSectionUrls[$sectionId] = $this->urlGenerator->linkToRoute(
+					'budgetcheck.page.appSettingsSection',
+					array_merge(['section' => $sectionId], $wsQuery),
+				);
+			}
+		}
+		$appSettingsSectionLabels = $ctx['appSettingsSectionLabels'] ?? [];
+		if ($appSettingsSectionLabels === [] && $canAdminApp) {
+			foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
+				$appSettingsSectionLabels[$sectionId] = $this->appSettingsSections->navLabel($this->l10n, $sectionId);
+			}
+		}
+
+		// Only emit URLs the current role/type may open — avoids advertising
+		// manager-only section paths in data-bc-urls. Legacy hash forward fails
+		// closed when a target is absent (viewer keeps the current page).
+		$settingsSectionUrls = [];
+		if ($selected !== null) {
+			$workspaceTypeForUrls = (string)($selected['type'] ?? '');
+			foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
+				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceTypeForUrls, $canManage)) {
+					continue;
+				}
+				$settingsSectionUrls[$sectionId] = $this->urlGenerator->linkToRoute(
+					'budgetcheck.page.settingsSection',
+					array_merge(['section' => $sectionId], $wsQuery),
+				);
+			}
+		}
+		$settingsSectionLabels = $ctx['settingsSectionLabels'] ?? [];
+		if ($settingsSectionLabels === [] && $selected !== null && $template === 'settings') {
+			$workspaceType = (string)($selected['type'] ?? '');
+			foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
+				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage)) {
+					continue;
+				}
+				$settingsSectionLabels[$sectionId] = $this->workspaceSettingsSections->navLabel($this->l10n, $sectionId);
+			}
+		}
+
 		$params = [
 			'pageId' => $template,
 			'pageTitle' => $title,
@@ -309,6 +472,10 @@ class PageController extends Controller
 			'canContribute' => $canContribute,
 			'canAdminApp' => $canAdminApp,
 			'appPolicy' => $ctx['appPolicy'] ?? null,
+			'settingsSection' => (string)($ctx['settingsSection'] ?? ''),
+			'settingsSectionLabels' => $settingsSectionLabels,
+			'appSettingsSectionLabels' => $appSettingsSectionLabels,
+			'breadcrumbParent' => is_array($ctx['breadcrumbParent'] ?? null) ? $ctx['breadcrumbParent'] : null,
 			'navigation' => $navigation,
 			'localeFormat' => $this->localeFormat,
 			'clientHints' => $this->localeFormat->clientHints(),
@@ -321,8 +488,10 @@ class PageController extends Controller
 				'period'       => $this->urlGenerator->linkToRoute('budgetcheck.page.period'),
 				'yearly'       => $this->urlGenerator->linkToRoute('budgetcheck.page.yearly'),
 				'workspaceOverview' => $this->urlGenerator->linkToRoute('budgetcheck.page.workspaceOverview', $wsQuery),
-				'settings'     => $this->urlGenerator->linkToRoute('budgetcheck.page.settings'),
-				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings'),
+				'settings'     => $this->urlGenerator->linkToRoute('budgetcheck.page.settings', $wsQuery),
+				'settingsSections' => $settingsSectionUrls,
+				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings', $wsQuery),
+				'appSettingsSections' => $appSettingsSectionUrls,
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
@@ -380,6 +549,14 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/catalog-pickers');
 		if ($pageScript === 'settings' || $pageScript === 'app-settings') {
 			Util::addScript(Application::APP_ID, 'common/entity-picker');
+		}
+		// Legacy /app-settings#anchor → split sub-page forwarding (must load before app-settings.js).
+		if ($pageScript === 'app-settings') {
+			Util::addScript(Application::APP_ID, 'app-settings-legacy-redirect');
+		}
+		// Legacy /settings#anchor → split sub-page forwarding (must load before settings.js).
+		if ($pageScript === 'settings') {
+			Util::addScript(Application::APP_ID, 'workspace-settings-legacy-redirect');
 		}
 		Util::addScript(Application::APP_ID, $pageScript);
 	}

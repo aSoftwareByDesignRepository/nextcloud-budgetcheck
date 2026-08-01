@@ -41,6 +41,8 @@ $nav = $_['navigation'] ?? [];
 $urls = $_['urls'] ?? [];
 $clientHints = $_['clientHints'] ?? ['locale' => 'en', 'htmlLang' => 'en-US', 'timezone' => 'Europe/Berlin'];
 $bcHtmlLang = (string)($clientHints['htmlLang'] ?? $clientHints['locale'] ?? 'en');
+$settingsSection = (string)($_['settingsSection'] ?? '');
+$breadcrumbParent = is_array($_['breadcrumbParent'] ?? null) ? $_['breadcrumbParent'] : null;
 /** @var \OCA\BudgetCheck\Service\LocaleFormatService|null $localeFormat */
 $localeFormat = $_['localeFormat'] ?? null;
 
@@ -69,6 +71,8 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	data-bc-html-lang="<?php p($bcHtmlLang); ?>"
 	data-bc-timezone="<?php p((string)($clientHints['timezone'] ?? '')); ?>"
 	data-bc-page="<?php p($pageId); ?>"
+	<?php if ($pageId === 'app-settings' && $settingsSection !== ''): ?>data-bc-app-settings-section="<?php p($settingsSection); ?>"<?php endif; ?>
+	<?php if ($pageId === 'settings' && $settingsSection !== ''): ?>data-bc-settings-section="<?php p($settingsSection); ?>"<?php endif; ?>
 	data-bc-workspace="<?php print_unescaped($workspaceJson); ?>"
 	data-bc-workspaces="<?php print_unescaped($workspacesJson); ?>"
 	data-bc-urls="<?php print_unescaped($urlsJson); ?>"
@@ -86,6 +90,14 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 					<?php if ($workspace !== null): ?>
 						<li class="bc-breadcrumb__sep" aria-hidden="true">/</li>
 						<li class="bc-breadcrumb__workspace"><?php p((string)($workspace['name'] ?? '')); ?></li>
+					<?php endif; ?>
+					<?php if ($breadcrumbParent !== null): ?>
+						<li class="bc-breadcrumb__sep" aria-hidden="true">/</li>
+						<li>
+							<a class="bc-breadcrumb__parent" href="<?php p((string)($breadcrumbParent['url'] ?? '#')); ?>">
+								<?php p((string)($breadcrumbParent['label'] ?? '')); ?>
+							</a>
+						</li>
 					<?php endif; ?>
 					<li class="bc-breadcrumb__sep" aria-hidden="true">/</li>
 					<li class="bc-breadcrumb__current" aria-current="page"><?php p($pageTitle); ?></li>

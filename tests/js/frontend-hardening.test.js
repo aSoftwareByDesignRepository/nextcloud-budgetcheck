@@ -128,6 +128,14 @@ function rel(file) {
 			!!firstScript && /common\/bootstrap/.test(firstScript[0]),
 			'bootstrap.js must be the first Util::addScript in registerFrontEndAssets'
 		);
+		assert(
+			/app-settings-legacy-redirect/.test(scriptBlock[0]),
+			'registerFrontEndAssets must load app-settings-legacy-redirect on app-settings pages'
+		);
+		const legacyPos = scriptBlock[0].indexOf('app-settings-legacy-redirect');
+		const pageScriptPos = scriptBlock[0].indexOf('Util::addScript(Application::APP_ID, $pageScript)');
+		assert(legacyPos !== -1 && pageScriptPos !== -1 && legacyPos < pageScriptPos,
+			'app-settings-legacy-redirect must register before page script');
 	}
 
 	const sharedLiveConsumers = [

@@ -3647,3 +3647,100 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	}
 }
 /* === support-us:bc end === */
+
+/* App settings sub-pages: in-page chip bar (DeskCheck parity). Critical when
+   Nextcloud collapses #app-navigation on narrow viewports — without it,
+   sibling settings pages would be unreachable on phones/tablets. */
+.bc-settings-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+	margin: 0 0 var(--bc-space-5);
+	padding: 0 0 var(--bc-space-3);
+	border-bottom: 1px solid var(--bc-border);
+}
+.bc-app .bc-settings-nav__link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: var(--bc-space-2) var(--bc-space-3);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	background: var(--color-main-background, #fff);
+	color: var(--color-main-text, #222);
+	text-decoration: none;
+	font-weight: 600;
+	font-size: var(--bc-fs-sm);
+	line-height: 1.2;
+}
+.bc-app .bc-settings-nav__link:hover {
+	border-color: var(--color-primary-element, #0082c9);
+	background: var(--bc-bg-stripe, var(--color-background-hover, #f5f5f5));
+	color: var(--color-main-text, #222);
+}
+.bc-app .bc-settings-nav__link:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 2px;
+}
+.bc-app .bc-settings-nav__link.is-active,
+.bc-app .bc-settings-nav__link[aria-current="page"] {
+	/* Keep main-text ink (not primary) — primary-on-dark-tint fails WCAG 1.4.3. */
+	border-color: var(--color-primary-element, #0082c9);
+	background: var(--bc-tint-info);
+	color: var(--color-main-text, #222);
+	font-weight: 700;
+}
+@media (max-width: 640px) {
+	.bc-settings-nav {
+		flex-direction: column;
+	}
+	.bc-app .bc-settings-nav__link {
+		width: 100%;
+		justify-content: flex-start;
+	}
+}
+.bc-inline-link {
+	color: var(--color-primary-element, #0082c9);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.bc-inline-link:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 2px;
+}
+
+/* App settings sub-pages: sidebar sub-navigation expanded while on a section. */
+.bc-nav__sublist {
+	list-style: none;
+	margin: 2px 0 var(--bc-space-2) var(--bc-space-3);
+	padding: 0 0 0 calc(24px + var(--bc-space-2) - 2px);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	border-left: 2px solid var(--bc-border);
+}
+.bc-nav__subitem { margin: 0; }
+.bc-nav__sublink {
+	display: flex;
+	align-items: center;
+	min-height: 44px;
+	padding: var(--bc-space-1) var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	color: var(--color-main-text, #1d1d1d);
+	text-decoration: none;
+	font-size: var(--bc-fs-sm);
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+.bc-nav__sublink:hover {
+	background: var(--bc-bg-stripe, var(--color-background-hover, #f5f5f5));
+}
+.bc-nav__sublink:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 2px;
+}
+.bc-nav__subitem.is-active .bc-nav__sublink {
+	background: var(--bc-tint-info);
+	font-weight: 600;
+}

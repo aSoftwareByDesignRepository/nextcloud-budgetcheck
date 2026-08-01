@@ -29,42 +29,100 @@
 	};
 
 	function pageInit() {
+		const Legacy = window.BudgetCheckWorkspaceSettingsLegacyRedirect;
+		if (Legacy && typeof Legacy.resolve === 'function') {
+			const redirectUrl = Legacy.resolve(document, window.location);
+			if (redirectUrl) {
+				window.location.replace(redirectUrl);
+				return;
+			}
+		}
 		bootstrap();
+	}
+
+	function activeSettingsSection() {
+		const root = document.getElementById('app-content');
+		return root && typeof root.getAttribute === 'function'
+			? String(root.getAttribute('data-bc-settings-section') || '')
+			: '';
 	}
 
 	async function bootstrap() {
 		if (!Ws || typeof Ws !== 'object') return;
-		const needsCaps = document.querySelector('[data-bc-timezone-picker]')
-			|| document.querySelector('[data-bc-currency-picker]');
-		if (needsCaps) {
-			try {
-				const data = await Api.get('/apps/budgetcheck/api/workspaces');
-				capabilities = data.capabilities || {};
-			} catch (err) {
-				Msg.handleApiError(err);
+		const section = activeSettingsSection();
+
+		if (section === 'workspace') {
+			const needsCaps = document.querySelector('[data-bc-timezone-picker]')
+				|| document.querySelector('[data-bc-currency-picker]');
+			if (needsCaps) {
+				try {
+					const data = await Api.get('/apps/budgetcheck/api/workspaces');
+					capabilities = data.capabilities || {};
+				} catch (err) {
+					Msg.handleApiError(err);
+				}
 			}
+			await initWorkspaceCatalogPickers();
+			hydrateWorkspaceForm();
+			wireWorkspaceForm();
+			return;
 		}
-		await initWorkspaceCatalogPickers();
-		hydrateWorkspaceForm();
-		hydrateTaxForm();
-		wireWorkspaceForm();
-		wireTaxForm();
-		wireVatPresetUi();
-		await initSummaryViewPreferences();
-		if (Ws.canManage) {
-			loadCategories();
-			loadBudgetDefaults();
-			loadMembers();
-			initMemberInvite();
-			initGroupInvite();
-			loadRecurring();
-		} else if (Ws.workspace) {
-			loadCategories();
+
+		if (section === 'tax') {
+			hydrateTaxForm();
+			wireTaxForm();
+			wireVatPresetUi();
+			return;
 		}
-		if (Ws.workspace && Ws.workspace.type === 'project') {
-			loadBookingStatuses();
+
+		if (section === 'planning-view') {
+			await initSummaryViewPreferences();
+			return;
 		}
-		wireHelpPanels();
+
+		if (section === 'categories') {
+			if (Ws.workspace) {
+				loadCategories();
+			}
+			return;
+		}
+
+		if (section === 'budget-defaults') {
+			if (Ws.canManage) {
+				loadBudgetDefaults();
+			}
+			return;
+		}
+
+		if (section === 'booking-statuses') {
+			if (Ws.workspace && Ws.workspace.type === 'project') {
+				loadBookingStatuses();
+			}
+			return;
+		}
+
+		if (section === 'members') {
+			if (Ws.canManage) {
+				loadMembers();
+				initMemberInvite();
+				initGroupInvite();
+			}
+			return;
+		}
+
+		if (section === 'recurring') {
+			if (Ws.canManage) {
+				loadRecurring();
+			}
+			return;
+		}
+
+		if (section === 'help') {
+			wireHelpPanels();
+			return;
+		}
+
+		// Unknown / empty section attribute: fail closed (no blanket mega-page boot).
 	}
 
 	function workspaceBudgetDecimals() {

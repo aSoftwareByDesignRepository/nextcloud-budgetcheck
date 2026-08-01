@@ -469,6 +469,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 					'netResult' => ['minor' => 600],
 					'availableAfterSavings' => ['minor' => 500],
 					'overBudget' => true,
+					'budget' => [
+						'overspent' => ['minor' => 150],
+					],
 					'isClosed' => false,
 				]],
 			]);
@@ -500,6 +503,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame(12000, $data['incomeMinor']);
 		self::assertCount(1, $data['months']);
 		self::assertTrue($data['months'][0]['overBudget']);
+		self::assertSame(150, $data['months'][0]['budgetOverspentMinor']);
 	}
 
 	public function testCookieOnlyCreateWorkspaceReturnsJsonForbidden(): void

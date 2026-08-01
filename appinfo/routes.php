@@ -16,7 +16,15 @@ return [
 		['name' => 'page#yearly',       'url' => '/yearly',       'verb' => 'GET'],
 		['name' => 'page#workspaceOverview', 'url' => '/workspaces', 'verb' => 'GET'],
 		['name' => 'page#settings',     'url' => '/settings',     'verb' => 'GET'],
+		// Keep the requirement literal (route files load without the app autoloader).
+		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
+		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
+			'requirements' => ['section' => 'planning-view|workspace|tax|categories|budget-defaults|booking-statuses|members|recurring|help']],
 		['name' => 'page#appSettings',  'url' => '/app-settings', 'verb' => 'GET'],
+		// Keep the requirement literal (route files load without the app autoloader).
+		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
+		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
+			'requirements' => ['section' => 'access|admins|defaults|support']],
 		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
 		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
 

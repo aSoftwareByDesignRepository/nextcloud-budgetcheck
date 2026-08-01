@@ -472,74 +472,118 @@ class AccessControlService
 		];
 	}
 
+	/**
+	 * Persist app policy.
+	 *
+	 * Optional `settings_section` scopes the write (ProjectCheck parity):
+	 * - missing key → full replace ("all") for legacy/API clients
+	 * - access|admins|defaults → merge that scope onto the current policy
+	 * - unknown / empty → reject (never coerce to full wipe)
+	 *
+	 * @param array<string, mixed> $payload
+	 * @return array<string, mixed>
+	 */
 	public function saveAppPolicy(array $payload): array
 	{
-		$adminCandidates = $payload['appAdminUserIds'] ?? [];
-		if (!is_array($adminCandidates)) {
-			throw new \InvalidArgumentException('appAdminUserIds must be an array.');
-		}
-		$normalised = [];
-		foreach ($adminCandidates as $candidate) {
-			if (!is_string($candidate)) {
-				continue;
+		$allowedSections = ['access', 'admins', 'defaults', 'all'];
+		if (!array_key_exists('settings_section', $payload)) {
+			$settingsSection = 'all';
+		} else {
+			$rawSection = strtolower(trim((string) $payload['settings_section']));
+			if (!in_array($rawSection, $allowedSections, true)) {
+				throw new \InvalidArgumentException('Invalid settings_section. Reload the page and try again.');
 			}
-			$candidate = trim($candidate);
-			if ($candidate === '' || strlen($candidate) > 64) {
-				continue;
-			}
-			$normalised[$candidate] = true;
-		}
-		$adminIds = array_keys($normalised);
-		foreach ($adminIds as $adminId) {
-			$user = $this->userManager->get($adminId);
-			if ($user === null) {
-				throw new \InvalidArgumentException('One or more app administrator entries refer to users that do not exist.');
-			}
-			if (!$user->isEnabled()) {
-				throw new \InvalidArgumentException('One or more app administrator entries refer to disabled users.');
-			}
+			$settingsSection = $rawSection;
 		}
 
-		$currentUser = $this->userSession->getUser();
-		$currentUserId = $currentUser?->getUID() ?? '';
-		if ($currentUserId !== '' && !$this->isSystemAdmin($currentUserId) && $this->isAppAdmin($currentUserId)) {
-			$removingSelf = !in_array($currentUserId, $adminIds, true);
-			if ($removingSelf && $adminIds === []) {
-				throw new \InvalidArgumentException('You cannot remove your own app administrator access without assigning another administrator first.');
+		$current = $this->getAppPolicy();
+		$merged = $current;
+
+		if ($settingsSection === 'all' || $settingsSection === 'admins') {
+			$adminCandidates = $payload['appAdminUserIds'] ?? [];
+			if (!is_array($adminCandidates)) {
+				throw new \InvalidArgumentException('appAdminUserIds must be an array.');
 			}
+			$normalised = [];
+			foreach ($adminCandidates as $candidate) {
+				if (!is_string($candidate)) {
+					continue;
+				}
+				$candidate = trim($candidate);
+				if ($candidate === '' || strlen($candidate) > 64) {
+					continue;
+				}
+				$normalised[$candidate] = true;
+			}
+			$adminIds = array_keys($normalised);
+			foreach ($adminIds as $adminId) {
+				$user = $this->userManager->get($adminId);
+				if ($user === null) {
+					throw new \InvalidArgumentException('One or more app administrator entries refer to users that do not exist.');
+				}
+				if (!$user->isEnabled()) {
+					throw new \InvalidArgumentException('One or more app administrator entries refer to disabled users.');
+				}
+			}
+
+			$currentUser = $this->userSession->getUser();
+			$currentUserId = $currentUser?->getUID() ?? '';
+			if ($currentUserId !== '' && !$this->isSystemAdmin($currentUserId) && $this->isAppAdmin($currentUserId)) {
+				$removingSelf = !in_array($currentUserId, $adminIds, true);
+				if ($removingSelf && $adminIds === []) {
+					throw new \InvalidArgumentException('You cannot remove your own app administrator access without assigning another administrator first.');
+				}
+			}
+			$merged['appAdminUserIds'] = $adminIds;
 		}
 
-		$timezone = trim((string)($payload['defaultTimezone'] ?? $this->getDefaultTimezone()));
-		if (!in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
-			throw new \InvalidArgumentException('Invalid default timezone.');
-		}
-		$currency = strtoupper(trim((string)($payload['defaultCurrency'] ?? $this->getDefaultCurrency())));
-		if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-			throw new \InvalidArgumentException('Invalid default currency code.');
-		}
-		if (!$this->money->isSupportedCurrency($currency)) {
-			throw new \InvalidArgumentException('Unsupported default currency for new workspaces.');
+		if ($settingsSection === 'all' || $settingsSection === 'defaults') {
+			$timezone = trim((string)($payload['defaultTimezone'] ?? $merged['defaultTimezone'] ?? $this->getDefaultTimezone()));
+			if (!in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
+				throw new \InvalidArgumentException('Invalid default timezone.');
+			}
+			$currency = strtoupper(trim((string)($payload['defaultCurrency'] ?? $merged['defaultCurrency'] ?? $this->getDefaultCurrency())));
+			if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+				throw new \InvalidArgumentException('Invalid default currency code.');
+			}
+			if (!$this->money->isSupportedCurrency($currency)) {
+				throw new \InvalidArgumentException('Unsupported default currency for new workspaces.');
+			}
+			$merged['defaultTimezone'] = $timezone;
+			$merged['defaultCurrency'] = $currency;
 		}
 
-		$restrictionRaw = $payload['accessRestrictionEnabled'] ?? false;
-		$restrictionEnabled = $restrictionRaw === true
-			|| $restrictionRaw === 1
-			|| $restrictionRaw === '1'
-			|| $restrictionRaw === 'true';
+		if ($settingsSection === 'all' || $settingsSection === 'access') {
+			$restrictionRaw = $payload['accessRestrictionEnabled'] ?? false;
+			$restrictionEnabled = $restrictionRaw === true
+				|| $restrictionRaw === 1
+				|| $restrictionRaw === '1'
+				|| $restrictionRaw === 'true';
 
-		$allowedUserCandidates = $payload['allowedUserIds'] ?? [];
-		if (!is_array($allowedUserCandidates)) {
-			throw new \InvalidArgumentException('allowedUserIds must be an array.');
+			$allowedUserCandidates = $payload['allowedUserIds'] ?? [];
+			if (!is_array($allowedUserCandidates)) {
+				throw new \InvalidArgumentException('allowedUserIds must be an array.');
+			}
+			$allowedGroupCandidates = $payload['allowedGroupIds'] ?? [];
+			if (!is_array($allowedGroupCandidates)) {
+				throw new \InvalidArgumentException('allowedGroupIds must be an array.');
+			}
+			$allowedUserIds = $this->normalizeUserIds($allowedUserCandidates);
+			$allowedGroupIds = $this->normalizeGroupIds($allowedGroupCandidates);
+			if ($restrictionEnabled && $allowedUserIds === [] && $allowedGroupIds === []) {
+				throw new \InvalidArgumentException('When access restriction is enabled, at least one allowed user or one allowed group is required.');
+			}
+			$merged['accessRestrictionEnabled'] = $restrictionEnabled;
+			$merged['allowedUserIds'] = $allowedUserIds;
+			$merged['allowedGroupIds'] = $allowedGroupIds;
 		}
-		$allowedGroupCandidates = $payload['allowedGroupIds'] ?? [];
-		if (!is_array($allowedGroupCandidates)) {
-			throw new \InvalidArgumentException('allowedGroupIds must be an array.');
-		}
-		$allowedUserIds = $this->normalizeUserIds($allowedUserCandidates);
-		$allowedGroupIds = $this->normalizeGroupIds($allowedGroupCandidates);
-		if ($restrictionEnabled && $allowedUserIds === [] && $allowedGroupIds === []) {
-			throw new \InvalidArgumentException('When access restriction is enabled, at least one allowed user or one allowed group is required.');
-		}
+
+		$adminIds = is_array($merged['appAdminUserIds'] ?? null) ? $merged['appAdminUserIds'] : [];
+		$timezone = (string)($merged['defaultTimezone'] ?? $this->getDefaultTimezone());
+		$currency = (string)($merged['defaultCurrency'] ?? $this->getDefaultCurrency());
+		$restrictionEnabled = !empty($merged['accessRestrictionEnabled']);
+		$allowedUserIds = is_array($merged['allowedUserIds'] ?? null) ? $merged['allowedUserIds'] : [];
+		$allowedGroupIds = is_array($merged['allowedGroupIds'] ?? null) ? $merged['allowedGroupIds'] : [];
 
 		$this->config->setAppValue(Application::APP_ID, self::KEY_APP_ADMINS, json_encode($adminIds, JSON_THROW_ON_ERROR));
 		$this->config->setAppValue(Application::APP_ID, self::KEY_DEFAULT_TIMEZONE, $timezone);

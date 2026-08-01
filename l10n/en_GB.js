@@ -571,7 +571,6 @@ OC.L10N.register(
 	"Member added." : "Member added.",
 	"Member removed." : "Member removed.",
 	"Members" : "Members",
-	"Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above." : "Members who have not set a personal preference inherit this default. Each member can change their own choice in “Your planning view” above.",
 	"Members, categories, tax, and workspace details." : "Members, categories, tax, and workspace details.",
 	"Minimum columns: date, title\/description, and amount. Category is optional when defaults are set." : "Minimum columns: date, title\/description, and amount. Category is optional when defaults are set.",
 	"Missing a date column (for example “date” or “bookingDate”)." : "Missing a date column (for example “date” or “bookingDate”).",
@@ -1175,6 +1174,7 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} of {total}",
 	"{decimals} decimal places" : "{decimals} decimal places",
 	"“From” date must be before “To” date." : "“From” date must be before “To” date."
-	},
+		"Members who have not set a personal preference inherit this default. Each member can change their own choice on" : "Members who have not set a personal preference inherit this default. Each member can change their own choice on",
+},
 	"nplurals=2; plural=(n != 1);"
 );

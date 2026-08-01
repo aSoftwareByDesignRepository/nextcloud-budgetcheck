@@ -392,9 +392,16 @@
 				text: t('budgetcheck', 'Mark one expense category as Savings transfer to track money you set aside toward your target.'),
 			}));
 			const settingsUrl = Ws && Ws.urls ? Ws.urls.settings : null;
-			const settingsHref = settingsUrl
-				? Ws.withWorkspace(settingsUrl) + '#bc-categories-title'
+			const categoriesSectionUrl = Ws && Ws.urls && Ws.urls.settingsSections
+				? Ws.urls.settingsSections.categories
 				: null;
+			const settingsHref = categoriesSectionUrl
+				? (typeof Ws.withWorkspace === 'function'
+					? Ws.withWorkspace(categoriesSectionUrl)
+					: categoriesSectionUrl)
+				: (settingsUrl
+					? Ws.withWorkspace(settingsUrl) + '#bc-categories-title'
+					: null);
 			if (settingsHref) {
 				const actions = createElement('div', { class: 'bc-summary-callout__actions' });
 				actions.appendChild(createElement('a', {

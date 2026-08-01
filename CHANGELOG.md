@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-07-31
+
+### Added
+
+- Multipage **Workspace settings** (`/settings/{section}`): Planning view, Workspace, Tax, Categories, Budget defaults, Booking statuses, Members, Recurring, and Help — catalog-driven routes, type/role visibility gates, sidebar sub-nav, in-page chip bar, and legacy `#anchor` forwarding with `workspaceId` preserved.
+
+### Security / integrity
+
+- Workspace settings dispatcher uses a literal slug→file map (no path concatenation from the request).
+- Unauthorized or type-mismatched section URLs redirect to the type-aware default section (manager-only partials are never rendered to viewers).
+- `data-bc-urls.settingsSections` lists only sections the current role/type may open (no advertising of manager-only paths).
+- Members, Recurring, and Budget defaults ship soft denial cards if the controller gate ever regresses.
+- Legacy hash redirects select targets only from server-rendered `urls.settingsSections` + a frozen allowlist.
+- Non-manager savings-target radios now correctly carry `disabled`.
+
+### Fixed
+
+- Settings JS boots only the APIs needed for the active section (`data-bc-settings-section`).
+- Savings-setup deep link prefers `/settings/categories` when section URLs are available.
+
+### Tests
+
+- Contract, template render, Node JS, mutation, and Playwright axe coverage for Workspace settings sections.
+
+## [1.1.4] - 2026-07-31
+
+### Added
+
+- Multipage **App settings** (`/app-settings/{section}`): Access, App admins, Defaults, and Support us — catalog-driven routes, sidebar sub-nav, in-page chip bar, and legacy `#anchor` forwarding with `workspaceId` preserved.
+- Merge-on-save for app policy section forms so incomplete section payloads cannot wipe other policy fields.
+
+### Security / integrity
+
+- App settings dispatcher uses a literal slug→file map (no path concatenation from the request).
+- Legacy hash redirects select targets only from server-rendered `urls.appSettingsSections` + a frozen allowlist.
+
+### Tests
+
+- Contract, template render, Node JS, mutation, and Playwright axe coverage for every App settings section URL.
+
 ## [1.1.3] - 2026-07-31
 
 ### Added

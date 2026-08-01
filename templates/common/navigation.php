@@ -116,10 +116,58 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 	</section>
 
 	<ul class="nav-menu bc-nav__list" aria-label="<?php p($l->t('Main sections')); ?>">
-		<?php foreach ($nav as $item): ?>
-			<?php $active = !empty($item['active']); ?>
+		<?php
+		// App settings / Workspace settings sub-pages: expanded sub-list while on any section.
+		$settingsSection = (string) ($_['settingsSection'] ?? '');
+		$appSettingsSectionUrls = (array) ($urls['appSettingsSections'] ?? []);
+		$appSettingsSectionLabels = (array) ($_['appSettingsSectionLabels'] ?? []);
+		$workspaceSettingsSectionUrls = (array) ($urls['settingsSections'] ?? []);
+		$workspaceSettingsSectionLabels = (array) ($_['settingsSectionLabels'] ?? []);
+		$appSettingsChildren = [];
+		if ($canAdminApp && $pageIdNav === 'app-settings') {
+			foreach ($appSettingsSectionLabels as $sectionId => $sectionLabel) {
+				$childHref = (string) ($appSettingsSectionUrls[$sectionId] ?? '');
+				if ($childHref === '' || $childHref === '#') {
+					continue;
+				}
+				$appSettingsChildren[] = [
+					'id' => (string) $sectionId,
+					'label' => (string) $sectionLabel,
+					'url' => $childHref,
+					'active' => $settingsSection === (string) $sectionId,
+				];
+			}
+		}
+		$workspaceSettingsChildren = [];
+		if ($pageIdNav === 'settings') {
+			foreach ($workspaceSettingsSectionLabels as $sectionId => $sectionLabel) {
+				$childHref = (string) ($workspaceSettingsSectionUrls[$sectionId] ?? '');
+				if ($childHref === '' || $childHref === '#') {
+					continue;
+				}
+				$workspaceSettingsChildren[] = [
+					'id' => (string) $sectionId,
+					'label' => (string) $sectionLabel,
+					'url' => $childHref,
+					'active' => $settingsSection === (string) $sectionId,
+				];
+			}
+		}
+		?>
+		<?php foreach ($nav as $item):
+			$children = [];
+			if (($item['id'] ?? '') === 'app-settings' && $appSettingsChildren !== []) {
+				$children = $appSettingsChildren;
+			} elseif (($item['id'] ?? '') === 'settings' && $workspaceSettingsChildren !== []) {
+				$children = $workspaceSettingsChildren;
+			}
+			$active = !empty($item['active']);
+			// With an expanded sub-list, aria-current belongs to the active
+			// child link only; the parent keeps the visual active state.
+			$parentAriaCurrent = $active && $children === [];
+			?>
 			<li class="bc-nav__item <?php p($active ? 'is-active active' : ''); ?>">
-				<a class="bc-nav__link" href="<?php p($item['url']); ?>" <?php if ($active): ?>aria-current="page"<?php endif; ?>>
+				<a class="bc-nav__link" href="<?php p($item['url']); ?>" <?php if ($parentAriaCurrent): ?>aria-current="page"<?php endif; ?>>
 					<span class="bc-nav__icon" aria-hidden="true">
 						<?php print_unescaped(IconCatalog::render($item['icon'] ?? 'layout-grid')); ?>
 					</span>
@@ -130,6 +178,24 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 						<?php endif; ?>
 					</span>
 				</a>
+				<?php if ($children !== []): ?>
+					<ul class="bc-nav__sublist">
+						<?php foreach ($children as $child):
+							$childHref = (string) ($child['url'] ?? '');
+							if ($childHref === '' || $childHref === '#') {
+								continue;
+							}
+							$childActive = !empty($child['active']);
+							?>
+							<li class="bc-nav__subitem <?php p($childActive ? 'is-active active' : ''); ?>">
+								<a class="bc-nav__sublink" href="<?php p($childHref); ?>"
+									<?php if ($childActive): ?>aria-current="page"<?php endif; ?>>
+									<?php p((string) $child['label']); ?>
+								</a>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
 			</li>
 		<?php endforeach; ?>
 	</ul>

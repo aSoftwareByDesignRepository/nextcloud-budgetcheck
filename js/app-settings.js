@@ -17,7 +17,74 @@
 	let policyTimezonePicker = null;
 	let policyCurrencyPicker = null;
 
+	/**
+	 * Merge-on-save helper: AccessControlService::saveAppPolicy replaces ALL
+	 * fields, so section pages must overlay ONLY their scope onto the current
+	 * server policy before POSTing.
+	 *
+	 * @param {'access'|'admins'|'defaults'|string} scope
+	 * @param {object} formState fields collected from this section's form
+	 * @param {object} currentPolicy policy from GET /api/admin/policy
+	 * @returns {object} full save payload
+	 */
+	function buildAppPolicySavePayload(scope, formState, currentPolicy) {
+		const policy = currentPolicy && typeof currentPolicy === 'object' ? currentPolicy : {};
+		const state = formState && typeof formState === 'object' ? formState : {};
+		const base = {
+			appAdminUserIds: Array.isArray(policy.appAdminUserIds)
+				? policy.appAdminUserIds.map(String)
+				: [],
+			accessRestrictionEnabled: !!policy.accessRestrictionEnabled,
+			allowedUserIds: Array.isArray(policy.allowedUserIds)
+				? policy.allowedUserIds.map(String)
+				: [],
+			allowedGroupIds: Array.isArray(policy.allowedGroupIds)
+				? policy.allowedGroupIds.map(String)
+				: [],
+			defaultTimezone: String(policy.defaultTimezone || 'Europe/Berlin'),
+			defaultCurrency: String(policy.defaultCurrency || 'EUR').trim().toUpperCase(),
+		};
+		if (scope === 'access') {
+			base.accessRestrictionEnabled = !!state.accessRestrictionEnabled;
+			base.allowedUserIds = Array.isArray(state.allowedUserIds)
+				? state.allowedUserIds.map(String)
+				: [];
+			base.allowedGroupIds = Array.isArray(state.allowedGroupIds)
+				? state.allowedGroupIds.map(String)
+				: [];
+		} else if (scope === 'admins') {
+			base.appAdminUserIds = Array.isArray(state.appAdminUserIds)
+				? state.appAdminUserIds.map(String)
+				: [];
+		} else if (scope === 'defaults') {
+			if (state.defaultTimezone != null && String(state.defaultTimezone) !== '') {
+				base.defaultTimezone = String(state.defaultTimezone);
+			}
+			if (state.defaultCurrency != null && String(state.defaultCurrency) !== '') {
+				base.defaultCurrency = String(state.defaultCurrency).trim().toUpperCase();
+			}
+		}
+		if (scope === 'access' || scope === 'admins' || scope === 'defaults' || scope === 'all') {
+			base.settings_section = scope;
+		}
+		return base;
+	}
+
+	if (typeof window !== 'undefined') {
+		window.BudgetCheckAppSettingsPolicyMerge = Object.freeze({
+			buildAppPolicySavePayload,
+		});
+	}
+
 	function pageInit() {
+		const Legacy = window.BudgetCheckAppSettingsLegacyRedirect;
+		if (Legacy && typeof Legacy.resolve === 'function') {
+			const redirectUrl = Legacy.resolve(document, window.location);
+			if (redirectUrl) {
+				window.location.replace(redirectUrl);
+				return;
+			}
+		}
 		void bootstrap();
 	}
 
@@ -113,6 +180,10 @@
 		wirePolicyEntityPickers(form);
 	}
 
+	/**
+	 * Bind only the pickers whose host DOM exists on this section page.
+	 * Access has users+groups; admins has admins; defaults has none.
+	 */
 	function wirePolicyEntityPickers(form) {
 		if (!EntityPicker || form.dataset.bcPolicyPickersBound === '1') return;
 		const usersQ = document.getElementById('bc-policy-users-q');
@@ -121,7 +192,10 @@
 		const groupsSuggest = document.getElementById('bc-policy-groups-suggest');
 		const adminsQ = document.getElementById('bc-policy-admins-q');
 		const adminsSuggest = document.getElementById('bc-policy-admins-suggest');
-		if (!usersQ || !usersSuggest || !groupsQ || !groupsSuggest || !adminsQ || !adminsSuggest) return;
+		const hasUsers = !!(usersQ && usersSuggest);
+		const hasGroups = !!(groupsQ && groupsSuggest);
+		const hasAdmins = !!(adminsQ && adminsSuggest);
+		if (!hasUsers && !hasGroups && !hasAdmins) return;
 		form.dataset.bcPolicyPickersBound = '1';
 		const accountStr = {
 			noResults: t('budgetcheck', 'No matching accounts.'),
@@ -133,83 +207,89 @@
 			searchErrorNetwork: t('budgetcheck', 'Search could not load (network).'),
 			searchErrorServer: t('budgetcheck', 'Search could not load.'),
 		};
-		EntityPicker.bindCombobox({
-			input: usersQ,
-			suggest: usersSuggest,
-			minLen: 2,
-			strings: accountStr,
-			isTaken: (id) => (form._bcAllowedUsers || []).some((x) => x.id === id),
-			fetchItems: async (query) => {
-				try {
-					const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
-					const items = (data.users || []).filter((u) => u && u.enabled !== false);
-					return { items, error: null };
-				} catch (err) {
-					const status = err && err.status;
-					if (status === 0) return { items: [], error: 'network' };
-					return { items: [], error: 'server' };
-				}
-			},
-			onPick: (item) => {
-				if ((form._bcAllowedUsers || []).some((x) => x.id === item.id)) {
-					Msg.announce(t('budgetcheck', 'That user is already in the list.'), 'warning');
-					return;
-				}
-				form._bcAllowedUsers = [...(form._bcAllowedUsers || []), { id: item.id, displayName: item.displayName || item.id }];
-				renderAllowedUserChips(form);
-			},
-		});
-		EntityPicker.bindCombobox({
-			input: groupsQ,
-			suggest: groupsSuggest,
-			minLen: 2,
-			strings: groupStr,
-			isTaken: (id) => (form._bcAllowedGroups || []).some((x) => x.id === id),
-			fetchItems: async (query) => {
-				try {
-					const data = await Api.get('/apps/budgetcheck/api/admin/groups', { q: query });
-					return { items: data.groups || [], error: null };
-				} catch (err) {
-					const status = err && err.status;
-					if (status === 0) return { items: [], error: 'network' };
-					return { items: [], error: 'server' };
-				}
-			},
-			onPick: (item) => {
-				if ((form._bcAllowedGroups || []).some((x) => x.id === item.id)) {
-					Msg.announce(t('budgetcheck', 'That group is already in the list.'), 'warning');
-					return;
-				}
-				form._bcAllowedGroups = [...(form._bcAllowedGroups || []), { id: item.id, displayName: item.displayName || item.id }];
-				renderAllowedGroupChips(form);
-			},
-		});
-		EntityPicker.bindCombobox({
-			input: adminsQ,
-			suggest: adminsSuggest,
-			minLen: 2,
-			strings: accountStr,
-			isTaken: (id) => (form._bcAppAdmins || []).some((x) => x.id === id),
-			fetchItems: async (query) => {
-				try {
-					const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
-					const items = (data.users || []).filter((u) => u && u.enabled !== false);
-					return { items, error: null };
-				} catch (err) {
-					const status = err && err.status;
-					if (status === 0) return { items: [], error: 'network' };
-					return { items: [], error: 'server' };
-				}
-			},
-			onPick: (item) => {
-				if ((form._bcAppAdmins || []).some((x) => x.id === item.id)) {
-					Msg.announce(t('budgetcheck', 'That user is already an administrator.'), 'warning');
-					return;
-				}
-				form._bcAppAdmins = [...(form._bcAppAdmins || []), { id: item.id, displayName: item.displayName || item.id }];
-				renderAppAdminChips(form);
-			},
-		});
+		if (hasUsers) {
+			EntityPicker.bindCombobox({
+				input: usersQ,
+				suggest: usersSuggest,
+				minLen: 2,
+				strings: accountStr,
+				isTaken: (id) => (form._bcAllowedUsers || []).some((x) => x.id === id),
+				fetchItems: async (query) => {
+					try {
+						const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
+						const items = (data.users || []).filter((u) => u && u.enabled !== false);
+						return { items, error: null };
+					} catch (err) {
+						const status = err && err.status;
+						if (status === 0) return { items: [], error: 'network' };
+						return { items: [], error: 'server' };
+					}
+				},
+				onPick: (item) => {
+					if ((form._bcAllowedUsers || []).some((x) => x.id === item.id)) {
+						Msg.announce(t('budgetcheck', 'That user is already in the list.'), 'warning');
+						return;
+					}
+					form._bcAllowedUsers = [...(form._bcAllowedUsers || []), { id: item.id, displayName: item.displayName || item.id }];
+					renderAllowedUserChips(form);
+				},
+			});
+		}
+		if (hasGroups) {
+			EntityPicker.bindCombobox({
+				input: groupsQ,
+				suggest: groupsSuggest,
+				minLen: 2,
+				strings: groupStr,
+				isTaken: (id) => (form._bcAllowedGroups || []).some((x) => x.id === id),
+				fetchItems: async (query) => {
+					try {
+						const data = await Api.get('/apps/budgetcheck/api/admin/groups', { q: query });
+						return { items: data.groups || [], error: null };
+					} catch (err) {
+						const status = err && err.status;
+						if (status === 0) return { items: [], error: 'network' };
+						return { items: [], error: 'server' };
+					}
+				},
+				onPick: (item) => {
+					if ((form._bcAllowedGroups || []).some((x) => x.id === item.id)) {
+						Msg.announce(t('budgetcheck', 'That group is already in the list.'), 'warning');
+						return;
+					}
+					form._bcAllowedGroups = [...(form._bcAllowedGroups || []), { id: item.id, displayName: item.displayName || item.id }];
+					renderAllowedGroupChips(form);
+				},
+			});
+		}
+		if (hasAdmins) {
+			EntityPicker.bindCombobox({
+				input: adminsQ,
+				suggest: adminsSuggest,
+				minLen: 2,
+				strings: accountStr,
+				isTaken: (id) => (form._bcAppAdmins || []).some((x) => x.id === id),
+				fetchItems: async (query) => {
+					try {
+						const data = await Api.get('/apps/budgetcheck/api/admin/users', { q: query });
+						const items = (data.users || []).filter((u) => u && u.enabled !== false);
+						return { items, error: null };
+					} catch (err) {
+						const status = err && err.status;
+						if (status === 0) return { items: [], error: 'network' };
+						return { items: [], error: 'server' };
+					}
+				},
+				onPick: (item) => {
+					if ((form._bcAppAdmins || []).some((x) => x.id === item.id)) {
+						Msg.announce(t('budgetcheck', 'That user is already an administrator.'), 'warning');
+						return;
+					}
+					form._bcAppAdmins = [...(form._bcAppAdmins || []), { id: item.id, displayName: item.displayName || item.id }];
+					renderAppAdminChips(form);
+				},
+			});
+		}
 	}
 
 	function renderAllowedUserChips(form) {
@@ -286,6 +366,22 @@
 		});
 	}
 
+	function collectFormState(form) {
+		const restrictCb = form.querySelector('input[name="accessRestrictionEnabled"]');
+		return {
+			accessRestrictionEnabled: !!(restrictCb && restrictCb.checked),
+			allowedUserIds: (form._bcAllowedUsers || []).map((u) => u.id),
+			allowedGroupIds: (form._bcAllowedGroups || []).map((g) => g.id),
+			appAdminUserIds: (form._bcAppAdmins || []).map((a) => a.id),
+			defaultTimezone: policyTimezonePicker
+				? policyTimezonePicker.getValue()
+				: getVal(form, 'defaultTimezone'),
+			defaultCurrency: (policyCurrencyPicker
+				? policyCurrencyPicker.getValue()
+				: getVal(form, 'defaultCurrency')),
+		};
+	}
+
 	function wireAppPolicy() {
 		const form = document.querySelector('[data-bc-app-policy-form]');
 		if (!form) return;
@@ -293,28 +389,21 @@
 		form.dataset.bcSubmitWired = '1';
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
-			const restrictCb = form.querySelector('input[name="accessRestrictionEnabled"]');
-			const accessRestrictionEnabled = !!(restrictCb && restrictCb.checked);
-			const allowedUserIds = (form._bcAllowedUsers || []).map((u) => u.id);
-			const allowedGroupIds = (form._bcAllowedGroups || []).map((g) => g.id);
-			if (accessRestrictionEnabled && allowedUserIds.length === 0 && allowedGroupIds.length === 0) {
-				Msg.announce(t('budgetcheck', 'When restriction is enabled, add at least one user or one group before saving.'), 'warning');
-				restrictCb?.focus();
-				return;
+			const scope = String(form.getAttribute('data-bc-app-policy-scope') || '');
+			const formState = collectFormState(form);
+			if (scope === 'access') {
+				if (formState.accessRestrictionEnabled
+					&& formState.allowedUserIds.length === 0
+					&& formState.allowedGroupIds.length === 0) {
+					Msg.announce(t('budgetcheck', 'When restriction is enabled, add at least one user or one group before saving.'), 'warning');
+					form.querySelector('input[name="accessRestrictionEnabled"]')?.focus();
+					return;
+				}
 			}
-			const payload = {
-				appAdminUserIds: (form._bcAppAdmins || []).map((a) => a.id),
-				accessRestrictionEnabled,
-				allowedUserIds,
-				allowedGroupIds,
-				defaultTimezone: policyTimezonePicker
-					? policyTimezonePicker.getValue()
-					: getVal(form, 'defaultTimezone'),
-				defaultCurrency: (policyCurrencyPicker
-					? policyCurrencyPicker.getValue()
-					: getVal(form, 'defaultCurrency')).trim().toUpperCase(),
-			};
 			try {
+				const res = await Api.get('/apps/budgetcheck/api/admin/policy');
+				const currentPolicy = res.policy || {};
+				const payload = buildAppPolicySavePayload(scope, formState, currentPolicy);
 				await Api.post('/apps/budgetcheck/api/admin/policy', payload);
 				Msg.announce(t('budgetcheck', 'App policy saved.'), 'success');
 				await initAppPolicyUi();
