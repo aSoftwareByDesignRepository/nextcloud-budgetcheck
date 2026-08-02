@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.7 - 2026-08-02
+
+### Added
+
+- **InvoicingCheck compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when InvoicingCheck is enabled (settlement stays in BudgetCheck).
+
+### Changed
+
+- **Uninstall:** app removal still drops tables, config, and upgrade-backup snapshots; receipt attachment binaries in appdata are no longer deleted by the uninstall repair step.
+- **l10n:** Locale catalog refresh across supported languages.
+
 ## [1.1.5] - 2026-07-31
 
 ### Added

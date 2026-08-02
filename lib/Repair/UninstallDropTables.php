@@ -117,10 +117,9 @@ final class UninstallDropTables implements IRepairStep
 		$this->config->deleteAppValues(self::APP_ID);
 
 		$this->purgeUpgradeBackupSnapshots($output);
-		$this->purgeTransactionAttachmentFiles($output);
 
 		$output->info(sprintf(
-			'budgetcheck: dropped %d of %d table(s); removed %d migration row(s), app config, upgrade-backup snapshots, and receipt attachment files.',
+			'budgetcheck: dropped %d of %d table(s); removed %d migration row(s), app config, and upgrade-backup snapshots.',
 			$dropped,
 			count(self::TABLES),
 			$migrationsRemoved,
@@ -173,31 +172,5 @@ final class UninstallDropTables implements IRepairStep
 
 		$node->delete();
 		$output->info('budgetcheck: removed upgrade-backup snapshots from app data.');
-	}
-
-	/**
-	 * Receipt binaries live under appdata — drop them on explicit app removal so
-	 * uninstall does not leave orphaned personal documents on disk.
-	 */
-	private function purgeTransactionAttachmentFiles(IOutput $output): void
-	{
-		$instanceId = (string)$this->config->getSystemValue('instanceid', '');
-		if ($instanceId === '') {
-			return;
-		}
-
-		$path = 'appdata_' . $instanceId . '/' . self::APP_ID . '/tx-attachments';
-		try {
-			$node = $this->rootFolder->get($path);
-		} catch (NotFoundException) {
-			return;
-		}
-
-		if (!$node instanceof Folder) {
-			return;
-		}
-
-		$node->delete();
-		$output->info('budgetcheck: removed transaction attachment files from app data.');
 	}
 }

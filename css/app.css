@@ -2689,6 +2689,28 @@
 .bc-dash-actions-grid--count-3 {
 	grid-template-columns: minmax(0, 1fr);
 }
+
+/* WP-ECO-BC: project workspace → InvoicingCheck compose strip */
+.bc-ic-compose .bc-section__header {
+	margin-bottom: var(--bc-space-3);
+}
+.bc-ic-compose__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-3);
+}
+.bc-ic-compose__actions .button {
+	min-height: 44px;
+}
+@media (max-width: 479px) {
+	.bc-ic-compose__actions {
+		flex-direction: column;
+	}
+	.bc-ic-compose__actions .button {
+		width: 100%;
+	}
+}
+
 @media (min-width: 480px) {
 	#app-content.bc-app .bc-dash-actions-grid--count-3,
 	.bc-dash-actions-grid--count-3 {

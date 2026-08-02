@@ -495,7 +495,26 @@ class PageController extends Controller
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
+			'invoicingCheckCreateUrl' => null,
+			'invoicingCheckReceivablesUrl' => null,
 		];
+		// WP-ECO-BC: soft deep link for project workspaces when InvoicingCheck is enabled.
+		if ($selected !== null && ($selected['type'] ?? '') === 'project') {
+			try {
+				$appManager = \OCP\Server::get(\OCP\App\IAppManager::class);
+				if ($appManager->isEnabledForUser('invoicecheck')) {
+					$params['invoicingCheckCreateUrl'] = $this->urlGenerator->linkToRoute('invoicecheck.page.createForm', [
+						'workspaceId' => (int) $selected['id'],
+					]);
+					$params['invoicingCheckReceivablesUrl'] = $this->urlGenerator->linkToRoute('invoicecheck.page.receivables', [
+						'workspaceId' => (int) $selected['id'],
+					]);
+				}
+			} catch (\Throwable) {
+				$params['invoicingCheckCreateUrl'] = null;
+				$params['invoicingCheckReceivablesUrl'] = null;
+			}
+		}
 		if (array_key_exists('currencyChangeAllowed', $ctx)) {
 			$params['currencyChangeAllowed'] = (bool)$ctx['currencyChangeAllowed'];
 		}

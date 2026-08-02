@@ -109,15 +109,28 @@ function budgetcheck_formalize_german(string $text): string
 	}
 
 	// Remaining verb forms tied to informal "du" subjects.
+	// Include punctuation-adjacent forms ("… verwendet hast.") — space-bounded
+	// rules alone leave trailing informal verbs in de_DE.
 	$verbForms = [
 		' du ' => ' Sie ',
 		' warst.' => ' waren.',
 		' warst,' => ' waren,',
 		' hast ' => ' haben ',
+		' hast.' => ' haben.',
+		' hast,' => ' haben,',
+		' hast!' => ' haben!',
 		' kannst ' => ' können ',
+		' kannst.' => ' können.',
+		' kannst,' => ' können,',
 		' musst ' => ' müssen ',
+		' musst.' => ' müssen.',
+		' musst,' => ' müssen,',
 		' darfst ' => ' dürfen ',
+		' darfst.' => ' dürfen.',
+		' darfst,' => ' dürfen,',
 		' wirst ' => ' werden ',
+		' wirst.' => ' werden.',
+		' wirst,' => ' werden,',
 		' änderst' => ' ändern',
 		' nutzt ' => ' nutzen ',
 		' schließt ' => ' schließen ',
