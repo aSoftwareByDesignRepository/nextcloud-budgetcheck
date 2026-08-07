@@ -98,22 +98,22 @@ $urls = $_['urls'] ?? [];
 	<section class="bc-card bc-section bc-ic-compose" aria-labelledby="bc-ic-compose-title" data-bc-ic-compose data-testid="bc-ic-compose">
 		<header class="bc-section__header">
 			<div>
-				<h2 id="bc-ic-compose-title"><?php p($l->t('InvoicingCheck')); ?></h2>
-				<p class="bc-section__sub"><?php p($l->t('Turn billable expenses from this project workspace into an invoice. Settlement stays in BudgetCheck; documents live in InvoicingCheck.')); ?></p>
-				<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('Receivables opens InvoicingCheck filtered to invoices that include expenses from this workspace.')); ?></p>
+				<h2 id="bc-ic-compose-title"><?php p($l->t('InvoiceCheck')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Turn billable expenses from this project workspace into an invoice. Settlement stays in BudgetCheck; documents live in InvoiceCheck.')); ?></p>
+				<p class="bc-field__hint bc-field__hint--block"><?php p($l->t('Receivables opens InvoiceCheck filtered to invoices that include expenses from this workspace.')); ?></p>
 			</div>
 		</header>
 		<div class="bc-ic-compose__actions">
 			<?php if (!empty($_['invoicingCheckCreateUrl'])): ?>
 				<a class="button primary" href="<?php p((string)$_['invoicingCheckCreateUrl']); ?>"
 					data-testid="bc-ic-create-invoice">
-					<?php p($l->t('Create invoice (InvoicingCheck)')); ?>
+					<?php p($l->t('Create invoice (InvoiceCheck)')); ?>
 				</a>
 			<?php endif; ?>
 			<?php if (!empty($_['invoicingCheckReceivablesUrl'])): ?>
 				<a class="button" href="<?php p((string)$_['invoicingCheckReceivablesUrl']); ?>"
 					data-testid="bc-ic-open-receivables">
-					<?php p($l->t('Open receivables (InvoicingCheck)')); ?>
+					<?php p($l->t('Open receivables (InvoiceCheck)')); ?>
 				</a>
 			<?php endif; ?>
 		</div>

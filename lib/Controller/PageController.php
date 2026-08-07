@@ -498,7 +498,7 @@ class PageController extends Controller
 			'invoicingCheckCreateUrl' => null,
 			'invoicingCheckReceivablesUrl' => null,
 		];
-		// WP-ECO-BC: soft deep link for project workspaces when InvoicingCheck is enabled.
+		// WP-ECO-BC: soft deep link for project workspaces when InvoiceCheck is enabled.
 		if ($selected !== null && ($selected['type'] ?? '') === 'project') {
 			try {
 				$appManager = \OCP\Server::get(\OCP\App\IAppManager::class);
@@ -552,6 +552,8 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/icons');
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
+		// Soft keyboard: keep focused notes/inputs above the IME on phones.
+		Util::addScript(Application::APP_ID, 'common/keep-focused-visible');
 		Util::addScript(Application::APP_ID, 'common/money');
 		Util::addScript(Application::APP_ID, 'common/workspace');
 		if (in_array($pageScript, ['dashboard', 'transactions'], true)) {

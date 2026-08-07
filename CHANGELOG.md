@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **InvoicingCheck compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when InvoicingCheck is enabled (settlement stays in BudgetCheck).
+- **InvoiceCheck compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when InvoiceCheck is enabled (settlement stays in BudgetCheck).
 
 ### Changed
 

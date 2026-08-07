@@ -16,7 +16,7 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 
 $allowExact = [
 	'BudgetCheck' => true,
-	'InvoicingCheck' => true,
+	'InvoiceCheck' => true,
 	'Check Partner' => true,
 	'Nextcloud' => true,
 	'CSV' => true,

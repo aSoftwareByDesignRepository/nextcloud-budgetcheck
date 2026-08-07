@@ -167,4 +167,17 @@ final class DesignSystemCssContractTest extends TestCase {
 			'Glossary DLs must clear core dt width: 130px',
 		);
 	}
+
+	public function testQuickstartStepCtasAreCentered(): void {
+		self::assertMatchesRegularExpression(
+			'/\.bc-quickstart__item\s+\.(?:bc-btn|button)[\s\S]{0,200}?align-self:\s*center/s',
+			$this->appCss,
+			'Design-system: quickstart step CTAs must be centered',
+		);
+		self::assertDoesNotMatchRegularExpression(
+			'/\.bc-quickstart__item\s+\.(?:bc-btn|button)[\s\S]{0,120}?align-self:\s*flex-start/s',
+			$this->appCss,
+			'Quickstart CTAs must not be left-ragged',
+		);
+	}
 }

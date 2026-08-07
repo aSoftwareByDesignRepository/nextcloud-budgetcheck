@@ -7,7 +7,7 @@ namespace OCA\BudgetCheck\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * WP-ECO-BC: soft InvoicingCheck deep links on project workspace dashboard.
+ * WP-ECO-BC: soft InvoiceCheck deep links on project workspace dashboard.
  * BudgetCheck stays standalone — links default null / hidden when IC disabled.
  */
 final class InvoiceCheckComposeContractTest extends TestCase
@@ -38,8 +38,8 @@ final class InvoiceCheckComposeContractTest extends TestCase
 		$tpl = (string) file_get_contents($this->root . '/templates/dashboard.php');
 		$this->assertStringContainsString('bc-ic-compose', $tpl);
 		$this->assertStringContainsString('invoicingCheckCreateUrl', $tpl);
-		$this->assertStringContainsString('Create invoice (InvoicingCheck)', $tpl);
-		$this->assertStringContainsString('Open receivables (InvoicingCheck)', $tpl);
+		$this->assertStringContainsString('Create invoice (InvoiceCheck)', $tpl);
+		$this->assertStringContainsString('Open receivables (InvoiceCheck)', $tpl);
 		$this->assertStringContainsString("\$workspace['type'] === 'project'", $tpl);
 	}
 
@@ -51,7 +51,7 @@ final class InvoiceCheckComposeContractTest extends TestCase
 		$this->assertDoesNotMatchRegularExpression(
 			'/<app\b[^>]*>\s*invoicecheck\s*<\/app>/i',
 			$hard,
-			'BudgetCheck must not hard-require InvoicingCheck'
+			'BudgetCheck must not hard-require InvoiceCheck'
 		);
 	}
 }

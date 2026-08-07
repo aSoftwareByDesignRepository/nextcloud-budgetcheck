@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Suite legacy isolation (CHECK-SUITE L1): BudgetCheck must work without
- * InvoicingCheck / CustomerCheck / InventoryCheck / MaintenanceCheck installed.
+ * InvoiceCheck / CustomerCheck / InventoryCheck / MaintenanceCheck installed.
  * Billing facades remain available for IC when present — ownership stays in BC.
  *
  * @see planning/check-productivity-suite/LEGACY-SAFETY.md
