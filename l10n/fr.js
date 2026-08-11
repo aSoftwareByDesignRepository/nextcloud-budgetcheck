@@ -1224,7 +1224,21 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} sur {total}",
 	"{decimals} decimal places" : "{decimals} décimales",
 	"“From” date must be before “To” date." : "La date « De » doit être antérieure à la date « À ».",
-	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Seules les personnes ajoutées comme gestionnaires individuels peuvent modifier la confidentialité. L’accès administrateur de l’app ne suffit pas."
+	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Seules les personnes ajoutées comme gestionnaires individuels peuvent modifier la confidentialité. L’accès administrateur de l’app ne suffit pas.",
+	"App administrators can see and manage this workspace for recovery." : "Les administrateurs de l’app peuvent voir et gérer cet espace pour la récupération.",
+	"Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data." : "Rendre cet espace privé ? Les administrateurs de l’app qui ne sont pas membres ne le verront plus. Retirez d’abord tous les groupes. Si vous êtes le seul gestionnaire et que votre compte est supprimé, cet espace ne pourra plus être ouvert dans BudgetCheck — seule une personne avec accès à la base de données pourra le récupérer. Les opérateurs de base de données peuvent encore lire les données stockées.",
+	"Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access." : "Uniquement les membres que vous ajoutez. Retirez tous les groupes avant de basculer. Un gestionnaire suffit ; si ce compte unique est supprimé, la récupération nécessite un accès à la base de données.",
+	"Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck." : "Uniquement les membres que vous ajoutez. Vous pouvez commencer seul comme gestionnaire ; si votre compte est supprimé sans autre gestionnaire, cet espace privé ne pourra plus être ouvert dans BudgetCheck.",
+	"People with direct database or server access may still read stored data. This is not end-to-end encryption." : "Les personnes ayant un accès direct à la base de données ou au serveur peuvent encore lire les données stockées. Ce n’est pas un chiffrement de bout en bout.",
+	"Private" : "Privé",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app." : "Privé signifie que seules les personnes que vous ajoutez comme membres peuvent ouvrir cet espace dans BudgetCheck. Les administrateurs qui ne sont pas membres ne le voient pas dans l’app.",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app." : "Privé signifie que seules les personnes que vous ajoutez comme membres peuvent ouvrir cet espace dans BudgetCheck. Les administrateurs Nextcloud et BudgetCheck qui ne sont pas membres ne le voient pas dans l’app.",
+	"Private workspaces" : "Espaces de travail privés",
+	"Standard" : "Standard",
+	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Revenir au mode standard ? Les administrateurs de l’app pourront à nouveau voir et gérer cet espace.",
+	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Cet espace est privé. Seules des personnes individuelles peuvent être membres — les groupes sont désactivés pour que l’accès reste sous votre contrôle.",
+	"Who can see this workspace" : "Qui peut voir cet espace de travail",
+	"You cannot create a workspace with your current access." : "Vous ne pouvez pas créer d’espace de travail avec votre accès actuel."
 	},
 	"nplurals=2; plural=(n > 1);"
 );

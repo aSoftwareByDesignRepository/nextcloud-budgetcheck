@@ -28,7 +28,8 @@ use OCP\IUserManager;
  *  - Project date changes are rejected when existing transactions would fall
  *    outside the new window (orphan-prevention).
  *  - Private workspaces disable app-admin break-glass, forbid group assignment,
- *    and require ≥2 individual managers before converting standard → private.
+ *    and may be owned by a single individual manager (last-manager floor only).
+ *    Orphan after the last manager account is gone is recoverable only via host/DB.
  */
 class WorkspaceService
 {
@@ -481,12 +482,8 @@ class WorkspaceService
 					'Remove all group assignments before making this workspace private.',
 				);
 			}
-			if ($this->countIndividualManagers($workspaceId) < 2) {
-				throw new ConflictException(
-					ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER,
-					'Add a second manager before making this workspace private. Private workspaces need at least two managers so access is not lost if one account is removed.',
-				);
-			}
+			// Sole manager is allowed. Last-manager invariant still prevents
+			// demoting/removing the final manager while the workspace exists.
 		}
 	}
 
@@ -664,7 +661,7 @@ class WorkspaceService
 			if ($fresh === null || (int)$fresh['workspace_id'] !== $workspaceId) {
 				throw new AccessDeniedException();
 			}
-			// Last-manager / dual-manager floor under lock (avoids concurrent demote races).
+			// Last-manager floor under lock (avoids concurrent demote races).
 			if ($role !== AccessControlService::ROLE_MANAGER && (string)$fresh['role'] === AccessControlService::ROLE_MANAGER) {
 				$this->ensureNotLastManager($workspaceId, (int)$fresh['id']);
 			}
@@ -875,16 +872,6 @@ class WorkspaceService
 		$remaining = $this->countIndividualManagers($workspaceId, $memberIdBeingChanged);
 		if ($remaining === 0) {
 			throw new \InvalidArgumentException('Cannot remove or downgrade the last workspace manager. Promote another member first.');
-		}
-		if (
-			$this->access->privacyMode($workspaceId) === AccessControlService::PRIVACY_PRIVATE
-			&& $remaining < 2
-			&& $this->countIndividualManagers($workspaceId) >= 2
-		) {
-			throw new ConflictException(
-				ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER,
-				'Private workspaces need at least two managers. Promote another member before removing or demoting this manager.',
-			);
 		}
 	}
 

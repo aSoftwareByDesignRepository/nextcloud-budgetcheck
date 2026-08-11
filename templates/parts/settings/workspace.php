@@ -167,7 +167,7 @@ $bcHtmlLang = $bcHtmlLang ?? (string)(($_['clientHints']['htmlLang'] ?? null) ?:
 				<input type="radio" name="privacyMode" value="private" data-bc-privacy-mode <?php p($canManagePrivacy ? '' : 'disabled'); ?> aria-describedby="bc-privacy-disclosure bc-privacy-private-hint">
 				<span>
 					<strong><?php p($l->t('Private')); ?></strong>
-					<span class="bc-field__hint bc-field__hint--block" id="bc-privacy-private-hint"><?php p($l->t('Only members you add. Before switching, add a second manager and remove any groups.')); ?></span>
+					<span class="bc-field__hint bc-field__hint--block" id="bc-privacy-private-hint"><?php p($l->t('Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access.')); ?></span>
 				</span>
 			</label>
 			<?php if ($canManage && !$canManagePrivacy): ?>

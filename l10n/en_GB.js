@@ -1224,7 +1224,21 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} of {total}",
 	"{decimals} decimal places" : "{decimals} decimal places",
 	"“From” date must be before “To” date." : "“From” date must be before “To” date.",
-	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Only people added as individual managers can change privacy. App-admin access alone is not enough."
+	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Only people added as individual managers can change privacy. App-admin access alone is not enough.",
+	"App administrators can see and manage this workspace for recovery." : "App administrators can see and manage this workspace for recovery.",
+	"Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data." : "Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.",
+	"Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access." : "Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access.",
+	"Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck." : "Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck.",
+	"People with direct database or server access may still read stored data. This is not end-to-end encryption." : "People with direct database or server access may still read stored data. This is not end-to-end encryption.",
+	"Private" : "Private",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app." : "Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app.",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app." : "Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app.",
+	"Private workspaces" : "Private workspaces",
+	"Standard" : "Standard",
+	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Switch back to standard? App administrators will be able to see and manage this workspace again.",
+	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.",
+	"Who can see this workspace" : "Who can see this workspace",
+	"You cannot create a workspace with your current access." : "You cannot create a workspace with your current access."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

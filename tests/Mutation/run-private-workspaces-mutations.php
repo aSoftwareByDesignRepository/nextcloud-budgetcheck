@@ -64,7 +64,8 @@ $assert(
 
 $assert(str_contains($ws, 'assertPrivacyTransitionAllowed'), 'privacy_transition_guard');
 $assert(str_contains($ws, 'CODE_WORKSPACE_HAS_GROUP_MEMBERS'), 'group_block_on_private');
-$assert(str_contains($ws, 'CODE_PRIVATE_WORKSPACE_DUAL_MANAGER'), 'dual_manager_guard');
+$assert(!str_contains($ws, 'countIndividualManagers($workspaceId) < 2'), 'no_dual_manager_convert_floor');
+$assert(str_contains($ws, 'ensureNotLastManager'), 'last_manager_guard');
 $assert(str_contains($ws, 'CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN'), 'group_assign_forbidden');
 $assert(str_contains($ws, 'individualMemberRole'), 'toggle_requires_individual_manager');
 $assert(str_contains($ws, 'WorkspaceRowLock::acquire'), 'privacy_toggle_row_lock');
@@ -79,6 +80,7 @@ $assert(
 $assert(str_contains($ws, 'canCreateWorkspace($userId, $privacyMode)'), 'create_service_privacy_gate');
 $assert(str_contains($ws, "'privacy_mode'"), 'insert_privacy_column');
 $assert(str_contains($ws, 'privacy_mode_changed'), 'audit_privacy_event');
+$assert(str_contains($tpl, 'recovery needs database access'), 'ui_sole_manager_orphan_disclosure');
 
 $assert(str_contains($api, 'canCreatePrivateWorkspace'), 'api_capability_private');
 $assert(str_contains($api, 'canCreateStandardWorkspace'), 'api_capability_standard');
@@ -98,9 +100,11 @@ $settingsJs = (string)file_get_contents($root . '/js/settings.js');
 $assert(str_contains($membersTpl, 'data-bc-private-groups-blocked'), 'members_private_groups_callout');
 $assert(str_contains($settingsJs, 'syncPrivateMembersUi'), 'settings_sync_private_members');
 $assert(str_contains($settingsJs, 'is-private-locked'), 'settings_private_locked_class');
+$assert(str_contains($settingsJs, 'only someone with database access can recover'), 'confirm_sole_manager_orphan');
 $listener = (string)file_get_contents($root . '/lib/Listener/UserDeletedListener.php');
 $assert(str_contains($listener, 'purgeUser'), 'user_deleted_purges_membership');
 
+// Retained for older clients; no longer thrown by WorkspaceService (sole manager allowed).
 $assert(str_contains($conflict, 'CODE_PRIVATE_WORKSPACE_DUAL_MANAGER'), 'conflict_codes');
 $assert(str_contains($mig, 'privacy_mode'), 'migration_column');
 $assert(str_contains($mig, 'bc_ws_privacy_idx'), 'migration_index');

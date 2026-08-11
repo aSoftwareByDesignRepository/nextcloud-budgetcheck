@@ -595,7 +595,7 @@
 			}
 			if (!privacyDisabled && nextPrivacy !== prevPrivacy) {
 				const confirmMsg = nextPrivacy === 'private'
-					? t('budgetcheck', 'Make this workspace private? App administrators who are not members will no longer see it. You need two managers and no groups. Database operators can still read stored data.')
+					? t('budgetcheck', 'Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.')
 					: t('budgetcheck', 'Switch back to standard? App administrators will be able to see and manage this workspace again.');
 				if (!window.confirm(confirmMsg)) {
 					return;

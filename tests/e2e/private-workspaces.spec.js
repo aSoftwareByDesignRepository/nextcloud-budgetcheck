@@ -68,8 +68,8 @@ test.describe('Private workspaces UX', () => {
 
 		const fieldset = page.locator('[data-bc-privacy-fieldset]');
 		await expect(fieldset).toBeVisible();
-		await expect(page.locator('#bc-privacy-disclosure')).toContainText(/database or server access/i);
-		await expect(page.locator('#bc-privacy-disclosure')).toContainText(/not end-to-end encryption/i);
+		await expect(page.locator('#bc-privacy-disclosure')).toContainText(/database or server access|Datenbank- oder Serverzugriff|base de données|base de datos/i);
+		await expect(page.locator('#bc-privacy-disclosure')).toContainText(/not end-to-end encryption|keine Ende-zu-Ende-Verschlüsselung|pas un chiffrement|no es cifrado/i);
 		await expect(page.locator('input[name="privacyMode"][value="private"]')).toHaveCount(1);
 		await expect(page.locator('input[name="privacyMode"][value="standard"]')).toHaveCount(1);
 		const privateRadio = page.locator('input[name="privacyMode"][value="private"]');
@@ -109,8 +109,9 @@ test.describe('Private workspaces UX', () => {
 
 		await page.locator('[data-bc-workspace-form] button[type="submit"]').click();
 		await expect.poll(() => confirmText, { timeout: 5000 }).not.toBeNull();
-		expect(String(confirmText)).toMatch(/database|server access/i);
-		expect(String(confirmText)).toMatch(/two managers|second manager|groups/i);
-		expect(String(confirmText).toLowerCase()).not.toMatch(/zero-knowledge|end-to-end encrypted/);
+		expect(String(confirmText)).toMatch(/database|server access|recover|Datenbank|wiederherstellen|récupér|base de datos/i);
+		expect(String(confirmText)).toMatch(/groups|Gruppen|groupes|grupos|manager|Manager|gestionnaire|gestor/i);
+		expect(String(confirmText).toLowerCase()).not.toMatch(/two managers|you need two managers|zwei manager brauchen|besoin de deux/i);
+		expect(String(confirmText).toLowerCase()).not.toMatch(/zero-knowledge|end-to-end encrypted|ende-zu-ende-verschlüsselt/);
 	});
 });

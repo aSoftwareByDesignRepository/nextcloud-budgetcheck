@@ -237,7 +237,7 @@
 					privacyFieldset.appendChild(privacyRadio('standard', t('budgetcheck', 'Standard'), t('budgetcheck', 'App administrators can see and manage this workspace for recovery.'), defaultPrivacy === 'standard'));
 				}
 				if (canPrivate) {
-					privacyFieldset.appendChild(privacyRadio('private', t('budgetcheck', 'Private'), t('budgetcheck', 'Only members you add. Add a second manager after creating so you are not locked out alone.'), defaultPrivacy === 'private'));
+					privacyFieldset.appendChild(privacyRadio('private', t('budgetcheck', 'Private'), t('budgetcheck', 'Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck.'), defaultPrivacy === 'private'));
 				}
 				form.appendChild(privacyFieldset);
 

@@ -1224,7 +1224,21 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} van {total}",
 	"{decimals} decimal places" : "{decimals} decimalen",
 	"“From” date must be before “To” date." : "De 'Vanaf'-datum moet vóór de 'Tot'-datum liggen.",
-	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Alleen personen die als individuele managers zijn toegevoegd, kunnen de privacy wijzigen. App-beheerderstoegang alleen is niet genoeg."
+	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Alleen personen die als individuele managers zijn toegevoegd, kunnen de privacy wijzigen. App-beheerderstoegang alleen is niet genoeg.",
+	"App administrators can see and manage this workspace for recovery." : "App-beheerders kunnen deze werkruimte zien en beheren voor herstel.",
+	"Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data." : "Deze werkruimte privé maken? App-beheerders die geen lid zijn zien hem dan niet meer. Verwijder eerst alle groepen. Bent u de enige manager en wordt uw account verwijderd, dan kan deze werkruimte niet meer in BudgetCheck worden geopend — alleen iemand met databasetoegang kan herstellen. Databasebeheerders kunnen opgeslagen gegevens nog steeds lezen.",
+	"Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access." : "Alleen leden die u toevoegt. Verwijder alle groepen vóór het omschakelen. Eén manager is genoeg; wordt dat enige manageraccount verwijderd, dan is databasetoegang nodig voor herstel.",
+	"Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck." : "Alleen leden die u toevoegt. U mag alleen als manager starten; wordt uw account zonder andere manager verwijderd, dan kan deze privéwerkruimte niet in BudgetCheck worden geopend.",
+	"People with direct database or server access may still read stored data. This is not end-to-end encryption." : "Mensen met directe database- of servertoegang kunnen opgeslagen gegevens nog steeds lezen. Dit is geen end-to-end-versleuteling.",
+	"Private" : "Privé",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app." : "Privé betekent dat alleen personen die u als lid toevoegt deze werkruimte in BudgetCheck kunnen openen. Beheerders die geen lid zijn zien hem niet in de app.",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app." : "Privé betekent dat alleen personen die u als lid toevoegt deze werkruimte in BudgetCheck kunnen openen. Nextcloud- en BudgetCheck-beheerders die geen lid zijn zien hem niet in de app.",
+	"Private workspaces" : "Privéwerkruimten",
+	"Standard" : "Standaard",
+	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Terug naar standaard? App-beheerders kunnen deze werkruimte weer zien en beheren.",
+	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Deze werkruimte is privé. Alleen individuele personen kunnen lid zijn — groepen staan uit zodat de toegang onder uw controle blijft.",
+	"Who can see this workspace" : "Wie deze werkruimte kan zien",
+	"You cannot create a workspace with your current access." : "U kunt met uw huidige toegang geen werkruimte maken."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

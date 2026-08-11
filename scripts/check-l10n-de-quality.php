@@ -35,6 +35,7 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 	'Export' => true,
 	'Budgets' => true,
 	'File' => true,
+	'Standard' => true,
 	'Optional:' => true,
 	'Required:' => true,
 	'Selected:' => true,

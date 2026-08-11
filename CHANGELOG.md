@@ -5,18 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.11 - 2026-08-11
+
+### Changed
+
+- **Sole-manager private workspaces:** converting standard → private no longer requires a second manager. Demoting/removing managers uses the normal last-manager rule (≥1). Groups are still forbidden on private workspaces.
+- Confirmation and help copy warn that if the sole manager account is removed, the private workspace cannot be opened in BudgetCheck (host/DB recovery only).
+
 ## 1.1.10 - 2026-08-11
 
 ### Added
 
 - **Private workspaces (ACL confidential mode):** managers can mark a workspace private so Nextcloud system admins and BudgetCheck app admins who are **not** members cannot see it in lists or open workspace-scoped APIs. Host/DB disclosure is shown before enabling private (not E2EE).
 - **Create rules:** any user who can open the app may create a **private** workspace; **standard** workspace create remains app-admin-only.
-- **Companion API 6:** mobile clients can create with `privacyMode` and update privacy via `PUT /api/mobile/v1/workspaces/{id}` under the same dual-manager / no-groups guards.
+- **Companion API 6:** mobile clients can create with `privacyMode` and update privacy via `PUT /api/mobile/v1/workspaces/{id}` under the same individual-manager / no-groups guards.
 - Web and companion UX for privacy mode (settings fieldset, create modal, members group lock, Private badge).
 
 ### Changed
 
-- Converting a **standard** workspace to **private** requires ≥2 individual managers and no Nextcloud group memberships; private workspaces allow individuals only.
+- Converting a **standard** workspace to **private** requires no Nextcloud group memberships; sole manager is allowed (orphan recovery = host/DB only). Private workspaces allow individuals only.
 - Member demote/remove and privacy toggles serialize with workspace row locks to avoid last-manager races.
 - Favorites / last-used and admin digest surfaces clip or opaque-count private workspaces (no name/id leak to non-members).
 

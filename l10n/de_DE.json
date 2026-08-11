@@ -1223,7 +1223,21 @@
         "{current} of {total}": "{current} von {total}",
         "{decimals} decimal places": "{decimals} Dezimalstellen",
         "“From” date must be before “To” date.": "„Von“-Datum muss vor „Bis“-Datum liegen.",
-        "Only people added as individual managers can change privacy. App-admin access alone is not enough.": "Nur Personen, die als einzelne Manager hinzugefügt wurden, können die Privatsphäre ändern. App-Admin-Zugang allein reicht nicht."
+        "Only people added as individual managers can change privacy. App-admin access alone is not enough.": "Nur Personen, die als einzelne Manager hinzugefügt wurden, können die Privatsphäre ändern. App-Admin-Zugang allein reicht nicht.",
+        "App administrators can see and manage this workspace for recovery.": "App-Administratoren können diesen Arbeitsbereich zur Wiederherstellung sehen und verwalten.",
+        "Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.": "Diesen Arbeitsbereich privat machen? App-Administratoren ohne Mitgliedschaft sehen ihn dann nicht mehr. Entfernen Sie zuerst alle Gruppen. Sind Sie der einzige Manager und wird Ihr Konto entfernt, lässt sich dieser Arbeitsbereich in BudgetCheck nicht mehr öffnen — nur jemand mit Datenbankzugriff kann ihn wiederherstellen. Datenbankbetreiber können gespeicherte Daten weiterhin lesen.",
+        "Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access.": "Nur Mitglieder, die Sie hinzufügen. Entfernen Sie vor dem Wechsel alle Gruppen. Ein Manager reicht; wird dieses einzige Manager-Konto entfernt, braucht die Wiederherstellung Datenbankzugriff.",
+        "Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck.": "Nur Mitglieder, die Sie hinzufügen. Sie können allein als Manager starten; wird Ihr Konto ohne weiteren Manager entfernt, lässt sich dieser private Arbeitsbereich in BudgetCheck nicht öffnen.",
+        "People with direct database or server access may still read stored data. This is not end-to-end encryption.": "Personen mit direktem Datenbank- oder Serverzugriff können gespeicherte Daten weiterhin lesen. Das ist keine Ende-zu-Ende-Verschlüsselung.",
+        "Private": "Privat",
+        "Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app.": "Privat bedeutet: Nur Personen, die Sie als Mitglieder hinzufügen, können diesen Arbeitsbereich in BudgetCheck öffnen. Administratoren ohne Mitgliedschaft sehen ihn in der App nicht.",
+        "Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app.": "Privat bedeutet: Nur Personen, die Sie als Mitglieder hinzufügen, können diesen Arbeitsbereich in BudgetCheck öffnen. Nextcloud- und BudgetCheck-Administratoren ohne Mitgliedschaft sehen ihn in der App nicht.",
+        "Private workspaces": "Private Arbeitsbereiche",
+        "Standard": "Standard",
+        "Switch back to standard? App administrators will be able to see and manage this workspace again.": "Zurück zu Standard? App-Administratoren können diesen Arbeitsbereich dann wieder sehen und verwalten.",
+        "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Dieser Arbeitsbereich ist privat. Nur einzelne Personen können Mitglieder sein — Gruppen sind deaktiviert, damit der Zugriff unter Ihrer Kontrolle bleibt.",
+        "Who can see this workspace": "Wer diesen Arbeitsbereich sehen kann",
+        "You cannot create a workspace with your current access.": "Mit Ihrem aktuellen Zugriff können Sie keinen Arbeitsbereich erstellen."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

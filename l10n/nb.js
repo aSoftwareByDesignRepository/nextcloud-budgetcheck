@@ -1224,7 +1224,21 @@ OC.L10N.register(
 	"{current} of {total}" : "{current} av {total}",
 	"{decimals} decimal places" : "{decimals} desimaler",
 	"“From” date must be before “To” date." : "Datoen «Fra» må ligge før datoen «Til».",
-	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Bare personer lagt til som individuelle managere kan endre personvern. App-administrator-tilgang alene er ikke nok."
+	"Only people added as individual managers can change privacy. App-admin access alone is not enough." : "Bare personer lagt til som individuelle managere kan endre personvern. App-administrator-tilgang alene er ikke nok.",
+	"App administrators can see and manage this workspace for recovery." : "App-administratorer kan se og administrere dette arbeidsområdet for gjenoppretting.",
+	"Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data." : "Gjøre dette arbeidsområdet privat? App-administratorer som ikke er medlemmer ser det ikke lenger. Fjern først alle grupper. Er du den eneste manageren og kontoen din fjernes, kan ikke arbeidsområdet åpnes i BudgetCheck — bare noen med databasetilgang kan gjenopprette det. Databaseoperatører kan fortsatt lese lagrede data.",
+	"Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access." : "Bare medlemmer du legger til. Fjern alle grupper før bytte. Én manager er nok; hvis den eneste managerkontoen fjernes, krever gjenoppretting databasetilgang.",
+	"Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck." : "Bare medlemmer du legger til. Du kan starte alene som manager; hvis kontoen din fjernes uten annen manager, kan ikke dette private arbeidsområdet åpnes i BudgetCheck.",
+	"People with direct database or server access may still read stored data. This is not end-to-end encryption." : "Personer med direkte database- eller servertilgang kan fortsatt lese lagrede data. Dette er ikke ende-til-ende-kryptering.",
+	"Private" : "Privat",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app." : "Privat betyr at bare personer du legger til som medlemmer kan åpne dette arbeidsområdet i BudgetCheck. Administratorer som ikke er medlemmer ser det ikke i appen.",
+	"Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app." : "Privat betyr at bare personer du legger til som medlemmer kan åpne dette arbeidsområdet i BudgetCheck. Nextcloud- og BudgetCheck-administratorer som ikke er medlemmer ser det ikke i appen.",
+	"Private workspaces" : "Private arbeidsområder",
+	"Standard" : "Standard",
+	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Bytte tilbake til standard? App-administratorer kan se og administrere dette arbeidsområdet igjen.",
+	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Dette arbeidsområdet er privat. Bare enkeltpersoner kan være medlemmer — grupper er slått av slik at tilgangen forblir under din kontroll.",
+	"Who can see this workspace" : "Hvem kan se dette arbeidsområdet",
+	"You cannot create a workspace with your current access." : "Du kan ikke opprette et arbeidsområde med din nåværende tilgang."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

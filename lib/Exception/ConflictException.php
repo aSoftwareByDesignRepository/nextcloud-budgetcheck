@@ -12,6 +12,7 @@ final class ConflictException extends BudgetCheckException
 	public const CODE_VERSION_CONFLICT = 'version_conflict';
 	public const CODE_WORKSPACE_HAS_GROUP_MEMBERS = 'workspace_has_group_members';
 	public const CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN = 'private_workspace_groups_forbidden';
+	/** @deprecated Retained for older clients; sole-manager private is allowed — this code is no longer thrown. */
 	public const CODE_PRIVATE_WORKSPACE_DUAL_MANAGER = 'private_workspace_dual_manager_required';
 
 	public function __construct(

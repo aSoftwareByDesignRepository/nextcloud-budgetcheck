@@ -1223,7 +1223,21 @@
         "{current} of {total}": "{current} de {total}",
         "{decimals} decimal places": "{decimals} decimales",
         "“From” date must be before “To” date.": "La fecha \"Desde\" debe ser anterior a la fecha \"Hasta\".",
-        "Only people added as individual managers can change privacy. App-admin access alone is not enough.": "Solo las personas añadidas como gestores individuales pueden cambiar la privacidad. El acceso de administrador de la app no basta."
+        "Only people added as individual managers can change privacy. App-admin access alone is not enough.": "Solo las personas añadidas como gestores individuales pueden cambiar la privacidad. El acceso de administrador de la app no basta.",
+        "App administrators can see and manage this workspace for recovery.": "Los administradores de la app pueden ver y gestionar este espacio para recuperación.",
+        "Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.": "¿Hacer privado este espacio? Los administradores de la app que no sean miembros ya no lo verán. Quite primero todos los grupos. Si es el único gestor y se elimina su cuenta, este espacio no se podrá abrir en BudgetCheck: solo alguien con acceso a la base de datos puede recuperarlo. Los operadores de la base de datos aún pueden leer los datos guardados.",
+        "Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access.": "Solo los miembros que añada. Quite todos los grupos antes de cambiar. Un gestor basta; si se elimina esa única cuenta de gestor, la recuperación necesita acceso a la base de datos.",
+        "Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck.": "Solo los miembros que añada. Puede empezar solo como gestor; si se elimina su cuenta sin otro gestor, este espacio privado no se podrá abrir en BudgetCheck.",
+        "People with direct database or server access may still read stored data. This is not end-to-end encryption.": "Quienes tengan acceso directo a la base de datos o al servidor aún pueden leer los datos almacenados. Esto no es cifrado de extremo a extremo.",
+        "Private": "Privado",
+        "Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app.": "Privado significa que solo las personas que añada como miembros pueden abrir este espacio en BudgetCheck. Los administradores que no sean miembros no lo ven en la app.",
+        "Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app.": "Privado significa que solo las personas que añada como miembros pueden abrir este espacio en BudgetCheck. Los administradores de Nextcloud y BudgetCheck que no sean miembros no lo ven en la app.",
+        "Private workspaces": "Espacios de trabajo privados",
+        "Standard": "Estándar",
+        "Switch back to standard? App administrators will be able to see and manage this workspace again.": "¿Volver a estándar? Los administradores de la app podrán ver y gestionar este espacio de nuevo.",
+        "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Este espacio es privado. Solo personas individuales pueden ser miembros: los grupos están desactivados para que el acceso quede bajo su control.",
+        "Who can see this workspace": "Quién puede ver este espacio de trabajo",
+        "You cannot create a workspace with your current access.": "No puede crear un espacio de trabajo con su acceso actual."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -162,7 +162,7 @@ class MobileApiController extends Controller
 	 *
 	 * Privacy-only surface: companions must not mutate currency/timezone/project
 	 * dates via this channel (those stay on web settings). Privacy transitions
-	 * still run through WorkspaceService guards (individual manager, dual-manager,
+	 * still run through WorkspaceService guards (individual manager, no-groups,
 	 * no groups, row lock).
 	 */
 	#[NoAdminRequired]

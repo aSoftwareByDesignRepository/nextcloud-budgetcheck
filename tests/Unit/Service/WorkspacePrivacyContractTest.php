@@ -35,7 +35,8 @@ final class WorkspacePrivacyContractTest extends TestCase
 		self::assertStringContainsString('privacy_mode', $src);
 		self::assertStringContainsString('assertPrivacyTransitionAllowed', $src);
 		self::assertStringContainsString('CODE_WORKSPACE_HAS_GROUP_MEMBERS', $src);
-		self::assertStringContainsString('CODE_PRIVATE_WORKSPACE_DUAL_MANAGER', $src);
+		self::assertStringNotContainsString('countIndividualManagers($workspaceId) < 2', $src);
+		self::assertStringContainsString('ensureNotLastManager', $src);
 		self::assertStringContainsString('CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN', $src);
 		self::assertStringContainsString('privacy_mode_changed', $src);
 		self::assertStringContainsString('WorkspaceRowLock::acquire', $src);

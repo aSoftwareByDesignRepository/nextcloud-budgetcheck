@@ -208,10 +208,12 @@ final class PrivateWorkspacesAclIntegrationTest extends TestCase
 		self::assertContains($id, $access->workspacesForUser(self::ADMIN));
 	}
 
-	public function testGroupAssignForbiddenOnPrivateAndDualManagerRequired(): void
+	public function testGroupAssignForbiddenOnPrivateAndSoleManagerCanConvert(): void
 	{
 		/** @var WorkspaceService $workspaces */
 		$workspaces = \OC::$server->get(WorkspaceService::class);
+		/** @var AccessControlService $access */
+		$access = \OC::$server->get(AccessControlService::class);
 
 		$created = $workspaces->createWorkspace(self::OWNER, [
 			'name' => 'Solo Private',
@@ -232,22 +234,44 @@ final class PrivateWorkspacesAclIntegrationTest extends TestCase
 			self::assertSame(ConflictException::CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN, $e->getErrorCode());
 		}
 
-		// Convert path: create standard with one manager only → private must fail dual-manager.
+		// Convert path: sole individual manager may enable private (orphan risk disclosed in UI).
 		$std = $workspaces->createWorkspace(self::ADMIN, [
-			'name' => 'Needs Two Managers',
+			'name' => 'Sole Convert Private',
 			'type' => 'household',
 			'privacyMode' => 'standard',
 			'primaryPlanningYear' => (int)date('Y'),
 		]);
 		$stdId = (int)$std['id'];
 		$this->workspaceIds[] = $stdId;
-		// Admin is individual manager via create; still only one manager.
+		$converted = $workspaces->updateWorkspace($stdId, self::ADMIN, ['privacyMode' => 'private']);
+		self::assertSame('private', $converted['privacyMode']);
+		$access->forgetPrivacyModeCache($stdId);
+		// Creator admin remains a member manager; other admins without membership stay blind.
+		self::assertSame(AccessControlService::ROLE_MANAGER, $access->role($stdId, self::ADMIN));
+		self::assertNull($access->role($stdId, self::OWNER));
+		self::assertNotContains($stdId, $access->workspacesForUser(self::OWNER));
+
+		// Standard workspace with a group assignment cannot convert until groups are removed.
+		$withGroup = $workspaces->createWorkspace(self::ADMIN, [
+			'name' => 'Has Group Block',
+			'type' => 'household',
+			'privacyMode' => 'standard',
+			'primaryPlanningYear' => (int)date('Y'),
+		]);
+		$gid = (int)$withGroup['id'];
+		$this->workspaceIds[] = $gid;
+		$workspaces->addGroupMember($gid, self::ADMIN, [
+			'groupId' => 'admin',
+			'role' => AccessControlService::ROLE_VIEWER,
+		]);
 		try {
-			$workspaces->updateWorkspace($stdId, self::ADMIN, ['privacyMode' => 'private']);
-			$this->fail('→ private with one manager must conflict');
+			$workspaces->updateWorkspace($gid, self::ADMIN, ['privacyMode' => 'private']);
+			$this->fail('→ private must conflict while groups are assigned');
 		} catch (ConflictException $e) {
-			self::assertSame(ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER, $e->getErrorCode());
+			self::assertSame(ConflictException::CODE_WORKSPACE_HAS_GROUP_MEMBERS, $e->getErrorCode());
 		}
+		$access->forgetPrivacyModeCache($gid);
+		self::assertSame(AccessControlService::PRIVACY_STANDARD, $access->privacyMode($gid));
 	}
 
 	public function testDoorPasserCreatesPrivateButNotStandard(): void
@@ -305,7 +329,7 @@ final class PrivateWorkspacesAclIntegrationTest extends TestCase
 		self::assertStringNotContainsStringIgnoringCase('Counted Private', json_encode($policy, JSON_THROW_ON_ERROR));
 	}
 
-	public function testDemoteSecondPrivateManagerIsBlocked(): void
+	public function testDemoteSecondPrivateManagerIsAllowedLastManagerIsNot(): void
 	{
 		/** @var WorkspaceService $workspaces */
 		$workspaces = \OC::$server->get(WorkspaceService::class);
@@ -324,28 +348,47 @@ final class PrivateWorkspacesAclIntegrationTest extends TestCase
 		]);
 
 		$spouseMemberId = null;
+		$ownerMemberId = null;
 		foreach ($workspaces->listMembers($id, self::OWNER) as $row) {
-			if (($row['type'] ?? '') === 'user' && ($row['userId'] ?? '') === self::SPOUSE) {
+			if (($row['type'] ?? '') !== 'user') {
+				continue;
+			}
+			if (($row['userId'] ?? '') === self::SPOUSE) {
 				$spouseMemberId = (int)$row['id'];
-				break;
+			}
+			if (($row['userId'] ?? '') === self::OWNER) {
+				$ownerMemberId = (int)$row['id'];
 			}
 		}
 		self::assertNotNull($spouseMemberId);
+		self::assertNotNull($ownerMemberId);
+
+		// Demoting one of two managers must succeed (sole-manager private is allowed).
+		$afterDemote = $workspaces->updateMember($spouseMemberId, self::OWNER, [
+			'role' => AccessControlService::ROLE_CONTRIBUTOR,
+		]);
+		$spouseRole = null;
+		foreach ($afterDemote as $row) {
+			if (($row['type'] ?? '') === 'user' && ($row['userId'] ?? '') === self::SPOUSE) {
+				$spouseRole = (string)($row['role'] ?? '');
+				break;
+			}
+		}
+		self::assertSame(AccessControlService::ROLE_CONTRIBUTOR, $spouseRole);
+
+		// Promote spouse back, then remove them — still OK while owner remains manager.
+		$workspaces->updateMember($spouseMemberId, self::OWNER, [
+			'role' => AccessControlService::ROLE_MANAGER,
+		]);
+		$workspaces->removeMember($spouseMemberId, self::OWNER);
 
 		try {
-			$workspaces->updateMember($spouseMemberId, self::OWNER, [
+			$workspaces->updateMember($ownerMemberId, self::OWNER, [
 				'role' => AccessControlService::ROLE_CONTRIBUTOR,
 			]);
-			$this->fail('Demoting one of two private managers must conflict');
-		} catch (ConflictException $e) {
-			self::assertSame(ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER, $e->getErrorCode());
-		}
-
-		try {
-			$workspaces->removeMember($spouseMemberId, self::OWNER);
-			$this->fail('Removing one of two private managers must conflict');
-		} catch (ConflictException $e) {
-			self::assertSame(ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER, $e->getErrorCode());
+			$this->fail('Demoting the last private manager must fail');
+		} catch (\InvalidArgumentException $e) {
+			self::assertStringContainsString('last workspace manager', $e->getMessage());
 		}
 	}
 
