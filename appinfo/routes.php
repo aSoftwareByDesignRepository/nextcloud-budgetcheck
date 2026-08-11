@@ -16,6 +16,7 @@ return [
 		['name' => 'page#yearly',       'url' => '/yearly',       'verb' => 'GET'],
 		['name' => 'page#workspaceOverview', 'url' => '/workspaces', 'verb' => 'GET'],
 		['name' => 'page#settings',     'url' => '/settings',     'verb' => 'GET'],
+		['name' => 'page#getTheApp',    'url' => '/get-the-app',  'verb' => 'GET'],
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
@@ -106,6 +107,7 @@ return [
 		['name' => 'mobile_api#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],
 		['name' => 'mobile_api#listWorkspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
 		['name' => 'mobile_api#createWorkspace', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'POST'],
+		['name' => 'mobile_api#updateWorkspace', 'url' => '/api/mobile/v1/workspaces/{workspaceId}', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#home', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/home', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#monthlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/monthly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#yearlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/yearly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],

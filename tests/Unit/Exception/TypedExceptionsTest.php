@@ -32,4 +32,13 @@ class TypedExceptionsTest extends TestCase
 		self::assertSame('project', $e->getActualType());
 		self::assertSame('monthly_close', $e->getOperation());
 	}
+
+	public function testConflictCodes(): void
+	{
+		$default = new ConflictException();
+		self::assertSame(ConflictException::CODE_VERSION_CONFLICT, $default->getErrorCode());
+		$custom = new ConflictException(ConflictException::CODE_WORKSPACE_HAS_GROUP_MEMBERS, 'groups first');
+		self::assertSame(ConflictException::CODE_WORKSPACE_HAS_GROUP_MEMBERS, $custom->getErrorCode());
+		self::assertSame('groups first', $custom->getMessage());
+	}
 }

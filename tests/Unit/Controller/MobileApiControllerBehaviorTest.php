@@ -101,10 +101,11 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertArrayHasKey('canCreateWorkspace', $data['capabilities']);
 	}
 
-	public function testCreateWorkspaceRequiresAppAdmin(): void
+	public function testCreateWorkspaceRequiresAppAdminForStandard(): void
 	{
 		$this->access->method('currentUserId')->willReturn('alice');
-		$this->access->method('isAppAdmin')->with('alice')->willReturn(false);
+		$this->access->method('normalisePrivacyMode')->willReturn('standard');
+		$this->access->method('canCreateWorkspace')->with('alice', 'standard')->willReturn(false);
 		$this->request->method('getHeader')->willReturnCallback(
 			static function (string $name): string {
 				if (strcasecmp($name, 'Authorization') === 0) {
@@ -141,6 +142,188 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$response = $controller->createWorkspace();
 		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
+	}
+
+	public function testCreatePrivateWorkspaceAllowedWhenDoorPasser(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->access->method('normalisePrivacyMode')->willReturn('private');
+		$this->access->method('canCreateWorkspace')->willReturnCallback(
+			static fn (string $uid, string $mode): bool => $uid === 'alice' && $mode === 'private'
+		);
+		$this->access->method('canCreateAnyWorkspace')->with('alice')->willReturn(true);
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn([
+			'name' => 'Home',
+			'type' => 'household',
+			'privacyMode' => 'private',
+			'primaryPlanningYear' => 2026,
+		]);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects(self::once())
+			->method('createWorkspace')
+			->with('alice', self::callback(static function (array $payload): bool {
+				return ($payload['privacyMode'] ?? null) === 'private';
+			}))
+			->willReturn([
+				'id' => 9,
+				'name' => 'Home',
+				'type' => 'household',
+				'privacyMode' => 'private',
+				'role' => 'manager',
+				'currencyCode' => 'EUR',
+				'currencyDecimals' => 2,
+				'timezone' => 'Europe/Berlin',
+			]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed');
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->createWorkspace();
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertTrue($data['ok']);
+		self::assertSame('private', $data['workspace']['privacyMode']);
+	}
+
+	public function testUpdateWorkspacePrivacyMode(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->access->method('normalisePrivacyMode')->willReturn('private');
+		$this->access->method('favoriteWorkspaceIds')->with('alice')->willReturn([9]);
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn([
+			'privacyMode' => 'private',
+		]);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects(self::once())
+			->method('updateWorkspace')
+			->with(9, 'alice', self::callback(static function (array $payload): bool {
+				return ($payload['privacyMode'] ?? null) === 'private'
+					&& count($payload) === 1;
+			}))
+			->willReturn([
+				'id' => 9,
+				'name' => 'Home',
+				'type' => 'household',
+				'privacyMode' => 'private',
+				'role' => 'manager',
+				'currencyCode' => 'EUR',
+				'currencyDecimals' => 2,
+				'timezone' => 'Europe/Berlin',
+				'capabilities' => [
+					'canManagePrivacy' => true,
+					'canAssignGroups' => false,
+				],
+			]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed');
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->updateWorkspace(9);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertTrue($data['ok']);
+		self::assertSame('private', $data['workspace']['privacyMode']);
+		self::assertTrue($data['workspace']['isFavorite']);
+		self::assertTrue($data['workspace']['capabilities']['canManagePrivacy']);
+		self::assertFalse($data['workspace']['capabilities']['canAssignGroups']);
+	}
+
+	public function testUpdateWorkspaceRejectsEmptyPatch(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn([
+			'name' => 'ignored',
+		]);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects(self::never())->method('updateWorkspace');
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->access,
+			$workspaces,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->updateWorkspace(9);
+		self::assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		self::assertSame('VALIDATION', $response->getData()['error']['code']);
 	}
 
 	public function testMonthlySummaryMapsMinorUnits(): void

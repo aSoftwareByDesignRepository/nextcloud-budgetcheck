@@ -71,6 +71,33 @@ final class PageControllerBudgetsNavTest extends TestCase
 		$ids = array_column($nav, 'id');
 		self::assertNotContains('budgets', $ids);
 		self::assertNotContains('transactions', $ids);
+		self::assertContains('get-the-app', $ids);
+		self::assertContains('dashboard', $ids);
+		self::assertContains('app-settings', $ids);
+	}
+
+	public function testGetTheAppNavOrderAfterSettings(): void
+	{
+		$controller = $this->controllerWith(
+			fn (string $text, array $parameters = []): string => $text,
+			fn (string $route, array $params = []): string => '/apps/budgetcheck/' . str_replace('budgetcheck.page.', '', $route),
+		);
+		$method = new ReflectionMethod(PageController::class, 'buildNavigation');
+		$method->setAccessible(true);
+		$workspace = ['id' => 1, 'type' => 'household', 'role' => 'manager'];
+		$nav = $method->invoke($controller, 'get-the-app', $workspace, true, true);
+		$ids = array_column($nav, 'id');
+		$settingsIdx = array_search('settings', $ids, true);
+		$getAppIdx = array_search('get-the-app', $ids, true);
+		$appSettingsIdx = array_search('app-settings', $ids, true);
+		self::assertNotFalse($settingsIdx);
+		self::assertNotFalse($getAppIdx);
+		self::assertNotFalse($appSettingsIdx);
+		self::assertGreaterThan($settingsIdx, $getAppIdx);
+		self::assertGreaterThan($getAppIdx, $appSettingsIdx);
+		$active = array_values(array_filter($nav, static fn (array $item): bool => !empty($item['active'])));
+		self::assertCount(1, $active);
+		self::assertSame('get-the-app', $active[0]['id']);
 	}
 
 	private function controllerWith(callable $t, callable $linkToRoute): PageController

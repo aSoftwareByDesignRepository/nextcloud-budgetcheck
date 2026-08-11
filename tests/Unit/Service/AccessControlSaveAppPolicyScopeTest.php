@@ -57,6 +57,8 @@ final class AccessControlSaveAppPolicyScopeTest extends TestCase
 		self::assertSame([], $policy['allowedUserIds']);
 		self::assertSame('America/New_York', $policy['defaultTimezone']);
 		self::assertSame('USD', $policy['defaultCurrency']);
+		self::assertArrayHasKey('privateWorkspaceCount', $policy);
+		self::assertSame(0, $policy['privateWorkspaceCount']);
 	}
 
 	public function testAdminsScopeDoesNotWipeAccessAllowlists(): void
@@ -206,8 +208,45 @@ final class AccessControlSaveAppPolicyScopeTest extends TestCase
 		$money = $this->createMock(MoneyService::class);
 		$money->method('isSupportedCurrency')->willReturn(true);
 
+		$result = $this->createMock(\Doctrine\DBAL\Result::class);
+		// PHPUnit may not have Doctrine Result — use a generic object with fetch/closeCursor.
+		$result = new class {
+			public function fetch(): array
+			{
+				return ['count' => 0];
+			}
+			public function closeCursor(): void
+			{
+			}
+		};
+		$qb = $this->getMockBuilder(\stdClass::class)
+			->addMethods(['select', 'from', 'where', 'expr', 'createNamedParameter', 'func', 'executeQuery'])
+			->getMock();
+		$func = new class {
+			public function count($a, $b)
+			{
+				return 'COUNT(*)';
+			}
+		};
+		$expr = new class {
+			public function eq($a, $b)
+			{
+				return 'eq';
+			}
+		};
+		$qb->method('func')->willReturn($func);
+		$qb->method('expr')->willReturn($expr);
+		$qb->method('select')->willReturnSelf();
+		$qb->method('from')->willReturnSelf();
+		$qb->method('where')->willReturnSelf();
+		$qb->method('createNamedParameter')->willReturnArgument(0);
+		$qb->method('executeQuery')->willReturn($result);
+
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('getQueryBuilder')->willReturn($qb);
+
 		return new AccessControlService(
-			$this->createMock(IDBConnection::class),
+			$db,
 			$config,
 			$groupManager,
 			$this->createMock(IUserSession::class),

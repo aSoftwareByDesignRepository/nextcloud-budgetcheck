@@ -103,6 +103,7 @@
 
 		if (section === 'members') {
 			if (Ws.canManage) {
+				syncPrivateMembersUi();
 				loadMembers();
 				initMemberInvite();
 				initGroupInvite();
@@ -123,6 +124,36 @@
 		}
 
 		// Unknown / empty section attribute: fail closed (no blanket mega-page boot).
+	}
+
+	function syncPrivateMembersUi() {
+		const isPrivate = String(Ws.workspace?.privacyMode || 'standard') === 'private';
+		const panel = document.querySelector('[data-bc-group-invite]');
+		const blocked = document.querySelector('[data-bc-private-groups-blocked]');
+		if (blocked) {
+			blocked.hidden = !isPrivate;
+		}
+		if (!panel) {
+			return;
+		}
+		panel.querySelectorAll('input, select, button').forEach((el) => {
+			if (el.closest('[data-bc-private-groups-blocked]')) {
+				return;
+			}
+			el.disabled = isPrivate;
+			if (isPrivate) {
+				el.setAttribute('aria-disabled', 'true');
+			} else {
+				el.removeAttribute('aria-disabled');
+			}
+		});
+		if (isPrivate) {
+			panel.setAttribute('aria-disabled', 'true');
+			panel.classList.add('is-private-locked');
+		} else {
+			panel.removeAttribute('aria-disabled');
+			panel.classList.remove('is-private-locked');
+		}
 	}
 
 	function workspaceBudgetDecimals() {
@@ -326,6 +357,10 @@
 		setVal(form, 'name', Ws.workspace.name);
 		syncWorkspaceCatalogPickersFromWorkspace();
 		setVal(form, 'overspendThresholdMinor', Ws.workspace.overspendThresholdMinor !== null ? String(Ws.workspace.overspendThresholdMinor) : '');
+		const privacy = String(Ws.workspace.privacyMode || 'standard');
+		form.querySelectorAll('input[name="privacyMode"]').forEach((radio) => {
+			radio.checked = radio.value === privacy;
+		});
 		if (Ws.workspace.type === 'household') {
 			const pyFromWs = typeof Ws.workspace.primaryPlanningYear === 'number' ? Ws.workspace.primaryPlanningYear : null;
 			const pyFromCreated = Number.parseInt(String(Ws.workspace.createdAt || '').slice(0, 4), 10);
@@ -550,6 +585,21 @@
 			}
 			if (payload.overspendThresholdMinor !== null) {
 				payload.overspendThresholdMinor = Number.parseInt(payload.overspendThresholdMinor, 10);
+			}
+			const privacyInput = form.querySelector('input[name="privacyMode"]:checked');
+			const privacyDisabled = !!form.querySelector('input[name="privacyMode"][disabled]');
+			const nextPrivacy = privacyInput ? privacyInput.value : 'standard';
+			const prevPrivacy = String(Ws.workspace.privacyMode || 'standard');
+			if (!privacyDisabled) {
+				payload.privacyMode = nextPrivacy;
+			}
+			if (!privacyDisabled && nextPrivacy !== prevPrivacy) {
+				const confirmMsg = nextPrivacy === 'private'
+					? t('budgetcheck', 'Make this workspace private? App administrators who are not members will no longer see it. You need two managers and no groups. Database operators can still read stored data.')
+					: t('budgetcheck', 'Switch back to standard? App administrators will be able to see and manage this workspace again.');
+				if (!window.confirm(confirmMsg)) {
+					return;
+				}
 			}
 			try {
 				await Api.put('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id, payload);

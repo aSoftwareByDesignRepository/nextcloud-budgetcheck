@@ -99,8 +99,9 @@ class MobileApiController extends Controller
 					'tax' => true,
 					'recurringSuggestions' => true,
 					'attachments' => true,
-					// Same gate as web ApiController::createWorkspace — app admin, not workspace manager.
-					'canCreateWorkspace' => $this->access->isAppAdmin($userId),
+					'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
+					'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
+					'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
 				],
 			];
 		});
@@ -124,7 +125,9 @@ class MobileApiController extends Controller
 				'workspaces' => $out,
 				'lastUsedWorkspaceId' => $this->access->lastUsedWorkspace($userId),
 				'favoriteWorkspaceIds' => $favorites,
-				'canCreateWorkspace' => $this->access->isAppAdmin($userId),
+				'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
+				'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
+				'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
 			];
 		});
 	}
@@ -135,14 +138,56 @@ class MobileApiController extends Controller
 	{
 		return $this->safe(function (string $userId): array {
 			$this->assertSafeMutationChannel();
-			if (!$this->access->isAppAdmin($userId)) {
+			$payload = $this->payload();
+			$privacyMode = $this->access->normalisePrivacyMode(
+				$payload['privacyMode'] ?? $payload['privacy_mode'] ?? AccessControlService::PRIVACY_STANDARD
+			);
+			if (!$this->access->canCreateWorkspace($userId, $privacyMode)) {
 				throw new AccessDeniedException();
 			}
 			$this->rateLimit->assertAllowed($userId, 'workspace_create', 10, 600);
-			$workspace = $this->workspaces->createWorkspace($userId, $this->payload());
+			$payload['privacyMode'] = $privacyMode;
+			$workspace = $this->workspaces->createWorkspace($userId, $payload);
 			return [
 				'workspace' => $this->mobileWorkspaceRow($workspace, false),
-				'canCreateWorkspace' => true,
+				'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
+				'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
+				'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
+			];
+		});
+	}
+
+	/**
+	 * Update workspace fields exposed to the companion.
+	 *
+	 * Privacy-only surface: companions must not mutate currency/timezone/project
+	 * dates via this channel (those stay on web settings). Privacy transitions
+	 * still run through WorkspaceService guards (individual manager, dual-manager,
+	 * no groups, row lock).
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function updateWorkspace(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$this->assertSafeMutationChannel();
+			$workspaceId = $this->validateId($workspaceId);
+			$payload = $this->payload();
+			$patch = [];
+			if (array_key_exists('privacyMode', $payload) || array_key_exists('privacy_mode', $payload)) {
+				$patch['privacyMode'] = $this->access->normalisePrivacyMode(
+					$payload['privacyMode'] ?? $payload['privacy_mode']
+				);
+			}
+			if ($patch === []) {
+				throw new ValidationException('No supported fields to update. Send privacyMode.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'workspace_update', 30, 300);
+			$workspace = $this->workspaces->updateWorkspace($workspaceId, $userId, $patch);
+			$favorites = $this->access->favoriteWorkspaceIds($userId);
+			$isFavorite = in_array($workspaceId, array_map('intval', $favorites), true);
+			return [
+				'workspace' => $this->mobileWorkspaceRow($workspace, $isFavorite),
 			];
 		});
 	}
@@ -816,7 +861,7 @@ class MobileApiController extends Controller
 		} catch (IdempotencyMismatchException $e) {
 			return $this->error('Idempotency key was reused with a different request.', Http::STATUS_CONFLICT, 'IDEMPOTENCY_MISMATCH');
 		} catch (ConflictException $e) {
-			return $this->error('This entry changed since you opened it. Reload and retry.', Http::STATUS_CONFLICT, 'VERSION_CONFLICT');
+			return $this->error($e->getMessage(), Http::STATUS_CONFLICT, strtoupper($e->getErrorCode()));
 		} catch (InternalErrorException $e) {
 			$this->logger->warning('budgetcheck mobile internal_error', ['exception' => $e]);
 			return $this->error('Request could not be completed.', Http::STATUS_INTERNAL_SERVER_ERROR, 'internal_error');
@@ -977,6 +1022,21 @@ class MobileApiController extends Controller
 			'isFavorite' => $isFavorite,
 			'role' => (string)($ws['role'] ?? AccessControlService::ROLE_VIEWER),
 			'isActive' => (bool)($ws['isActive'] ?? true),
+			'privacyMode' => (string)($ws['privacyMode'] ?? AccessControlService::PRIVACY_STANDARD),
+			'capabilities' => $this->mobilePrivacyCapabilities($ws),
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $ws
+	 * @return array{canManagePrivacy: bool, canAssignGroups: bool}
+	 */
+	private function mobilePrivacyCapabilities(array $ws): array
+	{
+		$caps = is_array($ws['capabilities'] ?? null) ? $ws['capabilities'] : [];
+		return [
+			'canManagePrivacy' => ($caps['canManagePrivacy'] ?? false) === true,
+			'canAssignGroups' => ($caps['canAssignGroups'] ?? false) === true,
 		];
 	}
 

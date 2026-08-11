@@ -15,6 +15,7 @@ const BASE = (process.env.E2E_BASE || process.env.BASE_URL || process.env.NC_BAS
 const a11yRoutes = [
 	'/apps/budgetcheck/',
 	'/apps/budgetcheck/settings',
+	'/apps/budgetcheck/get-the-app',
 	'/apps/budgetcheck/transactions',
 	'/apps/budgetcheck/budgets',
 	'/apps/budgetcheck/monthly',

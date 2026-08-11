@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Exception\ConflictException;
 use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -26,6 +27,8 @@ use OCP\IUserManager;
  *    cannot end up with an orphaned workspace nobody can edit.
  *  - Project date changes are rejected when existing transactions would fall
  *    outside the new window (orphan-prevention).
+ *  - Private workspaces disable app-admin break-glass, forbid group assignment,
+ *    and require ≥2 individual managers before converting standard → private.
  */
 class WorkspaceService
 {
@@ -82,7 +85,7 @@ class WorkspaceService
 		while ($row = $result->fetch()) {
 			$workspace = $this->hydrateRow($row);
 			$workspace['role'] = $this->access->role((int)$workspace['id'], $userId);
-			$out[] = $workspace;
+			$out[] = $this->withPrivacyCapabilities($workspace, $userId);
 		}
 		$result->closeCursor();
 		return $out;
@@ -115,7 +118,10 @@ class WorkspaceService
 			throw new AccessDeniedException();
 		}
 		$workspace['role'] = $role;
-		return $this->summaryViewPrefs->enrichHouseholdWorkspace($workspace, $userId);
+		return $this->withPrivacyCapabilities(
+			$this->summaryViewPrefs->enrichHouseholdWorkspace($workspace, $userId),
+			$userId
+		);
 	}
 
 	public function createWorkspace(string $userId, array $payload): array
@@ -136,6 +142,13 @@ class WorkspaceService
 		$primaryPlanningYear = null;
 		if ($type === self::TYPE_HOUSEHOLD) {
 			$primaryPlanningYear = $this->normalisePrimaryPlanningYear($payload['primaryPlanningYear'] ?? null);
+		}
+		$privacyMode = $this->access->normalisePrivacyMode(
+			$payload['privacyMode'] ?? $payload['privacy_mode'] ?? AccessControlService::PRIVACY_STANDARD
+		);
+		// Defence in depth: controllers gate create, but service must not trust callers.
+		if (!$this->access->canCreateWorkspace($userId, $privacyMode)) {
+			throw new AccessDeniedException();
 		}
 
 		// Household workspaces must not carry project payload fields.
@@ -164,6 +177,7 @@ class WorkspaceService
 					self::COL_AUTO_COPY_PREV_MONTH => $qb->createNamedParameter($autoCopy, \PDO::PARAM_BOOL),
 					'is_closed' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
 					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'privacy_mode' => $qb->createNamedParameter($privacyMode),
 					'project_total_cap_minor' => $qb->createNamedParameter($projectCap, $projectCap === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'project_start_date' => $qb->createNamedParameter($projectStart),
 					'project_end_date' => $qb->createNamedParameter($projectEnd),
@@ -200,6 +214,7 @@ class WorkspaceService
 			throw $e;
 		}
 
+		$this->access->forgetPrivacyModeCache($id);
 		$workspace = $this->loadById($id);
 		if ($workspace === null) {
 			// Should never happen; commit succeeded above. Defensive only.
@@ -207,12 +222,16 @@ class WorkspaceService
 		}
 		$workspace['role'] = AccessControlService::ROLE_MANAGER;
 		$this->access->rememberLastUsedWorkspace($userId, $id);
-		$this->audit->record($userId, 'workspace_created', 'workspace', (string)$id, ['type' => $type, 'name' => $name], $id);
+		$this->audit->record($userId, 'workspace_created', 'workspace', (string)$id, [
+			'type' => $type,
+			'name' => $name,
+			'privacyMode' => $privacyMode,
+		], $id);
 		$this->categories->ensureSystemCategoriesForWorkspace($id, $userId);
 		if ($type === self::TYPE_PROJECT) {
 			$this->ensureDefaultBookingStatusesForWorkspace($id);
 		}
-		return $workspace;
+		return $this->withPrivacyCapabilities($workspace, $userId);
 	}
 
 	public function updateWorkspace(int $workspaceId, string $userId, array $payload): array
@@ -364,27 +383,111 @@ class WorkspaceService
 			}
 		}
 
+		$privacyRaw = $payload['privacyMode'] ?? $payload['privacy_mode'] ?? null;
+		if ($privacyRaw !== null && $privacyRaw !== '') {
+			$nextPrivacy = $this->access->normalisePrivacyMode($privacyRaw);
+			$currentPrivacy = (string)($workspace['privacyMode'] ?? AccessControlService::PRIVACY_STANDARD);
+			if ($nextPrivacy !== $currentPrivacy) {
+				$this->assertPrivacyTransitionAllowed($workspaceId, $userId, $currentPrivacy, $nextPrivacy);
+				$updates['privacy_mode'] = $nextPrivacy;
+				$logChanges['privacyMode'] = $nextPrivacy;
+			}
+		}
+
 		if ($updates === []) {
 			return $workspace;
 		}
 		$updates['updated_at'] = $this->utcNow();
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_workspaces');
-		foreach ($updates as $col => $value) {
-			$type = match (true) {
-				is_bool($value) => \PDO::PARAM_BOOL,
-				is_int($value) => \PDO::PARAM_INT,
-				$value === null => \PDO::PARAM_NULL,
-				default => \PDO::PARAM_STR,
-			};
-			$qb->set($col, $qb->createNamedParameter($value, $type));
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			// Re-check privacy transition under lock when toggling confidentiality.
+			if (isset($updates['privacy_mode'])) {
+				$fresh = $this->loadById($workspaceId);
+				if ($fresh === null) {
+					throw new AccessDeniedException();
+				}
+				$currentPrivacy = (string)($fresh['privacyMode'] ?? AccessControlService::PRIVACY_STANDARD);
+				$nextPrivacy = (string)$updates['privacy_mode'];
+				if ($nextPrivacy !== $currentPrivacy) {
+					$this->assertPrivacyTransitionAllowed($workspaceId, $userId, $currentPrivacy, $nextPrivacy);
+				} else {
+					unset($updates['privacy_mode'], $logChanges['privacyMode']);
+				}
+			}
+			$substantive = $updates;
+			unset($substantive['updated_at']);
+			if ($substantive === []) {
+				$this->db->commit();
+				return $this->getForUser($workspaceId, $userId);
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_workspaces');
+			foreach ($updates as $col => $value) {
+				$type = match (true) {
+					is_bool($value) => \PDO::PARAM_BOOL,
+					is_int($value) => \PDO::PARAM_INT,
+					$value === null => \PDO::PARAM_NULL,
+					default => \PDO::PARAM_STR,
+				};
+				$qb->set($col, $qb->createNamedParameter($value, $type));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
 
-		$this->audit->record($userId, 'workspace_updated', 'workspace', (string)$workspaceId, $logChanges, $workspaceId);
+		if (isset($logChanges['privacyMode'])) {
+			$this->access->forgetPrivacyModeCache($workspaceId);
+			$this->audit->record($userId, 'privacy_mode_changed', 'workspace', (string)$workspaceId, [
+				'from' => (string)($workspace['privacyMode'] ?? AccessControlService::PRIVACY_STANDARD),
+				'to' => (string)$logChanges['privacyMode'],
+			], $workspaceId);
+			// Also record a generic update entry without the workspace display name.
+			$other = $logChanges;
+			unset($other['privacyMode']);
+			if ($other !== []) {
+				$this->audit->record($userId, 'workspace_updated', 'workspace', (string)$workspaceId, $other, $workspaceId);
+			}
+		} else {
+			$this->audit->record($userId, 'workspace_updated', 'workspace', (string)$workspaceId, $logChanges, $workspaceId);
+		}
 		return $this->getForUser($workspaceId, $userId);
+	}
+
+	/**
+	 * Convert standard ↔ private with Q3/Q5 guards. Caller must already be an
+	 * individual manager (app-admin bypass alone is insufficient for private).
+	 */
+	private function assertPrivacyTransitionAllowed(
+		int $workspaceId,
+		string $userId,
+		string $_from,
+		string $to,
+	): void {
+		if ($this->access->individualMemberRole($workspaceId, $userId) !== AccessControlService::ROLE_MANAGER) {
+			throw new AccessDeniedException();
+		}
+		if ($to === AccessControlService::PRIVACY_PRIVATE) {
+			if ($this->countGroupAssignments($workspaceId) > 0) {
+				throw new ConflictException(
+					ConflictException::CODE_WORKSPACE_HAS_GROUP_MEMBERS,
+					'Remove all group assignments before making this workspace private.',
+				);
+			}
+			if ($this->countIndividualManagers($workspaceId) < 2) {
+				throw new ConflictException(
+					ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER,
+					'Add a second manager before making this workspace private. Private workspaces need at least two managers so access is not lost if one account is removed.',
+				);
+			}
+		}
 	}
 
 	public function updateTaxMode(int $workspaceId, string $userId, array $payload): array
@@ -553,16 +656,30 @@ class WorkspaceService
 		$workspaceId = (int)$row['workspace_id'];
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$role = $this->normaliseRole((string)($payload['role'] ?? $row['role']));
-		// Last-manager protection: do not let the only manager of a workspace
-		// downgrade themselves and orphan the workspace.
-		if ($role !== AccessControlService::ROLE_MANAGER && (string)$row['role'] === AccessControlService::ROLE_MANAGER) {
-			$this->ensureNotLastManager($workspaceId, (int)$row['id']);
+
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$fresh = $this->loadMember($memberId);
+			if ($fresh === null || (int)$fresh['workspace_id'] !== $workspaceId) {
+				throw new AccessDeniedException();
+			}
+			// Last-manager / dual-manager floor under lock (avoids concurrent demote races).
+			if ($role !== AccessControlService::ROLE_MANAGER && (string)$fresh['role'] === AccessControlService::ROLE_MANAGER) {
+				$this->ensureNotLastManager($workspaceId, (int)$fresh['id']);
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_workspace_members')
+				->set('role', $qb->createNamedParameter($role))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($memberId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_workspace_members')
-			->set('role', $qb->createNamedParameter($role))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($memberId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
 		$this->audit->record($userId, 'workspace_member_updated', 'workspace_member', (string)$row['user_id'], ['role' => $role], $workspaceId);
 		return $this->listMembers($workspaceId, $userId);
 	}
@@ -575,13 +692,28 @@ class WorkspaceService
 		}
 		$workspaceId = (int)$row['workspace_id'];
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
-		if ((string)$row['role'] === AccessControlService::ROLE_MANAGER) {
-			$this->ensureNotLastManager($workspaceId, (int)$row['id']);
+
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$fresh = $this->loadMember($memberId);
+			if ($fresh === null || (int)$fresh['workspace_id'] !== $workspaceId) {
+				throw new AccessDeniedException();
+			}
+			if ((string)$fresh['role'] === AccessControlService::ROLE_MANAGER) {
+				$this->ensureNotLastManager($workspaceId, (int)$fresh['id']);
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('bc_workspace_members')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($memberId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete('bc_workspace_members')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($memberId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
 		$this->access->forgetLastUsedWorkspace((string)$row['user_id'], $workspaceId);
 		$this->audit->record($userId, 'workspace_member_removed', 'workspace_member', (string)$row['user_id'], [], $workspaceId);
 		return $this->listMembers($workspaceId, $userId);
@@ -630,6 +762,12 @@ class WorkspaceService
 	public function addGroupMember(int $workspaceId, string $userId, array $payload): array
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		if ($this->access->privacyMode($workspaceId) === AccessControlService::PRIVACY_PRIVATE) {
+			throw new ConflictException(
+				ConflictException::CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN,
+				'Private workspaces allow individual members only. Groups cannot be assigned.',
+			);
+		}
 		$gid = trim((string)($payload['groupId'] ?? ''));
 		if ($gid === '') {
 			throw new \InvalidArgumentException('groupId is required.');
@@ -663,6 +801,12 @@ class WorkspaceService
 		}
 		$workspaceId = (int)$row['workspace_id'];
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
+		if ($this->access->privacyMode($workspaceId) === AccessControlService::PRIVACY_PRIVATE) {
+			throw new ConflictException(
+				ConflictException::CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN,
+				'Private workspaces allow individual members only. Groups cannot be assigned.',
+			);
+		}
 		$role = $this->normaliseGroupRole((string)($payload['role'] ?? $row['role']));
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_workspace_groups')
@@ -728,18 +872,64 @@ class WorkspaceService
 
 	private function ensureNotLastManager(int $workspaceId, int $memberIdBeingChanged): void
 	{
+		$remaining = $this->countIndividualManagers($workspaceId, $memberIdBeingChanged);
+		if ($remaining === 0) {
+			throw new \InvalidArgumentException('Cannot remove or downgrade the last workspace manager. Promote another member first.');
+		}
+		if (
+			$this->access->privacyMode($workspaceId) === AccessControlService::PRIVACY_PRIVATE
+			&& $remaining < 2
+			&& $this->countIndividualManagers($workspaceId) >= 2
+		) {
+			throw new ConflictException(
+				ConflictException::CODE_PRIVATE_WORKSPACE_DUAL_MANAGER,
+				'Private workspaces need at least two managers. Promote another member before removing or demoting this manager.',
+			);
+		}
+	}
+
+	private function countIndividualManagers(int $workspaceId, ?int $excludeMemberId = null): int
+	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*', 'count'))
 			->from('bc_workspace_members')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->eq('role', $qb->createNamedParameter(AccessControlService::ROLE_MANAGER)))
-			->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($memberIdBeingChanged, \PDO::PARAM_INT)));
+			->andWhere($qb->expr()->eq('role', $qb->createNamedParameter(AccessControlService::ROLE_MANAGER)));
+		if ($excludeMemberId !== null) {
+			$qb->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($excludeMemberId, \PDO::PARAM_INT)));
+		}
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
-		if ((int)($row['count'] ?? 0) === 0) {
-			throw new \InvalidArgumentException('Cannot remove or downgrade the last workspace manager. Promote another member first.');
-		}
+		return (int)($row['count'] ?? 0);
+	}
+
+	private function countGroupAssignments(int $workspaceId): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_workspace_groups')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0);
+	}
+
+	/**
+	 * @param array<string, mixed> $workspace
+	 * @return array<string, mixed>
+	 */
+	private function withPrivacyCapabilities(array $workspace, string $userId): array
+	{
+		$privacy = (string)($workspace['privacyMode'] ?? AccessControlService::PRIVACY_STANDARD);
+		$individualManager = $this->access->individualMemberRole((int)$workspace['id'], $userId)
+			=== AccessControlService::ROLE_MANAGER;
+		$workspace['capabilities'] = [
+			'canManagePrivacy' => $individualManager,
+			'canAssignGroups' => $individualManager && $privacy !== AccessControlService::PRIVACY_PRIVATE,
+		];
+		return $workspace;
 	}
 
 	public function loadById(int $workspaceId): ?array
@@ -776,6 +966,7 @@ class WorkspaceService
 				?? false),
 			'isClosed' => (bool)$row['is_closed'],
 			'isActive' => (bool)$row['is_active'],
+			'privacyMode' => $this->hydratePrivacyMode($row),
 			'projectTotalCapMinor' => $row['project_total_cap_minor'] === null ? null : (int)$row['project_total_cap_minor'],
 			'projectStartDate' => $row['project_start_date'] !== null ? (string)$row['project_start_date'] : null,
 			'projectEndDate' => $row['project_end_date'] !== null ? (string)$row['project_end_date'] : null,
@@ -801,6 +992,17 @@ class WorkspaceService
 			'includeSpecialsInTotalsDefault' => (bool)($row['include_specials_default'] ?? false),
 			'generatePlannedFromBudgetsDefault' => (bool)($row['gen_planned_budget'] ?? false),
 		];
+	}
+
+	/**
+	 * @param array<string, mixed> $row
+	 */
+	private function hydratePrivacyMode(array $row): string
+	{
+		$mode = strtolower(trim((string)($row['privacy_mode'] ?? AccessControlService::PRIVACY_STANDARD)));
+		return in_array($mode, AccessControlService::PRIVACY_MODES, true)
+			? $mode
+			: AccessControlService::PRIVACY_STANDARD;
 	}
 
 	private function activeHouseholdYearMonth(string $type, string $timezone): ?string

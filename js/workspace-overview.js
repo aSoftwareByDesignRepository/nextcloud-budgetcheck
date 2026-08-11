@@ -142,9 +142,12 @@
 		]));
 		card.appendChild(C.createElement('div', { class: 'bc-workspace-card__meta' }, [
 			C.createElement('span', { class: 'bc-badge bc-badge--' + String(workspace.type || 'household'), text: workspace.type === 'project' ? t('budgetcheck', 'Project') : t('budgetcheck', 'Household') }),
+			workspace.privacyMode === 'private'
+				? C.createElement('span', { class: 'bc-badge bc-badge--private', text: t('budgetcheck', 'Private') })
+				: null,
 			C.createElement('span', { class: 'bc-pill', text: String(workspace.currencyCode || '') }),
 			C.createElement('span', { class: 'bc-pill', text: roleLabel }),
-		]));
+		].filter(Boolean)));
 		card.appendChild(C.createElement('div', { class: 'bc-workspace-card__actions' }, [
 			C.createElement('a', {
 				class: 'button primary',

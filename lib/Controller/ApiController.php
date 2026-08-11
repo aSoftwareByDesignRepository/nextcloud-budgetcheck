@@ -121,7 +121,9 @@ class ApiController extends Controller
 				'lastUsedWorkspaceId' => $this->access->lastUsedWorkspace($userId),
 				'favoriteWorkspaceIds' => $favoriteWorkspaceIds,
 				'capabilities' => [
-					'canCreateWorkspace' => $this->access->isAppAdmin($userId),
+					'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
+					'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
+					'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
 					'currencyCatalog' => $this->currencyCatalog->forApi(),
 					'timezoneCatalog' => $this->timezoneCatalog->forApi(),
 					'defaultCurrency' => $this->access->getDefaultCurrency(),
@@ -172,11 +174,16 @@ class ApiController extends Controller
 	public function createWorkspace(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {
-			if (!$this->access->isAppAdmin($userId)) {
+			$payload = $this->payload();
+			$privacyMode = $this->access->normalisePrivacyMode(
+				$payload['privacyMode'] ?? $payload['privacy_mode'] ?? AccessControlService::PRIVACY_STANDARD
+			);
+			if (!$this->access->canCreateWorkspace($userId, $privacyMode)) {
 				throw new AccessDeniedException();
 			}
 			$this->rateLimit->assertAllowed($userId, 'workspace_create', 10, 600);
-			return ['workspace' => $this->workspaces->createWorkspace($userId, $this->payload())];
+			$payload['privacyMode'] = $privacyMode;
+			return ['workspace' => $this->workspaces->createWorkspace($userId, $payload)];
 		});
 	}
 
@@ -1252,7 +1259,7 @@ class ApiController extends Controller
 		} catch (RateLimitExceededException $e) {
 			return $this->error('Too many requests. Please wait a moment and try again.', 429, 'rate_limit_exceeded');
 		} catch (ConflictException $e) {
-			return $this->error('This entry changed since you opened it. Reload and retry.', Http::STATUS_CONFLICT, 'version_conflict');
+			return $this->error($e->getMessage(), Http::STATUS_CONFLICT, $e->getErrorCode());
 		} catch (InternalErrorException $e) {
 			$this->logger->warning('budgetcheck internal_error', ['exception' => $e]);
 			return $this->error('Request could not be completed.', Http::STATUS_INTERNAL_SERVER_ERROR, 'internal_error');

@@ -66,5 +66,10 @@ $appUrl = (string)($_['appUrl'] ?? '');
 		<dd><?php p($defaultTimezone); ?></dd>
 		<dt><?php p($l->t('Default currency')); ?></dt>
 		<dd><?php p($defaultCurrency); ?></dd>
+		<dt><?php p($l->t('Private workspaces')); ?></dt>
+		<dd><?php
+			$count = isset($policy['privateWorkspaceCount']) ? (int)$policy['privateWorkspaceCount'] : 0;
+			p($l->n('%n private workspace (names hidden from administrators who are not members)', '%n private workspaces (names hidden from administrators who are not members)', $count));
+		?></dd>
 	</dl>
 </div>

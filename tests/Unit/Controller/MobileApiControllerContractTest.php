@@ -27,6 +27,7 @@ final class MobileApiControllerContractTest extends TestCase
 		'uploadTransactionAttachment',
 		'deleteTransactionAttachment',
 		'createWorkspace',
+		'updateWorkspace',
 	];
 
 	/** @var list<string> */
@@ -80,7 +81,8 @@ final class MobileApiControllerContractTest extends TestCase
 		self::assertStringContainsString('assertSafeMutationChannel', $src);
 		self::assertStringContainsString('MobileMutationChannel::isSafe', $src);
 		self::assertStringContainsString('MobileErrorCodes::fromInvalidArgument', $src);
-		self::assertStringContainsString('VERSION_CONFLICT', $src);
+		self::assertStringContainsString('getErrorCode()', $src);
+		self::assertStringContainsString('strtoupper($e->getErrorCode())', $src);
 		self::assertStringContainsString('NOT_FOUND', $src);
 		self::assertStringContainsString('NotFoundException', $src);
 		self::assertStringContainsString('Idempotency-Key', $src);

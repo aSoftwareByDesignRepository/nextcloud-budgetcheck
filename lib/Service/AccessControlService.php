@@ -22,7 +22,8 @@ use Psr\Log\LoggerInterface;
  *  - System admin: any Nextcloud admin. Always allowed; can do everything an
  *    app admin can do plus reset stuck app config from the OCC.
  *  - App admin: configured via app config (`app_admin_user_ids`). Can manage
- *    every workspace and the global app settings.
+ *    every *standard* workspace and the global app settings. Private workspaces
+ *    require an individual membership row — app/system admin bypass does not apply.
  *  - Workspace manager: persisted in `bc_workspace_members.role = manager`.
  *    Owns workspace settings, members, categories, recurring rules, budgets,
  *    savings target, tax settings, monthly close and reopen.
@@ -62,6 +63,13 @@ class AccessControlService
 	public const ROLE_CONTRIBUTOR = 'contributor';
 	public const ROLE_VIEWER = 'viewer';
 
+	/** App-admin break-glass applies; default for existing workspaces. */
+	public const PRIVACY_STANDARD = 'standard';
+	/** Membership-only; admins without an individual row cannot see or manage. */
+	public const PRIVACY_PRIVATE = 'private';
+
+	public const PRIVACY_MODES = [self::PRIVACY_STANDARD, self::PRIVACY_PRIVATE];
+
 	private const ROLE_RANK = [
 		self::ROLE_VIEWER => 1,
 		self::ROLE_CONTRIBUTOR => 2,
@@ -80,6 +88,9 @@ class AccessControlService
 
 	/** @var array<string, list<string>> */
 	private array $userGroupIdsCache = [];
+
+	/** @var array<int, string> */
+	private array $privacyModeCache = [];
 
 	public function __construct(
 		private IDBConnection $db,
@@ -164,19 +175,25 @@ class AccessControlService
 	}
 
 	/**
-	 * Resolve the effective role of a user inside a workspace. App admins are
-	 * treated as managers everywhere so they can recover from a misconfigured
-	 * workspace without first having to add themselves as a member.
+	 * Resolve the effective role of a user inside a workspace.
 	 *
-	 * The effective role is the strongest of the user's own membership role and
-	 * the role of any group they belong to that is assigned to the workspace
-	 * (group roles never exceed contributor). Returns null when the user has no
-	 * role from any source.
+	 * Standard workspaces: app admins are treated as managers everywhere so they
+	 * can recover from a misconfigured workspace without first having to add
+	 * themselves as a member. Otherwise the effective role is the strongest of
+	 * individual membership and group assignments (groups capped at contributor).
+	 *
+	 * Private workspaces: individual membership only — no app-admin bypass and
+	 * no group inheritance (groups are forbidden on private; defence in depth).
+	 * Returns null when the user has no role from an allowed source.
 	 */
 	public function role(int $workspaceId, string $userId): ?string
 	{
 		if ($workspaceId < 1 || $userId === '') {
 			return null;
+		}
+		$privacy = $this->privacyMode($workspaceId);
+		if ($privacy === self::PRIVACY_PRIVATE) {
+			return $this->individualRole($workspaceId, $userId);
 		}
 		if ($this->isAppAdmin($userId)) {
 			return self::ROLE_MANAGER;
@@ -193,9 +210,120 @@ class AccessControlService
 	}
 
 	/**
+	 * Persisted privacy mode for a workspace. Missing / unknown rows treat as
+	 * standard so a partial migration never opens a silent private hole.
+	 */
+	public function privacyMode(int $workspaceId): string
+	{
+		if ($workspaceId < 1) {
+			return self::PRIVACY_STANDARD;
+		}
+		if (array_key_exists($workspaceId, $this->privacyModeCache)) {
+			return $this->privacyModeCache[$workspaceId];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('privacy_mode')
+			->from('bc_workspaces')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		if ($row === false) {
+			$this->privacyModeCache[$workspaceId] = self::PRIVACY_STANDARD;
+			return self::PRIVACY_STANDARD;
+		}
+		$mode = strtolower(trim((string)($row['privacy_mode'] ?? self::PRIVACY_STANDARD)));
+		if (!in_array($mode, self::PRIVACY_MODES, true)) {
+			$mode = self::PRIVACY_STANDARD;
+		}
+		$this->privacyModeCache[$workspaceId] = $mode;
+		return $mode;
+	}
+
+	/**
+	 * Drop a cached privacy mode after a successful toggle so the same request
+	 * sees the new value (role / list helpers share this service instance).
+	 */
+	public function forgetPrivacyModeCache(int $workspaceId): void
+	{
+		unset($this->privacyModeCache[$workspaceId]);
+	}
+
+	/**
+	 * Whether the user may create a workspace with the given privacy mode.
+	 * Standard create stays app-admin only; private create is open to anyone
+	 * who already passes the app door.
+	 */
+	public function canCreateWorkspace(string $userId, string $privacyMode): bool
+	{
+		if ($userId === '') {
+			return false;
+		}
+		$mode = strtolower(trim($privacyMode));
+		if ($mode === self::PRIVACY_PRIVATE) {
+			return $this->canUseApp($userId);
+		}
+		if ($mode === self::PRIVACY_STANDARD) {
+			return $this->isAppAdmin($userId);
+		}
+		return false;
+	}
+
+	/**
+	 * UI capability: may open the create-workspace flow for at least one mode.
+	 */
+	public function canCreateAnyWorkspace(string $userId): bool
+	{
+		return $this->canCreateWorkspace($userId, self::PRIVACY_STANDARD)
+			|| $this->canCreateWorkspace($userId, self::PRIVACY_PRIVATE);
+	}
+
+	/**
+	 * Opaque count of private workspaces for admin digests (names never exposed).
+	 */
+	public function countPrivateWorkspaces(): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_workspaces')
+			->where($qb->expr()->eq('privacy_mode', $qb->createNamedParameter(self::PRIVACY_PRIVATE)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['count'] ?? 0);
+	}
+
+	/**
+	 * Normalise a privacy_mode payload value. Invalid input throws.
+	 */
+	public function normalisePrivacyMode(mixed $raw, string $default = self::PRIVACY_STANDARD): string
+	{
+		if ($raw === null || $raw === '') {
+			return $default;
+		}
+		if (!is_string($raw) && !is_int($raw)) {
+			throw new \InvalidArgumentException('privacy_mode must be standard or private.');
+		}
+		$mode = strtolower(trim((string)$raw));
+		if (!in_array($mode, self::PRIVACY_MODES, true)) {
+			throw new \InvalidArgumentException('privacy_mode must be standard or private.');
+		}
+		return $mode;
+	}
+
+	/**
+	 * The user's own membership role from `bc_workspace_members`, or null.
+	 * Public for privacy toggles that must ignore app-admin bypass.
+	 */
+	public function individualMemberRole(int $workspaceId, string $userId): ?string
+	{
+		return $this->individualRole($workspaceId, $userId);
+	}
+
+	/**
 	 * The user's own membership role from `bc_workspace_members`, or null.
 	 */
-	private function individualRole(int $workspaceId, string $userId): ?string
+	protected function individualRole(int $workspaceId, string $userId): ?string
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('role')
@@ -221,7 +349,7 @@ class AccessControlService
 	 *
 	 * @return list<string>
 	 */
-	private function groupRolesForUser(int $workspaceId, string $userId): array
+	protected function groupRolesForUser(int $workspaceId, string $userId): array
 	{
 		$gids = $this->userGroupIds($userId);
 		if ($gids === []) {
@@ -318,15 +446,7 @@ class AccessControlService
 			return [];
 		}
 		if ($this->isAppAdmin($userId)) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->select('id')->from('bc_workspaces')->orderBy('name', 'ASC');
-			$result = $qb->executeQuery();
-			$ids = [];
-			while ($row = $result->fetch()) {
-				$ids[] = (int)$row['id'];
-			}
-			$result->closeCursor();
-			return $ids;
+			return $this->workspaceIdsVisibleToAppAdmin($userId);
 		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('workspace_id')
@@ -342,15 +462,52 @@ class AccessControlService
 		$gids = $this->userGroupIds($userId);
 		if ($gids !== []) {
 			$gq = $this->db->getQueryBuilder();
-			$gq->selectDistinct('workspace_id')
-				->from('bc_workspace_groups')
-				->where($gq->expr()->in('gid', $gq->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+			$gq->selectDistinct('g.workspace_id')
+				->from('bc_workspace_groups', 'g')
+				->innerJoin('g', 'bc_workspaces', 'w', $gq->expr()->eq('g.workspace_id', 'w.id'))
+				->where($gq->expr()->in('g.gid', $gq->createNamedParameter($gids, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)))
+				->andWhere($gq->expr()->neq('w.privacy_mode', $gq->createNamedParameter(self::PRIVACY_PRIVATE)));
 			$gResult = $gq->executeQuery();
 			while ($row = $gResult->fetch()) {
 				$ids[] = (int)$row['workspace_id'];
 			}
 			$gResult->closeCursor();
 		}
+
+		return array_values(array_unique($ids));
+	}
+
+	/**
+	 * App admins see every standard workspace plus private workspaces where they
+	 * hold an individual membership row.
+	 *
+	 * @return list<int>
+	 */
+	private function workspaceIdsVisibleToAppAdmin(string $userId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('bc_workspaces')
+			->where($qb->expr()->neq('privacy_mode', $qb->createNamedParameter(self::PRIVACY_PRIVATE)))
+			->orderBy('name', 'ASC');
+		$result = $qb->executeQuery();
+		$ids = [];
+		while ($row = $result->fetch()) {
+			$ids[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+
+		$mq = $this->db->getQueryBuilder();
+		$mq->select('m.workspace_id')
+			->from('bc_workspace_members', 'm')
+			->innerJoin('m', 'bc_workspaces', 'w', $mq->expr()->eq('m.workspace_id', 'w.id'))
+			->where($mq->expr()->eq('m.user_id', $mq->createNamedParameter($userId)))
+			->andWhere($mq->expr()->eq('w.privacy_mode', $mq->createNamedParameter(self::PRIVACY_PRIVATE)));
+		$mResult = $mq->executeQuery();
+		while ($row = $mResult->fetch()) {
+			$ids[] = (int)$row['workspace_id'];
+		}
+		$mResult->closeCursor();
 
 		return array_values(array_unique($ids));
 	}
@@ -451,7 +608,8 @@ class AccessControlService
 	 *   allowedUsersPreview:list<array{id:string,displayName:string}>,
 	 *   allowedGroupsPreview:list<array{id:string,displayName:string}>,
 	 *   defaultTimezone:string,
-	 *   defaultCurrency:string
+	 *   defaultCurrency:string,
+	 *   privateWorkspaceCount:int
 	 * }
 	 */
 	public function getAppPolicy(): array
@@ -469,6 +627,7 @@ class AccessControlService
 			'allowedGroupsPreview' => $this->previewGroups($allowedGroupIds),
 			'defaultTimezone' => $this->getDefaultTimezone(),
 			'defaultCurrency' => $this->getDefaultCurrency(),
+			'privateWorkspaceCount' => $this->countPrivateWorkspaces(),
 		];
 	}
 

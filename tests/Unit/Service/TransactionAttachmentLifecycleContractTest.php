@@ -38,11 +38,13 @@ final class TransactionAttachmentLifecycleContractTest extends TestCase
 		self::assertStringContainsString('if ($persistedName !== null)', $src);
 	}
 
-	public function testUninstallPurgesAttachmentAppData(): void
+	public function testUninstallKeepsAttachmentAppData(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Repair/UninstallDropTables.php');
-		self::assertStringContainsString('purgeTransactionAttachmentFiles', $src);
-		self::assertStringContainsString('/tx-attachments', $src);
+		// 1.1.7+: explicit removal drops DB metadata but keeps receipt binaries on disk.
+		self::assertStringNotContainsString('purgeTransactionAttachmentFiles', $src);
+		self::assertStringNotContainsString('/tx-attachments', $src);
+		self::assertStringContainsString('purgeUpgradeBackupSnapshots', $src);
 	}
 
 	public function testMobileDeleteBindsWorkspace(): void

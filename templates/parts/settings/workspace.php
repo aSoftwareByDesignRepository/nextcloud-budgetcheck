@@ -9,6 +9,9 @@
 
 $workspace = $_['workspace'] ?? null;
 $canManage = !empty($_['canManageWorkspace']);
+$canManagePrivacy = array_key_exists('canManagePrivacy', $_)
+	? (bool) $_['canManagePrivacy']
+	: $canManage;
 $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 	? (bool) $_['currencyChangeAllowed']
 	: true;
@@ -147,6 +150,32 @@ $bcHtmlLang = $bcHtmlLang ?? (string)(($_['clientHints']['htmlLang'] ?? null) ?:
 				<input type="text" inputmode="decimal" name="projectTotalCapMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>
 			</label>
 		<?php endif; ?>
+		<fieldset class="bc-fieldset bc-fieldset--mode-group bc-field--full-width bc-privacy-fieldset" data-bc-privacy-fieldset>
+			<legend class="bc-fieldset__legend"><?php p($l->t('Who can see this workspace')); ?></legend>
+			<div class="bc-callout bc-callout--info bc-privacy-disclosure" role="note" id="bc-privacy-disclosure">
+				<p><?php p($l->t('Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app.')); ?></p>
+				<p class="bc-callout__hint"><?php p($l->t('People with direct database or server access may still read stored data. This is not end-to-end encryption.')); ?></p>
+			</div>
+			<label class="bc-field bc-field--radio">
+				<input type="radio" name="privacyMode" value="standard" data-bc-privacy-mode <?php p($canManagePrivacy ? '' : 'disabled'); ?> aria-describedby="bc-privacy-disclosure bc-privacy-standard-hint">
+				<span>
+					<strong><?php p($l->t('Standard')); ?></strong>
+					<span class="bc-field__hint bc-field__hint--block" id="bc-privacy-standard-hint"><?php p($l->t('App administrators can see and manage this workspace for recovery.')); ?></span>
+				</span>
+			</label>
+			<label class="bc-field bc-field--radio">
+				<input type="radio" name="privacyMode" value="private" data-bc-privacy-mode <?php p($canManagePrivacy ? '' : 'disabled'); ?> aria-describedby="bc-privacy-disclosure bc-privacy-private-hint">
+				<span>
+					<strong><?php p($l->t('Private')); ?></strong>
+					<span class="bc-field__hint bc-field__hint--block" id="bc-privacy-private-hint"><?php p($l->t('Only members you add. Before switching, add a second manager and remove any groups.')); ?></span>
+				</span>
+			</label>
+			<?php if ($canManage && !$canManagePrivacy): ?>
+				<p class="bc-field__hint bc-field__hint--block" id="bc-privacy-manager-only" role="status">
+					<?php p($l->t('Only people added as individual managers can change privacy. App-admin access alone is not enough.')); ?>
+				</p>
+			<?php endif; ?>
+		</fieldset>
 		<?php if ($canManage): ?>
 			<div class="bc-form-actions">
 				<button type="submit" class="button primary"><?php p($l->t('Save workspace')); ?></button>

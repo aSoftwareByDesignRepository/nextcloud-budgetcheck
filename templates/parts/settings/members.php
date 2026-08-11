@@ -58,9 +58,12 @@ $canManage = !empty($_['canManageWorkspace']);
 		</div>
 	</div>
 
-	<div class="bc-member-invite" data-bc-group-invite aria-labelledby="bc-group-invite-title">
+	<div class="bc-member-invite" data-bc-group-invite aria-labelledby="bc-group-invite-title" data-bc-group-invite-panel>
 		<h3 id="bc-group-invite-title" class="bc-member-invite__title"><?php p($l->t('Add a group')); ?></h3>
 		<p id="bc-group-invite-hint" class="bc-field__hint bc-field__hint--block"><?php p($l->t('Everyone in the group gets the chosen role. Groups can be contributors or viewers; assign managers to individual people so responsibility stays clear.')); ?></p>
+		<p class="bc-callout bc-callout--warning" data-bc-private-groups-blocked hidden role="status">
+			<?php p($l->t('This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.')); ?>
+		</p>
 		<div class="bc-member-invite__grid">
 			<div class="bc-entity-picker bc-member-invite__search">
 				<label for="bc-group-invite-q" class="bc-sr-only"><?php p($l->t('Search directory for a group to add')); ?></label>

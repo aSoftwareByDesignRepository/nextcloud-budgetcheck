@@ -10,6 +10,7 @@ use OCA\BudgetCheck\Service\AppSettingsSectionCatalog;
 use OCA\BudgetCheck\Service\LocaleFormatService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Service\WorkspaceSettingsSectionCatalog;
+use OCA\BudgetCheck\Support\MobileAppLinks;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -46,6 +47,7 @@ class PageController extends Controller
 		private IL10N $l10n,
 		private AppSettingsSectionCatalog $appSettingsSections,
 		private WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
+		private MobileAppLinks $mobileAppLinks,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -185,6 +187,20 @@ class PageController extends Controller
 			$this->l10n->t('Browse all workspaces, filter quickly, and choose quick access entries for the sidebar.'),
 			$ctx,
 			'workspace-overview'
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getTheApp(): TemplateResponse
+	{
+		$ctx = $this->resolveWorkspace();
+		return $this->page(
+			'get-the-app',
+			$this->l10n->t('Get the App'),
+			$this->l10n->t('Official Android app — features and Google Play download.'),
+			$ctx,
+			'get-the-app'
 		);
 	}
 
@@ -412,7 +428,11 @@ class PageController extends Controller
 		$selected = $ctx['workspace'];
 		$canManage = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
 		$canContribute = $selected !== null && in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER, AccessControlService::ROLE_CONTRIBUTOR], true);
+		// Privacy toggle requires an *individual* manager seat — app-admin bypass alone is not enough.
+		$canManagePrivacy = $selected !== null
+			&& (($selected['capabilities']['canManagePrivacy'] ?? false) === true);
 		$canAdminApp = $this->access->isAppAdmin($userId);
+		$canCreateWorkspace = $this->access->canCreateAnyWorkspace($userId);
 		$navigation = $this->buildNavigation($template, $selected, $canAdminApp, $canManage);
 
 		$wsQuery = $selected !== null ? ['workspaceId' => (int)$selected['id']] : [];
@@ -461,6 +481,7 @@ class PageController extends Controller
 			}
 		}
 
+		$lang = $this->l10n->getLanguageCode();
 		$params = [
 			'pageId' => $template,
 			'pageTitle' => $title,
@@ -469,8 +490,10 @@ class PageController extends Controller
 			'workspaces' => $ctx['workspaces'],
 			'favoriteWorkspaceIds' => $ctx['favoriteWorkspaceIds'] ?? [],
 			'canManageWorkspace' => $canManage,
+			'canManagePrivacy' => $canManagePrivacy,
 			'canContribute' => $canContribute,
 			'canAdminApp' => $canAdminApp,
+			'canCreateWorkspace' => $canCreateWorkspace,
 			'appPolicy' => $ctx['appPolicy'] ?? null,
 			'settingsSection' => (string)($ctx['settingsSection'] ?? ''),
 			'settingsSectionLabels' => $settingsSectionLabels,
@@ -492,6 +515,10 @@ class PageController extends Controller
 				'settingsSections' => $settingsSectionUrls,
 				'appSettings'  => $this->urlGenerator->linkToRoute('budgetcheck.page.appSettings', $wsQuery),
 				'appSettingsSections' => $appSettingsSectionUrls,
+				'getTheApp'    => $this->urlGenerator->linkToRoute('budgetcheck.page.getTheApp', $wsQuery),
+				'playStore'    => $this->mobileAppLinks->playStoreUrl(),
+				'mobileProductPage' => $this->mobileAppLinks->productPageUrl($lang),
+				'mobilePrivacyPage' => $this->mobileAppLinks->privacyPageUrl($lang),
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
@@ -606,6 +633,7 @@ class PageController extends Controller
 			['id' => 'period',       'label' => $this->l10n->t('Period overview'),'icon' => 'calendar-range', 'route' => 'budgetcheck.page.period',       'show' => $workspaceType === WorkspaceService::TYPE_PROJECT, 'hint' => $this->l10n->t('Project totals and cap')],
 			['id' => 'yearly',       'label' => $this->l10n->t('Yearly overview'),'icon' => 'calendar-clock', 'route' => 'budgetcheck.page.yearly',       'show' => $workspaceType === WorkspaceService::TYPE_HOUSEHOLD, 'hint' => $this->l10n->t('Year-at-a-glance')],
 			['id' => 'settings',     'label' => $this->l10n->t('Workspace settings'), 'icon' => 'settings',       'route' => 'budgetcheck.page.settings',     'show' => $workspace !== null, 'hint' => $canManageWorkspace ? $this->l10n->t('Members, categories, tax, and workspace details.') : $this->l10n->t('Your planning view and read-only workspace details.')],
+			['id' => 'get-the-app',  'label' => $this->l10n->t('Get the App'), 'icon' => 'smartphone', 'route' => 'budgetcheck.page.getTheApp', 'show' => true, 'hint' => $this->l10n->t('Android app on Google Play')],
 			['id' => 'app-settings', 'label' => $this->l10n->t('App settings'),   'icon' => 'shield-check',   'route' => 'budgetcheck.page.appSettings',  'show' => $canAdminApp, 'hint' => $this->l10n->t('Directory access, app administrators, and defaults for new workspaces.')],
 		];
 

@@ -50,6 +50,7 @@ foreach ([
 	'uploadTransactionAttachment',
 	'deleteTransactionAttachment',
 	'createWorkspace',
+	'updateWorkspace',
 ] as $mut) {
 	$assert(
 		(bool)preg_match(
@@ -85,7 +86,8 @@ $assert(str_contains($codes, 'TAX_DISABLED'), 'error_code_tax_disabled');
 $assert(str_contains($mobile, 'NOT_FOUND'), 'not_found_code');
 $assert(str_contains($mobile, 'NotFoundException'), 'not_found_exception');
 $assert(str_contains($mobile, "'message' => \$message"), 'error_envelope_includes_message');
-$assert(str_contains($mobile, 'VERSION_CONFLICT'), 'cas_code_version_conflict');
+$assert(str_contains($mobile, 'strtoupper($e->getErrorCode())'), 'cas_code_version_conflict');
+$assert(str_contains((string)file_get_contents($root . '/lib/Exception/ConflictException.php'), 'CODE_VERSION_CONFLICT'), 'conflict_version_const');
 $assert(str_contains($codes, 'MONTH_CLOSED'), 'closed_month_code');
 $assert(str_contains($mobile, 'Idempotency-Key'), 'idempotency_header');
 $assert(str_contains($mobile, 'version is required for deletes'), 'delete_version_required');
@@ -112,19 +114,25 @@ $assert(!str_contains($mobile, 'LICENSE_REQUIRED'), 'no_license_required');
 $assert(!str_contains($mobile, 'NO_MOBILE_SEAT'), 'no_seat_code');
 $assert(str_contains($caps, "'free' => true"), 'capabilities_free');
 $assert(str_contains($caps, 'companion.min'), 'capabilities_min');
-$assert(str_contains($caps, 'COMPANION_API = 5'), 'companion_api_v5');
+$assert(str_contains($caps, 'COMPANION_API = 6'), 'companion_api_v6');
 $assert(str_contains($mobile, 'resolveForDeliveryInWorkspace'), 'mobile_download_binds_workspace');
 $assert(str_contains($mobile, 'function downloadTransactionAttachment'), 'mobile_download_method');
 $assert(str_contains($mobile, 'function monthlySummary'), 'monthly_summary_route_method');
 $assert(str_contains($mobile, 'function yearlySummary'), 'yearly_summary_route_method');
 $assert(str_contains($mobile, 'function periodSummary'), 'period_summary_route_method');
 $assert(str_contains($mobile, 'function createWorkspace'), 'create_workspace_route_method');
+$assert(str_contains($mobile, 'function updateWorkspace'), 'update_workspace_route_method');
 $assert(str_contains($mobile, 'canCreateWorkspace'), 'can_create_workspace_flag');
-$assert(str_contains($mobile, 'isAppAdmin'), 'create_workspace_app_admin_acl');
+$assert(str_contains($mobile, 'canCreatePrivateWorkspace'), 'create_workspace_private_capability');
+$assert(str_contains($mobile, 'normalisePrivacyMode'), 'create_workspace_privacy_normalise');
+$assert(str_contains($mobile, 'canCreateWorkspace($userId, $privacyMode)'), 'create_workspace_privacy_acl');
+$assert(str_contains($mobile, "Send privacyMode"), 'update_workspace_privacy_only');
 $assert(str_contains($routes, 'monthly-summary'), 'route_monthly_summary');
 $assert(str_contains($routes, 'yearly-summary'), 'route_yearly_summary');
 $assert(str_contains($routes, 'period-summary'), 'route_period_summary');
 $assert(str_contains($routes, 'mobile_api#createWorkspace'), 'route_create_workspace');
+$assert(str_contains($routes, 'mobile_api#updateWorkspace'), 'route_update_workspace');
+$assert((bool)preg_match('/#\[NoCSRFRequired\]\s*\n\s*public function updateWorkspace\(/', $mobile), 'mobile_update_workspace_nocsrf');
 $assert(!str_contains($app, 'registerAlias('), 'no_invalid_register_alias');
 $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');
@@ -134,8 +142,9 @@ $assert(str_contains($mig, 'bc_mobile_push'), 'migration_push');
 $assert(str_contains($catalog, 'bc_idempotency'), 'catalog_idempotency');
 $assert(str_contains($uninstall, 'bc_idempotency'), 'uninstall_idempotency');
 $assert(str_contains($uninstall, 'bc_mobile_push'), 'uninstall_push');
-$assert(str_contains($uninstall, 'purgeTransactionAttachmentFiles'), 'uninstall_purges_tx_attachments');
-$assert(str_contains($uninstall, 'tx-attachments'), 'uninstall_tx_attachments_path');
+$assert(!str_contains($uninstall, 'purgeTransactionAttachmentFiles'), 'uninstall_keeps_tx_attachments');
+$assert(!str_contains($uninstall, 'tx-attachments'), 'uninstall_no_tx_attachments_path');
+$assert(str_contains($uninstall, 'purgeUpgradeBackupSnapshots'), 'uninstall_purges_upgrade_backups');
 $attach = (string)file_get_contents($root . '/lib/Service/TransactionAttachmentService.php');
 $assert(str_contains($attach, 'purgeForTransaction'), 'attach_purge_on_tx_delete');
 $assert(str_contains($attach, 'deleteInWorkspace'), 'attach_workspace_bound_delete');

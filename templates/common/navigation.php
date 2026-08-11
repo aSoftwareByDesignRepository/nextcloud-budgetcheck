@@ -18,6 +18,7 @@ $workspaces = $_['workspaces'] ?? [];
 $favoriteWorkspaceIds = array_map('intval', (array)($_['favoriteWorkspaceIds'] ?? []));
 $urls = $_['urls'] ?? [];
 $canAdminApp = !empty($_['canAdminApp']);
+$canCreateWorkspace = !empty($_['canCreateWorkspace']);
 $overviewUrl = (string)($urls['workspaceOverview'] ?? '#');
 $pageIdNav = (string)($_['pageId'] ?? '');
 $overviewActive = $pageIdNav === 'workspace-overview';
@@ -44,7 +45,7 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 	<section class="bc-switcher" aria-labelledby="bc-switcher-title">
 		<header class="bc-switcher__header">
 			<h4 id="bc-switcher-title" class="bc-switcher__title"><?php p($l->t('Workspaces')); ?></h4>
-			<?php if ($canAdminApp): ?>
+			<?php if ($canCreateWorkspace): ?>
 				<button type="button" class="bc-switcher__add" data-bc-action="open-create-workspace">
 					<?php print_unescaped(IconCatalog::render('plus', 'bc-icon--inline')); ?>
 					<span><?php p($l->t('New')); ?></span>
@@ -76,12 +77,14 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 							$active = $id === $activeId;
 							$url = (string)($urls['dashboard'] ?? '#') . '?workspaceId=' . $id;
 							$type = (string)($w['type'] ?? 'household');
+							$isPrivate = (($w['privacyMode'] ?? 'standard') === 'private');
 							?>
 							<li>
 								<a class="bc-switcher__link <?php p($active ? 'is-active' : ''); ?>"
 									href="<?php p($url); ?>"
 									data-bc-workspace-id="<?php p((string)$id); ?>"
 									data-bc-workspace-type="<?php p($type); ?>"
+									<?php if ($isPrivate): ?>data-bc-workspace-private="1"<?php endif; ?>
 									<?php if ($active): ?>aria-current="true"<?php endif; ?>>
 									<span class="bc-switcher__icon" aria-hidden="true">
 										<?php print_unescaped(IconCatalog::render($type === 'household' ? 'home' : 'briefcase')); ?>
@@ -90,6 +93,9 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 										<span class="bc-switcher__name"><?php p((string)$w['name']); ?></span>
 										<span class="bc-switcher__meta">
 											<?php p((string)$w['currencyCode']); ?>
+											<?php if ($isPrivate): ?>
+												· <?php p($l->t('Private')); ?>
+											<?php endif; ?>
 											<?php if (!empty($w['role'])): ?>
 												· <?php p((string)$w['role']); ?>
 											<?php endif; ?>
@@ -109,7 +115,7 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 		</div>
 		<?php if (empty($workspaces)): ?>
 			<p class="bc-switcher__empty"><?php p($l->t('You are not a member of any workspace yet.')); ?></p>
-			<?php if ($canAdminApp): ?>
+			<?php if ($canCreateWorkspace): ?>
 				<button type="button" class="button primary bc-switcher__cta" data-bc-action="open-create-workspace"><?php p($l->t('Create your first workspace')); ?></button>
 			<?php endif; ?>
 		<?php endif; ?>

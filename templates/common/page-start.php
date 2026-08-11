@@ -19,6 +19,7 @@
  *  - canManageWorkspace (bool)      true when current user is manager
  *  - canContribute (bool)           true when current user is contributor or higher
  *  - canAdminApp (bool)             true when current user is an app admin
+ *  - canCreateWorkspace (bool)      true when user may create standard and/or private
  *  - navigation (list<array>)       items provided by PageController
  *  - urls (array<string,string>)    canonical URLs for each route
  *  - clientHints (array)            {locale, htmlLang, timezone}
@@ -37,6 +38,7 @@ $workspaces = $_['workspaces'] ?? [];
 $canManage = !empty($_['canManageWorkspace']);
 $canContribute = !empty($_['canContribute']);
 $canAdminApp = !empty($_['canAdminApp']);
+$canCreateWorkspace = !empty($_['canCreateWorkspace']);
 $nav = $_['navigation'] ?? [];
 $urls = $_['urls'] ?? [];
 $clientHints = $_['clientHints'] ?? ['locale' => 'en', 'htmlLang' => 'en-US', 'timezone' => 'Europe/Berlin'];
@@ -56,6 +58,7 @@ $pageIcons = [
 	'yearly' => 'calendar-clock',
 	'workspace-overview' => 'users',
 	'settings' => 'settings',
+	'get-the-app' => 'smartphone',
 	'app-settings' => 'shield-check',
 ];
 $headerIconName = $pageIcons[$pageId] ?? 'layout-grid';
@@ -78,7 +81,8 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	data-bc-urls="<?php print_unescaped($urlsJson); ?>"
 	data-bc-can-manage="<?php p($canManage ? '1' : '0'); ?>"
 	data-bc-can-contribute="<?php p($canContribute ? '1' : '0'); ?>"
-	data-bc-can-admin="<?php p($canAdminApp ? '1' : '0'); ?>">
+	data-bc-can-admin="<?php p($canAdminApp ? '1' : '0'); ?>"
+	data-bc-can-create="<?php p($canCreateWorkspace ? '1' : '0'); ?>">
 	<a class="bc-skip-link" href="#bc-main-content"><?php p($l->t('Skip to main content')); ?></a>
 	<div id="bc-live-region" class="bc-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 	<div id="bc-alert-region" class="bc-sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>

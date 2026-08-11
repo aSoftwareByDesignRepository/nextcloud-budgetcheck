@@ -45,6 +45,9 @@
 		get canAdmin() {
 			return dataset().bcCanAdmin === '1';
 		},
+		get canCreate() {
+			return dataset().bcCanCreate === '1';
+		},
 		get locale() {
 			return dataset().bcLocale || 'en';
 		},
@@ -185,13 +188,17 @@
 			const data = await Api.get('/apps/budgetcheck/api/workspaces');
 			capabilities = data.capabilities || {};
 			if (!capabilities.canCreateWorkspace) {
-				Msg.announce(t('budgetcheck', 'Only app administrators can create workspaces.'), 'warning');
+				Msg.announce(t('budgetcheck', 'You cannot create a workspace with your current access.'), 'warning');
 				return;
 			}
 		} catch (err) {
 			Msg.handleApiError(err);
 			return;
 		}
+
+		const canStandard = !!capabilities.canCreateStandardWorkspace;
+		const canPrivate = !!capabilities.canCreatePrivateWorkspace;
+		const defaultPrivacy = canStandard ? 'standard' : 'private';
 
 		C.openModal({
 			title: t('budgetcheck', 'New workspace'),
@@ -206,6 +213,48 @@
 					C.createElement('option', { value: 'project', text: t('budgetcheck', 'Project (start/end dates)') }),
 				]);
 				wrap(form, t('budgetcheck', 'Type'), typeSelect);
+
+				const privacyFieldset = C.createElement('fieldset', {
+					class: 'bc-fieldset bc-fieldset--mode-group bc-field--full-width bc-privacy-fieldset',
+				});
+				privacyFieldset.appendChild(C.createElement('legend', {
+					class: 'bc-fieldset__legend',
+					text: t('budgetcheck', 'Who can see this workspace'),
+				}));
+				privacyFieldset.appendChild(C.createElement('div', {
+					class: 'bc-callout bc-callout--info',
+					attrs: { role: 'note', id: 'bc-new-privacy-disclosure' },
+				}, [
+					C.createElement('p', {
+						text: t('budgetcheck', 'Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app.'),
+					}),
+					C.createElement('p', {
+						class: 'bc-callout__hint',
+						text: t('budgetcheck', 'People with direct database or server access may still read stored data. This is not end-to-end encryption.'),
+					}),
+				]));
+				if (canStandard) {
+					privacyFieldset.appendChild(privacyRadio('standard', t('budgetcheck', 'Standard'), t('budgetcheck', 'App administrators can see and manage this workspace for recovery.'), defaultPrivacy === 'standard'));
+				}
+				if (canPrivate) {
+					privacyFieldset.appendChild(privacyRadio('private', t('budgetcheck', 'Private'), t('budgetcheck', 'Only members you add. Add a second manager after creating so you are not locked out alone.'), defaultPrivacy === 'private'));
+				}
+				form.appendChild(privacyFieldset);
+
+				function privacyRadio(value, title, hint, selected) {
+					return C.createElement('label', { class: 'bc-field bc-field--radio' }, [
+						C.createElement('input', {
+							type: 'radio',
+							name: 'privacyMode',
+							value,
+							attrs: selected ? { checked: 'checked' } : {},
+						}),
+						C.createElement('span', {}, [
+							C.createElement('strong', { text: title }),
+							C.createElement('span', { class: 'bc-field__hint bc-field__hint--block', text: hint }),
+						]),
+					]);
+				}
 
 				const planYearSelect = C.createElement('select', { name: 'primaryPlanningYear', class: 'bc-input' });
 				const yNow = new Date().getFullYear();
@@ -265,11 +314,13 @@
 
 				form._collect = () => {
 					const isProject = typeSelect.value === 'project';
+					const privacyInput = form.querySelector('input[name="privacyMode"]:checked');
 					const payload = {
 						name: nameInput.value.trim(),
 						type: typeSelect.value,
 						currencyCode: (modalCurrencyPicker ? modalCurrencyPicker.getValue() : '').toUpperCase().trim(),
 						timezone: modalTimezonePicker ? modalTimezonePicker.getValue() : '',
+						privacyMode: privacyInput ? privacyInput.value : defaultPrivacy,
 					};
 					if (isProject) {
 						payload.projectStartDate = startInput.value;

@@ -17,8 +17,8 @@ use OCP\Capabilities\ICapability;
 class Capabilities implements ICapability
 {
 	public const COMPANION_MIN = 1;
-	/** Companion API major: 5 = attachment download/preview (workspace-bound). */
-	public const COMPANION_API = 5;
+	/** Companion API major: 5 = attachment download; 6 = workspace privacy update (PUT). */
+	public const COMPANION_API = 6;
 
 	public function __construct(
 		private readonly IAppManager $appManager,

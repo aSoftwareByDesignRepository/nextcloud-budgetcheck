@@ -14,8 +14,9 @@ $base = dirname(__DIR__) . '/l10n';
 $en = json_decode((string) file_get_contents($base . '/en.json'), true, 512, JSON_THROW_ON_ERROR);
 $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSON_THROW_ON_ERROR);
 
-$allowExact = [
+	$allowExact = [
 	'BudgetCheck' => true,
+	'BudgetCheck Mobile' => true,
 	'InvoiceCheck' => true,
 	'Check Partner' => true,
 	'Nextcloud' => true,
