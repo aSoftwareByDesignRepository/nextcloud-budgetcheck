@@ -120,32 +120,36 @@ final class L10nVariantCatalogTest extends TestCase
 
 		$de = $this->loadCatalog('de');
 		$deDe = $this->loadCatalog('de_DE');
-		$informalPattern = '/\b(du|dich|dir|dein|deine|deinen|deinem|deiner|deins|bist|kannst|musst|hast|wirst|warst|darfst|änderst)\b'
-			. '|^(Wähle|Gib|Erstelle|Verwende|Aktiviere|Markiere|Füge|Lege|Erfasse)\s/u';
+		$informalPattern = '/\b(du|dich|dir|dein|deine|deinen|deinem|deiner|deins|bist|kannst|musst|hast|wirst|warst|darfst|brauchst|änderst)\b'
+			. '|^(Wähle|Gib|Erstelle|Verwende|Aktiviere|Markiere|Füge|Lege|Erfasse|Hänge|Prüfe|Tippe|Klicke|Öffne|Nutze|Lade|Benenne|Probiere|Versuche|Trage)\s/u';
 
-		$differs = 0;
-		foreach ($deDe['translations'] as $key => $value) {
-			$text = is_array($value) ? implode(' ', $value) : $value;
-			self::assertSame(
-				0,
-				preg_match($informalPattern, $text),
-				"de_DE.json still uses informal du for '{$key}': {$text}"
-			);
-			$base = $de['translations'][$key] ?? null;
-			$baseText = is_array($base) ? implode(' ', $base) : (string)$base;
-			if ($baseText !== $text) {
-				$differs++;
+		foreach (['de' => $de, 'de_DE' => $deDe] as $lang => $catalog) {
+			foreach ($catalog['translations'] as $key => $value) {
+				$text = is_array($value) ? implode(' ', $value) : $value;
+				self::assertSame(
+					0,
+					preg_match($informalPattern, $text),
+					"{$lang}.json still uses informal du for '{$key}': {$text}"
+				);
 			}
 		}
-		self::assertGreaterThan(
-			20,
-			$differs,
-			'de_DE should differ from informal de in many user-facing strings'
+		self::assertSame(
+			'Sind Sie sicher?',
+			$de['translations']['Are you sure?'] ?? '',
 		);
 		self::assertSame(
 			'Sind Sie sicher?',
 			$deDe['translations']['Are you sure?'] ?? '',
 		);
+		// de is formal Sie; de_DE is derived via formalize (idempotent copy).
+		foreach ($deDe['translations'] as $key => $value) {
+			$base = $de['translations'][$key] ?? null;
+			self::assertSame(
+				budgetcheck_formalize_german(is_array($base) ? implode(' ', $base) : (string)$base),
+				is_array($value) ? implode(' ', $value) : $value,
+				"de_DE '{$key}' must equal formalize(de)"
+			);
+		}
 	}
 
 	public function testVariantJsRegistersSameKeyCountAsJson(): void

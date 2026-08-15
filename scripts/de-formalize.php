@@ -3,10 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Convert informal German (du) UI strings to formal register (Sie) for de_DE.
+ * Convert informal German (du) UI strings to formal register (Sie).
  *
- * Used by scripts/sync-l10n-variants.php. Idempotent on strings that are
- * already formal. Curated phrase overrides take precedence over regex rules.
+ * Used when syncing de_DE from de (scripts/sync-l10n-variants.php) and when
+ * bringing de.json itself to Sie-form. Idempotent on strings that are already
+ * formal. Curated phrase overrides take precedence over regex rules.
  *
  * @internal Exported for unit tests.
  */
@@ -35,6 +36,7 @@ function budgetcheck_formalize_german(string $text): string
 		'In wie vielen Monaten dieses Jahres du über Budget warst.' => 'In wie vielen Monaten dieses Jahres Sie über Budget waren.',
 		'Wähle oder lege einen Arbeitsbereich an, um zu starten' => 'Wählen Sie einen Arbeitsbereich aus oder legen Sie einen an, um zu starten',
 		'Speichern hier erstellt eine monatsbezogene Überschreibung.' => 'Speichern erstellt hier eine monatsbezogene Überschreibung.',
+		'Lade …' => 'Wird geladen …',
 	];
 	foreach ($phrases as $from => $to) {
 		$out = str_replace($from, $to, $out);
@@ -45,6 +47,7 @@ function budgetcheck_formalize_german(string $text): string
 		'Deine ' => 'Ihre ',
 		'Dein ' => 'Ihr ',
 		'Deinen ' => 'Ihren ',
+		'deines ' => 'Ihres ',
 		'deine ' => 'Ihre ',
 		'deinen ' => 'Ihren ',
 		'deinem ' => 'Ihrem ',
@@ -56,12 +59,13 @@ function budgetcheck_formalize_german(string $text): string
 		$out = str_replace($from, $to, $out);
 	}
 
-	// Pronoun + verb clusters.
+	// Pronoun + verb clusters (before bare "du" replacement).
 	$clusters = [
 		'kannst du dir' => 'können Sie sich',
 		'kannst du' => 'können Sie',
 		'darfst du' => 'dürfen Sie',
 		'musst du' => 'müssen Sie',
+		'brauchst du' => 'brauchen Sie',
 		'wirst du' => 'werden Sie',
 		'bist du' => 'sind Sie',
 		'hast du' => 'haben Sie',
@@ -76,6 +80,7 @@ function budgetcheck_formalize_german(string $text): string
 		'bis du' => 'bis Sie',
 		'damit du' => 'damit Sie',
 		'außer du' => 'außer Sie',
+		'bevor du' => 'bevor Sie',
 		'Sobald du' => 'Sobald Sie',
 		' du ' => ' Sie ',
 		' dich ' => ' Sie ',
@@ -87,9 +92,10 @@ function budgetcheck_formalize_german(string $text): string
 		$out = str_replace($from, $to, $out);
 	}
 
-	// Informal imperatives at sentence starts and after full stops.
+	// Informal imperatives at sentence starts, after stops, and after em dashes.
 	$imperatives = [
 		'Wähle ' => 'Wählen Sie ',
+		'wähle ' => 'wählen Sie ',
 		'Gib ' => 'Geben Sie ',
 		'Erstelle ' => 'Erstellen Sie ',
 		'Verwende ' => 'Verwenden Sie ',
@@ -98,14 +104,44 @@ function budgetcheck_formalize_german(string $text): string
 		'Füge ' => 'Fügen Sie ',
 		'Lege ' => 'Legen Sie ',
 		'Erfasse ' => 'Erfassen Sie ',
+		'Hänge ' => 'Hängen Sie ',
+		'Prüfe ' => 'Prüfen Sie ',
+		'prüfe ' => 'prüfen Sie ',
+		'Tippe ' => 'Tippen Sie ',
+		'Klicke ' => 'Klicken Sie ',
+		'klicke ' => 'klicken Sie ',
+		'Drücke ' => 'Drücken Sie ',
+		'Öffne ' => 'Öffnen Sie ',
+		'Nutze ' => 'Nutzen Sie ',
+		'nutze ' => 'nutzen Sie ',
+		'Lade ' => 'Laden Sie ',
+		'Benenne ' => 'Benennen Sie ',
+		'Probiere ' => 'Probieren Sie ',
+		'Versuche ' => 'Versuchen Sie ',
+		'versuche ' => 'versuchen Sie ',
+		'Trage ' => 'Tragen Sie ',
+		'Scanne ' => 'Scannen Sie ',
 		'Wende dich ' => 'Wenden Sie sich ',
 	];
 	foreach ($imperatives as $from => $to) {
-		$out = preg_replace('/(^|\.\s+)' . preg_quote($from, '/') . '/u', '$1' . $to, $out) ?? $out;
-		// Also at start of string without period.
+		$out = preg_replace('/(^|[.!?]\s+|—\s+|:\s+)' . preg_quote($from, '/') . '/u', '$1' . $to, $out) ?? $out;
 		if (str_starts_with($out, $from)) {
 			$out = $to . substr($out, strlen($from));
 		}
+	}
+
+	// Mid-sentence informal verb clusters.
+	$mid = [
+		' und versuche ' => ' und versuchen Sie ',
+		' und klicke ' => ' und klicken Sie ',
+		' und prüfe ' => ' und prüfen Sie ',
+		' und importiere ' => ' und importieren Sie ',
+		' oder nutze ' => ' oder nutzen Sie ',
+		' oder setze ' => ' oder setzen Sie ',
+		' → nutze ' => ' → nutzen Sie ',
+	];
+	foreach ($mid as $from => $to) {
+		$out = str_replace($from, $to, $out);
 	}
 
 	// Remaining verb forms tied to informal "du" subjects.
@@ -128,18 +164,23 @@ function budgetcheck_formalize_german(string $text): string
 		' darfst ' => ' dürfen ',
 		' darfst.' => ' dürfen.',
 		' darfst,' => ' dürfen,',
+		' brauchst ' => ' brauchen ',
+		' brauchst.' => ' brauchen.',
+		' brauchst,' => ' brauchen,',
 		' wirst ' => ' werden ',
 		' wirst.' => ' werden.',
 		' wirst,' => ' werden,',
 		' änderst' => ' ändern',
-		' nutzt ' => ' nutzen ',
-		' schließt ' => ' schließen ',
+		' erzeugst' => ' erzeugen',
+		' hinzufügst' => ' hinzufügen',
+		' bearbeitest' => ' bearbeiten',
+		// Do not map bare "nutzt"/"schließt" — those are often 3rd-person.
 	];
 	foreach ($verbForms as $from => $to) {
 		$out = str_replace($from, $to, $out);
 	}
 
-	// Trailing informal verb forms at end of sentence.
+	// Trailing informal pronouns.
 	$out = preg_replace('/\bdu\b/u', 'Sie', $out) ?? $out;
 	$out = preg_replace('/\bdich\b/u', 'Sie', $out) ?? $out;
 	$out = preg_replace('/\bdir\b/u', 'Ihnen', $out) ?? $out;
@@ -222,6 +263,43 @@ function budgetcheck_de_formal_phrase_overrides(): array
 		'{count} Buchungen in diesem Zeitraum. Wähle einen Kalendermonat, um einen einzelnen Monat zu fokussieren.' => '{count} Buchungen in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen einzelnen Monat zu fokussieren.',
 		'Füge zuerst Einnahmen- oder Ausgabenkategorien hinzu.' => 'Fügen Sie zuerst Einnahmen- oder Ausgabenkategorien hinzu.',
 		'Direkt zur passenden Ansicht springen.' => 'Springen Sie direkt zur passenden Ansicht.',
+		'Hänge Fotos oder PDF-Belege an diese Buchung an. Füge sie unten hinzu — sie werden beim Speichern hochgeladen. Nur Mitglieder des Arbeitsbereichs können sie sehen.' => 'Hängen Sie Fotos oder PDF-Belege an diese Buchung an. Fügen Sie sie unten hinzu — sie werden beim Speichern hochgeladen. Nur Mitglieder des Arbeitsbereichs können sie sehen.',
+		'Hänge Fotos, PDF-Belege oder XML-E-Rechnungen an diese Buchung an. Füge sie unten hinzu — sie werden beim Speichern hochgeladen. Nur Mitglieder des Arbeitsbereichs können sie sehen.' => 'Hängen Sie Fotos, PDF-Belege oder XML-E-Rechnungen an diese Buchung an. Fügen Sie sie unten hinzu — sie werden beim Speichern hochgeladen. Nur Mitglieder des Arbeitsbereichs können sie sehen.',
+		'Prüfe die Verbindung und versuche es erneut. Der letzte Versuch wurde nicht abgeschlossen.' => 'Prüfen Sie die Verbindung und versuchen Sie es erneut. Der letzte Versuch wurde nicht abgeschlossen.',
+		'Lade den Projektzeitraum als Excel-Arbeitsmappe herunter.' => 'Laden Sie den Projektzeitraum als Excel-Arbeitsmappe herunter.',
+		'Lade das ausgewählte Jahr als Excel-Arbeitsmappe herunter.' => 'Laden Sie das ausgewählte Jahr als Excel-Arbeitsmappe herunter.',
+		'Gruppen-, Kategorie- und Monatssummen für das aktuelle Filterergebnis. Klicke eine Zeile an, um detaillierter zu filtern.' => 'Gruppen-, Kategorie- und Monatssummen für das aktuelle Filterergebnis. Klicken Sie eine Zeile an, um detaillierter zu filtern.',
+		'Lade …' => 'Wird geladen …',
+		'Der Monat ist abgeschlossen. Öffne ihn wieder, bevor du Budgetziele änderst.' => 'Der Monat ist abgeschlossen. Öffnen Sie ihn wieder, bevor Sie Budgetziele ändern.',
+		'Monat ist abgeschlossen. Öffne ihn erneut, bevor du geplante Einträge erzeugst.' => 'Monat ist abgeschlossen. Öffnen Sie ihn erneut, bevor Sie geplante Einträge erzeugen.',
+		'Benenne Kategorien für dein Budget. Gruppen sind für wenige eigene Buckets in Berichten und Filtern — keine Bankhierarchie. Notizen an Buchungen eignen sich gut für Empfängernamen.' => 'Benennen Sie Kategorien für Ihr Budget. Gruppen sind für wenige eigene Buckets in Berichten und Filtern — keine Bankhierarchie. Notizen an Buchungen eignen sich gut für Empfängernamen.',
+		'Keine passende Währung. Versuche einen anderen ISO-Code.' => 'Keine passende Währung. Versuchen Sie einen anderen ISO-Code.',
+		'Keine passende Zeitzone. Versuche einen Städte- oder Regionsnamen.' => 'Keine passende Zeitzone. Versuchen Sie einen Städte- oder Regionsnamen.',
+		'Noch keine Arbeitsbereiche im Schnellzugriff. Nutze „Verwalten“, um Favoriten anzupinnen.' => 'Noch keine Arbeitsbereiche im Schnellzugriff. Nutzen Sie „Verwalten“, um Favoriten anzupinnen.',
+		'Öffne eine einfache Erklärung zu jedem Wert und seiner Bedeutung für dieses Jahr.' => 'Öffnen Sie eine einfache Erklärung zu jedem Wert und seiner Bedeutung für dieses Jahr.',
+		'Öffne die Projektübersicht, um die Gesamtausgaben gegenüber der Obergrenze zu sehen.' => 'Öffnen Sie die Projektübersicht, um die Gesamtausgaben gegenüber der Obergrenze zu sehen.',
+		'Prüfe die Vorschau und klicke dann auf „Buchungen importieren“.' => 'Prüfen Sie die Vorschau und klicken Sie dann auf „Buchungen importieren“.',
+		'Zeile {row}: Betrag ist ungültig. Nutze Formate wie 42,50 oder 1.234,56 oder 1234.56 (ohne Währungssymbol).' => 'Zeile {row}: Betrag ist ungültig. Nutzen Sie Formate wie 42,50 oder 1.234,56 oder 1234.56 (ohne Währungssymbol).',
+		'Zeile {row}: Datum ist ungültig. Nutze {pattern} oder JJJJ-MM-TT.' => 'Zeile {row}: Datum ist ungültig. Nutzen Sie {pattern} oder JJJJ-MM-TT.',
+		'Zeile {row}: unbekannte Kategorie „{name}“. Nutze einen Namen aus der Liste oben.' => 'Zeile {row}: unbekannte Kategorie „{name}“. Nutzen Sie einen Namen aus der Liste oben.',
+		'Die ersten {count} Treffer werden angezeigt. Tippe weiter, um die Liste einzugrenzen.' => 'Die ersten {count} Treffer werden angezeigt. Tippen Sie weiter, um die Liste einzugrenzen.',
+		'Das neue Buchungsdatum fällt in einen abgeschlossenen Monat. Öffne diesen Monat zuerst wieder.' => 'Das neue Buchungsdatum fällt in einen abgeschlossenen Monat. Öffnen Sie diesen Monat zuerst wieder.',
+		'Diese Buchung fällt in einen abgeschlossenen Monat. Öffne den Monat wieder, bevor du Buchungen hinzufügst.' => 'Diese Buchung fällt in einen abgeschlossenen Monat. Öffnen Sie den Monat wieder, bevor Sie Buchungen hinzufügen.',
+		'Dieser Monat ist geschlossen. Öffne ihn wieder, um Änderungen vorzunehmen.' => 'Dieser Monat ist geschlossen. Öffnen Sie ihn wieder, um Änderungen vorzunehmen.',
+		'Dieser Monat ist offen. Prüfe die Summen vor dem Schließen.' => 'Dieser Monat ist offen. Prüfen Sie die Summen vor dem Schließen.',
+		'Diese Buchung gehört zu einem abgeschlossenen Monat. Öffne den Monat wieder, bevor du sie bearbeitest.' => 'Diese Buchung gehört zu einem abgeschlossenen Monat. Öffnen Sie den Monat wieder, bevor Sie sie bearbeiten.',
+		'Probiere einen größeren Zeitraum, eine andere Kategorie oder setze die Filter zurück, um alles zu sehen.' => 'Probieren Sie einen größeren Zeitraum, eine andere Kategorie oder setzen Sie die Filter zurück, um alles zu sehen.',
+		'Lade eine CSV-Datei hoch, prüfe jede Zeile und importiere sie sicher in einem atomaren Schritt.' => 'Laden Sie eine CSV-Datei hoch, prüfen Sie jede Zeile und importieren Sie sie sicher in einem atomaren Schritt.',
+		'Lade eine CSV von deiner Bank oder aus einer Tabelle hoch. Numerische Kategorie-IDs brauchst du nie — wähle unten Standards oder nutze Kategorienamen aus der Liste.' => 'Laden Sie eine CSV von Ihrer Bank oder aus einer Tabelle hoch. Numerische Kategorie-IDs brauchen Sie nie — wählen Sie unten Standards oder nutzen Sie Kategorienamen aus der Liste.',
+		'Lade deine CSV hoch und klicke auf „CSV prüfen“.' => 'Laden Sie Ihre CSV hoch und klicken Sie auf „CSV prüfen“.',
+		'Prüfe deine CSV vor dem Import.' => 'Prüfen Sie Ihre CSV vor dem Import.',
+		'Arbeitsbereichseinstellungen, Mitglieder, Kategorien, Sparziele und Steuermodus werden in BudgetCheck verwaltet und gelten je Arbeitsbereich. Öffne die App, um globale Richtlinie, Verzeichniszugriff und Vorgaben anzupassen.' => 'Arbeitsbereichseinstellungen, Mitglieder, Kategorien, Sparziele und Steuermodus werden in BudgetCheck verwaltet und gelten je Arbeitsbereich. Öffnen Sie die App, um globale Richtlinie, Verzeichniszugriff und Vorgaben anzupassen.',
+		'Du brauchst Mitwirkenden- oder Verwalterzugriff, um Buchungen in diesen Arbeitsbereich zu importieren.' => 'Sie brauchen Mitwirkenden- oder Verwalterzugriff, um Buchungen in diesen Arbeitsbereich zu importieren.',
+		'Tippe, um alle IANA-Zeitzonen zu durchsuchen.' => 'Tippen Sie, um alle IANA-Zeitzonen zu durchsuchen.',
+		'Tippe, um unterstützte Währungen zu durchsuchen.' => 'Tippen Sie, um unterstützte Währungen zu durchsuchen.',
+		'Jahresübersicht → nutze die Jahresansicht für die Haushaltsbilanz.' => 'Jahresübersicht → nutzen Sie die Jahresansicht für die Haushaltsbilanz.',
+		'Trage einen Namen in eine „category“-Spalte ein oder nutze die Standardauswahl unten. IDs sind nicht nötig.' => 'Tragen Sie einen Namen in eine „category“-Spalte ein oder nutzen Sie die Standardauswahl unten. IDs sind nicht nötig.',
+		'Daten folgen der Spracheinstellung deines Kontos (z. B. TT.MM.JJJJ auf Deutsch). ISO-Daten (JJJJ-MM-TT) funktionieren immer.' => 'Daten folgen der Spracheinstellung Ihres Kontos (z. B. TT.MM.JJJJ auf Deutsch). ISO-Daten (JJJJ-MM-TT) funktionieren immer.',
 	];
 }
 
@@ -230,6 +308,6 @@ function budgetcheck_de_formal_phrase_overrides(): array
  */
 function budgetcheck_german_is_informal(string $text): bool
 {
-	static $pattern = '/\b(du|dich|dir|dein|deine|deinen|deinem|deiner|deins|bist|kannst|musst|hast|wirst|warst|darfst|änderst|nutzt|schließt)\b|(?:^|[.!?]\s+|\s)(Wähle|Gib|Erstelle|Verwende|Aktiviere|Markiere|Füge|Lege|Erfasse)\s/u';
+	static $pattern = '/\b(du|dich|dir|dein|deine|deinen|deinem|deiner|deins|bist|kannst|musst|hast|wirst|warst|darfst|brauchst|änderst|erzeugst|hinzufügst|bearbeitest)\b|(?:^|[.!?]\s+|—\s+)(Wähle|Gib|Erstelle|Verwende|Aktiviere|Markiere|Füge|Lege|Erfasse|Hänge|Prüfe|Tippe|Klicke|Drücke|Öffne|Nutze|Lade|Benenne|Probiere|Versuche|Trage|Scanne)\s/u';
 	return (bool)preg_match($pattern, $text);
 }

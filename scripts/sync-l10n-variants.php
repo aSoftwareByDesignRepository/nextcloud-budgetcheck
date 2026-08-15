@@ -15,7 +15,8 @@ declare(strict_types=1);
  *
  * Variants are derived deterministically from their base catalog:
  *   - en_GB applies curated British spellings to values (keys never change),
- *   - de_DE applies formal German (Sie) via scripts/de-formalize.php,
+ *   - de_DE applies formal German (Sie) via scripts/de-formalize.php
+ *     (idempotent when de.json is already formal),
  *   - all other variants are value-identical copies of the base.
  *
  * The matching .js files are emitted by scripts/regenerate-l10n-js.php, which
