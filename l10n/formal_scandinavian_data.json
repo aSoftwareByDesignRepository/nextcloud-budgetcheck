@@ -1,0 +1,458 @@
+{
+  "A household can save by percentage of income, an absolute amount, or whichever is larger. Progress appears on the dashboard and yearly overview—no need to tag individual transactions.": {
+    "da": "En husstand kan spare en procentdel af indkomsten, et fast beløb eller det, der er størst. Fremskridt vises på oversigten og i årsrapporten — behøver ikke mærke enkelte posteringer.",
+    "sv": "Ett hushåll kan spara en andel av inkomsten, ett fast belopp eller det som är störst. Framsteg syns på instrumentpanelen och årsöversikten — behöver inte märka enskilda transaktioner.",
+    "nb": "En husholdning kan spare en prosentandel av inntekten, et fast beløp eller det som er størst. Fremdrift vises på dashbordet og i årsrapporten — trenger ikke merke enkeltposteringer."
+  },
+  "Amount in this workspace’s currency. Use your usual decimal separator (dot or comma).": {
+    "da": "Beløb i dette arbejdsområdes valuta. Brug sædvanlig decimalseparator (punktum eller komma).",
+    "sv": "Belopp i arbetsytans valuta. Använd det vanliga decimaltecken (punkt eller komma)."
+  },
+  "Attach photos or PDF receipts to this booking. Add them below — they upload when you save. Only workspace members can view them.": {
+    "da": "Vedhæft fotos eller PDF-kvitteringer til denne postering. Tilføj dem nedenfor — de uploades, ved gemning. Kun medlemmer af arbejdsområdet kan se dem.",
+    "sv": "Bifoga foton eller PDF-kvitton till den här bokföringen. Lägg till dem nedan — de laddas upp vid sparande. Bara medlemmar i arbetsytan kan se dem.",
+    "nb": "Legg ved bilder eller PDF-kvitteringer til denne posteringen. Legg dem til under — de lastes opp ved lagring. Bare medlemmer av arbeidsområdet kan se dem."
+  },
+  "Attach photos, PDF receipts, or XML e-invoices to this booking. Add them below — they upload when you save. Only workspace members can view them.": {
+    "da": "Vedhæft fotos, PDF-kvitteringer eller XML-e-fakturaer til denne postering. Tilføj dem nedenfor — de uploades, ved gemning. Kun medlemmer af arbejdsområdet kan se dem.",
+    "sv": "Bifoga foton, PDF-kvitton eller XML-e-fakturor till den här bokföringen. Lägg till dem nedan — de laddas upp vid sparande. Bara medlemmar i arbetsytan kan se dem.",
+    "nb": "Legg ved bilder, PDF-kvitteringer eller XML-e-fakturaer til denne posteringen. Legg dem til under — de lastes opp ved lagring. Bare medlemmer av arbeidsområdet kan se dem."
+  },
+  "Budget targets and planned ledger placeholders for the month. These are not included in actual cash flow above—they show what you expect before real bookings arrive.": {
+    "da": "Budgetmål og planlagte hovedbogsposter for måneden. De tæller ikke med i den faktiske pengestrøm ovenfor—de viser, hvad forventer, før reelle posteringer kommer.",
+    "sv": "Budgetmål och planerade bokföringsplatshållare för månaden. De ingår inte i det faktiska kassaflödet ovan — de visar vad förväntar innan riktiga bokningar kommer.",
+    "nb": "Budsjettmål og planlagte hovedbok-plassholdere for måneden. De er ikke med i faktisk kontantstrøm over — de viser hva forventer før reelle posteringer kommer."
+  },
+  "Category flag for money moved to savings. Counts toward your savings goal and is excluded from everyday budget saldo, but stays in total expenses.": {
+    "da": "Markering for penge flyttet til opsparing. Tæller med i sparemålet og er udelukket fra daglig budgetsaldo, men forbliver i de samlede udgifter.",
+    "sv": "Flagga för pengar som flyttas till sparande. Räknas mot sparmålet och exkluderas från vardagsbudgetens saldo, men finns kvar i totala utgifter."
+  },
+  "Controls how income and expense totals appear on the dashboard, monthly plan, and yearly overview—for you only.": {
+    "da": "Styrer, hvordan indtægts- og udgiftstotaler vises på oversigten, månedsplanen og årsrapporten — kun .",
+    "sv": "Styr hur inkomst- och utgiftssummor visas på instrumentpanelen, månadsplanen och årsöversikten — bara .",
+    "nb": "Styrer hvordan inntekts- og utgiftstotaler vises på dashbordet, månedsplanen og årsrapporten — bare ."
+  },
+  "Date and month fields use your Nextcloud language. Tables and summaries match. The browser's calendar popup may still follow your device language in some setups.": {
+    "da": "Dato- og månedsfelter bruger det Nextcloud-sprog. Tabeller og oversigter matcher. Browserens kalendervælger kan i nogle opsætninger stadig følge enhedens sprog.",
+    "sv": "Datum- och månadsfält använder det Nextcloud-språk. Tabeller och sammanfattningar matchar. Webbläsarens kalenderpopup kan fortfarande följa enhetens språk i vissa konfigurationer."
+  },
+  "Every BudgetCheck screen is scoped to one workspace. Choose one in the sidebar, or ask an app administrator to add you to a workspace.": {
+    "da": "Hver BudgetCheck-skærm er knyttet til ét arbejdsområde. Vælg ét i sidepanelet, eller bed en app-administrator om at tilføje til et arbejdsområde.",
+    "sv": "Varje BudgetCheck-skärm gäller en arbetsyta. Välj en i sidofältet, eller be en appadministratör lägga till i en arbetsyta.",
+    "nb": "Hver BudgetCheck-skjerm er knyttet til ett arbeidsområde. Velg ett i sidepanelet, eller be en app-administrator om å legge til i et arbeidsområde."
+  },
+  "From your category budget plan": {
+    "da": "Fra det kategoribudget",
+    "sv": "Från kategoribudgetplan",
+    "nb": "Fra kategoribudsjettplanen"
+  },
+  "How the mobile app handles your data.": {
+    "da": "Sådan håndterer mobilappen data.",
+    "sv": "Hur mobilappen hanterar data.",
+    "nb": "Slik håndterer mobilappen dataene ."
+  },
+  "If you export from LibreOffice or Excel, comma or semicolon delimiters both work — the importer detects which you used.": {
+    "da": "hvis der eksporterer fra LibreOffice eller Excel, virker både komma og semikolon — importøren genkender, hvad brugte.",
+    "sv": "Om exporterar från LibreOffice eller Excel fungerar både komma och semikolon — importören känner av vilket använde.",
+    "nb": "hvis eksporterer fra LibreOffice eller Excel, fungerer både komma og semikolon — importøren oppdager hva brukte."
+  },
+  "If you export from LibreOffice or Excel, comma, semicolon, or tab delimiters all work — the importer detects which you used.": {
+    "da": "hvis der eksporterer fra LibreOffice eller Excel, virker komma, semikolon og tabulator — importøren genkender, hvad brugte.",
+    "sv": "Om exporterar från LibreOffice eller Excel fungerar komma, semikolon och tabb — importören känner av vilket använde.",
+    "nb": "hvis eksporterer fra LibreOffice eller Excel, fungerer komma, semikolon og tabulator — importøren oppdager hva brukte."
+  },
+  "Import is not available for your role": {
+    "da": "Import er ikke tilgængelig for rolle",
+    "sv": "Import är inte tillgänglig för roll",
+    "nb": "Import er ikke tilgjengelig for rollen"
+  },
+  "Importing from your bank?": {
+    "da": "Importerer fra bank?",
+    "sv": "Importerar från banken?",
+    "nb": "Importerer fra banken?"
+  },
+  "In project workspaces you can tag a booking with a status (for example in progress or paid). Leave empty if you do not need a workflow step.": {
+    "da": "I projektarbejdsområder kan markere en postering med en status (f.eks. i gang eller betalt). Lad feltet være tomt, hvis det workflow ikke kræver det.",
+    "sv": "I projektarbetsytor kan tagga en transaktion med en status (till exempel pågående eller betald). Lämna tomt om inte behöver ett arbetsflödessteg.",
+    "nb": "I prosjektarbeidsområder kan merke en postering med en status (for eksempel under arbeid eller betalt). La stå tom hvis ikke trenger et arbeidsflyttrinn."
+  },
+  "Jump straight to the screen you need.": {
+    "da": "Hop direkte til den skærm, der er brug for.",
+    "sv": "Hoppa direkt till skärmen behöver.",
+    "nb": "Gå rett til skjermen trenger."
+  },
+  "Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.": {
+    "da": "Gør dette arbejdsområde privat? App-administratorer, der ikke er medlemmer, ser det ikke længere. Fjern først alle grupper. Er den eneste manager, og konto fjernes, kan arbejdsområdet ikke åbnes i BudgetCheck — kun nogen med databaseadgang kan gendanne det. Databaseoperatører kan stadig læse gemte data.",
+    "sv": "Göra den här arbetsytan privat? Appadministratörer som inte är medlemmar ser den inte längre. Ta först bort alla grupper. Är den enda managern och det konto tas bort kan arbetsytan inte öppnas i BudgetCheck — bara någon med databasåtkomst kan återställa den. Databasoperatörer kan fortfarande läsa sparade data.",
+    "nb": "Gjøre dette arbeidsområdet privat? App-administratorer som ikke er medlemmer ser det ikke lenger. Fjern først alle grupper. Er den eneste manageren og kontoen fjernes, kan ikke arbeidsområdet åpnes i BudgetCheck — bare noen med databasetilgang kan gjenopprette det. Databaseoperatører kan fortsatt lese lagrede data."
+  },
+  "Mark one expense category as Savings transfer to track money you set aside toward your target.": {
+    "da": "Markér én udgiftskategori som opsparingsoverførsel for at følge de penge, lægger til side mod det mål.",
+    "sv": "Markera en utgiftskategori som sparkontoöverföring för att följa pengar lägger undan mot målet.",
+    "nb": "Merk én utgiftskategori som spareoverføring for å følge pengene setter av mot målet."
+  },
+  "Mark your savings category under Settings → Categories to track transfers against this target.": {
+    "da": "Markér opsparingskategori under Indstillinger → Kategorier for at følge overførsler mod dette mål.",
+    "sv": "Markera sparkategori under Inställningar → Kategorier för att följa överföringar mot detta mål."
+  },
+  "Maximum 500 rows per import. Split larger exports into several files — you can validate multiple batches in a row.": {
+    "da": "Højst 500 rækker pr. import. Del større eksporter i flere filer — Det er muligt at validere flere batches i træk.",
+    "sv": "Högst 500 rader per import. Dela större exporter i flera filer — Det går att validera flera satser i rad.",
+    "nb": "Maksimum 500 rader per import. Del større eksporter i flere filer — Det er mulig å validere flere satser på rad."
+  },
+  "Money that came in this month, summed in minor units (e.g. cents) and shown formatted in your locale.": {
+    "da": "Penge ind denne måned, summeret i mindste enheder (f.eks. øre) og vist formateret efter sprogindstilling.",
+    "sv": "Pengar som kom in den här månaden, summerade i minorenheter (t.ex. öre) och formaterade enligt det språk."
+  },
+  "Month is closed. Reopen it before changing budget targets.": {
+    "da": "Måneden er lukket. Genåbn den, før ændrer budgetmål.",
+    "sv": "Månaden är stängd. Öppna den igen innan ändrar budgetmål.",
+    "nb": "Måneden er lukket. Gjenåpne den før endrer budsjettmål."
+  },
+  "Month is closed. Reopen it before generating planned entries.": {
+    "da": "Måneden er lukket. Genåbn den, før genererer planlagte posteringer.",
+    "sv": "Månaden är stängd. Öppna den igen innan skapar planerade poster.",
+    "nb": "Måneden er lukket. Åpne den igjen før genererer planlagte poster."
+  },
+  "Name categories for your budget. Group is for a few custom buckets in reports and filters—not bank hierarchy. Notes on transactions work well for vendor names.": {
+    "da": "Navngiv kategorier til det budget. Gruppe er til få egne spande i rapporter og filtre — ikke bankhierarki. Noter på posteringer egner sig til butiksnavne.",
+    "sv": "Namnge kategorier för budget. Grupp är för några egna fack i rapporter och filter — inte bankhierarki. Anteckningar på transaktioner passar bra för butiksnamn."
+  },
+  "No ledger transactions yet—each month is empty until you post one.": {
+    "da": "Ingen hovedbogstransaktioner endnu—hver måned er tom, indtil registrerer én.",
+    "sv": "Inga huvudbokstransaktioner ännu — varje månad är tom tills bokför en.",
+    "nb": "Ingen hovedbokstransaksjoner ennå—hver måned er tom til registrerer én."
+  },
+  "Nothing booked for {monthLabel}. That calendar month is after your latest ledger booking ({monthTo}).": {
+    "da": "Intet bogført for {monthLabel}. Den kalendermåned ligger efter seneste hovedbogspostering ({monthTo}).",
+    "sv": "Inget bokfört för {monthLabel}. Den kalendermånaden ligger efter senaste huvudbokspost ({monthTo}).",
+    "nb": "Ingenting bokført for {monthLabel}. Den kalendermåneden er etter siste hovedbokspostering ({monthTo})."
+  },
+  "Nothing booked for {monthLabel}. That calendar month is before your first ledger booking ({monthFrom}).": {
+    "da": "Intet bogført for {monthLabel}. Den kalendermåned ligger før første hovedbogspostering ({monthFrom}).",
+    "sv": "Inget bokfört för {monthLabel}. Den kalendermånaden ligger före första huvudbokspost ({monthFrom}).",
+    "nb": "Ingenting bokført for {monthLabel}. Den kalendermåneden er før første hovedbokspostering ({monthFrom})."
+  },
+  "Nothing booked for {monthLabel}. You can still plan budgets and use month tools.": {
+    "da": "Intet bogført for {monthLabel}. Det er muligt at stadig planlægge budgetter og bruge månedsværktøjer.",
+    "sv": "Inget bokfört för {monthLabel}. Det går att fortfarande planera budgetar och använda månadsverktyg.",
+    "nb": "Ingenting bokført for {monthLabel}. Det er mulig å fortsatt planlegge budsjetter og bruke månedsverktøy."
+  },
+  "Once you add a booking it will appear here. You can edit, tag, or delete entries from this page.": {
+    "da": "Når tilføjer en postering, vises den her. Posteringer kan redigeres, mærkes eller slettes fra denne side.",
+    "sv": "När lägger till en transaktion visas den här. Det går att redigera, tagga eller ta bort poster från den här sidan.",
+    "nb": "Når legger til en postering, vises den her. Det er mulig å redigere, merke eller slette posteringer fra denne siden."
+  },
+  "Only members you add. Remove any groups before switching. One manager is enough; if that sole manager account is removed, recovery needs database access.": {
+    "da": "Kun medlemmer, tilføjer. Fjern alle grupper før skift. Én manager er nok; hvis den eneste managerkonto fjernes, kræver gendannelse databaseadgang.",
+    "sv": "Bara medlemmar lägger till. Ta bort alla grupper innan byter. En manager räcker; om det enda managerkontot tas bort krävs databasåtkomst för återställning.",
+    "nb": "Bare medlemmer legger til. Fjern alle grupper før bytte. Én manager er nok; hvis den eneste managerkontoen fjernes, krever gjenoppretting databasetilgang."
+  },
+  "Only members you add. You can start alone as manager; if your account is removed with no other manager, this private workspace cannot be opened in BudgetCheck.": {
+    "da": "Kun medlemmer, tilføjer. Det er muligt at starte alene som manager; hvis konto fjernes uden anden manager, kan dette private arbejdsområde ikke åbnes i BudgetCheck.",
+    "sv": "Bara medlemmar lägger till. Det går att börja ensam som manager; om det konto tas bort utan annan manager kan den här privata arbetsytan inte öppnas i BudgetCheck.",
+    "nb": "Bare medlemmer legger til. Det er mulig å starte alene som manager; hvis kontoen fjernes uten annen manager, kan ikke dette private arbeidsområdet åpnes i BudgetCheck."
+  },
+  "Pick a calendar year and month. The year list grows with your ledger; your primary planning year anchors the default range.": {
+    "da": "Vælg et kalenderår og en måned. Årslisten vokser med hovedbogen; det primære planlægningsår fastlægger standardintervallet.",
+    "sv": "Välj kalenderår och månad. Årslistan växer med huvudboken; det primära planeringsår förankrar standardintervallet."
+  },
+  "Pick a workspace before importing transactions.": {
+    "da": "Vælg et arbejdsområde, før importerer posteringer.",
+    "sv": "Välj en arbetsyta innan importerar transaktioner.",
+    "nb": "Velg et arbeidsområde før importerer posteringer."
+  },
+  "Pick a workspace in the sidebar before importing transactions.": {
+    "da": "Vælg et arbejdsområde i sidebjælken, før importerer posteringer.",
+    "sv": "Välj en arbetsyta i sidofältet innan importerar transaktioner.",
+    "nb": "Velg et arbeidsområde i sidefeltet før importerer posteringer."
+  },
+  "Planned entries reflect your category budget targets for this month. A real booking in the same category removes the placeholder automatically (any amount, same or neighbouring month).": {
+    "da": "Planlagte poster afspejler kategoribudgetmål for denne måned. En reel postering i samme kategori fjerner pladsholderen automatisk (ethvert beløb, samme eller næste måned).",
+    "sv": "Planerade poster speglar kategoribudgetmål för denna månad. En riktig bokföring i samma kategori tar automatiskt bort platshållaren (vilket belopp som helst, samma eller närliggande månad).",
+    "nb": "Planlagte poster gjenspeiler kategoribudsjettmålene for denne måneden. En reell postering i samme kategori fjerner plassholderen automatisk (ethvert beløp, samme eller nabomåned)."
+  },
+  "Planning cushion after the target—not your bank balance.": {
+    "da": "Planlægningsbuffer efter målet — ikke banksaldo.",
+    "sv": "Planeringsbuffert efter målet — inte det banksaldo.",
+    "nb": "Planleggingsbuffer etter målet — ikke banksaldoen ."
+  },
+  "Private means only people you add as members can open this workspace in BudgetCheck. Administrators who are not members cannot see it in the app.": {
+    "da": "Privat betyder, at kun personer, tilføjer som medlemmer, kan åbne dette arbejdsområde i BudgetCheck. Administratorer, der ikke er medlemmer, ser det ikke i appen.",
+    "sv": "Privat betyder att bara personer lägger till som medlemmar kan öppna den här arbetsytan i BudgetCheck. Administratörer som inte är medlemmar ser den inte i appen.",
+    "nb": "Privat betyr at bare personer legger til som medlemmer kan åpne dette arbeidsområdet i BudgetCheck. Administratorer som ikke er medlemmer ser det ikke i appen."
+  },
+  "Private means only people you add as members can open this workspace in BudgetCheck. Nextcloud and BudgetCheck administrators who are not members cannot see it in the app.": {
+    "da": "Privat betyder, at kun personer, tilføjer som medlemmer, kan åbne dette arbejdsområde i BudgetCheck. Nextcloud- og BudgetCheck-administratorer, der ikke er medlemmer, ser det ikke i appen.",
+    "sv": "Privat betyder att bara personer lägger till som medlemmar kan öppna den här arbetsytan i BudgetCheck. Nextcloud- och BudgetCheck-administratörer som inte är medlemmar ser den inte i appen.",
+    "nb": "Privat betyr at bare personer legger til som medlemmer kan åpne dette arbeidsområdet i BudgetCheck. Nextcloud- og BudgetCheck-administratorer som ikke er medlemmer ser det ikke i appen."
+  },
+  "Queued — uploads when you save": {
+    "da": "I kø — uploades, ved gemning",
+    "sv": "I kö — laddas upp vid sparande",
+    "nb": "I kø — lastes opp ved lagring"
+  },
+  "Repeating income or expenses — on a fixed interval or on specific dates you list. Generate creates planned ledger entries; a matching import removes the plan automatically.": {
+    "da": "Gentagne indtægter eller udgifter – med fast interval eller på bestemte datoer, angiver. Generér opretter planlagte posteringer; en matchende import fjerner planen automatisk.",
+    "sv": "Återkommande inkomster eller utgifter — med fast intervall eller på specifika datum som anger. Generera skapar planerade bokningar; en matchande import tar bort planen automatiskt.",
+    "nb": "Gjentakende inntekter eller utgifter — med fast intervall eller på bestemte datoer angir. Generer oppretter planlagte posteringer; en matchende import fjerner planen automatisk."
+  },
+  "Review months for households, or period progress for projects, wherever you are.": {
+    "da": "Gennemgå måneder for husstande eller periodefremskridt for projekter, uanset hvor der er.",
+    "sv": "Granska månader för hushåll, eller periodframsteg för projekt, var än är.",
+    "nb": "Gå gjennom måneder for husholdninger, eller periodefremdrift for prosjekter, uansett hvor er."
+  },
+  "The amount you plan to set aside (percentage, fixed amount, or the higher of both).": {
+    "da": "Beløbet, planlægger at lægge til side (procent, fast beløb eller det højeste af begge).",
+    "sv": "Beloppet planerar att avsätta (procent, fast belopp eller det högsta av båda).",
+    "nb": "Beløpet planlegger å sette av (prosent, fast beløp eller det høyeste av begge)."
+  },
+  "The official Android app connects to this Nextcloud. Keep household and project budgets with you — progress stays on your server.": {
+    "da": "Den officielle Android-app forbinder til denne Nextcloud. Tag husstands- og projektbudgetter med — fremskridt bliver på server.",
+    "sv": "Den officiella Android-appen ansluter till den här Nextcloud. Ta med hushålls- och projektbudgetar — framstegen stannar på server.",
+    "nb": "Den offisielle Android-appen kobler til denne Nextcloud. Ta med husholdnings- og prosjektbudsjetter — fremdriften blir på serveren ."
+  },
+  "The total amount you actually set aside this year.": {
+    "da": "Det samlede beløb, faktisk lagde til side i år.",
+    "sv": "Det totala belopp faktiskt avsatte det här året.",
+    "nb": "Det totale beløpet faktisk satte av i år."
+  },
+  "The total amount you planned to set aside this year.": {
+    "da": "Det samlede beløb, planlagde at lægge til side i år.",
+    "sv": "Det totala belopp planerade att avsätta det här året.",
+    "nb": "Det totale beløpet planla å sette av i år."
+  },
+  "This booking falls into a closed month. Reopen the month before adding transactions.": {
+    "da": "Denne postering falder i en lukket måned. Genåbn måneden, før tilføjer posteringer.",
+    "sv": "Den här bokningen hamnar i en stängd månad. Öppna månaden igen innan lägger till transaktioner.",
+    "nb": "Denne posteringen havner i en lukket måned. Gjenåpne måneden før legger til posteringer."
+  },
+  "This transaction belongs to a closed month. Reopen the month before editing.": {
+    "da": "Denne postering hører til en lukket måned. Genåbn måneden, før redigerer.",
+    "sv": "Den här transaktionen tillhör en stängd månad. Öppna månaden igen innan redigerar.",
+    "nb": "Denne posteringen tilhører en lukket måned. Gjenåpne måneden før redigerer."
+  },
+  "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": {
+    "da": "Dette arbejdsområde er privat. Kun enkelte personer kan være medlemmer — grupper er slået fra, så adgangen forbliver under kontrol.",
+    "sv": "Den här arbetsytan är privat. Bara enskilda personer kan vara medlemmar — grupper är avstängda så att åtkomsten förblir under kontroll.",
+    "nb": "Dette arbeidsområdet er privat. Bare enkeltpersoner kan være medlemmer — grupper er slått av slik at tilgangen forblir under kontroll."
+  },
+  "Transaction saved. You can add receipts below, then click Done.": {
+    "da": "Postering gemt. Det er muligt at tilføje kvitteringer nedenfor og derefter klikke på Færdig.",
+    "sv": "Bokföring sparad. Det går att lägga till kvitton nedan och sedan klicka på Klar.",
+    "nb": "Postering lagret. Det er mulig å legge til kvitteringer nedenfor, deretter klikke Ferdig."
+  },
+  "Transfers in this category count toward your savings goal and are excluded from everyday budget saldo.": {
+    "da": "Overførsler i denne kategori tæller med i sparemålet og er udelukket fra daglig budgetsaldo.",
+    "sv": "Överföringar i den här kategorin räknas mot sparmålet och exkluderas från vardagsbudgetens saldo."
+  },
+  "Try broadening your filters.": {
+    "da": "Prøv at udvide filtre."
+  },
+  "Upload a CSV from your bank or spreadsheet. You never need numeric category IDs — pick defaults below or use category names from the list.": {
+    "da": "Upload en CSV fra bank eller et regneark. behøver aldrig numeriske kategori-ID’er — vælg standarder nedenfor, eller brug kategorinavne fra listen.",
+    "nb": "Last opp en CSV fra banken eller et regneark. Numeriske kategori-ID-er trenger aldri — velg standarder under eller bruk kategorinavn fra listen."
+  },
+  "Upload your CSV and click “Validate CSV”.": {
+    "da": "Upload CSV, og klik på «Validér CSV».",
+    "sv": "Ladda upp CSV och klicka på «Validera CSV»."
+  },
+  "Use for unusually large or one-off entries. They stay in the ledger but are excluded from everyday monthly totals unless you include them in workspace settings.": {
+    "da": "Til usædvanligt store eller engangsposteringer. De bliver i hovedbogen, men er udelukket fra de daglige månedstotaler, medmindre inkluderer dem i arbejdsområdets indstillinger.",
+    "sv": "För ovanligt stora eller engångsposter. De finns kvar i huvudboken men exkluderas från månatliga vardagssummor om inte inkluderar dem i arbetsytans inställningar.",
+    "nb": "For uvanlig store eller engangsposteringer. De blir i hovedboken, men er utelatt fra månedlige daglige totaler med mindre inkluderer dem i innstillingene for arbeidsområdet."
+  },
+  "Use the transactions screen to add your first entry.": {
+    "da": "Brug transaktionsskærmen til at tilføje første postering.",
+    "sv": "Använd transaktionsskärmen för att lägga till första post.",
+    "nb": "Bruk transaksjonsskjermen for å legge til første postering."
+  },
+  "Use when your bank export has no reference column. Only enable if you might import the same file twice.": {
+    "da": "Brug, når bankeksporten ingen referencekolonne har. Aktivér kun, hvis Det er muligt at komme til at importere samme fil to gange.",
+    "sv": "Använd när bankexporten saknar referenskolumn. Aktivera bara om Det går att importera samma fil två gånger.",
+    "nb": "Bruk når bankeksporten ikke har referansekolonne. Slå bare på hvis Det er mulig å komme til å importere samme fil to ganger."
+  },
+  "Uses Nextcloud Login Flow — your main password is never stored in the app.": {
+    "da": "Bruger Nextcloud Login Flow — hovedadgangskode gemmes aldrig i appen.",
+    "sv": "Använder Nextcloud Login Flow — det huvudlösenord lagras aldrig i appen."
+  },
+  "Uses the externalRef column (or transaction ID from your bank). Rows without a reference are always imported.": {
+    "da": "Bruger kolonnen externalRef (eller transaktions-ID fra bank). Rækker uden reference importeres altid."
+  },
+  "Validate your CSV before importing.": {
+    "da": "Validér CSV, før importerer.",
+    "sv": "Validera CSV innan importerar.",
+    "nb": "Valider CSV-en før importerer."
+  },
+  "View workspace details and set how planning totals appear for you.": {
+    "da": "Se arbejdsområdets detaljer, og indstil, hvordan planlægningstotaler vises .",
+    "sv": "Visa arbetsytans detaljer och ställ in hur planeringssummor visas .",
+    "nb": "Se detaljer for arbeidsområdet og still inn hvordan planleggingstotaler vises ."
+  },
+  "What happens when you close this month": {
+    "da": "Hvad der sker, når lukker denne måned",
+    "sv": "Vad som händer när stänger den här månaden",
+    "nb": "Hva som skjer når lukker denne måneden"
+  },
+  "What you can do": {
+    "da": "Hvad Det er muligt at gøre",
+    "sv": "Vad Det går att göra",
+    "nb": "Hva Det er mulig å gjøre"
+  },
+  "When enabled, the next due date jumps to the first scheduled date on or after this day when you save.": {
+    "da": "Når aktiveret, springer næste forfaldsdato til den første planlagte dato på eller efter denne dag, ved gemning.",
+    "sv": "När detta är aktiverat hoppar nästa förfallodatum till det första schemalagda datumet på eller efter denna dag vid sparande.",
+    "nb": "Når aktivert, hopper neste forfallsdato til den første planlagte datoen på eller etter denne dagen ved lagring."
+  },
+  "You are not a member of any workspace yet.": {
+    "da": "der er endnu ikke medlem af noget arbejdsområde.",
+    "sv": "är inte medlem i någon arbetsyta ännu.",
+    "nb": "er ikke medlem av noe arbeidsområde ennå."
+  },
+  "You are not allowed to use BudgetCheck right now.": {
+    "da": "der er ikke tilladelse til at bruge BudgetCheck lige nu.",
+    "sv": "får inte använda BudgetCheck just nu.",
+    "nb": "har ikke tillatelse til å bruke BudgetCheck akkurat nå."
+  },
+  "You are not authorized to perform that action.": {
+    "da": "der er ikke autoriseret til at udføre den handling.",
+    "sv": "har inte behörighet att utföra den åtgärden.",
+    "nb": "har ikke autorisasjon til å utføre den handlingen."
+  },
+  "You can hide this panel permanently; it does not block any action.": {
+    "da": "Det er muligt at skjule dette panel permanent; det blokerer ingen handling.",
+    "sv": "Det går att dölja den här panelen permanent; den blockerar inga åtgärder.",
+    "nb": "Det er mulig å skjule dette panelet permanent; det blokkerer ingen handling."
+  },
+  "You cannot create a workspace with your current access.": {
+    "da": "Det er muligt at ikke oprette et arbejdsområde med nuværende adgang.",
+    "sv": "Det går att inte skapa en arbetsyta med nuvarande åtkomst.",
+    "nb": "Det er mulig å ikke opprette et arbeidsområde med nåværende tilgang."
+  },
+  "You do not have access to BudgetCheck. Ask an app administrator to add you to a workspace.": {
+    "da": "der er ikke adgang til BudgetCheck. Bed en app-administrator om at tilføje til et arbejdsområde.",
+    "sv": "har inte åtkomst till BudgetCheck. Be en appadministratör lägga till i en arbetsyta.",
+    "nb": "har ikke tilgang til BudgetCheck. Be en app-administrator om å legge til i et arbeidsområde."
+  },
+  "You do not have access to BudgetCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access.": {
+    "da": "der er ikke adgang til BudgetCheck. konto er ikke blandt de brugere eller grupper, der må bruge denne app. Kontakt en server- eller app-administrator, hvis der har brug for adgang.",
+    "sv": "har inte åtkomst till BudgetCheck. det konto finns inte bland användare eller grupper som får använda appen. Be en server- eller appadministratör om behöver åtkomst.",
+    "nb": "har ikke tilgang til BudgetCheck. Kontoen er ikke blant brukerne eller gruppene som har tillatelse til å bruke denne appen. Spør en server- eller app-administrator hvis trenger tilgang."
+  },
+  "You do not have permission to open app settings.": {
+    "da": "der er ikke tilladelse til at åbne app-indstillinger.",
+    "sv": "har inte behörighet att öppna appinställningarna.",
+    "nb": "har ikke tillatelse til å åpne app-innstillinger."
+  },
+  "You need contributor or manager access to import transactions into this workspace.": {
+    "da": "skal have bidragsyder- eller lederadgang for at importere posteringer til dette arbejdsområde.",
+    "sv": "behöver medarbetar- eller ansvarigåtkomst för att importera transaktioner till den här arbetsytan.",
+    "nb": "trenger bidragsyter- eller ledertilgang for å importere posteringer til dette arbeidsområdet."
+  },
+  "Your import choices are remembered for this workspace on this device.": {
+    "da": "Importvalg huskes for dette arbejdsområde på denne enhed.",
+    "sv": "importval kommer ihåg för den här arbetsytan på den här enheten.",
+    "nb": "Importvalgene huskes for dette arbeidsområdet på denne enheten."
+  },
+  "Your import choices are saved to your account for this workspace and sync across devices.": {
+    "da": "Importvalg gemmes på konto for dette arbejdsområde og synkroniseres på tværs af enheder.",
+    "sv": "importval sparas på kontot för den här arbetsytan och synkas mellan enheter.",
+    "nb": "Importvalgene lagres på kontoen for dette arbeidsområdet og synkroniseres på tvers av enheter."
+  },
+  "Your monthly savings goal and how much you moved aside.": {
+    "da": "det månedlige opsparingsmål, og hvor meget der er lagt til side.",
+    "sv": "det månatliga sparmål och hur mycket har lagt undan.",
+    "nb": "det månedlige sparemål og hvor mye har satt av."
+  },
+  "Your planning view and read-only workspace details.": {
+    "da": "Planlægningsvisning og skrivebeskyttede detaljer om arbejdsområdet.",
+    "sv": "planeringsvy och skrivskyddade arbetsytedetaljer.",
+    "nb": "Planleggingsvisningen og skrivebeskyttede detaljer for arbeidsområdet."
+  },
+  "Your session expired. Please reload and sign in again.": {
+    "da": "session er udløbet. Genindlæs siden og log ind igen.",
+    "sv": "session har gått ut. Ladda om och logga in igen.",
+    "nb": "Økten er utløpt. Last inn på nytt og logg inn igjen."
+  },
+  "Amount reserved by your savings target before everyday spending. Percentage targets reserve a share of net income; absolute targets reserve a fixed amount.": {
+    "sv": "Belopp reserverat av sparmålet före vardagliga utgifter. Procentmål reserverar en andel av nettoinkomsten; absoluta mål reserverar ett fast belopp."
+  },
+  "Ask a workspace contributor to add bookings. You can still review breakdowns once entries exist.": {
+    "sv": "Be en medarbetare i arbetsytan lägga till transaktioner. Det går att fortfarande granska uppdelningar när poster finns.",
+    "nb": "Be en bidragsyter i arbeidsområdet om å legge til posteringer. Det er mulig å fortsatt gjennomgå oppdelinger når posteringer finnes."
+  },
+  "Before you close:": {
+    "sv": "Innan stänger:",
+    "nb": "Før lukker:"
+  },
+  "Choose whether the amount you entered is gross or net. Budget usage follows the workspace tax basis in settings.": {
+    "sv": "Välj om beloppet angav är brutto eller netto. Budgetanvändning följer arbetsytans skatteunderlag i inställningarna.",
+    "nb": "Velg om beløpet skrev inn er brutto eller netto. Budsjettbruk følger arbeidsområdets avgiftsgrunnlag under innstillinger."
+  },
+  "Choose year and month with the lists below. The URL updates when you change the month so you can bookmark or share it.": {
+    "sv": "Välj år och månad med listorna nedan. URL:en uppdateras när byter månad så att Det går att bokmärka eller dela den.",
+    "nb": "Velg år og måned med listene nedenfor. URL-en oppdateres når endrer måneden, slik at Det er mulig å bokmerke eller dele den."
+  },
+  "Expense means money leaving the workspace; income means money arriving. The category list updates when you change this.": {
+    "sv": "Utgift betyder att pengar lämnar arbetsytan; inkomst betyder att pengar kommer in. Kategorilistan uppdateras när ändrar detta.",
+    "nb": "Utgift betyr penger som forlater arbeidsområdet; inntekt betyr penger som kommer inn. Kategorilisten oppdateres når endrer dette."
+  },
+  "Households plan one calendar year at a time. You can change this later in workspace settings.": {
+    "sv": "Hushåll planerar ett kalenderår i taget. Det går att ändra detta senare i arbetsyteinställningarna.",
+    "nb": "Husholdninger planlegger ett kalenderår om gangen. Det er mulig å endre dette senere under arbeidsområdeinnstillinger."
+  },
+  "How much of your yearly savings target was achieved.": {
+    "sv": "Hur stor del av det årliga sparmål som uppnåddes."
+  },
+  "How to read this": {
+    "sv": "Så här läser detta",
+    "nb": "Slik leser dette"
+  },
+  "Month changed while editing. Save was cancelled — reopen the overrides for the month you want.": {
+    "sv": "Månaden ändrades under redigeringen. Sparandet avbröts — öppna undantagen igen för den månad vill.",
+    "nb": "Måneden endret seg under redigeringen. Lagring ble avbrutt — åpne overstyringene på nytt for måneden vil."
+  },
+  "Only one planned booking can be created on this date. Clear the end date if you want the rule to repeat on your schedule.": {
+    "sv": "Högst en planerad bokning kan skapas detta datum. Rensa slutdatumet om regeln ska upprepas enligt det schema."
+  },
+  "Only real Nextcloud user accounts can be selected. Unknown logins are rejected when you save.": {
+    "sv": "Endast riktiga Nextcloud-användarkonton kan väljas. Okända inloggningar avvisas vid sparande.",
+    "nb": "Kun ekte Nextcloud-brukerkontoer kan velges. Ukjente innlogginger avvises ved lagring."
+  },
+  "Reopen is reversible. Use it before recording corrections, then close again to refresh the snapshot.": {
+    "sv": "Omöppning går att ångra. Använd den innan registrerar korrigeringar och stäng sedan igen för att uppdatera ögonblicksbilden."
+  },
+  "See income, expenses, savings, and what needs your attention.": {
+    "sv": "Se inkomster, utgifter, sparande och vad som behöver uppmärksamhet."
+  },
+  "Start and end date are the same. This rule can create at most one booking on that day and will not repeat afterward. Clear the end date if it should continue on your repeat schedule.": {
+    "sv": "Start- och slutdatum är samma. Regeln kan skapa högst en bokning den dagen och upprepas inte därefter. Rensa slutdatumet om den ska fortsätta enligt det upprepningsschema."
+  },
+  "This month currently uses the workspace default savings target. Saving here creates a month-specific override.": {
+    "sv": "Den här månaden använder arbetsytans standardsparmål. Om sparar här skapas ett månadsspecifikt undantag."
+  },
+  "Used as baseline for months. You can still override single months in planning.": {
+    "sv": "Används som baslinje för månader. Det går att fortfarande åsidosätta enskilda månader i planeringen.",
+    "nb": "Brukes som grunnlag for måneder. Det er mulig å fortsatt overstyre enkelte måneder i planleggingen."
+  },
+  "When disabled, new entries are stored without net/VAT/gross split. Existing tax split values are removed automatically when you save disabled mode.": {
+    "sv": "När inaktiverat lagras nya poster utan netto/VAT/brutto-uppdelning. Befintliga VAT-uppdelningsvärden tas bort automatiskt vid sparande inaktiverat läge.",
+    "nb": "Når deaktivert lagres nye posteringer uten netto/MVA/brutto-deling. Eksisterende MVA-deling fjernes automatisk ved lagring deaktivert modus."
+  },
+  "When enabled, the next due date is reset to this date when you save.": {
+    "sv": "När aktiverat återställs nästa förfallodatum till detta datum vid sparande.",
+    "nb": "Når aktivert tilbakestilles neste forfallsdato til denne datoen ved lagring."
+  },
+  "When restriction is enabled, add at least one user or one group before saving.": {
+    "sv": "När begränsning är aktiverad, lägg till minst en användare eller en grupp innan sparar."
+  },
+  "Choose the category that best describes this booking. Only categories for the direction you selected are listed.": {
+    "nb": "Velg kategorien som best beskriver denne posteringen. Kun kategorier for retningen valgte vises."
+  },
+  "Log income and expenses on the go": {
+    "nb": "Før inntekter og utgifter mens er på farten"
+  },
+  "No quick access workspaces yet. Use Manage to pin your favorites.": {
+    "nb": "Ingen hurtigtilgangs-arbeidsområder ennå. Bruk Administrer for å feste favorittene ."
+  }
+}
