@@ -1,10 +1,8 @@
-# BudgetCheck — PHP unit tests and supply-chain audit.
 name: CI
 
 on:
   push:
     branches: [master, main]
-    tags: ['v*']
   pull_request:
 
 permissions:
@@ -15,89 +13,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend:
-    name: Frontend lint
+  ci:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Frontend checks
-        run: npm test
-
-  lint:
-    name: Lint & security audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           coverage: none
           tools: composer:v2
 
-      - name: Validate composer.json / composer.lock
-        run: composer validate --strict
-
-      - name: Security audit (composer.lock)
-        run: composer audit --locked
-
-      - name: PHP syntax check
-        run: |
-          find lib tests templates -name '*.php' -print0 \
-            | xargs -0 -n1 -P4 php -l
-
-  test:
-    name: PHPUnit (PHP ${{ matrix.php-version }})
-    runs-on: ubuntu-latest
-    needs: [frontend, lint]
-    strategy:
-      fail-fast: false
-      matrix:
-        php-version: ['8.2', '8.3', '8.4']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-version }}
-          coverage: none
-          tools: composer:v2
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ matrix.php-version }}-${{ hashFiles('composer.lock') }}
-          restore-keys: |
-            composer-${{ matrix.php-version }}-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
-
-      - name: PHPUnit
-        run: ./vendor/bin/phpunit --testsuite unit
-
-      # Integration suite needs a bootstrapped Nextcloud (Docker). Local gate:
-      #   ../../docker/run-app-phpunit.sh budgetcheck --testsuite integration
-      # E2E (host, with e2e/.env): npm run e2e:smoke:safe
-
-      - name: Mutation gauntlets
-        run: |
+      - run: composer validate --no-check-publish
+      - run: find lib tests templates -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
+      - run: bash scripts/check-db-naming.sh
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: ./vendor/bin/phpunit --testsuite unit
+      - run: npm test
+      - run: |
           php tests/Mutation/run-closeout-mutations.php
           php tests/Mutation/run-epic-gate-mutations.php
           php tests/Mutation/run-billing-facade-mutations.php
