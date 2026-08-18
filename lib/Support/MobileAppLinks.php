@@ -24,6 +24,7 @@ final class MobileAppLinks
 	public const PRODUCT_PAGE_PATH_DE = '/de/apps/budgetcheck.html';
 	public const PRIVACY_PAGE_PATH = '/en/privacy-budgetcheck-mobile.html';
 	public const PRIVACY_PAGE_PATH_DE = '/de/datenschutz-budgetcheck-mobile.html';
+	public const PLAY_LISTED = true;
 
 	public function playStoreUrl(): string
 	{
@@ -33,6 +34,11 @@ final class MobileAppLinks
 	public function playStorePackageId(): string
 	{
 		return self::PLAY_STORE_PACKAGE_ID;
+	}
+
+	public function playListed(): bool
+	{
+		return self::PLAY_LISTED;
 	}
 
 	public function productPageUrl(string $languageCode): string

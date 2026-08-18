@@ -205,4 +205,5 @@ $activeId = $workspace !== null ? (int)$workspace['id'] : 0;
 			</li>
 		<?php endforeach; ?>
 	</ul>
+	<?php include __DIR__ . '/../parts/feedback-nav-footer.php'; ?>
 </div>

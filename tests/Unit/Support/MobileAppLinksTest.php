@@ -17,6 +17,7 @@ final class MobileAppLinksTest extends TestCase
 			$links->playStoreUrl(),
 		);
 		self::assertSame('de.softwarebydesign.budgetcheck', $links->playStorePackageId());
+		self::assertTrue($links->playListed());
 	}
 
 	public function testProductAndPrivacyUrlsAreHttpsOnVendorOrigin(): void

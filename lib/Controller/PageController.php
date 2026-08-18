@@ -579,6 +579,7 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/icons');
 		Util::addScript(Application::APP_ID, 'common/household-period-controls');
 		Util::addScript(Application::APP_ID, 'common/messaging');
+		Util::addScript(Application::APP_ID, 'common/app-feedback');
 		// Soft keyboard: keep focused notes/inputs above the IME on phones.
 		Util::addScript(Application::APP_ID, 'common/keep-focused-visible');
 		Util::addScript(Application::APP_ID, 'common/money');

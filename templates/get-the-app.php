@@ -66,7 +66,7 @@ $features = [
 				<span class="bc-get-app__play-label"><?php p($l->t('Get it on Google Play')); ?></span>
 			</a>
 			<p class="bc-get-app__price-hint">
-				<?php p($l->t('Not yet publicly listed on Google Play. Until then the web app covers the feature set. When available: one-time purchase — price varies by country. No organisation seat licence.')); ?>
+				<?php p($l->t('On Google Play. One-time purchase — price varies by country. No organisation seat licence.')); ?>
 			</p>
 		</div>
 	</section>
