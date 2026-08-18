@@ -1238,7 +1238,17 @@ OC.L10N.register(
 	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Zurück zu Standard? App-Administratoren können diesen Arbeitsbereich dann wieder sehen und verwalten.",
 	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Dieser Arbeitsbereich ist privat. Nur einzelne Personen können Mitglieder sein — Gruppen sind deaktiviert, damit der Zugriff unter Ihrer Kontrolle bleibt.",
 	"Who can see this workspace" : "Wer diesen Arbeitsbereich sehen kann",
-	"You cannot create a workspace with your current access." : "Mit Ihrem aktuellen Zugriff können Sie keinen Arbeitsbereich erstellen."
+	"You cannot create a workspace with your current access." : "Mit Ihrem aktuellen Zugriff können Sie keinen Arbeitsbereich erstellen.",
+	"Report a problem" : "Fehler melden",
+	"Suggest an improvement" : "Verbesserung vorschlagen",
+	"Open GitHub Issues" : "GitHub Issues öffnen",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-Mail ohne Antwort-SLA. Gebuchte Hilfe: Support & wir.",
+	"Report this problem" : "Diesen Fehler melden",
+	"(opens in a new tab)" : "(öffnet in neuem Tab)",
+	"Setup & training" : "Einrichtung & Schulung",
+	"Commissioned feature" : "Beauftragte Funktion",
+	"Mobile & terminal" : "Mobil & Terminal",
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Bei Google Play. Einmalkauf — der Preis hängt vom Land ab. Keine Organisationsplatz-Lizenz."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

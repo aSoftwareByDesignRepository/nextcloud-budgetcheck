@@ -1,0 +1,13 @@
+{
+  "identical": [
+    "bookingDate, date, valuta, Buchungsdatum",
+    "direction, type, Soll/Haben, debit/credit",
+    "title, description, memo, Verwendungszweck"
+  ],
+  "informal": [],
+  "all": [
+    "bookingDate, date, valuta, Buchungsdatum",
+    "direction, type, Soll/Haben, debit/credit",
+    "title, description, memo, Verwendungszweck"
+  ]
+}

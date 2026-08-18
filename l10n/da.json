@@ -1237,7 +1237,17 @@
         "Switch back to standard? App administrators will be able to see and manage this workspace again.": "Skift tilbage til standard? App-administratorer kan igen se og administrere dette arbejdsområde.",
         "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Dette arbejdsområde er privat. Kun enkelte personer kan være medlemmer — grupper er slået fra, så adgangen forbliver under kontrol.",
         "Who can see this workspace": "Hvem kan se dette arbejdsområde",
-        "You cannot create a workspace with your current access.": "Det er muligt at ikke oprette et arbejdsområde med nuværende adgang."
+        "You cannot create a workspace with your current access.": "Det er muligt at ikke oprette et arbejdsområde med nuværende adgang.",
+        "Report a problem": "Rapportér et problem",
+        "Suggest an improvement": "Foreslå en forbedring",
+        "Open GitHub Issues": "Åbn GitHub Issues",
+        "Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail uden svar-SLA. Brug for booket hjælp? Brug Support & os.",
+        "Report this problem": "Rapportér dette problem",
+        "(opens in a new tab)": "(åbner i en ny fane)",
+        "Setup & training": "Opsætning og træning",
+        "Commissioned feature": "Bestilt funktion",
+        "Mobile & terminal": "Mobil og terminal",
+        "On Google Play. One-time purchase — price varies by country. No organisation seat licence.": "På Google Play. Engangskøb — prisen afhænger af landet. Ingen organisationspladslicens."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

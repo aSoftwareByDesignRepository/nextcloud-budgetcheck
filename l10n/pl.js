@@ -1238,7 +1238,17 @@ OC.L10N.register(
 	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Wrócić do trybu standardowego? Administratorzy aplikacji znów będą mogli widzieć i zarządzać tą przestrzenią.",
 	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Ta przestrzeń jest prywatna. Tylko pojedyncze osoby mogą być członkami — grupy są wyłączone, aby dostęp pozostał pod Twoją kontrolą.",
 	"Who can see this workspace" : "Kto może zobaczyć tę przestrzeń roboczą",
-	"You cannot create a workspace with your current access." : "Nie możesz utworzyć przestrzeni roboczej przy obecnym dostępie."
+	"You cannot create a workspace with your current access." : "Nie możesz utworzyć przestrzeni roboczej przy obecnym dostępie.",
+	"Report a problem" : "Zgłoś problem",
+	"Suggest an improvement" : "Zaproponuj ulepszenie",
+	"Open GitHub Issues" : "Otwórz GitHub Issues",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail bez SLA odpowiedzi. Potrzebujesz umówionej pomocy? Użyj Wsparcie i my.",
+	"Report this problem" : "Zgłoś ten problem",
+	"(opens in a new tab)" : "(otwiera się w nowej karcie)",
+	"Setup & training" : "Wdrożenie i szkolenie",
+	"Commissioned feature" : "Funkcja na zlecenie",
+	"Mobile & terminal" : "Mobilnie i terminal",
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "W Google Play. Zakup jednorazowy — cena zależy od kraju. Bez licencji stanowiska organizacji."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

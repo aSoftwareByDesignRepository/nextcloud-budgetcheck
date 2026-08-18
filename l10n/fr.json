@@ -1237,7 +1237,17 @@
         "Switch back to standard? App administrators will be able to see and manage this workspace again.": "Revenir au mode standard ? Les administrateurs de l’app pourront à nouveau voir et gérer cet espace.",
         "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Cet espace est privé. Seules des personnes individuelles peuvent être membres — les groupes sont désactivés pour que l’accès reste sous votre contrôle.",
         "Who can see this workspace": "Qui peut voir cet espace de travail",
-        "You cannot create a workspace with your current access.": "Vous ne pouvez pas créer d’espace de travail avec votre accès actuel."
+        "You cannot create a workspace with your current access.": "Vous ne pouvez pas créer d’espace de travail avec votre accès actuel.",
+        "Report a problem": "Signaler un problème",
+        "Suggest an improvement": "Proposer une amélioration",
+        "Open GitHub Issues": "Ouvrir GitHub Issues",
+        "Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Support et nous.",
+        "Report this problem": "Signaler ce problème",
+        "(opens in a new tab)": "(s’ouvre dans un nouvel onglet)",
+        "Setup & training": "Mise en place et formation",
+        "Commissioned feature": "Fonction sur commande",
+        "Mobile & terminal": "Mobile et terminal",
+        "On Google Play. One-time purchase — price varies by country. No organisation seat licence.": "Sur Google Play. Achat unique — le prix dépend du pays. Pas de licence de siège organisation."
     },
     "pluralForm": "nplurals=2; plural=(n > 1);"
 }

@@ -1,0 +1,6 @@
+[
+  "bookingDate, date, valuta, Buchungsdatum",
+  "direction, Soll/Haben, debit/credit (rename a bank “type” column to “direction” if needed)",
+  "direction, type, Soll/Haben, debit/credit",
+  "title, description, memo, Verwendungszweck"
+]

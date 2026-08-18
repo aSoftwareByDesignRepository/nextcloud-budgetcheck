@@ -1237,7 +1237,17 @@
         "Switch back to standard? App administrators will be able to see and manage this workspace again.": "Terug naar standaard? App-beheerders kunnen deze werkruimte weer zien en beheren.",
         "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Deze werkruimte is privé. Alleen individuele personen kunnen lid zijn — groepen staan uit zodat de toegang onder uw controle blijft.",
         "Who can see this workspace": "Wie deze werkruimte kan zien",
-        "You cannot create a workspace with your current access.": "U kunt met uw huidige toegang geen werkruimte maken."
+        "You cannot create a workspace with your current access.": "U kunt met uw huidige toegang geen werkruimte maken.",
+        "Report a problem": "Probleem melden",
+        "Suggest an improvement": "Verbetering voorstellen",
+        "Open GitHub Issues": "GitHub Issues openen",
+        "Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail zonder antwoord-SLA. Geboekte hulp nodig? Gebruik Support en wij.",
+        "Report this problem": "Dit probleem melden",
+        "(opens in a new tab)": "(opent in een nieuw tabblad)",
+        "Setup & training": "Inrichting en training",
+        "Commissioned feature": "Functie in opdracht",
+        "Mobile & terminal": "Mobiel en terminal",
+        "On Google Play. One-time purchase — price varies by country. No organisation seat licence.": "Op Google Play. Eenmalige aankoop — de prijs verschilt per land. Geen organisatielicentie per plaats."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

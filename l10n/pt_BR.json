@@ -1018,7 +1018,7 @@
         "Start date": "Data de início",
         "Status": "Status",
         "Summary month": "Resumo do mês",
-        "Support & us": "Apoie-nos e nós",
+        "Support & us": "Support e nós",
         "Support us": "Apoie-nos",
         "Surplus in this filter window": "Excedente nesta janela de filtro",
         "Tags": "Etiquetas",
@@ -1237,7 +1237,17 @@
         "Switch back to standard? App administrators will be able to see and manage this workspace again.": "Voltar ao padrão? Os administradores de aplicativos poderão ver e gerenciar este espaço de trabalho novamente.",
         "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Este espaço de trabalho é privado. Apenas pessoas individuais podem ser membros – os grupos estão desativados para que o acesso permaneça sob seu controle.",
         "Who can see this workspace": "Quem pode ver este espaço de trabalho",
-        "You cannot create a workspace with your current access.": "o usuário não pode criar um espaço de trabalho com seu acesso atual."
+        "You cannot create a workspace with your current access.": "o usuário não pode criar um espaço de trabalho com seu acesso atual.",
+        "Report a problem": "Relatar um problema",
+        "Suggest an improvement": "Sugerir uma melhoria",
+        "Open GitHub Issues": "Abrir GitHub Issues",
+        "Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sem SLA de resposta. Precisa de ajuda agendada? Use Support e nós.",
+        "Report this problem": "Relatar este problema",
+        "(opens in a new tab)": "(abre em uma nova aba)",
+        "Setup & training": "Implantação e treinamento",
+        "Commissioned feature": "Funcionalidade sob encomenda",
+        "Mobile & terminal": "Celular e terminal",
+        "On Google Play. One-time purchase — price varies by country. No organisation seat licence.": "No Google Play. Compra única — o preço varia por país. Sem licença de vaga da organização."
     },
     "pluralForm": "nplurals=2; plural=(n > 1);"
 }

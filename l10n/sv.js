@@ -1238,7 +1238,17 @@ OC.L10N.register(
 	"Switch back to standard? App administrators will be able to see and manage this workspace again." : "Byta tillbaka till standard? Appadministratörer kan se och hantera den här arbetsytan igen.",
 	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "Den här arbetsytan är privat. Bara enskilda personer kan vara medlemmar — grupper är avstängda så att åtkomsten förblir under kontroll.",
 	"Who can see this workspace" : "Vem kan se den här arbetsytan",
-	"You cannot create a workspace with your current access." : "Det går att inte skapa en arbetsyta med nuvarande åtkomst."
+	"You cannot create a workspace with your current access." : "Det går att inte skapa en arbetsyta med nuvarande åtkomst.",
+	"Report a problem" : "Rapportera ett problem",
+	"Suggest an improvement" : "Föreslå en förbättring",
+	"Open GitHub Issues" : "Öppna GitHub Issues",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-post utan svars-SLA. Behöver du bokad hjälp? Använd Support & vi.",
+	"Report this problem" : "Rapportera det här problemet",
+	"(opens in a new tab)" : "(öppnas i en ny flik)",
+	"Setup & training" : "Installation och utbildning",
+	"Commissioned feature" : "Beställd funktion",
+	"Mobile & terminal" : "Mobil och terminal",
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "På Google Play. Engångsköp — priset varierar per land. Ingen organisationsplatslicens."
 	},
 	"nplurals=2; plural=(n != 1);"
 );
