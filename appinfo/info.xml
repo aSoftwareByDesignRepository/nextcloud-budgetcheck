@@ -6,7 +6,6 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>budgetcheck</id>
 	<name>BudgetCheck</name>
-	<name lang="de">BudgetCheck</name>
 	<summary>Scoped household and project finance with auditable monthly close, budgets, and savings targets</summary>
 	<summary lang="de">Haushalts- und Projektfinanzen mit nachvollziehbarem Monatsabschluss, Budgets und Sparzielen</summary>
 	<summary lang="fr">Finances domestiques et de projet avec clôture mensuelle vérifiable, budgets et objectifs d'épargne</summary>
@@ -92,9 +91,84 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 - PHP 8.2–8.4
 - MySQL o PostgreSQL
 	]]></description>
+	<description lang="nl"><![CDATA[
+# BudgetCheck
+
+Gerichte financiën voor Nextcloud. Elke **workspace** is óf een **huishouden** (terugkerend maandelijks ritme met budgetten, spaardoelen en een jaaroverzicht) óf een **afgebakend project** (projectvenster, overzicht per periode, optionele waarschuwing bij een maximum).
+
+Elke workspace heeft zijn eigen grootboek, categorieën, leden en fiscale instellingen. De **server is de bron van waarheid** voor alle berekeningen; bedragen worden opgeslagen in **kleine eenheden**, nooit als zwevendekommagetallen. **Maandafsluiting** produceert een onveranderlijke snapshot met een controleerbare berekenings-hash; een gecontroleerde heropening herstelt de bewerking. De optionele modus **fiscaal bewust** ondersteunt invoer netto of brutto met deterministische btw-omzetting.
+
+De gebruikersinterface is **workspace-gebonden** (totalen voor huishouden en project worden nooit gemengd), richt zich op **WCAG 2.1 AA**, volledig toetsenbordgebruik en responsieve layouts vanaf **320px** breedte.
+
+## Vereisten
+
+- Nextcloud 32–34
+- PHP 8.2–8.4
+- MySQL of PostgreSQL
+	]]></description>
+	<description lang="it"><![CDATA[
+# BudgetCheck
+
+Finanza mirata per Nextcloud. Ogni **workspace** è uno dei due: un **nucleo domestico** (ritmo mensile ricorrente con budget, obiettivi di risparmio e panoramica annuale) oppure un **progetto delimitato** (finestra di progetto, panoramica per periodo, avviso di limite opzionale).
+
+Ogni workspace ha il proprio libro contabile, categorie, membri e impostazioni fiscali. Il **server è la fonte di verità** per tutti i calcoli; gli importi vengono salvati in **unità minori**, mai come numeri a virgola mobile. La **chiusura mensile** produce uno snapshot immutabile con una hash di calcolo verificabile; la riapertura controllata ripristina l’editing. La modalità opzionale **fiscal-aware** supporta l’inserimento al netto o al lordo con conversione IVA deterministica.
+
+L’interfaccia è **scopata per workspace** (i totali di nucleo domestico e progetto non si mescolano), mira a **WCAG 2.1 AA**, uso completo da tastiera e layout responsive da **320px** di larghezza.
+
+## Requisiti
+
+- Nextcloud 32–34
+- PHP 8.2–8.4
+- MySQL o PostgreSQL
+	]]></description>
+	<description lang="pl"><![CDATA[
+# BudgetCheck
+
+Finanse w dopasowanym zakresie dla Nextcloud. Każdy **workspace** to albo **gospodarstwo domowe** (cykliczny, comiesięczny rytm z budżetami, celami oszczędności i rocznym podsumowaniem), albo **ograniczony projekt** (okno projektu, podsumowanie okresu, opcjonalne ostrzeżenie o limicie).
+
+Każdy workspace ma własną księgę, kategorie, członków i ustawienia podatkowe. **To serwer jest źródłem prawdy** dla wszystkich obliczeń; kwoty są przechowywane w **jednostkach drobnych**, nigdy jako liczby zmiennoprzecinkowe. **Zamknięcie miesiąca** tworzy niezmienną migawkę z możliwością weryfikacji hasha obliczeń; kontrolowane ponowne otwarcie przywraca możliwość edycji. Opcjonalny tryb **uwzględniający podatki** obsługuje zapis netto lub brutto z deterministyczną konwersją VAT.
+
+Interfejs jest **ograniczony do workspace** (sumy dla gospodarstwa domowego i projektu nigdy się nie mieszają), celuje w **WCAG 2.1 AA**, pełne korzystanie z klawiatury i responsywne układy od szerokości **320px**.
+
+## Wymagania
+
+- Nextcloud 32–34
+- PHP 8.2–8.4
+- MySQL lub PostgreSQL
+	]]></description>
+	<description lang="sv"><![CDATA[
+# BudgetCheck
+
+Riktad ekonomi för Nextcloud. Varje **workspace** är antingen ett **hushåll** (återkommande månadsrytm med budgetar, sparmål och årlig översikt) eller ett **avgränsat projekt** (projektfönster, periodöversikt, valfri varning vid tak).
+
+Varje workspace har sin egen huvudbok, kategorier, medlemmar och skatteinställningar. **Servern är sanningskällan** för alla beräkningar; belopp sparas i **mindre enheter**, aldrig som flyttal. **Månadsslut** skapar en oföränderlig snapshot med en verifierbar beräknings-hash; kontrollerad återöppning återställer redigeringen. Valfritt **skatteanpassat** läge stödjer införing av netto eller brutto med deterministisk momsomvandling.
+
+Gränssnittet är **avgränsat per workspace** (totalsummor för hushåll och projekt blandas aldrig), siktar på **WCAG 2.1 AA**, full användning med tangentbord och responsiva layouter från **320px** bredd.
+
+## Krav
+
+- Nextcloud 32–34
+- PHP 8.2–8.4
+- MySQL eller PostgreSQL
+	]]></description>
+	<description lang="nb"><![CDATA[
+# BudgetCheck
+
+Målrettet økonomi for Nextcloud. Hver **workspace** er enten et **husholdningsbudsjett** (tilbakevendende månedlig rytme med budsjetter, mål for sparing og årlig oversikt) eller et **avgrenset prosjekt** (prosjektvindu, oversikt per periode, valgfri advarsel ved tak).
+
+Hver workspace har sin egen hovedbok, kategorier, medlemmer og skatteinnstillinger. **Serveren er kilde til sannhet** for alle beregninger; beløp lagres i **mindre enheter**, aldri som flyttall. **Månedlig avslutning** lager en uforanderlig snapshot med en verifiserbar beregnings-hash; kontrollert gjenåpning gjenoppretter redigeringen. Valgfri **skattebevisst** modus støtter innføring av netto eller brutto med deterministisk mva-omregning.
+
+Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og prosjekt blandes aldri), målretter **WCAG 2.1 AA**, full tastaturbruk og responsive oppsett fra **320px** bredde.
+
+## Krav
+
+- Nextcloud 32–34
+- PHP 8.2–8.4
+- MySQL eller PostgreSQL
+	]]></description>
 	<version>1.1.13</version>
 	<licence>AGPL-3.0-or-later</licence>
-	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
+	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>BudgetCheck</namespace>
 	<category>organization</category>
 	<category>tools</category>
