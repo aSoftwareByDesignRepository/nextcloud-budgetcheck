@@ -1,3 +1,6 @@
+# Internal docs belong in the parent workspace, not this repo
+/docs/
+
 # Dependencies
 /vendor/
 node_modules/
