@@ -421,7 +421,7 @@ OC.L10N.register(
 	"Expense:" : "Ausgabe:",
 	"expenses" : "Ausgaben",
 	"Expenses" : "Ausgaben",
-	"Export" : "Export",
+	"Export" : "Exportieren",
 	"Export failed. Please retry." : "Export fehlgeschlagen. Bitte erneut versuchen.",
 	"Export project workbook (Excel)" : "Projekt-Arbeitsmappe (Excel) exportieren",
 	"Export started." : "Export gestartet.",
@@ -1248,7 +1248,6 @@ OC.L10N.register(
 	"Setup & training" : "Einrichtung & Schulung",
 	"Commissioned feature" : "Beauftragte Funktion",
 	"Mobile & terminal" : "Mobil & Terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Bei Google Play. Einmalkauf — der Preis hängt vom Land ab. Keine Organisationsplatz-Lizenz."
-	},
-	"nplurals=2; plural=(n != 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Bei Google Play. Einmalkauf — der Preis hängt vom Land ab. Keine Organisationsplatz-Lizenz.",
+},
+"nplurals=2; plural=(n != 1);");

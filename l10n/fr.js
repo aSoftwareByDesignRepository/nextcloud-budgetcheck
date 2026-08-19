@@ -1248,7 +1248,6 @@ OC.L10N.register(
 	"Setup & training" : "Mise en place et formation",
 	"Commissioned feature" : "Fonction sur commande",
 	"Mobile & terminal" : "Mobile et terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Sur Google Play. Achat unique — le prix dépend du pays. Pas de licence de siège organisation."
-	},
-	"nplurals=2; plural=(n > 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Sur Google Play. Achat unique — le prix dépend du pays. Pas de licence de siège organisation.",
+},
+"nplurals=2; plural=(n > 1);");

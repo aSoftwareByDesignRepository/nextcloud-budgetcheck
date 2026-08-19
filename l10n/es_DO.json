@@ -256,7 +256,7 @@
         "Clear selection": "Borrar selección",
         "Clear status filter": "Borrar filtro de estado",
         "Clear timezone selection": "Borrar selección de zona horaria",
-        "Close": "Cerca",
+        "Close": "Cerrar",
         "Close and review months": "Cerrar y revisar meses",
         "Close gallery": "Cerrar galería",
         "Close or reopen this month": "Cerrar o reabrir este mes",
@@ -333,7 +333,7 @@
         "Defaults": "Valores predeterminados",
         "Defaults for new workspaces": "Valores predeterminados para nuevos espacios de trabajo",
         "Deficit in this filter window": "Déficit en esta ventana de filtro",
-        "Delete": "Borrar",
+        "Delete": "Eliminar",
         "Delete rule {title}": "Eliminar regla {title}",
         "Delete this rule?": "¿Eliminar esta regla?",
         "Delete this transaction?": "¿Eliminar este movimiento?",
@@ -1237,7 +1237,17 @@
         "Switch back to standard? App administrators will be able to see and manage this workspace again.": "¿Volver a estándar? Los administradores de la app podrán ver y gestionar este espacio de nuevo.",
         "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.": "Este espacio es privado. Solo personas individuales pueden ser miembros: los grupos están desactivados para que el acceso quede bajo su control.",
         "Who can see this workspace": "Quién puede ver este espacio de trabajo",
-        "You cannot create a workspace with your current access.": "No puede crear un espacio de trabajo con su acceso actual."
+        "You cannot create a workspace with your current access.": "No puede crear un espacio de trabajo con su acceso actual.",
+        "Report this problem": "Notificar este problema",
+        "Setup & training": "Puesta en marcha y formación",
+        "Report a problem": "Notificar un problema",
+        "Open GitHub Issues": "Abrir GitHub Issues",
+        "Mobile & terminal": "Móvil y terminal",
+        "Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "El correo no incluye un SLA de respuesta. Si necesita ayuda concertada, use Soporte y nosotros.",
+        "(opens in a new tab)": "(se abre en una pestaña nueva)",
+        "On Google Play. One-time purchase — price varies by country. No organisation seat licence.": "En Google Play. Compra única; el precio varía según el país. Sin licencia de puesto de organización.",
+        "Commissioned feature": "Función por encargo",
+        "Suggest an improvement": "Sugerir una mejora"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

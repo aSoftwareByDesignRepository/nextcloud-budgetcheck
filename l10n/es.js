@@ -257,7 +257,7 @@ OC.L10N.register(
 	"Clear selection" : "Borrar selección",
 	"Clear status filter" : "Borrar filtro de estado",
 	"Clear timezone selection" : "Borrar selección de zona horaria",
-	"Close" : "Cerca",
+	"Close" : "Cerrar",
 	"Close and review months" : "Cerrar y revisar meses",
 	"Close gallery" : "Cerrar galería",
 	"Close or reopen this month" : "Cerrar o reabrir este mes",
@@ -334,7 +334,7 @@ OC.L10N.register(
 	"Defaults" : "Valores predeterminados",
 	"Defaults for new workspaces" : "Valores predeterminados para nuevos espacios de trabajo",
 	"Deficit in this filter window" : "Déficit en esta ventana de filtro",
-	"Delete" : "Borrar",
+	"Delete" : "Eliminar",
 	"Delete rule {title}" : "Eliminar regla {title}",
 	"Delete this rule?" : "¿Eliminar esta regla?",
 	"Delete this transaction?" : "¿Eliminar este movimiento?",
@@ -1248,7 +1248,6 @@ OC.L10N.register(
 	"Setup & training" : "Puesta en marcha y formación",
 	"Commissioned feature" : "Función por encargo",
 	"Mobile & terminal" : "Móvil y terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "En Google Play. Compra única; el precio varía según el país. Sin licencia de puesto de organización."
-	},
-	"nplurals=2; plural=(n != 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "En Google Play. Compra única; el precio varía según el país. Sin licencia de puesto de organización.",
+},
+"nplurals=2; plural=(n != 1);");

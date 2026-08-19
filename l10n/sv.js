@@ -1242,13 +1242,12 @@ OC.L10N.register(
 	"Report a problem" : "Rapportera ett problem",
 	"Suggest an improvement" : "Föreslå en förbättring",
 	"Open GitHub Issues" : "Öppna GitHub Issues",
-	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-post utan svars-SLA. Behöver du bokad hjälp? Använd Support & vi.",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-post utan svars-SLA. Bokad hjälp: Support & vi.",
 	"Report this problem" : "Rapportera det här problemet",
 	"(opens in a new tab)" : "(öppnas i en ny flik)",
 	"Setup & training" : "Installation och utbildning",
 	"Commissioned feature" : "Beställd funktion",
 	"Mobile & terminal" : "Mobil och terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "På Google Play. Engångsköp — priset varierar per land. Ingen organisationsplatslicens."
-	},
-	"nplurals=2; plural=(n != 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "På Google Play. Engångsköp — priset varierar per land. Ingen organisationsplatslicens.",
+},
+"nplurals=2; plural=(n != 1);");

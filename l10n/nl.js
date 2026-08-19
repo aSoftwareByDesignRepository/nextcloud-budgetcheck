@@ -257,7 +257,7 @@ OC.L10N.register(
 	"Clear selection" : "Duidelijke selectie",
 	"Clear status filter" : "Statusfilter wissen",
 	"Clear timezone selection" : "Tijdzoneselectie wissen",
-	"Close" : "Dichtbij",
+	"Close" : "Sluiten",
 	"Close and review months" : "Sluit de maanden af ​​en bekijk ze",
 	"Close gallery" : "Galerij sluiten",
 	"Close or reopen this month" : "Deze maand sluiten of heropenen",
@@ -954,7 +954,7 @@ OC.L10N.register(
 	"Scheduled date" : "Geplande datum",
 	"Scheduled dates" : "Geplande datums",
 	"Screenshots and details on our website." : "Schermafbeeldingen en details op onze website.",
-	"Search" : "Zoekopdracht",
+	"Search" : "Zoeken",
 	"Search by name" : "Zoek op naam",
 	"Search could not load (network)." : "Zoeken kon niet laden (netwerk).",
 	"Search could not load." : "Zoekopdracht kan niet worden geladen.",
@@ -1248,7 +1248,6 @@ OC.L10N.register(
 	"Setup & training" : "Inrichting en training",
 	"Commissioned feature" : "Functie in opdracht",
 	"Mobile & terminal" : "Mobiel en terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Op Google Play. Eenmalige aankoop — de prijs verschilt per land. Geen organisatielicentie per plaats."
-	},
-	"nplurals=2; plural=(n != 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Op Google Play. Eenmalige aankoop — de prijs verschilt per land. Geen organisatielicentie per plaats.",
+},
+"nplurals=2; plural=(n != 1);");

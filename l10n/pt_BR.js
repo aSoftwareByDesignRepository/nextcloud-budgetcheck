@@ -954,7 +954,7 @@ OC.L10N.register(
 	"Scheduled date" : "Data agendada",
 	"Scheduled dates" : "Datas agendadas",
 	"Screenshots and details on our website." : "Capturas de tela e detalhes em nosso site.",
-	"Search" : "Procurar",
+	"Search" : "Pesquisar",
 	"Search by name" : "Pesquisar por nome",
 	"Search could not load (network)." : "A pesquisa não pôde ser carregada (rede).",
 	"Search could not load." : "A pesquisa não pôde ser carregada.",
@@ -1248,7 +1248,6 @@ OC.L10N.register(
 	"Setup & training" : "Implantação e treinamento",
 	"Commissioned feature" : "Funcionalidade sob encomenda",
 	"Mobile & terminal" : "Celular e terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "No Google Play. Compra única — o preço varia por país. Sem licença de vaga da organização."
-	},
-	"nplurals=2; plural=(n > 1);"
-);
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "No Google Play. Compra única — o preço varia por país. Sem licença de vaga da organização.",
+},
+"nplurals=2; plural=(n > 1);");
