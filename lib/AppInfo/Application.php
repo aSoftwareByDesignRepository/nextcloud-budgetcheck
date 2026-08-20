@@ -131,6 +131,8 @@ class Application extends App implements IBootstrap
 		$context->registerService(RateLimitService::class, function ($c): RateLimitService {
 			return new RateLimitService(
 				$c->query(\OCP\IConfig::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(ILockingProvider::class),
 				$c->query(AuditLogService::class),
 			);
 		});

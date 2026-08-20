@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.14 - 2026-08-20
+
+### Fixed
+
+- **Rate limits for LDAP/AD UUID user ids (#17):** counters are stored in per-user preferences (`rate_limit:{action}`) instead of embedding the userId in an `oc_appconfig` key (VARCHAR(64)). Favoriting workspaces and other rate-limited actions work for UUID-style UIDs; exclusive locking also respects the 64-char `oc_file_locks` key limit.
+
 ## 1.1.13 - 2026-08-19
 
 ### Changed

@@ -32,7 +32,8 @@
 		"test": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit -c phpunit.xml",
 		"test:unit": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit --testsuite unit",
 		"test:integration": "php -d opcache.enable=0 -d opcache.enable_cli=0 vendor/bin/phpunit --testsuite integration",
-		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php"
+		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
+		"mutate:rate-limit-key": "php tests/Mutation/run-rate-limit-key-length-mutations.php"
 	},
 	"config": {
 		"optimize-autoloader": true,
