@@ -4248,13 +4248,16 @@ textarea {
 .bc-nav-footer__popover {
 	position: relative;
 	display: flex;
-	justify-content: center;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--bc-space-2, 0.5rem);
 }
 
 .bc-nav-footer__trigger {
 	display: inline-flex;
-	gap: var(--bc-space-2, 0.5rem);
+	gap: var(--bc-space-3, 0.75rem);
 	min-height: 44px;
+	min-width: 44px;
 	padding: var(--bc-space-2, 0.5rem) var(--bc-space-3, 0.75rem);
 	border-radius: var(--bc-radius-sm, 6px);
 	box-sizing: border-box;
@@ -4279,6 +4282,11 @@ textarea {
 
 .bc-nav-footer__trigger:focus:not(:focus-visible) {
 	outline: none;
+}
+
+.bc-nav-footer__trigger-icon .bc-icon {
+	width: 20px;
+	height: 20px;
 }
 
 .bc-nav-footer__menu {
@@ -4310,14 +4318,17 @@ textarea {
 .bc-nav-footer__menu-item {
 	display: flex;
 	align-items: center;
-	gap: var(--bc-space-2, 0.5rem);
+	gap: var(--bc-space-3, 0.75rem);
 	min-height: 44px;
+	min-width: 44px;
 	padding: var(--bc-space-2, 0.5rem) var(--bc-space-3, 0.75rem);
 	border-radius: var(--bc-radius-sm, 6px);
 	color: var(--color-main-text);
 	text-decoration: none;
 	font-size: var(--bc-fs-sm, 0.875rem);
-	white-space: nowrap;
+	line-height: var(--bc-line-base, 1.45);
+	white-space: normal;
+	overflow-wrap: anywhere;
 }
 
 .bc-nav-footer__menu-item:hover {
@@ -4331,6 +4342,20 @@ textarea {
 
 .bc-nav-footer__menu-item:focus:not(:focus-visible) {
 	outline: none;
+}
+
+.bc-nav-footer__menu-icon .bc-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.bc-nav-footer__note {
+	margin: 0;
+	font-size: var(--bc-fs-xs, 0.75rem);
+	line-height: 1.45;
+	color: var(--color-text-maxcontrast);
+	text-align: center;
+	overflow-wrap: anywhere;
 }
 
 @media (width < 480px) {
@@ -4375,6 +4400,10 @@ textarea {
 	outline-offset: 2px;
 }
 
+.bc-nav-footer__toast-link:focus:not(:focus-visible) {
+	outline: none;
+}
+
 @media (prefers-contrast: more) {
 	#app-navigation .bc-nav-footer,
 	.bc-nav .bc-nav-footer,
@@ -4388,26 +4417,30 @@ textarea {
 	}
 
 	.bc-nav-footer__trigger:focus-visible,
-	.bc-nav-footer__menu-item:focus-visible {
+	.bc-nav-footer__menu-item:focus-visible,
+	.bc-nav-footer__toast-link:focus-visible {
 		outline-width: 3px;
 	}
 }
 
 @media (forced-colors: active) {
-	.bc-nav-footer__menu-item {
+	.bc-nav-footer__menu-item,
+	.bc-nav-footer__toast-link {
 		forced-color-adjust: none;
 		color: LinkText;
 	}
 
 	.bc-nav-footer__trigger:focus-visible,
-	.bc-nav-footer__menu-item:focus-visible {
+	.bc-nav-footer__menu-item:focus-visible,
+	.bc-nav-footer__toast-link:focus-visible {
 		outline: 3px solid Highlight;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.bc-nav-footer__trigger,
-	.bc-nav-footer__menu-item {
+	.bc-nav-footer__menu-item,
+	.bc-nav-footer__toast-link {
 		transition: none;
 	}
 }

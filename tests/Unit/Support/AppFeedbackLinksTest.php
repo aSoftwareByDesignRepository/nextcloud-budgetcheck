@@ -54,6 +54,13 @@ final class AppFeedbackLinksTest extends TestCase
 		self::assertStringNotContainsString('token=', $keep);
 	}
 
+	public function testSanitizePageUrlStripsNextcloudUpgradeAckQueryKey(): void
+	{
+		$links = new AppFeedbackLinks('budgetcheck', 'BudgetCheck');
+		$noisy = '/apps/budgetcheck/?IKnowThatThisIsABigInstanceAndTheUpdateRequestCouldRunIntoATimeoutAndHowToRestoreABackup=IAmSuperSureToDoThis';
+		self::assertSame('/apps/budgetcheck/', $links->sanitizePageUrl($noisy));
+	}
+
 	public function testMailtoBodyOmitsIdentityAndRejectsUnsafeErrorCodes(): void
 	{
 		$links = new AppFeedbackLinks('budgetcheck', 'BudgetCheck', '9.9.9');
