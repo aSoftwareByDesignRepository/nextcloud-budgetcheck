@@ -80,12 +80,15 @@ final class MobileApiControllerContractTest extends TestCase
 		self::assertStringNotContainsString('Http::STATUS_PAYMENT_REQUIRED', $src);
 		self::assertStringContainsString('assertSafeMutationChannel', $src);
 		self::assertStringContainsString('MobileMutationChannel::isSafe', $src);
+		self::assertStringContainsString('authorizationBasicAuthenticatesCurrentUser', $src);
+		self::assertStringContainsString('checkPassword', $src);
 		self::assertStringContainsString('MobileErrorCodes::fromInvalidArgument', $src);
 		self::assertStringContainsString('getErrorCode()', $src);
 		self::assertStringContainsString('strtoupper($e->getErrorCode())', $src);
 		self::assertStringContainsString('NOT_FOUND', $src);
 		self::assertStringContainsString('NotFoundException', $src);
 		self::assertStringContainsString('Idempotency-Key', $src);
+		self::assertStringContainsString('Idempotency-Key header is required for create', $src);
 		self::assertStringContainsString("\$list['items']", $src);
 		self::assertStringContainsString("'transactions' => \$enriched", $src);
 		self::assertStringContainsString("'hasBudget' => \$hasBudget", $src);
@@ -95,8 +98,9 @@ final class MobileApiControllerContractTest extends TestCase
 		self::assertStringContainsString('MONTH_CLOSED', $errorCodes);
 		self::assertStringContainsString('TAX_DISABLED', $errorCodes);
 		$channel = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MobileMutationChannel.php');
-		self::assertStringContainsString('Basic|Bearer', $channel);
 		self::assertStringContainsString('bool $csrfPassed', $channel);
+		self::assertStringContainsString('bool $basicAuthValidated', $channel);
+		self::assertStringNotContainsString('Basic|Bearer', $channel);
 		self::assertStringNotContainsString('requestTokenHeader', $channel);
 		self::assertStringContainsString('passesCSRFCheck()', $src);
 	}

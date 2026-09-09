@@ -27,7 +27,7 @@ final class L10nGermanCopyQualityTest extends TestCase
 		self::assertSame('Nach Sparziel verfügbar', $t['Available after savings']);
 		self::assertSame('Negatives Restbudget nach Sparziel', $t['Available after savings is negative']);
 		self::assertSame(
-			'Nach Abzug des Sparziels bist du diesen Monat im Minus.',
+			'Nach Abzug des Sparziels sind Sie diesen Monat im Minus.',
 			$t['Available after savings is negative this month.']
 		);
 		self::assertSame('Knappes Budget', $t['Tight month']);

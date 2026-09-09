@@ -39,6 +39,9 @@ $assert(str_contains($routes, 'mobile_api#downloadTransactionAttachment'), 'rout
 $assert(str_contains($routes, '/attachments/{attachmentId}/download'), 'route_download_attachments_path');
 $assert(str_contains($mobile, 'assertSafeMutationChannel'), 'mutation_channel_guard');
 $assert(str_contains($mobile, 'MobileMutationChannel::isSafe'), 'mutation_channel_helper_used');
+$assert(str_contains($mobile, 'authorizationBasicAuthenticatesCurrentUser'), 'mutation_channel_validates_basic');
+$assert(str_contains($mobile, 'checkPassword'), 'mutation_channel_check_password');
+$assert(!str_contains($mobile, "preg_match('/^(Basic|Bearer)"), 'mutation_channel_no_presence_only_bearer');
 // Channel + validateId must run INSIDE safe() so failures become JSON 403/422, not uncaught throws.
 foreach ([
 	'createTransaction',
@@ -76,10 +79,19 @@ $assert(
 );
 $assert(str_contains($mobile, 'MobileErrorCodes::fromInvalidArgument'), 'error_codes_helper_used');
 $channel = (string)file_get_contents($root . '/lib/Service/MobileMutationChannel.php');
-$assert(str_contains($channel, 'Basic|Bearer'), 'channel_allows_basic_bearer');
 $assert(str_contains($channel, 'bool $csrfPassed'), 'channel_requires_csrf_bool');
+$assert(str_contains($channel, 'bool $basicAuthValidated'), 'channel_requires_validated_basic_bool');
+$assert(!str_contains($channel, 'Basic|Bearer'), 'channel_no_presence_only_auth');
 $assert(!str_contains($channel, 'requestTokenHeader'), 'channel_no_raw_token_string_gate');
 $assert(str_contains($mobile, 'passesCSRFCheck()'), 'controller_validates_csrf_cryptographically');
+$assert(str_contains($idemp, 'claimOrReplay'), 'idempotency_claim_before_create');
+$assert(str_contains($idemp, 'completeClaim'), 'idempotency_complete_claim');
+$assert(str_contains($idemp, 'STATUS_PENDING'), 'idempotency_pending_status');
+$assert(str_contains($idemp, 'STALE_PENDING_SECONDS'), 'idempotency_stale_pending');
+$assert(str_contains($idemp, 'purgeExpired'), 'idempotency_purge_expired');
+$assert(str_contains($idemp, 'RETENTION_DAYS'), 'idempotency_retention_const');
+$assert(str_contains($mobile, 'claimOrReplay'), 'controller_claims_before_create');
+$assert(str_contains($mobile, 'loadHydrated'), 'get_transaction_hydrated');
 $codes = (string)file_get_contents($root . '/lib/Service/MobileErrorCodes.php');
 $assert(str_contains($codes, 'MONTH_CLOSED'), 'error_code_month_closed');
 $assert(str_contains($codes, 'TAX_DISABLED'), 'error_code_tax_disabled');
@@ -90,6 +102,7 @@ $assert(str_contains($mobile, 'strtoupper($e->getErrorCode())'), 'cas_code_versi
 $assert(str_contains((string)file_get_contents($root . '/lib/Exception/ConflictException.php'), 'CODE_VERSION_CONFLICT'), 'conflict_version_const');
 $assert(str_contains($codes, 'MONTH_CLOSED'), 'closed_month_code');
 $assert(str_contains($mobile, 'Idempotency-Key'), 'idempotency_header');
+$assert(str_contains($mobile, 'Idempotency-Key header is required for create'), 'idempotency_key_required');
 $assert(str_contains($mobile, 'version is required for deletes'), 'delete_version_required');
 $assert(str_contains($mobile, 'MobileHomeKpi::dominantKey'), 'home_kpi_helper_used');
 $assert(str_contains($mobile, "\$list['items']"), 'list_tx_unwraps_items');

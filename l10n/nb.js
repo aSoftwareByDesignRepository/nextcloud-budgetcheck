@@ -1248,6 +1248,7 @@ OC.L10N.register(
 	"Setup & training" : "Oppsett og opplæring",
 	"Commissioned feature" : "Bestilt funksjon",
 	"Mobile & terminal" : "Mobil og terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "På Google Play. Engangskjøp — prisen varierer per land. Ingen organisasjonsplasslisens.",
-},
-"nplurals=2; plural=(n != 1);");
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "På Google Play. Engangskjøp — prisen varierer per land. Ingen organisasjonsplasslisens."
+	},
+	"nplurals=2; plural=(n != 1);"
+);

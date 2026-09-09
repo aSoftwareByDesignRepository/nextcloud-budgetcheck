@@ -7,23 +7,26 @@ namespace OCA\BudgetCheck\Service;
 /**
  * CSRF / auth channel gate for mobile mutations.
  *
- * Safe channels:
- *  - Basic/Bearer Authorization (app-password / token clients), OR
- *  - a cryptographically validated CSRF requesttoken ({@see IRequest::passesCSRFCheck()}).
+ * Safe channels (enforced in {@see \OCA\BudgetCheck\Controller\MobileApiController}):
+ *  - a cryptographically validated CSRF requesttoken ({@see IRequest::passesCSRFCheck()}), OR
+ *  - Authorization: Basic credentials that {@see IUserManager::checkPassword()} as the
+ *    already-bound session user (companion app password).
  *
- * Cookie-only browsers without a *valid* token are rejected. A non-empty
- * forged `requesttoken` string alone is never enough.
+ * Presence of `Authorization: Bearer …` / junk `Basic …` MUST NOT bypass CSRF —
+ * that would let a same-site attacker ride the victim's browser cookie.
+ * Cookie-only browsers without a *valid* token are rejected.
  */
 final class MobileMutationChannel
 {
+	/**
+	 * @param bool $csrfPassed Result of {@see IRequest::passesCSRFCheck()}
+	 * @param bool $basicAuthValidated True only when Basic credentials checkPassword
+	 *                                 as the current session UID
+	 */
 	public static function isSafe(
-		?string $authorizationHeader,
 		bool $csrfPassed,
+		bool $basicAuthValidated,
 	): bool {
-		$auth = trim((string)$authorizationHeader);
-		if ($auth !== '' && preg_match('/^(Basic|Bearer)\s+\S+/i', $auth) === 1) {
-			return true;
-		}
-		return $csrfPassed;
+		return $csrfPassed || $basicAuthValidated;
 	}
 }

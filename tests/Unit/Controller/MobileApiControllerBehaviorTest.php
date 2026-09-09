@@ -22,6 +22,8 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUser;
+use OCP\IUserManager;
+use OCP\Authentication\Token\IProvider;
 use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -40,6 +42,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 	private IAppManager $appManager;
 	/** @var IUserSession&MockObject */
 	private IUserSession $userSession;
+	/** @var IUserManager&MockObject */
+	private IUserManager $userManager;
 	/** @var TransactionService&MockObject */
 	private TransactionService $transactions;
 
@@ -52,7 +56,21 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$this->access = $this->createMock(AccessControlService::class);
 		$this->appManager = $this->createMock(IAppManager::class);
 		$this->userSession = $this->createMock(IUserSession::class);
+		$this->userManager = $this->createMock(IUserManager::class);
 		$this->transactions = $this->createMock(TransactionService::class);
+
+		$alice = $this->createMock(IUser::class);
+		$alice->method('getUID')->willReturn('alice');
+		$alice->method('getDisplayName')->willReturn('Alice');
+		$this->userSession->method('getUser')->willReturn($alice);
+		$this->userManager->method('checkPassword')->willReturnCallback(
+			static function (string $login, string $pass) use ($alice) {
+				if ($login === 'alice' && $pass === 'app-password') {
+					return $alice;
+				}
+				return false;
+			}
+		);
 
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
@@ -60,6 +78,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$this->controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$this->createMock(WorkspaceService::class),
 			$this->createMock(CategoryService::class),
@@ -123,6 +143,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -190,6 +212,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -258,6 +282,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -305,6 +331,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -372,6 +400,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -420,6 +450,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -508,6 +540,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -568,6 +602,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 				if (strcasecmp($name, 'Authorization') === 0) {
 					return 'Basic ' . base64_encode('alice:app-password');
 				}
+				if (strcasecmp($name, 'Idempotency-Key') === 0) {
+					return 'test-idem-key-1';
+				}
 				return '';
 			}
 		);
@@ -586,10 +623,14 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects(self::once())->method('assertAllowed');
+		$idem = $this->createMock(MobileIdempotencyService::class);
+		$idem->expects(self::once())->method('claimOrReplay')->willReturn(null);
 
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -597,7 +638,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(BookingStatusService::class),
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
-			$this->createMock(MobileIdempotencyService::class),
+			$idem,
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
@@ -616,6 +657,264 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 		self::assertSame('FORBIDDEN', $response->getData()['error']['code']);
 	}
+
+	public function testCreateTransactionStripsPlannedAndQueryMassAssignment(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				if (strcasecmp($name, 'Idempotency-Key') === 0) {
+					return 'test-idem-key-strip';
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		// Merged GET+POST as Nextcloud Request::getParams() would — attacker query fields
+		// must not reach TransactionService::create.
+		$this->request->method('getParams')->willReturn([
+			'categoryId' => 1,
+			'title' => 'Coffee',
+			'amountMinor' => 350,
+			'direction' => 'expense',
+			'bookingDate' => '2026-07-01',
+			'isPlanned' => 1,
+			'recurringRuleId' => 99,
+			'budgetId' => 7,
+			'externalRef' => 'evil-ref',
+			'created_by' => 'admin',
+		]);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'contributor',
+			'currencyCode' => 'EUR',
+		]);
+		$categories = $this->createMock(CategoryService::class);
+		$categories->method('loadForWorkspace')->willReturn([
+			'id' => 1,
+			'workspace_id' => 1,
+			'name' => 'Food',
+			'type' => 'expense',
+			'isActive' => true,
+			'isSpecial' => false,
+		]);
+		$transactions = $this->createMock(TransactionService::class);
+		$transactions->expects(self::once())
+			->method('create')
+			->with(
+				1,
+				'alice',
+				self::callback(static function (array $payload): bool {
+					return ($payload['title'] ?? null) === 'Coffee'
+						&& ($payload['amountMinor'] ?? null) === 350
+						&& ($payload['workspaceId'] ?? null) === 1
+						&& !array_key_exists('isPlanned', $payload)
+						&& !array_key_exists('recurringRuleId', $payload)
+						&& !array_key_exists('budgetId', $payload)
+						&& !array_key_exists('externalRef', $payload)
+						&& !array_key_exists('created_by', $payload);
+				}),
+				self::anything(),
+				self::anything(),
+				null
+			)
+			->willReturn([
+				'id' => 42,
+				'title' => 'Coffee',
+				'amountMinor' => 350,
+				'version' => 1,
+			]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed');
+		$idem = $this->createMock(MobileIdempotencyService::class);
+		$idem->expects(self::once())->method('claimOrReplay')->willReturn(null);
+		$idem->expects(self::once())->method('completeClaim');
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
+			$this->access,
+			$workspaces,
+			$categories,
+			$transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$idem,
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->createTransaction(1);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		self::assertTrue($response->getData()['ok']);
+	}
+
+	public function testCreateTransactionRequiresIdempotencyKey(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn([
+			'categoryId' => 1,
+			'title' => 'Coffee',
+			'amountMinor' => 350,
+			'direction' => 'expense',
+			'bookingDate' => '2026-07-01',
+		]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed');
+		$idem = $this->createMock(MobileIdempotencyService::class);
+		$idem->expects(self::never())->method('claimOrReplay');
+		$this->transactions->expects(self::never())->method('create');
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
+			$this->access,
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$idem,
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+		$response = $controller->createTransaction(1);
+		self::assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		self::assertStringContainsString('Idempotency-Key', (string)$response->getData()['message']);
+	}
+
+
+	public function testUpdateTransactionStripsExternalRefMassAssignment(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn([
+			'version' => 1,
+			'title' => 'Coffee',
+			'amountMinor' => 350,
+			'direction' => 'expense',
+			'bookingDate' => '2026-07-01',
+			'categoryId' => 1,
+			'externalRef' => 'BANK-HIJACK',
+		]);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn([
+			'id' => 1,
+			'name' => 'Home',
+			'type' => 'household',
+			'role' => 'contributor',
+			'currencyCode' => 'EUR',
+		]);
+		$categories = $this->createMock(CategoryService::class);
+		$categories->method('loadForWorkspace')->willReturn([
+			'id' => 1,
+			'workspace_id' => 1,
+			'name' => 'Food',
+			'type' => 'expense',
+			'isActive' => true,
+			'isSpecial' => false,
+		]);
+		$transactions = $this->createMock(TransactionService::class);
+		$transactions->method('loadForWorkspace')->willReturn([
+			'id' => 42,
+			'workspace_id' => 1,
+			'category_id' => 1,
+			'title' => 'Coffee',
+			'amount_minor' => 350,
+			'version' => 1,
+		]);
+		$transactions->expects(self::once())
+			->method('update')
+			->with(
+				42,
+				'alice',
+				self::callback(static function (array $payload): bool {
+					return ($payload['title'] ?? null) === 'Coffee'
+						&& ($payload['version'] ?? null) === 1
+						&& !array_key_exists('externalRef', $payload);
+				}),
+				self::anything(),
+				self::anything(),
+				null
+			)
+			->willReturn([
+				'id' => 42,
+				'title' => 'Coffee',
+				'amountMinor' => 350,
+				'version' => 2,
+			]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed');
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
+			$this->access,
+			$workspaces,
+			$categories,
+			$transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->updateTransaction(1, 42);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		self::assertTrue($response->getData()['ok']);
+	}
+
 	public function testYearlySummaryMapsMonths(): void
 	{
 		$this->access->method('currentUserId')->willReturn('alice');
@@ -663,6 +962,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -704,6 +1005,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -748,6 +1051,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -826,6 +1131,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -907,6 +1214,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),
@@ -966,6 +1275,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$controller = new MobileApiController(
 			$this->request,
 			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
 			$this->createMock(CategoryService::class),

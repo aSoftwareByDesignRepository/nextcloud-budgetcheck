@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 
 $base = dirname(__DIR__) . '/l10n';
-$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb'];
+$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR'];
 
 $en = json_decode((string) file_get_contents($base . '/en.json'), true, 512, JSON_THROW_ON_ERROR);
 $enTranslations = $en['translations'] ?? [];

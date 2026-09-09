@@ -9,45 +9,26 @@ use PHPUnit\Framework\TestCase;
 
 final class MobileMutationChannelTest extends TestCase
 {
-	public function testAllowsBasicAuth(): void
+	public function testAllowsValidatedBasicWithoutCsrf(): void
 	{
-		self::assertTrue(MobileMutationChannel::isSafe('Basic dXNlcjpwYXNz', false));
+		self::assertTrue(MobileMutationChannel::isSafe(false, true));
 	}
 
-	public function testAllowsBearerAuth(): void
+	public function testAllowsCsrfWithoutBasic(): void
 	{
-		self::assertTrue(MobileMutationChannel::isSafe('Bearer tok-123', false));
+		self::assertTrue(MobileMutationChannel::isSafe(true, false));
+		self::assertTrue(MobileMutationChannel::isSafe(true, true));
 	}
 
-	public function testRejectsEmptyAuthScheme(): void
+	public function testRejectsWhenNeitherCsrfNorValidatedBasic(): void
 	{
-		self::assertFalse(MobileMutationChannel::isSafe('Basic ', false));
-		self::assertFalse(MobileMutationChannel::isSafe('Token abc', false));
-		self::assertFalse(MobileMutationChannel::isSafe('', false));
-		self::assertFalse(MobileMutationChannel::isSafe(null, false));
+		self::assertFalse(MobileMutationChannel::isSafe(false, false));
 	}
 
-	public function testAllowsWhenCsrfCheckPasses(): void
+	public function testPresenceOnlyAuthIsNotAChannelArgument(): void
 	{
-		self::assertTrue(MobileMutationChannel::isSafe(null, true));
-		self::assertTrue(MobileMutationChannel::isSafe('', true));
-	}
-
-	public function testRejectsWhenCsrfCheckFails(): void
-	{
-		self::assertFalse(MobileMutationChannel::isSafe(null, false));
-		self::assertFalse(MobileMutationChannel::isSafe('', false));
-	}
-
-	public function testForgedNonEmptyTokenAloneIsInsufficient(): void
-	{
-		// Historical bug: any non-empty requesttoken string bypassed the gate.
-		// Cryptographic validity is expressed only via $csrfPassed.
-		self::assertFalse(MobileMutationChannel::isSafe(null, false));
-	}
-
-	public function testPrefersAuthOverFailedCsrf(): void
-	{
-		self::assertTrue(MobileMutationChannel::isSafe('Basic abc', false));
+		// Historical bug: Authorization header presence alone bypassed CSRF.
+		// The helper now only accepts cryptographic CSRF or validated Basic.
+		self::assertFalse(MobileMutationChannel::isSafe(false, false));
 	}
 }

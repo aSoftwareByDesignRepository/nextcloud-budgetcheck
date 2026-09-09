@@ -1239,15 +1239,16 @@ OC.L10N.register(
 	"This workspace is private. Only individual people can be members — groups are turned off so access stays under your control." : "This workspace is private. Only individual people can be members — groups are turned off so access stays under your control.",
 	"Who can see this workspace" : "Who can see this workspace",
 	"You cannot create a workspace with your current access." : "You cannot create a workspace with your current access.",
-	"Report this problem" : "Report this problem",
-	"Setup & training" : "Setup & training",
 	"Report a problem" : "Report a problem",
-	"Open GitHub Issues" : "Open GitHub Issues",
-	"Mobile & terminal" : "Mobile & terminal",
-	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "Email is best-effort — no reply SLA. Need booked help? Use Support & us.",
-	"(opens in a new tab)" : "(opens in a new tab)",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "On Google Play. One-time purchase — price varies by country. No organisation seat licence.",
-	"Commissioned feature" : "Commissioned feature",
 	"Suggest an improvement" : "Suggest an improvement",
-},
-"nplurals=2; plural=(n != 1);");
+	"Open GitHub Issues" : "Open GitHub Issues",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "Email is best-effort — no reply SLA. Need booked help? Use Support & us.",
+	"Report this problem" : "Report this problem",
+	"(opens in a new tab)" : "(opens in a new tab)",
+	"Setup & training" : "Setup & training",
+	"Commissioned feature" : "Commissioned feature",
+	"Mobile & terminal" : "Mobile & terminal",
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "On Google Play. One-time purchase — price varies by country. No organisation seat licence."
+	},
+	"nplurals=2; plural=(n != 1);"
+);

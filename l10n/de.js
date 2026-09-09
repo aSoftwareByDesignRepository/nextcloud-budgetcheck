@@ -1053,7 +1053,7 @@ OC.L10N.register(
 	"The total amount you planned to set aside this year." : "Der Gesamtbetrag, den Sie in diesem Jahr sparen wollten.",
 	"These values pre-fill the form when an app administrator creates a workspace. They do not change existing workspaces." : "Diese Werte füllen das Formular vor, wenn eine App-Administration einen Arbeitsbereich anlegt. Bestehende Arbeitsbereiche werden nicht geändert.",
 	"They will lose access to this workspace." : "Sie verlieren den Zugriff auf diesen Arbeitsbereich.",
-	"Things to look at" : "Das solltest Sie prüfen",
+	"Things to look at" : "Das sollten Sie prüfen",
 	"Things to review before closing" : "Vor dem Schließen prüfen",
 	"This action does not apply to this workspace type." : "Diese Aktion gilt nicht für diesen Arbeitsbereichstyp.",
 	"This booking falls into a closed month. Reopen the month before adding transactions." : "Diese Buchung fällt in einen abgeschlossenen Monat. Öffnen Sie den Monat wieder, bevor Sie Buchungen hinzufügen.",
@@ -1248,6 +1248,7 @@ OC.L10N.register(
 	"Setup & training" : "Einrichtung & Schulung",
 	"Commissioned feature" : "Beauftragte Funktion",
 	"Mobile & terminal" : "Mobil & Terminal",
-	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Bei Google Play. Einmalkauf — der Preis hängt vom Land ab. Keine Organisationsplatz-Lizenz.",
-},
-"nplurals=2; plural=(n != 1);");
+	"On Google Play. One-time purchase — price varies by country. No organisation seat licence." : "Bei Google Play. Einmalkauf — der Preis hängt vom Land ab. Keine Organisationsplatz-Lizenz."
+	},
+	"nplurals=2; plural=(n != 1);"
+);

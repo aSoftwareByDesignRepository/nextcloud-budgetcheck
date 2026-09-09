@@ -48,6 +48,9 @@
 	color: var(--bc-muted);
 	margin-top: 4px;
 }
+.bc-summary-tile--primary > .bc-tx-kpi-tile__sub {
+	color: var(--color-main-text);
+}
 .bc-tx-new-btn {
 	display: inline-flex;
 	align-items: center;

@@ -1535,6 +1535,12 @@
 	letter-spacing: 0.05em;
 	color: var(--bc-muted);
 }
+/* Primary tiles sit on --bc-tint-info; muted gray fails WCAG AA (~4.19). */
+.bc-summary-tile--primary > .bc-summary-tile__label,
+.bc-summary-tile--primary > .bc-summary-tile__hint,
+.bc-summary-tile--primary > .bc-tx-kpi-tile__sub {
+	color: var(--color-main-text);
+}
 .bc-summary-tile__value {
 	font-size: var(--bc-fs-2xl);
 	font-weight: 700;

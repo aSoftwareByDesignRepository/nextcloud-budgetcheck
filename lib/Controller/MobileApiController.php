@@ -39,8 +39,13 @@ use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\StreamResponse;
+use OCP\Authentication\Exceptions\ExpiredTokenException;
+use OCP\Authentication\Exceptions\InvalidTokenException;
+use OCP\Authentication\Exceptions\WipeTokenException;
+use OCP\Authentication\Token\IProvider;
 use OCP\IL10N;
 use OCP\IRequest;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
@@ -48,8 +53,11 @@ use Psr\Log\LoggerInterface;
  * Free BudgetCheck Mobile API (`/api/mobile/v1/*`).
  *
  * - No license / seat / payment-required gates (COMPANION-APP.md v2.0).
- * - Mutations: NoCSRFRequired for Basic/Bearer app-password; cookie sessions
+ * - Mutations: NoCSRFRequired for validated Basic app-password; cookie sessions
  *   must pass IRequest::passesCSRFCheck() (assertSafeMutationChannel).
+ *   Junk Bearer/Basic headers must not skip CSRF for a cookie session.
+ *   Login Flow / CLI app passwords authenticate via IProvider::getToken —
+ *   checkPassword alone rejects them (same posture as ProjectCheck Mobile).
  * - ACL, CAS version, closed-month, tax, IDOR: identical to web services.
  */
 class MobileApiController extends Controller
@@ -57,6 +65,8 @@ class MobileApiController extends Controller
 	public function __construct(
 		IRequest $request,
 		private readonly IUserSession $userSession,
+		private readonly IUserManager $userManager,
+		private readonly IProvider $tokenProvider,
 		private readonly AccessControlService $access,
 		private readonly WorkspaceService $workspaces,
 		private readonly CategoryService $categories,
@@ -522,11 +532,12 @@ class MobileApiController extends Controller
 		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
 			$workspaceId = $this->validateId($workspaceId);
 			$txId = $this->validateId($txId);
-			$this->workspaces->getForUser($workspaceId, $userId);
-			$tx = $this->transactions->loadForWorkspace($txId, $workspaceId);
-			if ($tx === null) {
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$existing = $this->transactions->loadForWorkspace($txId, $workspaceId);
+			if ($existing === null || $existing['deleted_at'] !== null) {
 				throw new NotFoundException('Transaction not found.');
 			}
+			$tx = $this->transactions->loadHydrated($txId, (string)$workspace['currencyCode']);
 			return ['transaction' => $tx];
 		});
 	}
@@ -538,27 +549,32 @@ class MobileApiController extends Controller
 		return $this->safe(function (string $userId) use ($workspaceId): array {
 			$workspaceId = $this->validateId($workspaceId);
 			$this->assertSafeMutationChannel();
-			$payload = $this->payload();
+			$payload = $this->mobileTransactionWritePayload();
 			$payload['workspaceId'] = $workspaceId;
 			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_write', 240, 300);
 
+			// Required: without a key, concurrent/retried POSTs double-book (Atlas Lens 1 proof).
 			$idemKey = trim((string)$this->request->getHeader('Idempotency-Key'));
+			if ($idemKey === '') {
+				throw new \InvalidArgumentException('Idempotency-Key header is required for create.');
+			}
 			$requestHash = MobileIdempotencyService::hashPayload($payload);
-			if ($idemKey !== '') {
-				$replay = $this->idempotency->findReplay($userId, $workspaceId, $idemKey, $requestHash);
-				if ($replay !== null) {
-					return $replay['body'];
-				}
+			$replay = $this->idempotency->claimOrReplay($userId, $workspaceId, $idemKey, $requestHash);
+			if ($replay !== null) {
+				return $replay['body'];
 			}
 
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
 			$bookingStatus = $this->resolveBookingStatus($payload['bookingStatusId'] ?? null, $workspaceId, $workspace);
-			$tx = $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus);
-			$body = ['transaction' => $tx];
-			if ($idemKey !== '') {
-				$this->idempotency->store($userId, $workspaceId, $idemKey, $requestHash, ['ok' => true] + $body, 200);
+			try {
+				$tx = $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus);
+			} catch (\Throwable $e) {
+				$this->idempotency->releaseClaim($userId, $workspaceId, $idemKey);
+				throw $e;
 			}
+			$body = ['transaction' => $tx];
+			$this->idempotency->completeClaim($userId, $workspaceId, $idemKey, $requestHash, ['ok' => true] + $body, 200);
 			return $body;
 		});
 	}
@@ -571,7 +587,7 @@ class MobileApiController extends Controller
 			$workspaceId = $this->validateId($workspaceId);
 			$txId = $this->validateId($txId);
 			$this->assertSafeMutationChannel();
-			$payload = $this->payload();
+			$payload = $this->mobileTransactionWritePayload(true);
 			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_write', 240, 300);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$existing = $this->transactions->loadForWorkspace($txId, $workspaceId);
@@ -628,14 +644,19 @@ class MobileApiController extends Controller
 				if (!(bool)($rule['isActive'] ?? $rule['is_active'] ?? true)) {
 					continue;
 				}
+				$amountMinor = (int)($rule['amountMinor'] ?? $rule['amount_minor'] ?? 0);
+				if ($amountMinor < 1 && isset($rule['amount']) && is_array($rule['amount'])) {
+					$amountMinor = (int)($rule['amount']['minor'] ?? 0);
+				}
 				$suggestions[] = [
 					'id' => (int)($rule['id'] ?? 0),
 					'title' => (string)($rule['title'] ?? $rule['name'] ?? ''),
 					'direction' => (string)($rule['direction'] ?? ''),
-					'amountMinor' => (int)($rule['amountMinor'] ?? $rule['amount_minor'] ?? 0),
+					'amountMinor' => $amountMinor,
 					'categoryId' => (int)($rule['categoryId'] ?? $rule['category_id'] ?? 0),
 					'nextDueDate' => $rule['nextDueDate'] ?? $rule['next_due_date'] ?? null,
 					'frequency' => (string)($rule['frequency'] ?? ''),
+					'postingMode' => (string)($rule['postingMode'] ?? $rule['posting_mode'] ?? RecurringRuleService::POSTING_PLAN),
 				];
 			}
 			return ['suggestions' => $suggestions];
@@ -658,6 +679,20 @@ class MobileApiController extends Controller
 			}
 			$ruleRow = $this->recurring->loadHydrated($ruleId, (string)$workspace['currencyCode']);
 			$category = $this->resolveCategory((int)$ruleRow['categoryId'], $workspaceId);
+			$today = $this->recurring->workspaceTodayIso($workspace);
+			$nextDue = (string)($ruleRow['nextDueDate'] ?? '');
+			if ($nextDue !== '' && $nextDue <= $today) {
+				$batch = $this->recurring->generateDue($ruleId, $userId, $workspace, $this->transactions, $category);
+				$ids = is_array($batch['transactionIds'] ?? null) ? $batch['transactionIds'] : [];
+				$firstId = isset($ids[0]) ? (int)$ids[0] : 0;
+				$transaction = $firstId > 0
+					? $this->transactions->loadForWorkspace($firstId, $workspaceId)
+					: null;
+				return [
+					'generated' => $batch,
+					'transaction' => $transaction,
+				];
+			}
 			$created = $this->recurring->generate($ruleId, $userId, $workspace, $this->transactions, $category);
 			return ['transaction' => $created];
 		});
@@ -805,16 +840,64 @@ class MobileApiController extends Controller
 	}
 
 	/**
-	 * Mutations accept Basic/Bearer app-password OR a cryptographically valid
-	 * CSRF requesttoken (IRequest::passesCSRFCheck). Cookie-only sessions
-	 * without a valid token — including forged non-empty strings — are rejected.
+	 * Mutations accept a valid CSRF requesttoken OR Basic credentials that
+	 * authenticate as the already-bound session user (companion app password).
+	 *
+	 * Junk `Authorization: Bearer x` / `Basic junk` MUST NOT bypass CSRF —
+	 * that would let a same-site attacker ride the victim's browser cookie.
 	 */
 	private function assertSafeMutationChannel(): void
 	{
-		$auth = (string)$this->request->getHeader('Authorization');
-		if (!MobileMutationChannel::isSafe($auth, $this->request->passesCSRFCheck())) {
+		$csrfPassed = $this->request->passesCSRFCheck();
+		$basicValidated = $csrfPassed ? false : $this->authorizationBasicAuthenticatesCurrentUser();
+		if (!MobileMutationChannel::isSafe($csrfPassed, $basicValidated)) {
 			throw new AccessDeniedException();
 		}
+	}
+
+	/**
+	 * True only when Authorization Basic credentials authenticate as the
+	 * current session UID — either via login password (checkPassword) or a
+	 * Login Flow / CLI app password (IProvider::getToken). Forged Bearer or
+	 * Basic shape alone must not skip CSRF.
+	 */
+	private function authorizationBasicAuthenticatesCurrentUser(): bool
+	{
+		$auth = trim((string)$this->request->getHeader('Authorization'));
+		if (preg_match('/^Basic\s+(\S+)$/i', $auth, $m) !== 1) {
+			return false;
+		}
+		$decoded = base64_decode($m[1], true);
+		if ($decoded === false || !str_contains($decoded, ':')) {
+			return false;
+		}
+		[$login, $secret] = explode(':', $decoded, 2);
+		if ($login === '' || $secret === '') {
+			return false;
+		}
+		$current = $this->userSession->getUser();
+		if ($current === null) {
+			return false;
+		}
+
+		$authed = $this->userManager->checkPassword($login, $secret);
+		if ($authed !== false) {
+			return hash_equals($current->getUID(), $authed->getUID());
+		}
+
+		try {
+			$token = $this->tokenProvider->getToken($secret);
+		} catch (InvalidTokenException|ExpiredTokenException|WipeTokenException) {
+			return false;
+		}
+
+		if (!hash_equals($current->getUID(), $token->getUID())) {
+			return false;
+		}
+
+		// Bind the Basic login name to the token (UID or loginName used at mint).
+		return hash_equals($token->getUID(), $login)
+			|| hash_equals($token->getLoginName(), $login);
 	}
 
 	/**
@@ -898,6 +981,44 @@ class MobileApiController extends Controller
 	{
 		$params = $this->request->getParams();
 		return is_array($params) ? $params : [];
+	}
+
+	/**
+	 * Allowlisted companion write fields only.
+	 *
+	 * Nextcloud Request::getParams() merges GET + POST + URL params, so a crafted
+	 * query string could otherwise inject planned/recurring/budget/externalRef
+	 * into TransactionService::create even though the mobile client never sends them.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function mobileTransactionWritePayload(bool $forUpdate = false): array
+	{
+		$raw = $this->payload();
+		$keys = [
+			'direction',
+			'title',
+			'bookingDate',
+			'amountMinor',
+			'amount',
+			'categoryId',
+			'notes',
+			'isSpecial',
+			'bookingStatusId',
+			'entryAmountBasis',
+			'vatRateBp',
+		];
+		if ($forUpdate) {
+			$keys[] = 'version';
+			// externalRef is import/bank-dedupe only — never writable via mobile companion.
+		}
+		$out = [];
+		foreach ($keys as $key) {
+			if (array_key_exists($key, $raw)) {
+				$out[$key] = $raw[$key];
+			}
+		}
+		return $out;
 	}
 
 	private function validateId(int $id): int
