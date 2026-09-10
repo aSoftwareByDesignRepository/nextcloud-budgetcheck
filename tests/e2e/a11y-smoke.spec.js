@@ -9,6 +9,7 @@ function hasAnyCreds() {
   return !!(
     process.env.NC_ADMIN_USER ||
     process.env.NC_EMPLOYEE_USER ||
+    (process.env.E2E_USER && (process.env.E2E_PASSWORD || process.env.E2E_PASS)) ||
     fs.existsSync(path.join(__dirname, '..', '..', '.auth', 'storage-state.json'))
   )
 }
@@ -20,6 +21,13 @@ async function ensureAuthed(page) {
   if (process.env.NC_ADMIN_USER || process.env.NC_EMPLOYEE_USER) {
     const role = process.env.NC_ADMIN_USER ? 'ADMIN' : 'EMPLOYEE'
     await login(page, credsFromEnv(role))
+    return
+  }
+  if (process.env.E2E_USER && (process.env.E2E_PASSWORD || process.env.E2E_PASS)) {
+    await login(page, {
+      username: process.env.E2E_USER,
+      password: process.env.E2E_PASSWORD || process.env.E2E_PASS || '',
+    })
   }
 }
 

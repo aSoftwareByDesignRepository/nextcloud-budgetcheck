@@ -45,6 +45,32 @@ class MoneyService
 	}
 
 	/**
+	 * Resolve a booking amount from either `amountMinor` (authoritative integer
+	 * minor units) or a human `amount` string.
+	 *
+	 * When `amountMinor` is present it MUST be an int or an all-digit string —
+	 * never a float/`"350.0"` that would be misread as a human amount (×100).
+	 *
+	 * @throws \InvalidArgumentException
+	 */
+	public function parseAmountField(mixed $amount, mixed $amountMinor, int $decimals = 2): int
+	{
+		if ($amountMinor !== null && $amountMinor !== '') {
+			if (is_int($amountMinor)) {
+				return $this->ensureInRange($amountMinor);
+			}
+			if (is_string($amountMinor)) {
+				$trimmed = trim($amountMinor);
+				if (preg_match('/^[0-9]+$/', $trimmed) === 1) {
+					return $this->ensureInRange((int)$trimmed);
+				}
+			}
+			throw new \InvalidArgumentException('amountMinor must be an integer number of minor units.');
+		}
+		return $this->parseHumanAmount($amount, $decimals);
+	}
+
+	/**
 	 * Parse a free-form positive amount into minor units. Returns the integer
 	 * value or throws on invalid input.
 	 *

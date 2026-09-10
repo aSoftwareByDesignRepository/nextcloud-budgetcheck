@@ -107,6 +107,7 @@ final class ApiControllerReadHappyPathTest extends TestCase
 			$this->request,
 			$this->access,
 			$this->workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->createMock(TransactionService::class),
 			$this->createMock(TransactionAttachmentService::class),

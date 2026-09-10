@@ -448,8 +448,8 @@ class TransactionService
 		if ($isPlanned && $recurringRuleId === null && $budgetId === null) {
 			throw new \InvalidArgumentException('Planned entries require recurringRuleId or budgetId.');
 		}
-		if (!$isPlanned && ($recurringRuleId !== null || $budgetId !== null)) {
-			throw new \InvalidArgumentException('recurringRuleId and budgetId are only allowed for planned entries.');
+		if (!$isPlanned && $budgetId !== null) {
+			throw new \InvalidArgumentException('budgetId is only allowed for planned entries.');
 		}
 		if ($isPlanned && $recurringRuleId !== null && $budgetId !== null) {
 			throw new \InvalidArgumentException('Planned entries cannot reference both recurringRuleId and budgetId.');
@@ -465,15 +465,16 @@ class TransactionService
 		if ($this->monthIsClosed($workspaceId, $ym)) {
 			throw new \InvalidArgumentException($closedMessage);
 		}
-		if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
-			throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
+		// One live ledger row per (rule, date) — planned or real (issue #18 book mode).
+		if ($recurringRuleId !== null && $this->hasLiveOccurrenceForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
+			throw new \InvalidArgumentException('An entry already exists for this rule and date.');
 		}
 		if ($isPlanned && $budgetId !== null && $this->hasLivePlannedForBudget($workspaceId, $budgetId)) {
 			throw new \InvalidArgumentException('A planned entry already exists for this budget target.');
 		}
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
-		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
+		$amount = $this->money->parseAmountField($payload['amount'] ?? null, $payload['amountMinor'] ?? null, $decimals);
 		$taxFields = $this->resolveTaxFields($payload, $workspace, $amount, $direction);
 
 		$now = $this->utcNow();
@@ -484,8 +485,8 @@ class TransactionService
 			if ($this->monthIsClosed($workspaceId, $ym)) {
 				throw new \InvalidArgumentException($closedMessage);
 			}
-			if ($isPlanned && $recurringRuleId !== null && $this->hasLivePlannedForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
-				throw new \InvalidArgumentException('A planned entry already exists for this rule and date.');
+			if ($recurringRuleId !== null && $this->hasLiveOccurrenceForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
+				throw new \InvalidArgumentException('An entry already exists for this rule and date.');
 			}
 			if ($isPlanned && $budgetId !== null && $this->hasLivePlannedForBudget($workspaceId, $budgetId)) {
 				throw new \InvalidArgumentException('A planned entry already exists for this budget target.');
@@ -523,6 +524,9 @@ class TransactionService
 			$qb->executeStatement();
 			$id = (int)$this->db->lastInsertId('bc_transactions');
 			if (!$isPlanned) {
+				// Recurring generate/auto-due already owns the occurrence; never let
+				// adjacent-month auto-book matching retire a sibling booking.
+				$allowLiveAutoBookReplace = $recurringRuleId === null;
 				(new PlannedTransactionMatchService($this->db, $this->audit, $this->timeFactory))
 					->replaceMatchingPlanned(
 						$workspaceId,
@@ -532,6 +536,7 @@ class TransactionService
 						$amount,
 						$bookingDate->format('Y-m-d'),
 						$id,
+						$allowLiveAutoBookReplace,
 					);
 			}
 			$this->db->commit();
@@ -565,7 +570,7 @@ class TransactionService
 		$this->resolveBookingStatusId($workspace, $bookingStatus);
 
 		$decimals = $this->money->decimalsFor($workspace['currencyCode']);
-		$amount = $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals);
+		$amount = $this->money->parseAmountField($payload['amount'] ?? null, $payload['amountMinor'] ?? null, $decimals);
 		$this->resolveTaxFields($payload, $workspace, $amount, $direction);
 	}
 
@@ -685,7 +690,11 @@ class TransactionService
 		if ($amountChanged || $taxChanged) {
 			$decimals = $this->money->decimalsFor($workspace['currencyCode']);
 			$amount = $amountChanged
-				? $this->money->parseHumanAmount($payload['amount'] ?? ($payload['amountMinor'] ?? null), $decimals)
+				? $this->money->parseAmountField(
+					$payload['amount'] ?? null,
+					array_key_exists('amountMinor', $payload) ? $payload['amountMinor'] : null,
+					$decimals,
+				)
 				: (int)$existing['amount_minor'];
 			$basisInput = (string)($payload['entryAmountBasis'] ?? $existing['entry_amount_basis']);
 			$rateInput = $payload['vatRateBp'] ?? $existing['vat_rate_bp'];
@@ -1181,6 +1190,19 @@ class TransactionService
 
 	public function hasLivePlannedForRecurringDate(int $workspaceId, int $recurringRuleId, string $bookingDate): bool
 	{
+		return $this->hasLiveOccurrenceForRecurringDate($workspaceId, $recurringRuleId, $bookingDate, true);
+	}
+
+	/**
+	 * Any live (non-deleted) ledger row for this rule+date, planned or real.
+	 * Used as the idempotency key for recurring generation (issue #18).
+	 */
+	public function hasLiveOccurrenceForRecurringDate(
+		int $workspaceId,
+		int $recurringRuleId,
+		string $bookingDate,
+		?bool $plannedOnly = null,
+	): bool {
 		if ($recurringRuleId < 1 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDate)) {
 			return false;
 		}
@@ -1190,12 +1212,117 @@ class TransactionService
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('recurring_rule_id', $qb->createNamedParameter($recurringRuleId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('booking_date', $qb->createNamedParameter($bookingDate)))
-			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
 			->andWhere($qb->expr()->isNull('deleted_at'));
+		if ($plannedOnly === true) {
+			$qb->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)));
+		} elseif ($plannedOnly === false) {
+			$qb->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(false, \PDO::PARAM_BOOL)));
+		}
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
 		return (int)($row['count'] ?? 0) > 0;
+	}
+
+	/**
+	 * Turn a planned recurring placeholder into a real booking (same row).
+	 * Idempotent: returns null when no live planned row exists for that key.
+	 *
+	 * @return array<string,mixed>|null hydrated transaction, or null when nothing to promote
+	 */
+	public function promotePlannedRecurringOccurrence(
+		int $workspaceId,
+		string $userId,
+		int $recurringRuleId,
+		string $bookingDate,
+		string $currencyCode,
+	): ?array {
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+		if ($recurringRuleId < 1 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bookingDate)) {
+			return null;
+		}
+		$ym = substr($bookingDate, 0, 7);
+		if ($this->monthIsClosed($workspaceId, $ym)) {
+			throw new \InvalidArgumentException('Month is closed. Reopen it before confirming planned entries.');
+		}
+
+		$id = 0;
+		$this->db->beginTransaction();
+		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			if ($this->monthIsClosed($workspaceId, $ym)) {
+				throw new \InvalidArgumentException('Month is closed. Reopen it before confirming planned entries.');
+			}
+			if ($this->hasLiveOccurrenceForRecurringDate($workspaceId, $recurringRuleId, $bookingDate, false)) {
+				// Real booking already present — drop the planned twin if any, keep the real.
+				$qbDel = $this->db->getQueryBuilder();
+				$qbDel->update('bc_transactions')
+					->set('deleted_at', $qbDel->createNamedParameter($this->utcNow()))
+					->set('updated_by', $qbDel->createNamedParameter($userId))
+					->set('updated_at', $qbDel->createNamedParameter($this->utcNow()))
+					->where($qbDel->expr()->eq('workspace_id', $qbDel->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+					->andWhere($qbDel->expr()->eq('recurring_rule_id', $qbDel->createNamedParameter($recurringRuleId, \PDO::PARAM_INT)))
+					->andWhere($qbDel->expr()->eq('booking_date', $qbDel->createNamedParameter($bookingDate)))
+					->andWhere($qbDel->expr()->eq('is_planned', $qbDel->createNamedParameter(true, \PDO::PARAM_BOOL)))
+					->andWhere($qbDel->expr()->isNull('deleted_at'));
+				$qbDel->executeStatement();
+				$this->db->commit();
+				return null;
+			}
+
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('id', 'version')
+				->from('bc_transactions')
+				->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+				->andWhere($qb->expr()->eq('recurring_rule_id', $qb->createNamedParameter($recurringRuleId, \PDO::PARAM_INT)))
+				->andWhere($qb->expr()->eq('booking_date', $qb->createNamedParameter($bookingDate)))
+				->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+				->andWhere($qb->expr()->isNull('deleted_at'))
+				->orderBy('id', 'ASC')
+				->setMaxResults(1)
+				->forUpdate();
+			$result = $qb->executeQuery();
+			$row = $result->fetch();
+			$result->closeCursor();
+			if ($row === false) {
+				$this->db->commit();
+				return null;
+			}
+			$id = (int)$row['id'];
+			$version = (int)$row['version'];
+			$now = $this->utcNow();
+			$uq = $this->db->getQueryBuilder();
+			$uq->update('bc_transactions')
+				->set('is_planned', $uq->createNamedParameter(false, \PDO::PARAM_BOOL))
+				->set('version', $uq->createNamedParameter($version + 1, \PDO::PARAM_INT))
+				->set('updated_by', $uq->createNamedParameter($userId))
+				->set('updated_at', $uq->createNamedParameter($now))
+				->where($uq->expr()->eq('id', $uq->createNamedParameter($id, \PDO::PARAM_INT)))
+				->andWhere($uq->expr()->eq('version', $uq->createNamedParameter($version, \PDO::PARAM_INT)))
+				->andWhere($uq->expr()->isNull('deleted_at'));
+			$affected = $uq->executeStatement();
+			if ($affected !== 1) {
+				throw new \RuntimeException('Concurrent update while confirming planned entry.');
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
+
+		$this->audit->record($userId, 'transaction_planned_confirmed', 'transaction', (string)$id, [
+			'recurringRuleId' => $recurringRuleId,
+			'bookingDate' => $bookingDate,
+		], $workspaceId);
+
+		return $this->loadHydrated($id, $currencyCode);
+	}
+
+	public function isMonthClosed(int $workspaceId, string $yearMonth): bool
+	{
+		return $this->monthIsClosed($workspaceId, $yearMonth);
 	}
 
 	public function hasLivePlannedForBudget(int $workspaceId, int $budgetId): bool

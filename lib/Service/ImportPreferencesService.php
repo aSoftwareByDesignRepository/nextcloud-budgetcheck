@@ -123,6 +123,19 @@ class ImportPreferencesService
 		];
 	}
 
+
+	/**
+	 * Best-effort preference wipe after a workspace is hard-deleted (no ACL check —
+	 * the workspace no longer exists).
+	 */
+	public function clearForUserWorkspace(string $userId, int $workspaceId): void
+	{
+		if ($userId === '' || $workspaceId < 1) {
+			return;
+		}
+		$this->config->deleteUserValue($userId, Application::APP_ID, $this->storageKey($workspaceId));
+	}
+
 	private function storageKey(int $workspaceId): string
 	{
 		return self::KEY_PREFIX . $workspaceId;

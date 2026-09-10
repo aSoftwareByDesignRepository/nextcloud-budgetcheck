@@ -7,6 +7,7 @@ namespace OCA\BudgetCheck\AppInfo;
 use OCP\Lock\ILockingProvider;
 use OCP\Files\IRootFolder;
 use OCP\App\IAppManager;
+use OCA\BudgetCheck\BackgroundJob\RecurringDueJob;
 use OCA\BudgetCheck\Capabilities;
 use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\MobilePushService;
@@ -40,6 +41,7 @@ use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\WorkspaceDeletionService;
 use OCA\BudgetCheck\Settings\AdminSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
@@ -250,6 +252,18 @@ class Application extends App implements IBootstrap
 			);
 		});
 
+		$context->registerService(WorkspaceDeletionService::class, function ($c): WorkspaceDeletionService {
+			return new WorkspaceDeletionService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(TransactionAttachmentService::class),
+				$c->query(AuditLogService::class),
+				$c->query(ImportPreferencesService::class),
+				$c->query(SummaryViewPreferencesService::class),
+			);
+		});
+
 		$context->registerService(BookingStatusService::class, function ($c): BookingStatusService {
 			return new BookingStatusService(
 				$c->query(\OCP\IDBConnection::class),
@@ -302,6 +316,17 @@ class Application extends App implements IBootstrap
 				$c->query(MoneyService::class),
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(RecurringDueJob::class, function ($c): RecurringDueJob {
+			return new RecurringDueJob(
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(RecurringRuleService::class),
+				$c->query(TransactionService::class),
+				$c->query(CategoryService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
 

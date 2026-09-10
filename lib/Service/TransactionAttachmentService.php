@@ -547,19 +547,8 @@ class TransactionAttachmentService
 			return ['success' => false, 'message' => 'XML file does not look like a valid e-invoice document.'];
 		}
 
-		if (substr_count($originalName, '.') > 1) {
-			$parts = explode('.', strtolower($originalName));
-			$lastPart = (string)end($parts);
-			$secondLastPart = count($parts) > 1 ? (string)$parts[count($parts) - 2] : '';
-			if (in_array($lastPart, self::DANGEROUS_EXTENSIONS, true) || in_array($secondLastPart, self::DANGEROUS_EXTENSIONS, true)) {
-				return ['success' => false, 'message' => 'File name contains a blocked extension.'];
-			}
-		}
-
-		foreach (self::DANGEROUS_EXTENSIONS as $dangerousExtension) {
-			if (stripos($originalName, '.' . $dangerousExtension) !== false) {
-				return ['success' => false, 'message' => 'File name contains a blocked extension.'];
-			}
+		if ($this->hasBlockedExtensionInName($originalName)) {
+			return ['success' => false, 'message' => 'File name contains a blocked extension.'];
 		}
 
 		return [
@@ -567,6 +556,38 @@ class TransactionAttachmentService
 			'mimeType' => $mimeType,
 			'originalName' => $originalName,
 		];
+	}
+
+	/**
+	 * Segment-based dangerous extension check (not substring).
+	 * Allows legitimate names like {@code my.com.jpg} / {@code photo.app.png}
+	 * while still blocking {@code evil.php.jpg} and bare {@code payload.exe}.
+	 */
+	private function hasBlockedExtensionInName(string $originalName): bool
+	{
+		$base = strtolower(basename($originalName));
+		$parts = array_values(array_filter(
+			explode('.', $base),
+			static fn (string $p): bool => $p !== '',
+		));
+		if (count($parts) < 2) {
+			return false;
+		}
+		$finalExt = $parts[count($parts) - 1];
+		if (in_array($finalExt, self::DANGEROUS_EXTENSIONS, true)) {
+			return true;
+		}
+		// Intermediate segments: unambiguous script/executable types (not com/app).
+		$intermediateDangerous = [
+			'php', 'phtml', 'php3', 'php4', 'php5', 'pht', 'phar',
+			'exe', 'sh', 'bat', 'cmd', 'scr', 'vbs', 'js', 'jar',
+		];
+		foreach (array_slice($parts, 1, -1) as $seg) {
+			if (in_array($seg, $intermediateDangerous, true)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public function sanitizeContentDispositionFilename(string $filename): string
@@ -740,6 +761,80 @@ class TransactionAttachmentService
 		}
 		$result->closeCursor();
 		return $rows;
+	}
+
+	/**
+	 * Delete attachment DB rows for every transaction in a workspace.
+	 * Callers MUST already be inside a DB transaction. Returns file descriptors
+	 * for {@see purgeCollectedFiles} after commit.
+	 *
+	 * @return list<array{transactionId:int,storedName:string}>
+	 */
+	public function collectAndDeleteRowsForWorkspace(int $workspaceId): array
+	{
+		if ($workspaceId < 1 || !$this->db->tableExists('bc_tx_attachments') || !$this->db->tableExists('bc_transactions')) {
+			return [];
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('a.id', 'a.transaction_id', 'a.stored_name')
+			->from('bc_tx_attachments', 'a')
+			->innerJoin('a', 'bc_transactions', 't', $qb->expr()->eq('a.transaction_id', 't.id'))
+			->where($qb->expr()->eq('t.workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$files = [];
+		$attachmentIds = [];
+		while ($row = $result->fetch()) {
+			$attachmentIds[] = (int)$row['id'];
+			$files[] = [
+				'transactionId' => (int)$row['transaction_id'],
+				'storedName' => (string)$row['stored_name'],
+			];
+		}
+		$result->closeCursor();
+
+		if ($attachmentIds === []) {
+			return [];
+		}
+
+		// Chunk deletes for large workspaces.
+		foreach (array_chunk($attachmentIds, 500) as $chunk) {
+			$dqb = $this->db->getQueryBuilder();
+			$dqb->delete('bc_tx_attachments')
+				->where($dqb->expr()->in('id', $dqb->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
+			$dqb->executeStatement();
+		}
+
+		return $files;
+	}
+
+	/**
+	 * Best-effort filesystem wipe for descriptors collected before commit.
+	 *
+	 * @param list<array{transactionId:int,storedName:string}> $files
+	 */
+	public function purgeCollectedFiles(array $files): void
+	{
+		$seenFolders = [];
+		foreach ($files as $file) {
+			$txId = (int)($file['transactionId'] ?? 0);
+			$name = (string)($file['storedName'] ?? '');
+			if ($txId < 1 || $name === '') {
+				continue;
+			}
+			$this->deleteStoredFile($txId, $name);
+			$seenFolders[$txId] = true;
+		}
+		foreach (array_keys($seenFolders) as $txId) {
+			try {
+				$folder = $this->getTransactionFolder((int)$txId, false);
+				$folder->delete();
+			} catch (NotFoundException) {
+				// Already gone.
+			} catch (\Throwable) {
+				// Best-effort — workspace DB cascade already committed.
+			}
+		}
 	}
 
 	/**

@@ -27,8 +27,8 @@ The UI is **workspace-scoped** (household and project totals never mix), targets
 
 ## Requirements
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
@@ -42,8 +42,8 @@ Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich
 
 ## Voraussetzungen
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
 	<description lang="fr"><![CDATA[
@@ -57,8 +57,8 @@ L'interface est **scopée par espace** (totaux foyer et projet ne se mélangent 
 
 ## Prérequis
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL ou PostgreSQL
 	]]></description>
 	<description lang="da"><![CDATA[
@@ -72,8 +72,8 @@ Brugerfladen er **adskilt pr. arbejdsområde** (husholdning og projekt blandes i
 
 ## Krav
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="es"><![CDATA[
@@ -87,8 +87,8 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 
 ## Requisitos
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="nl"><![CDATA[
@@ -102,8 +102,8 @@ De gebruikersinterface is **workspace-gebonden** (totalen voor huishouden en pro
 
 ## Vereisten
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL of PostgreSQL
 	]]></description>
 	<description lang="it"><![CDATA[
@@ -117,8 +117,8 @@ L’interfaccia è **scopata per workspace** (i totali di nucleo domestico e pro
 
 ## Requisiti
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="pl"><![CDATA[
@@ -132,8 +132,8 @@ Interfejs jest **ograniczony do workspace** (sumy dla gospodarstwa domowego i pr
 
 ## Wymagania
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL lub PostgreSQL
 	]]></description>
 	<description lang="sv"><![CDATA[
@@ -147,8 +147,8 @@ Gränssnittet är **avgränsat per workspace** (totalsummor för hushåll och pr
 
 ## Krav
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="nb"><![CDATA[
@@ -162,11 +162,11 @@ Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og 
 
 ## Krav
 
-- Nextcloud 32–34
-- PHP 8.2–8.4
+- Nextcloud 32–35
+- PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
-	<version>1.1.14</version>
+	<version>1.4.0</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>BudgetCheck</namespace>
@@ -207,7 +207,7 @@ Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og 
 	</screenshot>
 	<donation type="other" title="Software by Design">https://nextcloud.software-by-design.de/</donation>
 	<dependencies>
-		<nextcloud min-version="32" max-version="34"/>
+		<nextcloud min-version="32" max-version="35"/>
 		<php min-version="8.2" max-version="8.5"/>
 		<database>mysql</database>
 		<database>pgsql</database>
@@ -222,7 +222,11 @@ Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og 
 			<icon>app.svg</icon>
 			<order>11</order>
 		</navigation>
-	</navigations>	<commands>
+	</navigations>
+	<background-jobs>
+		<job>OCA\BudgetCheck\BackgroundJob\RecurringDueJob</job>
+	</background-jobs>
+	<commands>
 		<command>OCA\BudgetCheck\Command\UpgradeBackupCommand</command>
 	</commands>
 

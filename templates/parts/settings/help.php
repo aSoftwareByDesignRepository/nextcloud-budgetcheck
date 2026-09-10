@@ -30,7 +30,7 @@
 				<dt><?php p($l->t('Savings transfer')); ?></dt>
 				<dd><?php p($l->t('Category flag for money moved to savings. Counts toward your savings goal and is excluded from everyday budget saldo, but stays in total expenses.')); ?></dd>
 				<dt><?php p($l->t('Planned entry')); ?></dt>
-				<dd><?php p($l->t('A placeholder booking from Generate on a recurring rule or from category budget targets. Recurring placeholders match amount; budget placeholders match category (any amount). A real booking in the same or neighbouring month removes the plan.')); ?></dd>
+				<dd><?php p($l->t('A reminder booking from a Plan-mode recurring rule or from category budget targets. Recurring plans match amount; budget plans match category (any amount). A matching real booking removes the plan. Book-mode recurring rules write real transactions instead.')); ?></dd>
 				<dt><?php p($l->t('Cap warning')); ?></dt>
 				<dd><?php p($l->t('For projects, a reminder when all-time spend approaches or exceeds the optional cap.')); ?></dd>
 			</dl>

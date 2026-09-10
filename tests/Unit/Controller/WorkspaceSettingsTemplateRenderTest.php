@@ -146,6 +146,22 @@ final class WorkspaceSettingsTemplateRenderTest extends TestCase
 			'Managers must not have disabled savings radios',
 		);
 		self::assertStringContainsString('Save workspace', $html);
+		self::assertStringContainsString('data-bc-workspace-delete-zone', $html);
+		self::assertStringContainsString('data-bc-workspace-delete', $html);
+	}
+
+	public function testWorkspacePartialHidesDeleteZoneForNonManagers(): void
+	{
+		$html = $this->renderPartial('workspace', $this->householdWorkspace(false));
+		self::assertStringNotContainsString('data-bc-workspace-delete', $html);
+		self::assertStringNotContainsString('data-bc-workspace-delete-zone', $html);
+	}
+
+	public function testProjectWorkspaceDeleteZoneMentionsInvoiceCheck(): void
+	{
+		$html = $this->renderPartial('workspace', $this->projectWorkspace(true));
+		self::assertStringContainsString('InvoiceCheck', $html);
+		self::assertStringContainsString('data-bc-workspace-delete-zone', $html);
 	}
 
 	public function testWorkspacePartialOmitsPlanningViewLinkWhenUrlMissing(): void

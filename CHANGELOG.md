@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.0 - 2026-09-10
+
+### Added
+
+- **Delete workspace (#19):** managers can permanently remove a workspace from Settings → Workspace (typed-name confirmation, impact preview, cascade of bookings/attachments/budgets/members/snapshots). Project workspaces warn that InvoiceCheck invoices remain but settlement links break.
+- **Mobile companion API 7:** `DELETE /api/mobile/v1/workspaces/{id}` with the same confirmName gate and rate limit (5/hour).
+
+### Security
+
+- Workspace delete is manager-only (private workspaces: individual manager only; no app-admin bypass). Exact workspace-name confirmation required.
+
+## 1.3.0 - 2026-09-07
+
+### Added
+- **Recurring posting modes (#18):** each rule chooses how dues land on the ledger.
+  - **Book automatically** (default for new rules): writes real transactions on Generate / when due.
+  - **Plan for bank import** (legacy behaviour, kept for existing rules): writes planned reminders that a matching import removes.
+- **Hourly `RecurringDueJob`:** auto-books active `book`-mode rules when `next_due_date` is on or before today in the workspace timezone. Plan-mode rules stay manual.
+- **Catch-up actions:** per-rule “Book now / Add plan now” for overdue dues, plus workspace “Add everything due”.
+- Generate can **promote** an existing planned twin to a real booking when switching to book mode (idempotent per rule+date).
+
+### Changed
+- Recurring settings UX rewritten for clarity (two modes, due badges, simpler verbs). WCAG 2.1 AA focus/labels retained.
+- **Contributors** see Settings → Recurring for catch-up only (Book / Add plan / Add everything due); create/edit/delete stay managers-only. Viewers stay redirected.
+- Inactive rules no longer offer Book/Add plan (plain “Paused” hint); Due badges expose an accessible name.
+- Real ledger rows may keep `recurring_rule_id` for provenance; uniqueness is one live row per (rule, date).
+- Closed months are skipped during generate/auto-due so the cursor never stalls forever.
+- Mobile recurring suggestions read `amount.minor` from the hydrated envelope (fixes always-zero amounts).
+- **Full BudgetCheck native-speaker quality pass (web + companion):** register (Sie/vous/usted/u/Lei), Transactions nav binding, workspace-manager role terms, untranslated lock/offline mobile strings, glossary alignment (PL **Księgowania**; IT button chrome vs Lei body).
+
+### Fixed
+- **Book + import no longer doubles:** matching bank/manual bookings (no `recurring_rule_id`) soft-delete the live book-mode auto-book. Recurring generate itself never replaces sibling months (adjacent-month matcher is import-only).
+- **Dev cron sidecar:** `nextcloud-cron` service + `backgroundjobs_mode=cron` so `RecurringDueJob` runs without web traffic. List recurring also does a rate-limited opportunistic due sweep.
+- **Mobile recurring UI:** Start → “Add what is due” screen with Book now (wired to generate-due API).
+
+### Security
+- Auto-due uses the rule author (fallback: earliest workspace manager) under the same contributor ACL as manual Generate; `FOR UPDATE` on the rule prevents double-posts under concurrent job + UI.
+- **Add full period** (`mode=full_period` / future `through`) is managers-only at API and service layer; contributors retain due catch-up Generate (`dueCatchUp` + `through` ≤ today).
+
+## 1.2.1 - 2026-09-04
+
+### Fixed
+- Store Requirements PHP range aligned with `info.xml`: **8.2–8.5**.
+
+## 1.2.0 - 2026-09-04
+
+### Changed
+- Nextcloud **35** support (`max-version` 35). Symfony Console 7–ready command signatures verified.
+
 ## 1.1.14 - 2026-08-20
 
 ### Fixed

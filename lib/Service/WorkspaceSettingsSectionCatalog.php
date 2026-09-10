@@ -109,21 +109,31 @@ final class WorkspaceSettingsSectionCatalog
 	 *
 	 * Visibility gates both navigation chips/sidebar children and direct URL access
 	 * (unauthorized sections redirect to {@see defaultSection()}).
+	 *
+	 * `$canContribute` is manager **or** contributor (same as PageController). Recurring
+	 * is open to contributors for catch-up Generate; CRUD stays manager-only in the UI.
 	 */
-	public function isVisible(string $section, string $workspaceType, bool $canManage): bool
-	{
+	public function isVisible(
+		string $section,
+		string $workspaceType,
+		bool $canManage,
+		bool $canContribute = false,
+	): bool {
 		if (!$this->isSection($section)) {
 			return false;
 		}
 		$isHousehold = $workspaceType === WorkspaceService::TYPE_HOUSEHOLD;
 		$isProject = $workspaceType === WorkspaceService::TYPE_PROJECT;
+		// Managers always count as contributors for visibility (call sites may omit the flag).
+		$canCatchUp = $canContribute || $canManage;
 
 		return match ($section) {
 			'planning-view' => $isHousehold,
 			'workspace', 'tax', 'categories', 'help' => true,
 			'budget-defaults' => $isHousehold && $canManage,
 			'booking-statuses' => $isProject,
-			'members', 'recurring' => $canManage,
+			'members' => $canManage,
+			'recurring' => $canCatchUp,
 			default => false,
 		};
 	}
@@ -181,7 +191,7 @@ final class WorkspaceSettingsSectionCatalog
 			'budget-defaults' => $l->t('Used as baseline for months. You can still override single months in planning.'),
 			'booking-statuses' => $l->t('Project-only workflow states for bookings (for example Open, In progress, Paid).'),
 			'members' => $l->t('Give people access to this workspace by adding them as a user or by adding a whole group. Each member is a manager, contributor, or viewer.'),
-			'recurring' => $l->t('Repeating income or expenses — on a fixed interval or on specific dates you list. Generate creates planned ledger entries; a matching import removes the plan automatically.'),
+			'recurring' => $l->t('Things that happen again and again — rent, salary, subscriptions. Contributors can add what is due; managers also create and edit the rules.'),
 			default => '',
 		};
 	}

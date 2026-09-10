@@ -16,6 +16,7 @@ use OCP\IUserManager;
 
 /**
  * Workspace lifecycle: list/create/update plus member CRUD.
+ * Hard-delete lives in {@see WorkspaceDeletionService} (typed confirm + cascade).
  *
  * Critical invariants enforced here:
  *  - Workspace `type` is required at creation and immutable after.

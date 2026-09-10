@@ -54,6 +54,8 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 	private AccessControlService $access;
 	/** @var WorkspaceService&MockObject */
 	private WorkspaceService $workspaces;
+	/** @var \OCA\BudgetCheck\Service\WorkspaceDeletionService&MockObject */
+	private \OCA\BudgetCheck\Service\WorkspaceDeletionService $workspaceDeletion;
 	/** @var CategoryService&MockObject */
 	private CategoryService $categories;
 	/** @var TransactionService&MockObject */
@@ -138,6 +140,28 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->workspaces->method('addGroupMember')->willReturn(['id' => 1]);
 		$this->workspaces->method('updateGroupMember')->willReturn(['id' => 1]);
 		$this->workspaces->method('removeGroupMember')->willReturn(['deleted' => true]);
+
+		$this->workspaceDeletion = $this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class);
+		$this->workspaceDeletion->method('previewImpact')->willReturn([
+			'workspaceId' => 7,
+			'name' => 'Home',
+			'type' => 'household',
+			'transactionCount' => 0,
+			'attachmentCount' => 0,
+			'memberCount' => 1,
+			'groupCount' => 0,
+			'closedMonthCount' => 0,
+			'billableInvoicedCount' => 0,
+			'billablePaidCount' => 0,
+			'hasInvoiceCheckLinks' => false,
+		]);
+		$this->workspaceDeletion->method('deleteWorkspace')->willReturn([
+			'deleted' => true,
+			'id' => 7,
+			'name' => 'Home',
+			'type' => 'household',
+			'impact' => [],
+		]);
 
 		$cat = ['id' => 3, 'name' => 'Food', 'groupKey' => 'expense', 'workspace_id' => 7];
 		$this->categories = $this->createMock(CategoryService::class);
@@ -285,6 +309,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$this->request,
 			$this->access,
 			$this->workspaces,
+			$this->workspaceDeletion,
 			$this->categories,
 			$this->transactions,
 			$this->attachments,
@@ -360,6 +385,14 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->params = ['name' => 'Home2'];
 		$this->assertOk($this->controller->updateWorkspace(7), 'updateWorkspace');
 		$invoked[] = 'updateWorkspace';
+
+		$this->params = [];
+		$this->assertOk($this->controller->previewWorkspaceDelete(7), 'previewWorkspaceDelete');
+		$invoked[] = 'previewWorkspaceDelete';
+
+		$this->params = ['confirmName' => 'Home'];
+		$this->assertOk($this->controller->deleteWorkspace(7), 'deleteWorkspace');
+		$invoked[] = 'deleteWorkspace';
 
 		$this->params = ['taxModeEnabled' => true];
 		$this->assertOk($this->controller->updateTaxMode(7), 'updateTaxMode');
@@ -626,6 +659,10 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$workspaces->method($m)->willReturnCallback($deny);
 		}
 
+		$workspaceDeletion = $this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class);
+		$workspaceDeletion->method('previewImpact')->willReturnCallback($deny);
+		$workspaceDeletion->method('deleteWorkspace')->willReturnCallback($deny);
+
 		$categories = $this->createMock(CategoryService::class);
 		foreach (['listForWorkspace', 'create', 'update', 'deactivate', 'loadForWorkspace', 'distinctGroupKeys'] as $m) {
 			$categories->method($m)->willReturnCallback($deny);
@@ -699,6 +736,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$this->request,
 			$access,
 			$workspaces,
+			$workspaceDeletion,
 			$categories,
 			$transactions,
 			$attachments,
@@ -765,6 +803,10 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 
 		$this->params = ['name' => 'X'];
 		$this->assertForbidden($c->updateWorkspace(7), 'updateWorkspace');
+		$this->params = [];
+		$this->assertForbidden($c->previewWorkspaceDelete(7), 'previewWorkspaceDelete');
+		$this->params = ['confirmName' => 'X'];
+		$this->assertForbidden($c->deleteWorkspace(7), 'deleteWorkspace');
 		$this->params = ['taxModeEnabled' => false];
 		$this->assertForbidden($c->updateTaxMode(7), 'updateTaxMode');
 

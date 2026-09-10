@@ -595,6 +595,25 @@ class AccessControlService
 	}
 
 	/**
+	 * Drop a single workspace id from the user's favorites (no-op if absent).
+	 */
+	public function removeFavoriteWorkspaceId(string $userId, int $workspaceId): void
+	{
+		if ($userId === '' || $workspaceId < 1) {
+			return;
+		}
+		$current = $this->favoriteWorkspaceIds($userId);
+		$next = array_values(array_filter(
+			$current,
+			static fn (int $id): bool => $id !== $workspaceId,
+		));
+		if ($next === $current) {
+			return;
+		}
+		$this->saveFavoriteWorkspaceIds($userId, $next);
+	}
+
+	/**
 	 * App-wide settings: app admins, optional directory restriction, defaults
 	 * for the workspace creation form. Preview rows help the settings UI render
 	 * chips without extra round-trips (same data app admins already see in members).

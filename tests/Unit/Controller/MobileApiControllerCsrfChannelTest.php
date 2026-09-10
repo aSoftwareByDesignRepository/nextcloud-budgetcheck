@@ -44,6 +44,7 @@ final class MobileApiControllerCsrfChannelTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->createMock(AccessControlService::class),
 			$this->createMock(WorkspaceService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->createMock(TransactionService::class),
 			$this->createMock(BookingStatusService::class),

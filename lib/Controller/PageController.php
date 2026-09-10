@@ -252,7 +252,8 @@ class PageController extends Controller
 
 		$workspaceType = (string)($selected['type'] ?? '');
 		$canManage = in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER], true);
-		if (!$this->workspaceSettingsSections->isVisible($section, $workspaceType, $canManage)) {
+		$canContribute = in_array(($selected['role'] ?? null), [AccessControlService::ROLE_MANAGER, AccessControlService::ROLE_CONTRIBUTOR], true);
+		if (!$this->workspaceSettingsSections->isVisible($section, $workspaceType, $canManage, $canContribute)) {
 			return new RedirectResponse($this->urlGenerator->linkToRoute(
 				'budgetcheck.page.settingsSection',
 				[
@@ -269,7 +270,7 @@ class PageController extends Controller
 
 		$settingsSectionLabels = [];
 		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
-			if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage)) {
+			if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage, $canContribute)) {
 				continue;
 			}
 			$settingsSectionLabels[$sectionId] = $this->workspaceSettingsSections->navLabel($this->l10n, $sectionId);
@@ -461,7 +462,7 @@ class PageController extends Controller
 		if ($selected !== null) {
 			$workspaceTypeForUrls = (string)($selected['type'] ?? '');
 			foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
-				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceTypeForUrls, $canManage)) {
+				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceTypeForUrls, $canManage, $canContribute)) {
 					continue;
 				}
 				$settingsSectionUrls[$sectionId] = $this->urlGenerator->linkToRoute(
@@ -474,7 +475,7 @@ class PageController extends Controller
 		if ($settingsSectionLabels === [] && $selected !== null && $template === 'settings') {
 			$workspaceType = (string)($selected['type'] ?? '');
 			foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
-				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage)) {
+				if (!$this->workspaceSettingsSections->isVisible($sectionId, $workspaceType, $canManage, $canContribute)) {
 					continue;
 				}
 				$settingsSectionLabels[$sectionId] = $this->workspaceSettingsSections->navLabel($this->l10n, $sectionId);

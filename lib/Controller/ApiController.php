@@ -33,6 +33,7 @@ use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\WorkspaceDeletionService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -72,6 +73,7 @@ class ApiController extends Controller
 		IRequest $request,
 		private AccessControlService $access,
 		private WorkspaceService $workspaces,
+		private WorkspaceDeletionService $workspaceDeletion,
 		private CategoryService $categories,
 		private TransactionService $transactions,
 		private TransactionAttachmentService $transactionAttachments,
@@ -202,6 +204,30 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId) use ($id): array {
 			$this->rateLimit->assertAllowed($userId, 'workspace_update', 30, 300);
 			return ['workspace' => $this->workspaces->updateWorkspace($id, $userId, $this->payload())];
+		});
+	}
+
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function previewWorkspaceDelete(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'workspace_delete_preview', 30, 300);
+			return ['impact' => $this->workspaceDeletion->previewImpact($id, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function deleteWorkspace(int $id): JSONResponse
+	{
+		$id = $this->validateId($id);
+		return $this->safe(function (string $userId) use ($id): array {
+			$this->rateLimit->assertAllowed($userId, 'workspace_delete', 5, 3600);
+			$payload = $this->payload();
+			$confirmName = (string)($payload['confirmName'] ?? $payload['confirm_name'] ?? '');
+			return $this->workspaceDeletion->deleteWorkspace($id, $userId, $confirmName);
 		});
 	}
 
@@ -641,8 +667,29 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId): array {
 			$workspaceId = $this->resolveWorkspaceId();
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$autoDue = null;
+			// Opportunistic catch-up when someone opens Recurring (cron may be idle).
+			// Rate-limited so a busy UI cannot hammer auto-book.
+			try {
+				$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+				$this->rateLimit->assertAllowed($userId, 'recurring_due_opportunistic_' . $workspaceId, 1, 300);
+				$autoDue = $this->recurring->generateDueForWorkspace(
+					$workspaceId,
+					$userId,
+					$workspace,
+					$this->transactions,
+					$this->categories,
+				);
+			} catch (RateLimitExceededException) {
+				$autoDue = null;
+			} catch (AccessDeniedException) {
+				$autoDue = null;
+			} catch (\Throwable) {
+				$autoDue = null;
+			}
 			return [
 				'rules' => $this->recurring->listForWorkspace($workspaceId, $userId, $workspace['currencyCode']),
+				'autoDue' => $autoDue,
 			];
 		});
 	}
@@ -706,13 +753,40 @@ class ApiController extends Controller
 			$category = $this->resolveCategory((int)$ruleRow['categoryId'], $workspaceId);
 			$mode = strtolower(trim((string)($payload['mode'] ?? 'next')));
 			if ($mode === 'full_period') {
+				$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 				$endDate = isset($ruleRow['endDate']) ? (string)$ruleRow['endDate'] : '';
 				if ($endDate === '') {
 					throw new \InvalidArgumentException('Rule has no end date.');
 				}
 				return ['generated' => $this->recurring->generate($id, $userId, $workspace, $this->transactions, $category, ['through' => $endDate])];
 			}
+			if ($mode === 'due') {
+				return ['generated' => $this->recurring->generateDue($id, $userId, $workspace, $this->transactions, $category)];
+			}
 			return ['transaction' => $this->recurring->generate($id, $userId, $workspace, $this->transactions, $category)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function generateDueRecurringRules(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? $this->request->getParam('workspaceId', 0));
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'recurring_generate', 30, 300);
+			return [
+				'generated' => $this->recurring->generateDueForWorkspace(
+					$workspaceId,
+					$userId,
+					$workspace,
+					$this->transactions,
+					$this->categories,
+				),
+			];
 		});
 	}
 

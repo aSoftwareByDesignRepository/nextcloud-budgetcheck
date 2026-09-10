@@ -826,7 +826,8 @@
 .bc-callout--critical { background: var(--bc-tint-critical); }
 .bc-callout p { margin: 0; }
 .bc-callout__hint {
-	color: var(--bc-muted);
+	/* Muted on tinted callout bg fails WCAG AA (~4.19). Use main text on tint. */
+	color: var(--color-main-text);
 	font-size: var(--bc-fs-sm);
 }
 
@@ -1400,6 +1401,106 @@
 	/* Mobile: narrower actions column inside horizontal scroll; desktop widens at 1024px. */
 	min-width: 14rem;
 }
+.bc-recurring-header {
+	align-items: flex-start;
+	gap: var(--bc-space-4);
+	flex-wrap: wrap;
+}
+.bc-recurring-header__text {
+	flex: 1 1 16rem;
+	min-width: 0;
+}
+.bc-recurring-header__text h2 {
+	margin: 0 0 var(--bc-space-2);
+	font-size: var(--bc-fs-xl, 1.35rem);
+	line-height: 1.3;
+}
+.bc-recurring-header__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+	align-items: center;
+}
+.bc-recurring-howto {
+	margin: 0 0 var(--bc-space-4);
+}
+.bc-recurring-howto__title {
+	font-weight: 600;
+	margin: 0;
+}
+.bc-recurring-howto__glossary {
+	margin-top: var(--bc-space-2);
+}
+.bc-recurring-due-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--bc-space-1);
+	margin-left: var(--bc-space-2);
+	padding: 0.1rem 0.55rem;
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-tint-warning);
+	color: var(--color-main-text);
+	font-size: var(--bc-fs-sm);
+	font-weight: 600;
+	white-space: nowrap;
+}
+.bc-recurring-mode-fieldset {
+	grid-column: 1 / -1;
+	margin: 0;
+	padding: var(--bc-space-3);
+	border: 1px solid var(--bc-border);
+	border-radius: var(--bc-radius-sm);
+	min-width: 0;
+}
+.bc-recurring-mode-fieldset > legend {
+	padding: 0 var(--bc-space-1);
+	font-weight: 600;
+}
+.bc-recurring-mode-options {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-3);
+	margin-top: var(--bc-space-2);
+}
+.bc-recurring-mode-option {
+	display: flex;
+	gap: var(--bc-space-3);
+	align-items: flex-start;
+	margin: 0;
+	padding: var(--bc-space-3);
+	border-radius: var(--bc-radius-sm);
+	background: var(--bc-bg-stripe);
+	cursor: pointer;
+}
+.bc-recurring-mode-option:focus-within {
+	outline: 2px solid var(--color-main-text);
+	outline-offset: 2px;
+}
+.bc-recurring-mode-option input {
+	margin-top: 0.2rem;
+	flex: 0 0 auto;
+}
+.bc-recurring-mode-option__body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bc-space-1);
+	min-width: 0;
+}
+.bc-recurring-mode-option__title {
+	font-weight: 600;
+	color: var(--bc-text);
+}
+.bc-recurring-mode-option__hint {
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
+	line-height: 1.45;
+}
+.bc-recurring-next-cell {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--bc-space-1);
+}
 .bc-table-actions,
 .bc-recurring-actions {
 	display: flex;
@@ -1413,6 +1514,14 @@
 .bc-app .bc-recurring-actions .button {
 	flex: 0 0 auto;
 	white-space: nowrap;
+	min-height: 44px;
+}
+.bc-recurring-actions .bc-muted {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	color: var(--bc-muted);
+	font-size: var(--bc-fs-sm);
 }
 /* Categories: many columns + long tax labels — scroll instead of crushing cells (incl. ≥1024px). */
 .bc-table-scroll .bc-categories-table {
@@ -1535,11 +1644,12 @@
 	letter-spacing: 0.05em;
 	color: var(--bc-muted);
 }
-/* Primary tiles sit on --bc-tint-info; muted gray fails WCAG AA (~4.19). */
-.bc-summary-tile--primary > .bc-summary-tile__label,
-.bc-summary-tile--primary > .bc-summary-tile__hint,
-.bc-summary-tile--primary > .bc-tx-kpi-tile__sub {
-	color: var(--color-main-text);
+/* Primary tint backgrounds wash out --bc-muted (~4.2:1); use main text for WCAG AA. */
+.bc-summary-tile--primary .bc-summary-tile__label {
+	color: var(--color-main-text, var(--bc-text));
+}
+.bc-summary-tile--primary .bc-summary-tile__hint {
+	color: var(--color-text-maxcontrast, var(--bc-text));
 }
 .bc-summary-tile__value {
 	font-size: var(--bc-fs-2xl);
@@ -4451,3 +4561,43 @@ textarea {
 	}
 }
 /* === app-feedback:bc end === */
+
+
+/* Workspace delete danger zone */
+.bc-danger-zone {
+	border: 1px solid color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, var(--color-border, transparent));
+	margin-top: var(--bc-space-6);
+}
+.bc-danger-zone .bc-section__header h2 {
+	color: var(--color-error-text, var(--color-error));
+	font-size: var(--bc-fs-lg, 1.15rem);
+	margin: 0 0 var(--bc-space-2);
+}
+.bc-danger-zone .bc-callout {
+	margin-bottom: var(--bc-space-4);
+}
+.bc-danger-zone .button.danger {
+	color: var(--color-primary-element-text, #fff);
+	background: var(--color-error, #e9322d);
+	border-color: var(--color-error, #e9322d);
+}
+.bc-danger-zone .button.danger:hover:not(:disabled),
+.bc-danger-zone .button.danger:focus-visible:not(:disabled) {
+	filter: brightness(0.95);
+}
+.bc-danger-zone .button.danger:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+.bc-workspace-delete-confirm__name {
+	font-weight: 600;
+	word-break: break-word;
+}
+.bc-workspace-delete-confirm__stats {
+	margin: 0;
+	padding-left: 1.25rem;
+}
+.bc-workspace-delete-confirm__stats li {
+	margin: 0.15rem 0;
+}
+

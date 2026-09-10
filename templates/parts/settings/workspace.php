@@ -183,3 +183,24 @@ $bcHtmlLang = $bcHtmlLang ?? (string)(($_['clientHints']['htmlLang'] ?? null) ?:
 		<?php endif; ?>
 	</form>
 </section>
+<?php if ($canManage): ?>
+<section class="bc-card bc-section bc-danger-zone" aria-labelledby="bc-ws-delete-title" data-bc-workspace-delete-zone>
+	<header class="bc-section__header">
+		<div>
+			<h2 id="bc-ws-delete-title"><?php p($l->t('Delete workspace')); ?></h2>
+			<p class="bc-section__sub"><?php p($l->t('Permanently remove this workspace and everything in it. This cannot be undone.')); ?></p>
+		</div>
+	</header>
+	<div class="bc-callout bc-callout--warning" role="note">
+		<p><?php p($l->t('All bookings, attachments, budgets, categories, members, and closed-month snapshots for this workspace will be deleted.')); ?></p>
+		<?php if (($workspace['type'] ?? '') === 'project'): ?>
+			<p><?php p($l->t('InvoiceCheck invoices that used expenses from this project stay in InvoiceCheck, but settlement links in BudgetCheck will break.')); ?></p>
+		<?php endif; ?>
+	</div>
+	<div class="bc-form-actions">
+		<button type="button" class="button danger" data-bc-workspace-delete>
+			<?php p($l->t('Delete workspace…')); ?>
+		</button>
+	</div>
+</section>
+<?php endif; ?>

@@ -72,8 +72,21 @@
 	}
 
 	function hasBlockedExtension(name) {
-		const lower = String(name || '').toLowerCase();
-		return LIMITS.dangerousExtensions.some((ext) => lower.includes('.' + ext));
+		const base = sanitizeFileName(name).toLowerCase();
+		const parts = base.split('.').filter((p) => p.length > 0);
+		if (parts.length < 2) {
+			return false;
+		}
+		const finalExt = parts[parts.length - 1];
+		if (LIMITS.dangerousExtensions.includes(finalExt)) {
+			return true;
+		}
+		// Intermediate segments: unambiguous script/executable types (not com/app).
+		const intermediateDangerous = [
+			'php', 'phtml', 'php3', 'php4', 'php5', 'pht', 'phar',
+			'exe', 'sh', 'bat', 'cmd', 'scr', 'vbs', 'js', 'jar',
+		];
+		return parts.slice(1, -1).some((seg) => intermediateDangerous.includes(seg));
 	}
 
 	function previewLabel(attachment) {

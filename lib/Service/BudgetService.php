@@ -249,6 +249,8 @@ class BudgetService
 		}
 		$this->db->beginTransaction();
 		try {
+			// Serialize concurrent default writers (unique index alone yields opaque DB errors).
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			foreach ($normalised as $categoryId => $plannedMinor) {
 				$existing = $this->loadExistingDefault($workspaceId, $categoryId);
 				if ($existing === null) {

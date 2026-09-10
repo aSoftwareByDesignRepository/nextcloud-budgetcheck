@@ -30,6 +30,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
+use OCA\BudgetCheck\Service\WorkspaceDeletionService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -69,6 +70,7 @@ class MobileApiController extends Controller
 		private readonly IProvider $tokenProvider,
 		private readonly AccessControlService $access,
 		private readonly WorkspaceService $workspaces,
+		private readonly WorkspaceDeletionService $workspaceDeletion,
 		private readonly CategoryService $categories,
 		private readonly TransactionService $transactions,
 		private readonly BookingStatusService $bookingStatuses,
@@ -203,6 +205,31 @@ class MobileApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+
+	/**
+	 * Hard-delete a workspace (manager only). Same cascade as web
+	 * {@see WorkspaceDeletionService::deleteWorkspace}; requires exact confirmName.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function deleteWorkspace(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$this->assertSafeMutationChannel();
+			$workspaceId = $this->validateId($workspaceId);
+			$payload = $this->payload();
+			$confirmName = (string)($payload['confirmName'] ?? $payload['confirm_name'] ?? '');
+			$this->rateLimit->assertAllowed($userId, 'workspace_delete', 5, 3600);
+			$result = $this->workspaceDeletion->deleteWorkspace($workspaceId, $userId, $confirmName);
+			return [
+				'deleted' => true,
+				'id' => (int)$result['id'],
+				'name' => (string)$result['name'],
+				'type' => (string)$result['type'],
+			];
+		});
+	}
+
 	#[NoCSRFRequired]
 	public function home(int $workspaceId): JSONResponse
 	{

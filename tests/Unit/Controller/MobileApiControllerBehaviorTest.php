@@ -82,6 +82,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$this->createMock(WorkspaceService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -147,6 +148,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -216,6 +218,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -286,6 +289,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -308,6 +312,68 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertTrue($data['workspace']['isFavorite']);
 		self::assertTrue($data['workspace']['capabilities']['canManagePrivacy']);
 		self::assertFalse($data['workspace']['capabilities']['canAssignGroups']);
+	}
+
+	public function testDeleteWorkspaceRequiresConfirmNameAndCallsDeletionService(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getHeader')->willReturnCallback(
+			static function (string $name): string {
+				if (strcasecmp($name, 'Authorization') === 0) {
+					return 'Basic ' . base64_encode('alice:app-password');
+				}
+				return '';
+			}
+		);
+		$this->request->method('getParam')->willReturn(null);
+		$this->request->method('getParams')->willReturn(['confirmName' => 'Alpha']);
+
+		$deletion = $this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class);
+		$deletion->expects(self::once())
+			->method('deleteWorkspace')
+			->with(9, 'alice', 'Alpha')
+			->willReturn([
+				'deleted' => true,
+				'id' => 9,
+				'name' => 'Alpha',
+				'type' => 'project',
+				'impact' => [],
+			]);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects(self::once())->method('assertAllowed')
+			->with('alice', 'workspace_delete', 5, 3600);
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
+			$this->access,
+			$this->createMock(WorkspaceService::class),
+			$deletion,
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$rate,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->deleteWorkspace(9);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		self::assertTrue($data['ok']);
+		self::assertTrue($data['deleted']);
+		self::assertSame(9, $data['id']);
+		self::assertSame('Alpha', $data['name']);
 	}
 
 	public function testUpdateWorkspaceRejectsEmptyPatch(): void
@@ -335,6 +401,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -404,6 +471,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -454,6 +522,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -544,6 +613,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -633,6 +703,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -745,6 +816,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$categories,
 			$transactions,
 			$this->createMock(BookingStatusService::class),
@@ -797,6 +869,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$this->createMock(WorkspaceService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -896,6 +969,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$categories,
 			$transactions,
 			$this->createMock(BookingStatusService::class),
@@ -966,6 +1040,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -1009,6 +1084,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -1055,6 +1131,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -1135,6 +1212,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -1218,6 +1296,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),
@@ -1279,6 +1358,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(IProvider::class),
 			$this->access,
 			$workspaces,
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
 			$this->createMock(CategoryService::class),
 			$this->transactions,
 			$this->createMock(BookingStatusService::class),

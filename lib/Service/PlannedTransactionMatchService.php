@@ -9,14 +9,16 @@ use OCP\IDBConnection;
 
 /**
  * When a real ledger row arrives (manual entry or bank import), remove a single
- * matching planned placeholder that was generated from a recurring rule.
+ * matching planned placeholder — or a matching **book-mode auto-booked** live
+ * row from a recurring rule — so CSV import does not leave duplicates.
  *
- * Match keys: workspace, category, direction, exact amount, booking month equal
- * or adjacent (covers salary on the last weekday vs. income counted from the
- * first day of the next month).
+ * Match keys: workspace, category, direction, exact amount (recurring), booking
+ * month equal or adjacent. Closed months are never touched.
  *
- * Placeholders whose booking month has been closed are never touched: the
- * month-close lock applies to system-driven writes too.
+ * Live auto-book replacement must NOT run when the new row itself is a
+ * recurring generate/auto-due booking (has recurring_rule_id). Otherwise
+ * booking October would soft-delete September (adjacent-month match) and
+ * destroy the ledger.
  */
 final class PlannedTransactionMatchService
 {
@@ -50,7 +52,10 @@ final class PlannedTransactionMatchService
 	}
 
 	/**
-	 * @return int|null id of the soft-deleted planned transaction, if any
+	 * @param bool $allowLiveAutoBookReplace When false (new row already has
+	 *        recurring_rule_id from generate/auto-due), only planned placeholders
+	 *        are replaced — never sibling live auto-books.
+	 * @return int|null id of the soft-deleted planned/auto-book transaction, if any
 	 */
 	public function replaceMatchingPlanned(
 		int $workspaceId,
@@ -60,6 +65,7 @@ final class PlannedTransactionMatchService
 		int $amountMinor,
 		string $bookingDate,
 		int $realTransactionId,
+		bool $allowLiveAutoBookReplace = true,
 	): ?int {
 		if ($categoryId < 1 || $amountMinor < 1 || $realTransactionId < 1) {
 			return null;
@@ -92,19 +98,45 @@ final class PlannedTransactionMatchService
 			$amountMinor,
 			$bookingDate,
 		);
-		if ($recurringPick === null) {
+		if ($recurringPick !== null) {
+			$this->softDeletePlanned(
+				(int)$recurringPick['id'],
+				(int)$recurringPick['version'],
+				$userId,
+				$workspaceId,
+				$realTransactionId,
+			);
+			return (int)$recurringPick['id'];
+		}
+
+		// Book-mode auto-books are real rows with recurring_rule_id. When the bank
+		// import (or a matching manual booking without a rule link) arrives,
+		// retire that auto-book so the ledger keeps one live occurrence.
+		if (!$allowLiveAutoBookReplace) {
 			return null;
 		}
 
-		$this->softDeletePlanned(
-			(int)$recurringPick['id'],
-			(int)$recurringPick['version'],
+		$autoBookPick = $this->pickRecurringAutoBookReplacement(
+			$workspaceId,
+			$categoryId,
+			$direction,
+			$amountMinor,
+			$bookingDate,
+			$realTransactionId,
+		);
+		if ($autoBookPick === null) {
+			return null;
+		}
+
+		$this->softDeleteLiveRecurringAutoBook(
+			(int)$autoBookPick['id'],
+			(int)$autoBookPick['version'],
 			$userId,
 			$workspaceId,
 			$realTransactionId,
 		);
 
-		return (int)$recurringPick['id'];
+		return (int)$autoBookPick['id'];
 	}
 
 	/**
@@ -182,6 +214,51 @@ final class PlannedTransactionMatchService
 				'version' => (int)$row['version'],
 				'yearMonth' => substr($plannedDate, 0, 7),
 				'distance' => abs(strtotime($plannedDate) - strtotime($bookingDate)),
+			];
+		}
+		$result->closeCursor();
+		$candidates = $this->withoutClosedMonths($workspaceId, $candidates);
+
+		return self::pickClosestCandidate($candidates);
+	}
+
+	/**
+	 * Live book-mode rows from recurring generate/auto-due (is_planned=0, rule set).
+	 *
+	 * @return array{id:int, version:int}|null
+	 */
+	private function pickRecurringAutoBookReplacement(
+		int $workspaceId,
+		int $categoryId,
+		string $direction,
+		int $amountMinor,
+		string $bookingDate,
+		int $excludeTransactionId,
+	): ?array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'booking_date', 'version')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter($direction)))
+			->andWhere($qb->expr()->eq('amount_minor', $qb->createNamedParameter($amountMinor, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(false, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNotNull('recurring_rule_id'))
+			->andWhere($qb->expr()->isNull('budget_id'))
+			->andWhere($qb->expr()->isNull('deleted_at'))
+			->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($excludeTransactionId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$candidates = [];
+		while ($row = $result->fetch()) {
+			$autoDate = (string)($row['booking_date'] ?? '');
+			if (!self::calendarMonthsAreAdjacent($autoDate, $bookingDate)) {
+				continue;
+			}
+			$candidates[] = [
+				'id' => (int)$row['id'],
+				'version' => (int)$row['version'],
+				'yearMonth' => substr($autoDate, 0, 7),
+				'distance' => abs(strtotime($autoDate) - strtotime($bookingDate)),
 			];
 		}
 		$result->closeCursor();
@@ -280,6 +357,34 @@ final class PlannedTransactionMatchService
 			return;
 		}
 		$this->audit->record($userId, 'planned_transaction_replaced', 'transaction', (string)$transactionId, [
+			'replacedByTransactionId' => $replacedById,
+		], $workspaceId);
+	}
+
+	private function softDeleteLiveRecurringAutoBook(
+		int $transactionId,
+		int $version,
+		string $userId,
+		int $workspaceId,
+		int $replacedById,
+	): void {
+		$now = $this->timeFactory->getDateTime('now', new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('bc_transactions')
+			->set('deleted_at', $qb->createNamedParameter($now))
+			->set('updated_by', $qb->createNamedParameter($userId))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->set('version', $qb->createNamedParameter($version + 1, \PDO::PARAM_INT))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter($version, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(false, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->isNotNull('recurring_rule_id'))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		$affected = $qb->executeStatement();
+		if ($affected === 0) {
+			return;
+		}
+		$this->audit->record($userId, 'recurring_autobook_replaced', 'transaction', (string)$transactionId, [
 			'replacedByTransactionId' => $replacedById,
 		], $workspaceId);
 	}

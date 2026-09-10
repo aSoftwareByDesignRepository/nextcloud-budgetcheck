@@ -127,7 +127,7 @@ $assert(!str_contains($mobile, 'LICENSE_REQUIRED'), 'no_license_required');
 $assert(!str_contains($mobile, 'NO_MOBILE_SEAT'), 'no_seat_code');
 $assert(str_contains($caps, "'free' => true"), 'capabilities_free');
 $assert(str_contains($caps, 'companion.min'), 'capabilities_min');
-$assert(str_contains($caps, 'COMPANION_API = 6'), 'companion_api_v6');
+$assert(str_contains($caps, 'COMPANION_API = 7'), 'companion_api_v7');
 $assert(str_contains($mobile, 'resolveForDeliveryInWorkspace'), 'mobile_download_binds_workspace');
 $assert(str_contains($mobile, 'function downloadTransactionAttachment'), 'mobile_download_method');
 $assert(str_contains($mobile, 'function monthlySummary'), 'monthly_summary_route_method');

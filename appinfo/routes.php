@@ -34,6 +34,8 @@ return [
 		['name' => 'api#createWorkspace',    'url' => '/api/workspaces',                   'verb' => 'POST'],
 		['name' => 'api#getWorkspace',       'url' => '/api/workspaces/{id}',              'verb' => 'GET'],
 		['name' => 'api#updateWorkspace',    'url' => '/api/workspaces/{id}',              'verb' => 'PUT'],
+		['name' => 'api#previewWorkspaceDelete', 'url' => '/api/workspaces/{id}/delete-impact', 'verb' => 'GET'],
+		['name' => 'api#deleteWorkspace',    'url' => '/api/workspaces/{id}',              'verb' => 'DELETE'],
 		['name' => 'api#updateTaxMode',      'url' => '/api/workspaces/{id}/tax-mode',     'verb' => 'PUT'],
 		['name' => 'api#getWorkspaceFavorites', 'url' => '/api/workspace-favorites', 'verb' => 'GET'],
 		['name' => 'api#saveWorkspaceFavorites', 'url' => '/api/workspace-favorites', 'verb' => 'PUT'],
@@ -78,6 +80,7 @@ return [
 		['name' => 'api#updateRecurringRule',    'url' => '/api/recurring-rules/{id}',             'verb' => 'PUT'],
 		['name' => 'api#deleteRecurringRule',    'url' => '/api/recurring-rules/{id}',             'verb' => 'DELETE'],
 		['name' => 'api#generateFromRecurringRule', 'url' => '/api/recurring-rules/{id}/generate', 'verb' => 'POST'],
+		['name' => 'api#generateDueRecurringRules', 'url' => '/api/recurring-rules/generate-due', 'verb' => 'POST'],
 
 		// Budgets and savings
 		['name' => 'api#listBudgets',        'url' => '/api/budgets',                       'verb' => 'GET'],
@@ -108,6 +111,7 @@ return [
 		['name' => 'mobile_api#listWorkspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
 		['name' => 'mobile_api#createWorkspace', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'POST'],
 		['name' => 'mobile_api#updateWorkspace', 'url' => '/api/mobile/v1/workspaces/{workspaceId}', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#deleteWorkspace', 'url' => '/api/mobile/v1/workspaces/{workspaceId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#home', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/home', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#monthlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/monthly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#yearlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/yearly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],

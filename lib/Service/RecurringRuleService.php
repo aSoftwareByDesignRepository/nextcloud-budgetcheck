@@ -10,9 +10,13 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 
 /**
- * Recurring transaction templates ("rules"). Rules never post on their own;
- * a manager explicitly runs **Generate**, which creates **planned** ledger
- * rows. A matching bank import or manual entry removes the plan automatically.
+ * Recurring transaction templates ("rules").
+ *
+ * Each rule has a **posting mode** (issue #18):
+ *  - {@see POSTING_BOOK} — Generate / the due job create **real** ledger rows
+ *    (subscriptions, salary, rent). Cursor advances automatically when due.
+ *  - {@see POSTING_PLAN} — Generate creates **planned** placeholders; a matching
+ *    bank import or manual entry removes the plan (legacy import workflow).
  *
  * Two schedule models exist (issue #11):
  *  - interval frequencies (monthly, quarterly, yearly, custom months) advance
@@ -26,8 +30,8 @@ use OCP\IDBConnection;
  *
  * The {@see preview()} method projects all dues between the rule's
  * `next_due_date` and the requested upper bound (capped at 36 occurrences to
- * keep responses bounded). Calling {@see generate()} materialises one
- * transaction in the ledger and advances `next_due_date`.
+ * keep responses bounded). Calling {@see generate()} materialises occurrence(s)
+ * in the ledger and advances `next_due_date`.
  */
 class RecurringRuleService
 {
@@ -38,10 +42,18 @@ class RecurringRuleService
 	public const FREQ_SCHEDULE = 'schedule';
 	private const FREQUENCIES = [self::FREQ_MONTHLY, self::FREQ_QUARTERLY, self::FREQ_YEARLY, self::FREQ_CUSTOM, self::FREQ_SCHEDULE];
 
+	/** Create real ledger transactions (default for new rules). */
+	public const POSTING_BOOK = 'book';
+	/** Create planned placeholders for bank-import matching (legacy). */
+	public const POSTING_PLAN = 'plan';
+	private const POSTING_MODES = [self::POSTING_BOOK, self::POSTING_PLAN];
+
 	public const MAX_SCHEDULE_ENTRIES = 60;
 
 	private const MAX_PREVIEW = 36;
 	private const MAX_GENERATE_BATCH = 600;
+	/** Safety cap for one background-job sweep across all workspaces. */
+	private const MAX_DUE_RULES_PER_SWEEP = 200;
 
 	public function __construct(
 		private IDBConnection $db,
@@ -113,6 +125,7 @@ class RecurringRuleService
 			}
 		}
 		$nextDue = $startDate;
+		$postingMode = $this->normalisePostingMode($payload['postingMode'] ?? $payload['posting_mode'] ?? self::POSTING_BOOK);
 
 		$now = $this->utcNow();
 		$qb = $this->db->getQueryBuilder();
@@ -129,6 +142,7 @@ class RecurringRuleService
 				'end_date' => $qb->createNamedParameter($endDate?->format('Y-m-d')),
 				'next_due_date' => $qb->createNamedParameter($nextDue->format('Y-m-d')),
 				'schedule_json' => $qb->createNamedParameter($schedule !== null ? self::encodeSchedule($schedule) : null),
+				'posting_mode' => $qb->createNamedParameter($postingMode),
 				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
 				'created_by' => $qb->createNamedParameter($userId),
 				'created_at' => $qb->createNamedParameter($now),
@@ -139,6 +153,7 @@ class RecurringRuleService
 		$this->audit->record($userId, 'recurring_rule_created', 'recurring_rule', (string)$id, [
 			'frequency' => $frequency,
 			'amountMinor' => $amount,
+			'postingMode' => $postingMode,
 			'scheduleCount' => $schedule !== null ? count($schedule) : null,
 		], $workspaceId);
 		return $this->loadHydrated($id, $workspace['currencyCode']);
@@ -254,6 +269,9 @@ class RecurringRuleService
 		}
 		if (array_key_exists('isActive', $payload)) {
 			$updates['is_active'] = (bool)$payload['isActive'];
+		}
+		if (array_key_exists('postingMode', $payload) || array_key_exists('posting_mode', $payload)) {
+			$updates['posting_mode'] = $this->normalisePostingMode($payload['postingMode'] ?? $payload['posting_mode']);
 		}
 		// Reactivating a completed schedule rule leaves next_due_date one day past
 		// end_date, which blocks Generate until realigned. Rewind to the last
@@ -388,8 +406,17 @@ class RecurringRuleService
 	}
 
 	/**
-	 * Materialise the **next due** occurrence as a real transaction and advance
-	 * `next_due_date`. Returns the newly created transaction id.
+	 * Materialise occurrence(s) and advance `next_due_date`.
+	 *
+	 * Options:
+	 *  - `through` (YYYY-MM-DD): batch until that date (inclusive)
+	 *  - `asPlanned` (bool): override posting mode for this call only
+	 *
+	 * Book mode creates real rows (or promotes an existing planned twin).
+	 * Plan mode creates planned placeholders. Closed months are skipped and the
+	 * cursor still advances so auto-due never stalls forever.
+	 *
+	 * @return array<string,mixed> single transaction (next mode) or batch details
 	 */
 	public function generate(int $ruleId, string $userId, array $workspace, TransactionService $tx, array $category, array $options = []): array
 	{
@@ -409,6 +436,16 @@ class RecurringRuleService
 
 		$throughRaw = trim((string)($options['through'] ?? ''));
 		$through = $throughRaw !== '' ? $this->parseIsoDate($throughRaw, 'through') : null;
+		if ($through !== null) {
+			// Bulk fill past "today" (Add full period) is manager-only.
+			// Due catch-up uses through=today with dueCatchUp=true and stays contributor-OK.
+			$todayIso = $this->workspaceTodayIso($workspace);
+			$throughIso = $through->format('Y-m-d');
+			$isDueCatchUp = !empty($options['dueCatchUp']) && $throughIso <= $todayIso;
+			if (!$isDueCatchUp) {
+				$this->access->ensureMinimumRole((int)$workspace['id'], $userId, AccessControlService::ROLE_MANAGER);
+			}
+		}
 		if ($through !== null && $through < $next) {
 			throw new \InvalidArgumentException('through must be on or after next due date.');
 		}
@@ -416,10 +453,16 @@ class RecurringRuleService
 			$through = $ruleEnd;
 		}
 
+		$asPlanned = array_key_exists('asPlanned', $options)
+			? (bool)$options['asPlanned']
+			: ($this->postingModeForRow($row) === self::POSTING_PLAN);
+
 		$createdIds = [];
 		$firstCreated = null;
 		$generatedCount = 0;
 		$skippedCount = 0;
+		$skippedClosedCount = 0;
+		$promotedCount = 0;
 		$generatedFrom = null;
 		$generatedTo = null;
 		$finalNext = $next;
@@ -457,13 +500,18 @@ class RecurringRuleService
 			if ($ruleEnd !== null && $through !== null && $through > $ruleEnd) {
 				$loopEnd = $ruleEnd;
 			}
+			if (!array_key_exists('asPlanned', $options)) {
+				$asPlanned = $this->postingModeForRow($row) === self::POSTING_PLAN;
+			}
 
 			while ($finalNext <= $loopEnd) {
 				if ($generatedCount >= self::MAX_GENERATE_BATCH) {
 					throw new \InvalidArgumentException('Too many occurrences in one generate call. Shorten the period and try again.');
 				}
 				$bookingDate = $finalNext->format('Y-m-d');
-				if ($tx->hasLivePlannedForRecurringDate((int)$workspace['id'], $ruleId, $bookingDate)) {
+				$ym = substr($bookingDate, 0, 7);
+				if ($tx->isMonthClosed((int)$workspace['id'], $ym)) {
+					$skippedClosedCount++;
 					$skippedCount++;
 					$finalNext = $this->advanceForRow($row, $schedule, $finalNext);
 					if ($ruleEnd !== null && $finalNext > $ruleEnd) {
@@ -471,6 +519,36 @@ class RecurringRuleService
 					}
 					continue;
 				}
+
+				if ($tx->hasLiveOccurrenceForRecurringDate((int)$workspace['id'], $ruleId, $bookingDate)) {
+					if (!$asPlanned) {
+						$promoted = $tx->promotePlannedRecurringOccurrence(
+							(int)$workspace['id'],
+							$userId,
+							$ruleId,
+							$bookingDate,
+							(string)$workspace['currencyCode'],
+						);
+						if ($promoted !== null) {
+							$createdIds[] = (int)$promoted['id'];
+							$firstCreated ??= $promoted;
+							$generatedCount++;
+							$promotedCount++;
+							$generatedFrom ??= $finalNext;
+							$generatedTo = $finalNext;
+						} else {
+							$skippedCount++;
+						}
+					} else {
+						$skippedCount++;
+					}
+					$finalNext = $this->advanceForRow($row, $schedule, $finalNext);
+					if ($ruleEnd !== null && $finalNext > $ruleEnd) {
+						break;
+					}
+					continue;
+				}
+
 				$created = $tx->create((int)$workspace['id'], $userId, [
 					'categoryId' => (int)$row['category_id'],
 					'direction' => (string)$row['direction'],
@@ -478,7 +556,7 @@ class RecurringRuleService
 					'amountMinor' => self::occurrenceAmountMinor($schedule, $bookingDate, (int)$row['amount_minor']),
 					'title' => (string)$row['title'],
 					'isSpecial' => false,
-					'isPlanned' => true,
+					'isPlanned' => $asPlanned,
 					'recurringRuleId' => $ruleId,
 				], $workspace, $category);
 				$createdIds[] = (int)$created['id'];
@@ -522,8 +600,11 @@ class RecurringRuleService
 			throw new \InvalidArgumentException('No occurrences could be generated for this period.');
 		}
 		if ($through === null && $generatedCount === 0) {
+			if ($skippedClosedCount > 0) {
+				throw new \InvalidArgumentException('Month is closed. Reopen it before generating this due date.');
+			}
 			if ($skippedCount > 0) {
-				throw new \InvalidArgumentException('A planned entry already exists for the next due date.');
+				throw new \InvalidArgumentException('An entry already exists for the next due date.');
 			}
 			throw new \InvalidArgumentException('No transaction was generated.');
 		}
@@ -531,6 +612,9 @@ class RecurringRuleService
 		$details = [
 			'count' => $generatedCount,
 			'skipped' => $skippedCount,
+			'skippedClosed' => $skippedClosedCount,
+			'promoted' => $promotedCount,
+			'asPlanned' => $asPlanned,
 			'transactionIds' => $createdIds,
 			'nextDueDate' => $finalNext->format('Y-m-d'),
 		];
@@ -547,6 +631,184 @@ class RecurringRuleService
 		}
 
 		return $details;
+	}
+
+	/**
+	 * Book (or plan) every due occurrence for one rule through the workspace's
+	 * local "today". Used by the UI catch-up button and the background job.
+	 *
+	 * @return array{count:int, skipped:int, skippedClosed:int, promoted:int, nextDueDate:string, asPlanned:bool}|array<string,mixed>
+	 */
+	public function generateDue(
+		int $ruleId,
+		string $userId,
+		array $workspace,
+		TransactionService $tx,
+		array $category,
+	): array {
+		$today = $this->workspaceTodayIso($workspace);
+		$row = $this->loadRow($ruleId);
+		if ($row === null || (int)$row['workspace_id'] !== (int)$workspace['id']) {
+			throw new AccessDeniedException();
+		}
+		$next = (string)$row['next_due_date'];
+		if ($next > $today) {
+			return [
+				'count' => 0,
+				'skipped' => 0,
+				'skippedClosed' => 0,
+				'promoted' => 0,
+				'asPlanned' => $this->postingModeForRow($row) === self::POSTING_PLAN,
+				'transactionIds' => [],
+				'nextDueDate' => $next,
+			];
+		}
+		return $this->generate($ruleId, $userId, $workspace, $tx, $category, [
+			'through' => $today,
+			'dueCatchUp' => true,
+		]);
+	}
+
+	/**
+	 * Catch up every active rule in a workspace whose next due is on or before today.
+	 *
+	 * @return array{rulesProcessed:int, generated:int, skipped:int, skippedClosed:int, promoted:int, errors:list<array{ruleId:int, message:string}>}
+	 */
+	public function generateDueForWorkspace(
+		int $workspaceId,
+		string $userId,
+		array $workspace,
+		TransactionService $tx,
+		CategoryService $categories,
+	): array {
+		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
+		$today = $this->workspaceTodayIso($workspace);
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'category_id')
+			->from('bc_recurring_rules')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('is_active', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->lte('next_due_date', $qb->createNamedParameter($today)))
+			->orderBy('next_due_date', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(self::MAX_DUE_RULES_PER_SWEEP);
+		$result = $qb->executeQuery();
+		$rules = [];
+		while ($row = $result->fetch()) {
+			$rules[] = $row;
+		}
+		$result->closeCursor();
+
+		$out = [
+			'rulesProcessed' => 0,
+			'generated' => 0,
+			'skipped' => 0,
+			'skippedClosed' => 0,
+			'promoted' => 0,
+			'errors' => [],
+		];
+		foreach ($rules as $ruleRow) {
+			$ruleId = (int)$ruleRow['id'];
+			try {
+				$category = $categories->loadForWorkspace((int)$ruleRow['category_id'], $workspaceId);
+				if ($category === null || empty($category['isActive'])) {
+					$out['errors'][] = ['ruleId' => $ruleId, 'message' => 'Category missing or inactive.'];
+					continue;
+				}
+				$details = $this->generateDue($ruleId, $userId, $workspace, $tx, $category);
+				$out['rulesProcessed']++;
+				$out['generated'] += (int)($details['count'] ?? 0);
+				$out['skipped'] += (int)($details['skipped'] ?? 0);
+				$out['skippedClosed'] += (int)($details['skippedClosed'] ?? 0);
+				$out['promoted'] += (int)($details['promoted'] ?? 0);
+			} catch (\Throwable $e) {
+				$out['errors'][] = [
+					'ruleId' => $ruleId,
+					'message' => $e->getMessage() !== '' ? $e->getMessage() : $e::class,
+				];
+			}
+		}
+		$this->audit->record($userId, 'recurring_due_batch', 'workspace', (string)$workspaceId, [
+			'rulesProcessed' => $out['rulesProcessed'],
+			'generated' => $out['generated'],
+			'skipped' => $out['skipped'],
+			'skippedClosed' => $out['skippedClosed'],
+			'promoted' => $out['promoted'],
+			'errorCount' => count($out['errors']),
+		], $workspaceId);
+		return $out;
+	}
+
+	/**
+	 * Background sweep: auto-book active `book`-mode rules that are due.
+	 * Plan-mode rules are never touched by the job (placeholders stay manual).
+	 *
+	 * @return array{rulesProcessed:int, generated:int, skipped:int, errors:int}
+	 */
+	public function processDueBookRules(
+		TransactionService $tx,
+		CategoryService $categories,
+		WorkspaceService $workspaces,
+	): array {
+		$summary = [
+			'rulesProcessed' => 0,
+			'generated' => 0,
+			'skipped' => 0,
+			'errors' => 0,
+		];
+		// Candidate rules: active book mode. Workspace-local "today" is applied per rule.
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('r.id', 'r.workspace_id', 'r.category_id', 'r.created_by', 'r.next_due_date', 'w.timezone', 'w.currency_code')
+			->from('bc_recurring_rules', 'r')
+			->innerJoin('r', 'bc_workspaces', 'w', $qb->expr()->eq('r.workspace_id', 'w.id'))
+			->where($qb->expr()->eq('r.is_active', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('r.posting_mode', $qb->createNamedParameter(self::POSTING_BOOK)))
+			->orderBy('r.next_due_date', 'ASC')
+			->addOrderBy('r.id', 'ASC')
+			->setMaxResults(self::MAX_DUE_RULES_PER_SWEEP);
+		$result = $qb->executeQuery();
+		$candidates = [];
+		while ($row = $result->fetch()) {
+			$candidates[] = $row;
+		}
+		$result->closeCursor();
+
+		foreach ($candidates as $cand) {
+			$workspaceId = (int)$cand['workspace_id'];
+			$ruleId = (int)$cand['id'];
+			try {
+				$today = $this->todayIsoForTimezone((string)$cand['timezone']);
+				if ((string)$cand['next_due_date'] > $today) {
+					continue;
+				}
+				$actor = $this->resolveAutomationActor($workspaceId, (string)$cand['created_by']);
+				if ($actor === null) {
+					$summary['errors']++;
+					$this->audit->record('system', 'recurring_due_skipped', 'recurring_rule', (string)$ruleId, [
+						'reason' => 'no_actor',
+						'workspaceId' => $workspaceId,
+					], $workspaceId);
+					continue;
+				}
+				$workspace = $workspaces->getForUser($workspaceId, $actor);
+				$category = $categories->loadForWorkspace((int)$cand['category_id'], $workspaceId);
+				if ($category === null || empty($category['isActive'])) {
+					$summary['errors']++;
+					continue;
+				}
+				$details = $this->generateDue($ruleId, $actor, $workspace, $tx, $category);
+				$summary['rulesProcessed']++;
+				$summary['generated'] += (int)($details['count'] ?? 0);
+				$summary['skipped'] += (int)($details['skipped'] ?? 0);
+			} catch (\Throwable $e) {
+				$summary['errors']++;
+				$this->audit->record('system', 'recurring_due_error', 'recurring_rule', (string)$ruleId, [
+					'message' => $e->getMessage() !== '' ? $e->getMessage() : $e::class,
+					'workspaceId' => $workspaceId,
+				], $workspaceId);
+			}
+		}
+		return $summary;
 	}
 
 	/**
@@ -842,11 +1104,81 @@ class RecurringRuleService
 			'endDate' => $row['end_date'] !== null ? (string)$row['end_date'] : null,
 			'nextDueDate' => (string)$row['next_due_date'],
 			'schedule' => $schedule,
+			'postingMode' => $this->postingModeForRow($row),
 			'isActive' => (bool)$row['is_active'],
 			'createdBy' => (string)$row['created_by'],
 			'createdAt' => (string)$row['created_at'],
 			'updatedAt' => (string)$row['updated_at'],
 		];
+	}
+
+	private function normalisePostingMode(mixed $raw): string
+	{
+		$mode = strtolower(trim((string)$raw));
+		if (!in_array($mode, self::POSTING_MODES, true)) {
+			throw new \InvalidArgumentException('postingMode must be book or plan.');
+		}
+		return $mode;
+	}
+
+	private function postingModeForRow(array $row): string
+	{
+		$mode = strtolower(trim((string)($row['posting_mode'] ?? self::POSTING_PLAN)));
+		return in_array($mode, self::POSTING_MODES, true) ? $mode : self::POSTING_PLAN;
+	}
+
+	/**
+	 * Calendar "today" in the workspace timezone (ISO date). Due comparisons and
+	 * the auto-book job use this so a Berlin household is not booked a day early/late.
+	 */
+	public function workspaceTodayIso(array $workspace): string
+	{
+		return $this->todayIsoForTimezone((string)($workspace['timezone'] ?? 'UTC'));
+	}
+
+	private function todayIsoForTimezone(string $timezone): string
+	{
+		try {
+			$tz = new \DateTimeZone($timezone !== '' ? $timezone : 'UTC');
+		} catch (\Throwable) {
+			$tz = new \DateTimeZone('UTC');
+		}
+		return $this->timeFactory->getDateTime('now', $tz)->format('Y-m-d');
+	}
+
+	/**
+	 * Prefer the rule author; if gone, the earliest workspace manager.
+	 */
+	private function resolveAutomationActor(int $workspaceId, string $preferredUserId): ?string
+	{
+		if ($preferredUserId !== '') {
+			try {
+				$this->access->ensureMinimumRole($workspaceId, $preferredUserId, AccessControlService::ROLE_CONTRIBUTOR);
+				return $preferredUserId;
+			} catch (\Throwable) {
+				// fall through to a living manager
+			}
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('user_id')
+			->from('bc_workspace_members')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('role', $qb->createNamedParameter(AccessControlService::ROLE_MANAGER)))
+			->orderBy('id', 'ASC')
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		if ($row === false) {
+			return null;
+		}
+		$uid = (string)$row['user_id'];
+		try {
+			$this->access->ensureMinimumRole($workspaceId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
+			return $uid;
+		} catch (\Throwable) {
+			return null;
+		}
 	}
 
 	private function parseIsoDate(string $value, string $field): \DateTimeImmutable

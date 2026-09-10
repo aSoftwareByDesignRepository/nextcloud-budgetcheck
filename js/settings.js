@@ -112,7 +112,7 @@
 		}
 
 		if (section === 'recurring') {
-			if (Ws.canManage) {
+			if (Ws.canContribute || Ws.canManage) {
 				loadRecurring();
 			}
 			return;
@@ -618,6 +618,141 @@
 			radio.addEventListener('change', () => syncDefaultSavingsUi(form));
 		});
 		syncDefaultSavingsUi(form);
+		wireWorkspaceDelete();
+	}
+
+	function wireWorkspaceDelete() {
+		const btn = document.querySelector('[data-bc-workspace-delete]');
+		if (!btn || !Ws.workspace || !Ws.canManage) return;
+		btn.addEventListener('click', async () => {
+			const workspaceName = String(Ws.workspace.name || '');
+			const workspaceId = Number(Ws.workspace.id);
+			if (!workspaceId || workspaceName === '') return;
+
+			let impact = null;
+			try {
+				const data = await Api.get('/apps/budgetcheck/api/workspaces/' + workspaceId + '/delete-impact');
+				impact = data && data.impact ? data.impact : null;
+			} catch (err) {
+				Msg.handleApiError(err);
+				return;
+			}
+
+			C.openModal({
+				title: t('budgetcheck', 'Delete workspace'),
+				primaryLabel: t('budgetcheck', 'Delete permanently'),
+				danger: true,
+				dialogClass: 'bc-modal__dialog--narrow',
+				render: ({ primaryBtn }) => {
+					const root = C.createElement('div', { class: 'bc-form-grid bc-workspace-delete-confirm' });
+					root.appendChild(C.createElement('p', {
+						text: t('budgetcheck', 'This permanently deletes {name} and cannot be undone.', { name: workspaceName }),
+					}));
+					const stats = C.createElement('ul', { class: 'bc-workspace-delete-confirm__stats' });
+					const tx = Number(impact?.transactionCount || 0);
+					const att = Number(impact?.attachmentCount || 0);
+					const closed = Number(impact?.closedMonthCount || 0);
+					stats.appendChild(C.createElement('li', {
+						text: t('budgetcheck', '{count} bookings (including planned and deleted drafts)', { count: tx }),
+					}));
+					stats.appendChild(C.createElement('li', {
+						text: t('budgetcheck', '{count} attachments', { count: att }),
+					}));
+					if (closed > 0) {
+						stats.appendChild(C.createElement('li', {
+							text: t('budgetcheck', '{count} closed months', { count: closed }),
+						}));
+					}
+					root.appendChild(stats);
+
+					if (String(Ws.workspace.type) === 'project') {
+						const invoiced = Number(impact?.billableInvoicedCount || 0);
+						const paid = Number(impact?.billablePaidCount || 0);
+						root.appendChild(C.createElement('div', {
+							class: 'bc-callout bc-callout--warning',
+							attrs: { role: 'note' },
+						}, [
+							C.createElement('p', {
+								text: t('budgetcheck', 'InvoiceCheck invoices remain, but BudgetCheck settlement links will break.'),
+							}),
+							(invoiced + paid) > 0
+								? C.createElement('p', {
+									class: 'bc-callout__hint',
+									text: t('budgetcheck', '{invoiced} invoiced and {paid} paid billable bookings are linked today.', {
+										invoiced,
+										paid,
+									}),
+								})
+								: null,
+						].filter(Boolean)));
+					}
+
+					root.appendChild(C.createElement('p', {
+						text: t('budgetcheck', 'Type the workspace name to confirm:'),
+					}));
+					root.appendChild(C.createElement('p', {
+						class: 'bc-workspace-delete-confirm__name',
+						attrs: { 'aria-hidden': 'true' },
+						text: workspaceName,
+					}));
+					const label = C.createElement('label', { class: 'bc-field' }, [
+						C.createElement('span', {
+							class: 'bc-field__label',
+							text: t('budgetcheck', 'Workspace name'),
+						}),
+					]);
+					const input = C.createElement('input', {
+						type: 'text',
+						name: 'confirmName',
+						class: 'bc-input',
+						attrs: {
+							autocomplete: 'off',
+							autocapitalize: 'off',
+							spellcheck: 'false',
+							'aria-required': 'true',
+							maxlength: '120',
+						},
+					});
+					label.appendChild(input);
+					root.appendChild(label);
+
+					const syncPrimary = () => {
+						if (primaryBtn) {
+							primaryBtn.disabled = input.value.trim() !== workspaceName;
+						}
+					};
+					// openModal creates primaryBtn after render; defer enable wiring.
+					queueMicrotask(() => {
+						const livePrimary = document.querySelector('.bc-modal__dialog .button.danger.primary, .bc-modal__dialog .button.primary');
+						if (livePrimary) {
+							livePrimary.disabled = true;
+							input.addEventListener('input', () => {
+								livePrimary.disabled = input.value.trim() !== workspaceName;
+							});
+						} else {
+							input.addEventListener('input', syncPrimary);
+						}
+					});
+					queueMicrotask(() => input.focus());
+					return root;
+				},
+				onSubmit: async (ctx) => {
+					const input = ctx.body?.querySelector('input[name="confirmName"]');
+					const confirmName = String(input?.value || '').trim();
+					if (confirmName !== workspaceName) {
+						Msg.announce(t('budgetcheck', 'Type the workspace name exactly to confirm deletion.'), 'error');
+						input?.focus();
+						return false;
+					}
+					await Api.del('/apps/budgetcheck/api/workspaces/' + workspaceId, { confirmName });
+					Msg.announce(t('budgetcheck', 'Workspace deleted.'), 'success');
+					window.setTimeout(() => {
+						window.location.href = OC.generateUrl('/apps/budgetcheck/workspaces');
+					}, 400);
+					return true;
+				},
+			});
+		});
 	}
 
 	function wireTaxForm() {
@@ -1312,29 +1447,89 @@
 	}
 
 	// ------ Recurring rules ------
+	function workspaceTodayIso() {
+		try {
+			const tz = (Ws.workspace && Ws.workspace.timezone) ? String(Ws.workspace.timezone) : 'UTC';
+			return new Intl.DateTimeFormat('en-CA', {
+				timeZone: tz,
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+			}).format(new Date());
+		} catch (e) {
+			return Dates.isoDate(new Date());
+		}
+	}
+
+	function recurringPostingModeLabel(mode) {
+		return mode === 'plan'
+			? t('budgetcheck', 'Plan for bank import')
+			: t('budgetcheck', 'Book automatically');
+	}
+
+	function recurringPrimaryActionLabel(rule) {
+		const isPlan = rule.postingMode === 'plan';
+		const today = workspaceTodayIso();
+		const due = String(rule.nextDueDate || '') <= today;
+		if (isPlan) {
+			return due ? t('budgetcheck', 'Add plan now') : t('budgetcheck', 'Add next plan');
+		}
+		return due ? t('budgetcheck', 'Book now') : t('budgetcheck', 'Book next');
+	}
+
 	async function loadRecurring() {
 		const tbody = document.querySelector('[data-bc-recurring-rows]');
 		if (!tbody || !Ws.workspace) return;
 		try {
 			const data = await Api.get('/apps/budgetcheck/api/recurring-rules', { workspaceId: Ws.workspace.id });
+			const auto = data.autoDue;
+			if (auto && (Number(auto.generated || 0) > 0)) {
+				const count = Number.parseInt(String(auto.generated || 0), 10) || 0;
+				const rules = Number.parseInt(String(auto.rulesProcessed || 0), 10) || 0;
+				Msg.announce(
+					t('budgetcheck', 'Added {count} entries across {rules} rules.')
+						.replace('{count}', String(count))
+						.replace('{rules}', String(rules)),
+					'success',
+				);
+			}
 			tbody.replaceChildren();
 			(data.rules || []).forEach((r) => tbody.appendChild(renderRecurringRow(r)));
 			if ((data.rules || []).length === 0) {
+				const emptyText = Ws.canManage
+					? t('budgetcheck', 'No recurring rules yet. Add rent, salary, or a subscription to start.')
+					: t('budgetcheck', 'No recurring rules yet. Ask a manager to add rent, salary, or a subscription.');
 				tbody.appendChild(C.createElement('tr', null, [
-					C.createElement('td', { attrs: { colspan: '8' }, class: 'bc-loading', text: t('budgetcheck', 'No recurring rules.') }),
+					C.createElement('td', { attrs: { colspan: '8' }, class: 'bc-loading', text: emptyText }),
 				]));
 			}
 		} catch (err) {
 			Msg.handleApiError(err);
 		}
 		document.querySelectorAll('[data-bc-action="open-create-recurring"]').forEach((btn) => {
+			btn.replaceWith(btn.cloneNode(true));
+		});
+		document.querySelectorAll('[data-bc-action="open-create-recurring"]').forEach((btn) => {
+			if (!Ws.canManage) {
+				btn.hidden = true;
+				btn.disabled = true;
+				return;
+			}
 			btn.addEventListener('click', () => openRecurringModal(null));
+		});
+		document.querySelectorAll('[data-bc-action="generate-due-recurring"]').forEach((btn) => {
+			btn.replaceWith(btn.cloneNode(true));
+		});
+		document.querySelectorAll('[data-bc-action="generate-due-recurring"]').forEach((btn) => {
+			btn.addEventListener('click', () => generateAllDueRecurring());
 		});
 	}
 
 	function renderRecurringRow(rule) {
 		const tr = C.createElement('tr');
 		const ruleLabel = rule.title || ('#' + rule.id);
+		const today = workspaceTodayIso();
+		const isDue = !!rule.isActive && String(rule.nextDueDate || '') <= today;
 		tr.appendChild(C.createElement('td', { text: rule.title }));
 		tr.appendChild(C.createElement('td', { text: rule.direction === 'income' ? t('budgetcheck', 'Income') : t('budgetcheck', 'Expense') }));
 		const isSchedule = rule.frequency === 'schedule';
@@ -1359,53 +1554,77 @@
 			freqText += ' \u00d7 ' + rule.intervalCount;
 		}
 		tr.appendChild(C.createElement('td', { text: freqText }));
-		tr.appendChild(C.createElement('td', { text: Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang) }));
-		tr.appendChild(C.createElement('td', {
-			text: rule.endDate ? Dates.formatDisplayDate(rule.endDate, Ws.htmlLang) : t('budgetcheck', 'Open-ended'),
-		}));
+		const nextCell = C.createElement('td', { class: 'bc-recurring-next-cell' });
+		nextCell.appendChild(document.createTextNode(Dates.formatDisplayDate(rule.nextDueDate, Ws.htmlLang)));
+		if (isDue) {
+			nextCell.appendChild(C.createElement('span', {
+				class: 'bc-recurring-due-pill',
+				text: t('budgetcheck', 'Due'),
+				attrs: {
+					title: t('budgetcheck', 'This date is today or earlier'),
+					'aria-label': t('budgetcheck', 'Due — this date is today or earlier'),
+				},
+			}));
+		}
+		tr.appendChild(nextCell);
+		tr.appendChild(C.createElement('td', { text: recurringPostingModeLabel(rule.postingMode || 'book') }));
 		tr.appendChild(C.createElement('td', { text: rule.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
 		const actions = C.createElement('td', { class: 'bc-recurring-actions-cell' });
 		const actionsGroup = C.createElement('div', { class: 'bc-recurring-actions', attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for {title}').replace('{title}', ruleLabel) } });
-		const gen = C.createElement('button', {
-			type: 'button',
-			class: 'button',
-			text: t('budgetcheck', 'Generate next'),
-			attrs: { 'aria-label': t('budgetcheck', 'Generate next for {title}').replace('{title}', ruleLabel) },
-		});
-		gen.addEventListener('click', () => generateRecurring(rule));
-		actionsGroup.appendChild(gen);
-		if (rule.endDate) {
-			const genFull = C.createElement('button', {
+		if (rule.isActive) {
+			const primaryLabel = recurringPrimaryActionLabel(rule);
+			const gen = C.createElement('button', {
+				type: 'button',
+				class: isDue ? 'button primary' : 'button',
+				text: primaryLabel,
+				attrs: { 'aria-label': primaryLabel + ' — ' + ruleLabel },
+			});
+			gen.addEventListener('click', () => generateRecurring(rule, { dueCatchUp: isDue }));
+			actionsGroup.appendChild(gen);
+			if (Ws.canManage && rule.endDate) {
+				const genFull = C.createElement('button', {
+					type: 'button',
+					class: 'button',
+					text: t('budgetcheck', 'Add full period'),
+					attrs: { 'aria-label': t('budgetcheck', 'Add full period for {title}').replace('{title}', ruleLabel) },
+				});
+				genFull.addEventListener('click', () => generateRecurring(rule, { fullPeriod: true }));
+				actionsGroup.appendChild(genFull);
+			}
+		} else {
+			actionsGroup.appendChild(C.createElement('span', {
+				class: 'bc-muted',
+				text: t('budgetcheck', 'Paused — turn Active on to book again.'),
+			}));
+		}
+		if (Ws.canManage) {
+			const edit = C.createElement('button', {
 				type: 'button',
 				class: 'button',
-				text: t('budgetcheck', 'Generate full period'),
-				attrs: { 'aria-label': t('budgetcheck', 'Generate full period for {title}').replace('{title}', ruleLabel) },
+				text: t('budgetcheck', 'Edit'),
+				attrs: { 'aria-label': t('budgetcheck', 'Edit rule {title}').replace('{title}', ruleLabel) },
 			});
-			genFull.addEventListener('click', () => generateRecurring(rule, { fullPeriod: true }));
-			actionsGroup.appendChild(genFull);
+			edit.addEventListener('click', () => openRecurringModal(rule));
+			actionsGroup.appendChild(edit);
+			const del = C.createElement('button', {
+				type: 'button',
+				class: 'button danger',
+				text: t('budgetcheck', 'Delete'),
+				attrs: { 'aria-label': t('budgetcheck', 'Delete rule {title}').replace('{title}', ruleLabel) },
+			});
+			del.addEventListener('click', () => deleteRecurring(rule));
+			actionsGroup.appendChild(del);
 		}
-		const edit = C.createElement('button', {
-			type: 'button',
-			class: 'button',
-			text: t('budgetcheck', 'Edit'),
-			attrs: { 'aria-label': t('budgetcheck', 'Edit rule {title}').replace('{title}', ruleLabel) },
-		});
-		edit.addEventListener('click', () => openRecurringModal(rule));
-		actionsGroup.appendChild(edit);
-		const del = C.createElement('button', {
-			type: 'button',
-			class: 'button danger',
-			text: t('budgetcheck', 'Delete'),
-			attrs: { 'aria-label': t('budgetcheck', 'Delete rule {title}').replace('{title}', ruleLabel) },
-		});
-		del.addEventListener('click', () => deleteRecurring(rule));
-		actionsGroup.appendChild(del);
 		actions.appendChild(actionsGroup);
 		tr.appendChild(actions);
 		return tr;
 	}
 
 	async function openRecurringModal(rule) {
+		if (!Ws.canManage) {
+			Msg.announce(t('budgetcheck', 'Only managers can create or edit recurring rules.'), 'error');
+			return;
+		}
 		const isEdit = !!rule;
 		const cats = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id });
 		const decimals = typeof Ws.workspace.currencyDecimals === 'number' ? Ws.workspace.currencyDecimals : (Ws.workspace.currencyCode === 'JPY' ? 0 : 2);
@@ -1416,7 +1635,7 @@
 				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
 				form.appendChild(C.createElement('p', {
 					class: 'bc-field__hint bc-field__hint--block',
-					text: t('budgetcheck', 'Generate creates a planned entry on Transactions. A matching bank import or manual booking removes it automatically (same category, direction, amount, same or neighbouring month).'),
+					text: t('budgetcheck', 'Name it clearly (for example “Spotify” or “Salary”). Pick how often it repeats, then choose whether BudgetCheck should book it as a real transaction or only show a plan reminder.'),
 				}));
 				const titleInput = C.createElement('input', { type: 'text', name: 'title', class: 'bc-input', maxlength: 180, required: true, value: rule ? rule.title : '' });
 				wrap(form, t('budgetcheck', 'Title'), titleInput, t('budgetcheck', 'Use a short name that explains what repeats.'));
@@ -1455,6 +1674,48 @@
 				});
 				amountInput.setAttribute('aria-describedby', amountHintId);
 				form.appendChild(C.createElement('label', { class: 'bc-field' }, [amountLabelText, amountInput, amountHint]));
+
+				const defaultMode = rule && rule.postingMode === 'plan' ? 'plan' : 'book';
+				const modeBook = C.createElement('input', {
+					type: 'radio', name: 'postingMode', value: 'book', class: 'bc-radio',
+					attrs: { id: 'bc-rec-mode-book' },
+				});
+				const modePlan = C.createElement('input', {
+					type: 'radio', name: 'postingMode', value: 'plan', class: 'bc-radio',
+					attrs: { id: 'bc-rec-mode-plan' },
+				});
+				if (defaultMode === 'plan') {
+					modePlan.checked = true;
+				} else {
+					modeBook.checked = true;
+				}
+				const modeFieldset = C.createElement('fieldset', { class: 'bc-recurring-mode-fieldset' }, [
+					C.createElement('legend', { text: t('budgetcheck', 'How should this post?') }),
+					C.createElement('div', { class: 'bc-recurring-mode-options', attrs: { role: 'radiogroup', 'aria-label': t('budgetcheck', 'How should this post?') } }, [
+						C.createElement('label', { class: 'bc-recurring-mode-option', attrs: { for: 'bc-rec-mode-book' } }, [
+							modeBook,
+							C.createElement('span', { class: 'bc-recurring-mode-option__body' }, [
+								C.createElement('span', { class: 'bc-recurring-mode-option__title', text: t('budgetcheck', 'Book automatically') }),
+								C.createElement('span', {
+									class: 'bc-recurring-mode-option__hint',
+									text: t('budgetcheck', 'On the due day, write a real transaction. Recommended for rent, salary, and subscriptions you enter by hand.'),
+								}),
+							]),
+						]),
+						C.createElement('label', { class: 'bc-recurring-mode-option', attrs: { for: 'bc-rec-mode-plan' } }, [
+							modePlan,
+							C.createElement('span', { class: 'bc-recurring-mode-option__body' }, [
+								C.createElement('span', { class: 'bc-recurring-mode-option__title', text: t('budgetcheck', 'Plan for bank import') }),
+								C.createElement('span', {
+									class: 'bc-recurring-mode-option__hint',
+									text: t('budgetcheck', 'Create a planned reminder. A matching bank import removes it. Do not use this if you also book the same payment automatically.'),
+								}),
+							]),
+						]),
+					]),
+				]);
+				form.appendChild(modeFieldset);
+
 				const freqSelect = C.createElement('select', { name: 'frequency', class: 'bc-input' }, [
 					C.createElement('option', { value: 'monthly', text: t('budgetcheck', 'Monthly') }),
 					C.createElement('option', { value: 'quarterly', text: t('budgetcheck', 'Quarterly') }),
@@ -1463,7 +1724,7 @@
 					C.createElement('option', { value: 'schedule', text: t('budgetcheck', 'Specific dates') }),
 				]);
 				freqSelect.value = rule ? rule.frequency : 'monthly';
-				wrap(form, t('budgetcheck', 'Repeat'), freqSelect, t('budgetcheck', 'Choose how often this rule should create a suggestion.'));
+				wrap(form, t('budgetcheck', 'Repeat'), freqSelect, t('budgetcheck', 'Choose how often this should happen.'));
 				const intervalSelect = C.createElement('select', { name: 'intervalCount', class: 'bc-input' }, [
 					C.createElement('option', { value: '2', text: t('budgetcheck', 'Every 2 months') }),
 					C.createElement('option', { value: '3', text: t('budgetcheck', 'Every 3 months') }),
@@ -1770,6 +2031,7 @@
 
 				form._collect = () => {
 					const scheduleMode = freqSelect.value === 'schedule';
+					const postingMode = (form.querySelector('input[name="postingMode"]:checked') || {}).value || 'book';
 					const payload = {
 						workspaceId: Ws.workspace.id,
 						title: titleInput.value.trim(),
@@ -1778,6 +2040,7 @@
 						amount: amountInput.value,
 						frequency: freqSelect.value,
 						intervalCount: freqSelect.value === 'custom_interval' ? (Number.parseInt(intervalSelect.value, 10) || 2) : 1,
+						postingMode: postingMode === 'plan' ? 'plan' : 'book',
 						isActive: isActiveInput.checked,
 						realignNextDue: !!(realignToggle && realignToggle.checked),
 						realignFromDate: realignDateInput ? realignDateInput.value.trim() : '',
@@ -1916,6 +2179,10 @@
 	}
 
 	async function deleteRecurring(rule) {
+		if (!Ws.canManage) {
+			Msg.announce(t('budgetcheck', 'Only managers can delete recurring rules.'), 'error');
+			return;
+		}
 		const ok = await C.confirmDialog({
 			title: t('budgetcheck', 'Delete this rule?'),
 			body: t('budgetcheck', 'Existing transactions generated from this rule remain.'),
@@ -1935,19 +2202,70 @@
 	async function generateRecurring(rule, options = {}) {
 		try {
 			const fullPeriod = !!options.fullPeriod;
+			if (fullPeriod && !Ws.canManage) {
+				Msg.announce(t('budgetcheck', 'Only managers can create or edit recurring rules.'), 'error');
+				return;
+			}
+			const dueCatchUp = !!options.dueCatchUp;
+			const body = fullPeriod ? { mode: 'full_period' } : (dueCatchUp ? { mode: 'due' } : {});
 			const response = await Api.post(
 				'/apps/budgetcheck/api/recurring-rules/' + rule.id + '/generate',
-				fullPeriod ? { mode: 'full_period' } : {}
+				body
 			);
-			if (fullPeriod) {
+			if (fullPeriod || dueCatchUp) {
 				const count = Number.parseInt(String(response?.generated?.count || 0), 10) || 0;
-				const message = count === 1
-					? t('budgetcheck', '1 transaction generated for the full period.')
-					: t('budgetcheck', '{count} transactions generated for the full period.').replace('{count}', String(count));
+				const asPlanned = !!(response?.generated?.asPlanned);
+				let message;
+				if (count === 0) {
+					message = t('budgetcheck', 'Nothing new to add — everything due is already on Transactions.');
+				} else if (asPlanned) {
+					message = count === 1
+						? t('budgetcheck', '1 planned reminder added.')
+						: t('budgetcheck', '{count} planned reminders added.').replace('{count}', String(count));
+				} else {
+					message = count === 1
+						? t('budgetcheck', '1 transaction booked.')
+						: t('budgetcheck', '{count} transactions booked.').replace('{count}', String(count));
+				}
 				Msg.announce(message, 'success');
 			} else {
-				Msg.announce(t('budgetcheck', 'Transaction generated.'), 'success');
+				const isPlan = rule.postingMode === 'plan';
+				Msg.announce(
+					isPlan
+						? t('budgetcheck', 'Planned reminder added.')
+						: t('budgetcheck', 'Transaction booked.'),
+					'success'
+				);
 			}
+			loadRecurring();
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	async function generateAllDueRecurring() {
+		if (!Ws.workspace) return;
+		try {
+			const response = await Api.post('/apps/budgetcheck/api/recurring-rules/generate-due', {
+				workspaceId: Ws.workspace.id,
+			});
+			const g = response?.generated || {};
+			const count = Number.parseInt(String(g.generated || 0), 10) || 0;
+			const rules = Number.parseInt(String(g.rulesProcessed || 0), 10) || 0;
+			const errCount = Array.isArray(g.errors) ? g.errors.length : 0;
+			let message;
+			if (count === 0 && rules === 0) {
+				message = t('budgetcheck', 'Nothing is due right now.');
+			} else {
+				message = t('budgetcheck', 'Added {count} entries across {rules} rules.')
+					.replace('{count}', String(count))
+					.replace('{rules}', String(rules));
+			}
+			if (errCount > 0) {
+				message += ' ' + t('budgetcheck', '{count} rules needed attention.')
+					.replace('{count}', String(errCount));
+			}
+			Msg.announce(message, errCount > 0 ? 'error' : 'success');
 			loadRecurring();
 		} catch (err) {
 			Msg.handleApiError(err);
