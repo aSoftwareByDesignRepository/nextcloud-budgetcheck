@@ -1293,7 +1293,6 @@
 		"Paused — turn Active on to book again.": "Pausiert — schalten Sie „Aktiv“ ein, um wieder zu buchen.",
 		"Due — this date is today or earlier": "Fällig — dieses Datum ist heute oder liegt in der Vergangenheit",
 		"A reminder booking from a Plan-mode recurring rule or from category budget targets. Recurring plans match amount; budget plans match category (any amount). A matching real booking removes the plan. Book-mode recurring rules write real transactions instead.": "Eine Erinnerungsbuchung aus einer Plan-Regel oder aus Kategorie-Budgets. Wiederkehrende Pläne passen zum Betrag; Budget-Pläne zur Kategorie (beliebiger Betrag). Eine passende echte Buchung entfernt den Plan. Buch-Regeln schreiben echte Buchungen.",
-		"Copy last month\\'s budget when opening a new month": "Copy last month\\'s budget when opening a new month",
 		"All bookings, attachments, budgets, categories, members, and closed-month snapshots for this workspace will be deleted.": "Alle Buchungen, Anhänge, Budgets, Kategorien, Mitglieder und abgeschlossenen Monatsabschlüsse dieses Arbeitsbereichs werden gelöscht.",
 		"Delete workspace…": "Arbeitsbereich löschen…",
 		"InvoiceCheck invoices remain, but BudgetCheck settlement links will break.": "Rechnungen in InvoiceCheck bleiben erhalten, aber Abrechnungslinks in BudgetCheck gehen verloren.",
@@ -1306,11 +1305,11 @@
 		"InvoiceCheck invoices that used expenses from this project stay in InvoiceCheck, but settlement links in BudgetCheck will break.": "Rechnungen in InvoiceCheck, die Ausgaben aus diesem Projekt verwendet haben, bleiben in InvoiceCheck; Abrechnungslinks in BudgetCheck gehen jedoch verloren.",
 		"Type the workspace name exactly to confirm deletion.": "Geben Sie den Namen des Arbeitsbereichs genau ein, um das Löschen zu bestätigen.",
 		"{count} closed months": "{count} abgeschlossene Monate",
-		"{count} bookings": "{count} bookings",
+		"{count} bookings": "{count} Buchungen",
 		"{count} attachments": "{count} Anhänge",
-		"{count} budgets": "{count} budgets",
-		"{count} categories": "{count} categories",
-		"{count} members": "{count} members"
+		"{count} budgets": "{count} Budgets",
+		"{count} categories": "{count} Kategorien",
+		"{count} members": "{count} Mitglieder"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

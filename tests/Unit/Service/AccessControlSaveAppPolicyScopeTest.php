@@ -180,6 +180,21 @@ final class AccessControlSaveAppPolicyScopeTest extends TestCase
 		]);
 	}
 
+	public function testEmptyStoredDefaultsFallBackToCatalog(): void
+	{
+		$service = $this->serviceWithSeed([
+			AccessControlService::KEY_APP_ADMINS => json_encode(['admin1'], JSON_THROW_ON_ERROR),
+			AccessControlService::KEY_ACCESS_RESTRICTION => '0',
+			AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS => json_encode([], JSON_THROW_ON_ERROR),
+			AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS => json_encode([], JSON_THROW_ON_ERROR),
+			AccessControlService::KEY_DEFAULT_TIMEZONE => '',
+			AccessControlService::KEY_DEFAULT_CURRENCY => '',
+		]);
+
+		self::assertSame('Europe/Berlin', $service->getDefaultTimezone());
+		self::assertSame('EUR', $service->getDefaultCurrency());
+	}
+
 	/**
 	 * @param array<string, string> $seed
 	 */

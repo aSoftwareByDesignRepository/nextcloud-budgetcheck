@@ -1648,8 +1648,10 @@
 .bc-summary-tile--primary .bc-summary-tile__label {
 	color: var(--color-main-text, var(--bc-text));
 }
-.bc-summary-tile--primary .bc-summary-tile__hint {
-	color: var(--color-text-maxcontrast, var(--bc-text));
+.bc-summary-tile--primary .bc-summary-tile__hint,
+.bc-summary-tile--primary .bc-tx-kpi-tile__sub {
+	/* Prefer main text on tinted primary tiles — maxcontrast can still fail AA on --bc-tint-info. */
+	color: var(--color-main-text, var(--bc-text));
 }
 .bc-summary-tile__value {
 	font-size: var(--bc-fs-2xl);

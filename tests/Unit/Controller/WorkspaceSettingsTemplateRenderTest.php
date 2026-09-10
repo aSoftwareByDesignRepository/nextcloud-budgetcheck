@@ -218,13 +218,15 @@ final class WorkspaceSettingsTemplateRenderTest extends TestCase
 
 	public function testManagerOnlyPartialsShowSoftDenialForViewers(): void
 	{
-		foreach (['members', 'recurring', 'budget-defaults'] as $section) {
+		foreach (['members', 'budget-defaults'] as $section) {
 			$html = $this->renderPartial($section, $this->householdWorkspace(false));
 			self::assertStringContainsString('Managers only', $html, "'{$section}' must soft-deny viewers");
 			self::assertStringNotContainsString('data-bc-action="member-invite-submit"', $html);
-			self::assertStringNotContainsString('data-bc-action="open-create-recurring"', $html);
 			self::assertStringNotContainsString('data-bc-action="save-budget-defaults"', $html);
 		}
+		$recurring = $this->renderPartial('recurring', $this->householdWorkspace(false));
+		self::assertStringContainsString('Contributors and managers only', $recurring, 'recurring must soft-deny viewers');
+		self::assertStringNotContainsString('data-bc-action="open-create-recurring"', $recurring);
 	}
 
 	public function testHelpPartialRendersGlossaryAndBridge(): void

@@ -184,7 +184,7 @@ final class WorkspaceSettingsPagesContractTest extends TestCase
 	{
 		$controller = self::read('lib/Controller/PageController.php');
 		self::assertStringContainsString('function settingsSection(string $section)', $controller);
-		self::assertStringContainsString('isVisible($section, $workspaceType, $canManage)', $controller);
+		self::assertStringContainsString('isVisible($section, $workspaceType, $canManage, $canContribute)', $controller);
 		self::assertStringContainsString('NotFoundResponse', $controller);
 		self::assertStringContainsString('defaultSection($workspaceType)', $controller);
 		self::assertStringContainsString("'settingsSections'", $controller);
@@ -200,7 +200,7 @@ final class WorkspaceSettingsPagesContractTest extends TestCase
 		);
 		self::assertMatchesRegularExpression(
 			'/foreach \(WorkspaceSettingsSectionCatalog::SECTIONS as \$sectionId\) \{\s*'
-			. 'if \(!\$this->workspaceSettingsSections->isVisible\(\$sectionId, \$workspaceTypeForUrls, \$canManage\)\) \{\s*'
+			. 'if \(!\$this->workspaceSettingsSections->isVisible\(\$sectionId, \$workspaceTypeForUrls, \$canManage, \$canContribute\)\) \{\s*'
 			. 'continue;/s',
 			$controller,
 		);
@@ -208,7 +208,7 @@ final class WorkspaceSettingsPagesContractTest extends TestCase
 
 	public function testManagerOnlyPartialsShipSoftDenialCards(): void
 	{
-		foreach (['members', 'recurring', 'budget-defaults'] as $section) {
+		foreach (['members', 'budget-defaults'] as $section) {
 			$partial = self::read('templates/parts/settings/' . $section . '.php');
 			self::assertStringContainsString(
 				"\$canManage = !empty(\$_['canManageWorkspace']);",
@@ -221,6 +221,17 @@ final class WorkspaceSettingsPagesContractTest extends TestCase
 				"{$section} must include a soft denial card for defense in depth",
 			);
 		}
+		$recurring = self::read('templates/parts/settings/recurring.php');
+		self::assertStringContainsString(
+			"\$canContribute = !empty(\$_['canContribute']) || \$canManage;",
+			$recurring,
+			'recurring must check canContribute (contributors may catch up)',
+		);
+		self::assertStringContainsString(
+			'Contributors and managers only',
+			$recurring,
+			'recurring soft denial must name contributors + managers',
+		);
 	}
 
 	public function testEveryLegacyAnchorTargetStillExistsInItsOwningPartial(): void

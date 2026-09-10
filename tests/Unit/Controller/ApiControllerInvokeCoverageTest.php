@@ -205,6 +205,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			'endDate' => '2026-12-31',
 		]);
 		$this->recurring->method('generate')->willReturn(['id' => 99]);
+		$this->recurring->method('generateDueForWorkspace')->willReturn([]);
 
 		$this->budgets = $this->createMock(BudgetService::class);
 		$this->budgets->method('listForMonth')->willReturn([]);
@@ -552,6 +553,10 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->assertOk($this->controller->generateFromRecurringRule(5), 'generateFromRecurringRule');
 		$invoked[] = 'generateFromRecurringRule';
 
+		$this->params = ['workspaceId' => 7];
+		$this->assertOk($this->controller->generateDueRecurringRules(), 'generateDueRecurringRules');
+		$invoked[] = 'generateDueRecurringRules';
+
 		$this->params = ['workspaceId' => 7, 'yearMonth' => '2026-09'];
 		$this->assertOk($this->controller->listBudgets(), 'listBudgets');
 		$invoked[] = 'listBudgets';
@@ -683,7 +688,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 
 		$recurring = $this->createMock(RecurringRuleService::class);
 		foreach ([
-			'listForWorkspace', 'create', 'update', 'delete', 'ownerWorkspaceId', 'loadHydrated', 'generate',
+			'listForWorkspace', 'create', 'update', 'delete', 'ownerWorkspaceId', 'loadHydrated', 'generate', 'generateDueForWorkspace',
 		] as $m) {
 			$recurring->method($m)->willReturnCallback($deny);
 		}
@@ -883,6 +888,8 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->assertForbidden($c->deleteRecurringRule(5), 'deleteRecurringRule');
 		$this->params = ['bookingDate' => '2026-09-01'];
 		$this->assertForbidden($c->generateFromRecurringRule(5), 'generateFromRecurringRule');
+		$this->params = ['workspaceId' => 7];
+		$this->assertForbidden($c->generateDueRecurringRules(), 'generateDueRecurringRules');
 
 		$this->params = ['workspaceId' => 7, 'rows' => []];
 		$this->assertForbidden($c->bulkUpsertBudgetDefaults(), 'bulkUpsertBudgetDefaults');

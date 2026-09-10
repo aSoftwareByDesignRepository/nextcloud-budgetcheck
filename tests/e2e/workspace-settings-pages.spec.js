@@ -219,15 +219,15 @@ test.describe('BudgetCheck multipage Workspace settings', () => {
     const chips = page.locator('#bc-settings-pages .bc-settings-nav__link');
     await expect(chips).toHaveCount(sections.length);
     await expect(page.locator('#bc-settings-pages .bc-settings-nav__link[aria-current="page"]')).toHaveCount(1);
-    await expect(page.locator('#bc-settings-pages .bc-settings-nav__link.is-active')).toContainText(/categories/i);
+    await expect(page.locator('#bc-settings-pages .bc-settings-nav__link.is-active')).toContainText(/categories|kategorien/i);
 
     const sublinks = page.locator('.bc-nav__item.is-active .bc-nav__sublink');
     await expect(sublinks).toHaveCount(sections.length);
     await expect(page.locator('.bc-nav__sublink[aria-current="page"]')).toHaveCount(1);
 
-    await page.locator('#bc-settings-pages .bc-settings-nav__link', { hasText: /help/i }).click();
+    await page.locator('#bc-settings-pages .bc-settings-nav__link', { hasText: /help|hilfe/i }).click();
     await page.waitForURL(/\/apps\/budgetcheck\/settings\/help/, { timeout: 30000 });
     expect(page.url()).toContain(`workspaceId=${ws.id}`);
-    await expect(page.locator('#bc-settings-pages .bc-settings-nav__link[aria-current="page"]')).toContainText(/help/i);
+    await expect(page.locator('#bc-settings-pages .bc-settings-nav__link[aria-current="page"]')).toContainText(/help|hilfe/i);
   });
 });

@@ -48,6 +48,7 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 		'updateRecurringRule',
 		'deleteRecurringRule',
 		'generateFromRecurringRule',
+		'generateDueRecurringRules',
 		'addMember',
 		'updateMember',
 		'removeMember',

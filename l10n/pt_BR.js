@@ -1293,7 +1293,25 @@ OC.L10N.register(
 	"No recurring rules yet. Ask a manager to add rent, salary, or a subscription." : "Ainda não há regras recorrentes. Peça a um gerente para adicionar aluguel, salário ou uma assinatura.",
 	"Paused — turn Active on to book again." : "Pausado — ative para lançar de novo.",
 	"Due — this date is today or earlier" : "Vencido — esta data é hoje ou anterior",
-	"A reminder booking from a Plan-mode recurring rule or from category budget targets. Recurring plans match amount; budget plans match category (any amount). A matching real booking removes the plan. Book-mode recurring rules write real transactions instead." : "Um lembrete de uma regra recorrente no modo Plano ou de orçamentos por categoria. Planos recorrentes batem o valor; planos de orçamento a categoria (qualquer valor). Um lançamento real correspondente remove o plano. Regras no modo Lançar gravam transações reais."
+	"A reminder booking from a Plan-mode recurring rule or from category budget targets. Recurring plans match amount; budget plans match category (any amount). A matching real booking removes the plan. Book-mode recurring rules write real transactions instead." : "Um lembrete de uma regra recorrente no modo Plano ou de orçamentos por categoria. Planos recorrentes batem o valor; planos de orçamento a categoria (qualquer valor). Um lançamento real correspondente remove o plano. Regras no modo Lançar gravam transações reais.",
+	"Copy last month\\'s budget when opening a new month" : "Copy last month\\'s budget when opening a new month",
+	"All bookings, attachments, budgets, categories, members, and closed-month snapshots for this workspace will be deleted." : "All bookings, attachments, budgets, categories, members, and closed-month snapshots for this workspace will be deleted.",
+	"Delete workspace…" : "Delete workspace…",
+	"InvoiceCheck invoices remain, but BudgetCheck settlement links will break." : "InvoiceCheck invoices remain, but BudgetCheck settlement links will break.",
+	"Delete workspace" : "Delete workspace",
+	"Type the workspace name to confirm:" : "Type the workspace name to confirm:",
+	"Workspace name" : "Workspace name",
+	"Permanently remove this workspace and everything in it. This cannot be undone." : "Permanently remove this workspace and everything in it. This cannot be undone.",
+	"Delete permanently" : "Delete permanently",
+	"Workspace deleted." : "Workspace deleted.",
+	"InvoiceCheck invoices that used expenses from this project stay in InvoiceCheck, but settlement links in BudgetCheck will break." : "InvoiceCheck invoices that used expenses from this project stay in InvoiceCheck, but settlement links in BudgetCheck will break.",
+	"Type the workspace name exactly to confirm deletion." : "Type the workspace name exactly to confirm deletion.",
+	"{count} closed months" : "{count} closed months",
+	"{count} bookings" : "{count} bookings",
+	"{count} attachments" : "{count} attachments",
+	"{count} budgets" : "{count} budgets",
+	"{count} categories" : "{count} categories",
+	"{count} members" : "{count} members"
 	},
 	"nplurals=2; plural=(n > 1);"
 );

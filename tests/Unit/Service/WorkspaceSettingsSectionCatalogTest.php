@@ -239,7 +239,7 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 			'budget-defaults' => 'baseline for months',
 			'booking-statuses' => 'Project-only workflow',
 			'members' => 'manager, contributor, or viewer',
-			'recurring' => 'fixed interval or on specific dates',
+			'recurring' => 'Contributors can add what is due',
 		];
 		$seen = [];
 		foreach ($fingerprints as $section => $fingerprint) {
