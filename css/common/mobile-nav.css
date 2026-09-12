@@ -1,0 +1,149 @@
+/**
+ * Mobile navigation drawer + in-page Menu button (<1024px).
+ * Hides broken/absent core #app-navigation-toggle.
+ * Drawer opens via .bc-nav--open; JS portals to body while open.
+ */
+
+@media (width < 1024px) {
+	#content.app-budgetcheck #app-navigation-toggle {
+		display: none !important;
+		visibility: hidden !important;
+		pointer-events: none !important;
+	}
+}
+
+/* In-page menu control (page-start.php) — beat NC core button height */
+#content.app-budgetcheck .bc-nav-toggle,
+.bc-nav-toggle {
+	display: none;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: center;
+	gap: var(--bc-space-2, 0.5rem);
+	min-height: 44px;
+	height: auto;
+	min-width: 44px;
+	padding: 0.625rem var(--bc-space-3, 0.75rem);
+	margin: 0 0 var(--bc-space-3, 0.75rem);
+	border: 1px solid var(--color-border, var(--bc-border));
+	border-radius: var(--bc-radius-sm, 8px);
+	background-color: var(--color-main-background);
+	color: var(--color-main-text);
+	font-family: inherit;
+	font-size: var(--bc-fs-sm, 0.875rem);
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	touch-action: manipulation;
+	flex-shrink: 0;
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-main-text, #000) 8%, transparent);
+}
+
+.bc-nav-toggle__icon {
+	display: inline-flex;
+	width: 1.25rem;
+	height: 1.25rem;
+	color: inherit;
+}
+
+.bc-nav-toggle__icon .bc-icon,
+.bc-nav-toggle__icon svg,
+.bc-nav-toggle__icon-svg {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+.bc-nav-toggle:hover {
+	background-color: var(--color-background-hover);
+	border-color: var(--color-primary-element);
+}
+
+.bc-nav-toggle:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+.bc-nav-toggle[aria-expanded='true'] {
+	background-color: color-mix(
+		in srgb,
+		var(--color-primary-element, #0082c9) 12%,
+		var(--color-main-background)
+	);
+	border-color: var(--color-primary-element);
+}
+
+.bc-nav-backdrop {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 1998;
+	background: color-mix(in srgb, var(--color-main-text, #000) 35%, transparent);
+	border: 0;
+	padding: 0;
+	margin: 0;
+	cursor: pointer;
+}
+
+body.bc-nav-open .bc-nav-backdrop {
+	display: block;
+}
+
+@media (width < 1024px) {
+	#content.app-budgetcheck .bc-nav-toggle,
+	.bc-nav-toggle {
+		display: inline-flex;
+		min-height: 44px;
+	}
+
+	#content.app-budgetcheck #app-navigation.bc-nav:not(.vue),
+	body > #app-navigation.bc-nav:not(.vue) {
+		position: fixed !important;
+		top: var(--header-height, 50px) !important;
+		inset-inline-start: 0;
+		width: min(18rem, 88vw) !important;
+		max-width: 88vw;
+		height: var(--body-height, calc(100dvh - var(--header-height, 50px))) !important;
+		z-index: 1999;
+		transform: translateX(-105%) !important;
+		transition: transform 180ms ease;
+		box-shadow:
+			0 4px 16px color-mix(in srgb, var(--color-main-text, #000) 18%, transparent),
+			0 0 0 1px var(--color-border);
+		overflow-x: hidden;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		background: var(--color-main-background);
+	}
+
+	#content.app-budgetcheck #app-navigation.bc-nav.bc-nav--open,
+	body > #app-navigation.bc-nav.bc-nav--open {
+		transform: translateX(0) !important;
+	}
+
+	body.bc-nav-open {
+		overflow: hidden;
+	}
+}
+
+@media (min-width: 1024px) {
+	.bc-nav-toggle {
+		display: none !important;
+	}
+
+	.bc-nav-backdrop {
+		display: none !important;
+	}
+}
+
+@media (width < 1024px) and (forced-colors: active) {
+	.bc-nav-toggle {
+		border: 2px solid ButtonText;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#content.app-budgetcheck #app-navigation.bc-nav:not(.vue),
+	body > #app-navigation.bc-nav:not(.vue) {
+		transition: none;
+	}
+}

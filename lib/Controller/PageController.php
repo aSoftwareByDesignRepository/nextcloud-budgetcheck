@@ -564,6 +564,7 @@ class PageController extends Controller
 	private function registerFrontEndAssets(string $pageScript): void {
 		Util::addStyle(Application::APP_ID, 'common/tokens');
 		Util::addStyle(Application::APP_ID, 'app');
+		Util::addStyle(Application::APP_ID, 'common/mobile-nav');
 		if ($pageScript === 'transactions') {
 			Util::addStyle(Application::APP_ID, 'transactions');
 		}
@@ -585,6 +586,8 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/keep-focused-visible');
 		Util::addScript(Application::APP_ID, 'common/money');
 		Util::addScript(Application::APP_ID, 'common/workspace');
+		// In-page Menu + drawer (Atlas ATLAS_MOBILE_NAV_CONTRACT / AZC#33).
+		Util::addScript(Application::APP_ID, 'common/mobile-nav');
 		if (in_array($pageScript, ['dashboard', 'transactions'], true)) {
 			Util::addScript(Application::APP_ID, 'common/attachment-gallery');
 			Util::addScript(Application::APP_ID, 'common/transaction-attachments');

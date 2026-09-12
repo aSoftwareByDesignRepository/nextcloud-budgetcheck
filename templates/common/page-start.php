@@ -88,6 +88,20 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	<div id="bc-alert-region" class="bc-sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
 	<div id="app-content-wrapper" class="bc-shell">
 		<header class="bc-page-header" aria-labelledby="bc-page-title">
+			<button type="button"
+				class="bc-nav-toggle"
+				id="bc-nav-toggle"
+				data-bc-nav-toggle
+				aria-controls="app-navigation"
+				aria-expanded="false"
+				aria-label="<?php p($l->t('Open navigation menu')); ?>"
+				data-aria-label-open="<?php p($l->t('Open navigation menu')); ?>"
+				data-aria-label-close="<?php p($l->t('Close navigation menu')); ?>">
+				<span class="bc-nav-toggle__icon" aria-hidden="true">
+					<?php print_unescaped(IconCatalog::render('menu', 'bc-nav-toggle__icon-svg')); ?>
+				</span>
+				<span class="bc-nav-toggle__label"><?php p($l->t('Menu')); ?></span>
+			</button>
 			<nav class="bc-breadcrumb" aria-label="<?php p($l->t('Breadcrumb')); ?>">
 				<ol>
 					<li><a class="bc-breadcrumb__brand" href="<?php p((string)($urls['dashboard'] ?? '#')); ?>"><?php p($l->t('BudgetCheck')); ?></a></li>

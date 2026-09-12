@@ -25,6 +25,10 @@ Every workspace has its own ledger, categories, members, and tax settings. The *
 
 The UI is **workspace-scoped** (household and project totals never mix), targets **WCAG 2.1 AA**, full keyboard use, and responsive layouts from **320px** width.
 
+## Feedback welcome
+
+We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+
 ## Requirements
 
 - Nextcloud 32–35
@@ -39,6 +43,10 @@ Finanzverwaltung in Nextcloud im **Workspace-Modell**: Jeder Workspace ist entwe
 Jeder Workspace besitzt eigenes Ledger, Kategorien, Mitglieder und Steuereinstellungen. Der **Server ist die alleinige Recheninstanz**; Beträge liegen in **kleinsten Währungseinheiten**, nie als Fließkomma. Der **Monatsabschluss** erzeugt einen unveränderlichen Snapshot mit prüfbarem Rechen-Hash; ein kontrolliertes **Wiederöffnen** ermöglicht erneute Bearbeitung. Optionaler **Steuer-Modus** für Netto- oder Bruttoerfassung mit deterministischer USt-Umrechnung.
 
 Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich nicht), orientiert sich an **WCAG 2.1 AA**, vollständiger Tastaturbedienung und responsiven Layouts ab **320px** Breite.
+
+## Feedback willkommen
+
+Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
 
 ## Voraussetzungen
 
@@ -60,7 +68,11 @@ L'interface est **scopée par espace** (totaux foyer et projet ne se mélangent 
 - Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL ou PostgreSQL
-	]]></description>
+
+## Retours bienvenus
+
+Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident — ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
+]]></description>
 	<description lang="da"><![CDATA[
 # BudgetCheck
 
@@ -69,6 +81,10 @@ L'interface est **scopée par espace** (totaux foyer et projet ne se mélangent 
 Hvert arbejdsområde har eget hovedbog, kategorier, medlemmer og skatteindstillinger. **Serveren er den eneste beregningsinstans**; beløb gemmes i **mindste valutaenheder**, aldrig som flydende tal. **Månedlig afslutning** skaber et uforanderligt øjebliksbillede med verificerbar beregnings-hash; kontrolleret genåbning gør redigering mulig igen. Valgfri **skattetilstand** understøtter netto- eller bruttoindtastning med deterministisk momsomregning.
 
 Brugerfladen er **adskilt pr. arbejdsområde** (husholdning og projekt blandes ikke), sigter mod **WCAG 2.1 AA**, fuld tastaturnavigation og responsive layouts fra **320 px** bredde.
+
+## Feedback er velkommen
+
+Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper — åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
 
 ## Krav
 
@@ -85,6 +101,10 @@ Cada espacio tiene su propio libro mayor, categorías, miembros y ajustes fiscal
 
 La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se mezclan), apunta a **WCAG 2.1 AA**, uso completo por teclado y diseños responsivos desde **320 px** de ancho.
 
+## Comentarios bienvenidos
+
+Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan — abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
+
 ## Requisitos
 
 - Nextcloud 32–35
@@ -99,6 +119,10 @@ Gerichte financiën voor Nextcloud. Elke **workspace** is óf een **huishouden**
 Elke workspace heeft zijn eigen grootboek, categorieën, leden en fiscale instellingen. De **server is de bron van waarheid** voor alle berekeningen; bedragen worden opgeslagen in **kleine eenheden**, nooit als zwevendekommagetallen. **Maandafsluiting** produceert een onveranderlijke snapshot met een controleerbare berekenings-hash; een gecontroleerde heropening herstelt de bewerking. De optionele modus **fiscaal bewust** ondersteunt invoer netto of brutto met deterministische btw-omzetting.
 
 De gebruikersinterface is **workspace-gebonden** (totalen voor huishouden en project worden nooit gemengd), richt zich op **WCAG 2.1 AA**, volledig toetsenbordgebruik en responsieve layouts vanaf **320px** breedte.
+
+## Feedback welkom
+
+We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen — open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
 
 ## Vereisten
 
@@ -115,6 +139,10 @@ Ogni workspace ha il proprio libro contabile, categorie, membri e impostazioni f
 
 L’interfaccia è **scopata per workspace** (i totali di nucleo domestico e progetto non si mescolano), mira a **WCAG 2.1 AA**, uso completo da tastiera e layout responsive da **320px** di larghezza.
 
+## Feedback benvenuto
+
+Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano — aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
+
 ## Requisiti
 
 - Nextcloud 32–35
@@ -129,6 +157,10 @@ Finanse w dopasowanym zakresie dla Nextcloud. Każdy **workspace** to albo **gos
 Każdy workspace ma własną księgę, kategorie, członków i ustawienia podatkowe. **To serwer jest źródłem prawdy** dla wszystkich obliczeń; kwoty są przechowywane w **jednostkach drobnych**, nigdy jako liczby zmiennoprzecinkowe. **Zamknięcie miesiąca** tworzy niezmienną migawkę z możliwością weryfikacji hasha obliczeń; kontrolowane ponowne otwarcie przywraca możliwość edycji. Opcjonalny tryb **uwzględniający podatki** obsługuje zapis netto lub brutto z deterministyczną konwersją VAT.
 
 Interfejs jest **ograniczony do workspace** (sumy dla gospodarstwa domowego i projektu nigdy się nie mieszają), celuje w **WCAG 2.1 AA**, pełne korzystanie z klawiatury i responsywne układy od szerokości **320px**.
+
+## Feedback mile widziany
+
+Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają — otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
 
 ## Wymagania
 
@@ -145,6 +177,10 @@ Varje workspace har sin egen huvudbok, kategorier, medlemmar och skatteinställn
 
 Gränssnittet är **avgränsat per workspace** (totalsummor för hushåll och projekt blandas aldrig), siktar på **WCAG 2.1 AA**, full användning med tangentbord och responsiva layouter från **320px** bredd.
 
+## Feedback välkomnas
+
+Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper — öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
+
 ## Krav
 
 - Nextcloud 32–35
@@ -159,6 +195,10 @@ Målrettet økonomi for Nextcloud. Hver **workspace** er enten et **husholdnings
 Hver workspace har sin egen hovedbok, kategorier, medlemmer og skatteinnstillinger. **Serveren er kilde til sannhet** for alle beregninger; beløp lagres i **mindre enheter**, aldri som flyttall. **Månedlig avslutning** lager en uforanderlig snapshot med en verifiserbar beregnings-hash; kontrollert gjenåpning gjenoppretter redigeringen. Valgfri **skattebevisst** modus støtter innføring av netto eller brutto med deterministisk mva-omregning.
 
 Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og prosjekt blandes aldri), målretter **WCAG 2.1 AA**, full tastaturbruk og responsive oppsett fra **320px** bredde.
+
+## Feedback er velkommen
+
+Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper — åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
 
 ## Krav
 
