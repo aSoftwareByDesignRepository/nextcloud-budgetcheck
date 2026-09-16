@@ -1310,7 +1310,10 @@ OC.L10N.register(
 	"{count} attachments" : "{count} Anhänge",
 	"{count} budgets" : "{count} Budgets",
 	"{count} categories" : "{count} Kategorien",
-	"{count} members" : "{count} Mitglieder"
+	"{count} members" : "{count} Mitglieder",
+	"Menu" : "Menü",
+	"Open navigation menu" : "Navigationsmenü öffnen",
+	"Close navigation menu" : "Navigationsmenü schließen"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

@@ -1315,5 +1315,6 @@ OC.L10N.register(
 	"Menu" : "Menu",
 	"Open navigation menu" : "Ouvrir le menu de navigation",
 	"Close navigation menu" : "Fermer le menu de navigation"
-	}
+	},
+	"nplurals=2; plural=(n > 1);"
 );

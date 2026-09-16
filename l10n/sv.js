@@ -1314,5 +1314,6 @@ OC.L10N.register(
 	"Menu" : "Meny",
 	"Open navigation menu" : "Öppna navigeringsmeny",
 	"Close navigation menu" : "Stäng navigeringsmeny"
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

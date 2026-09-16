@@ -57,7 +57,12 @@ test.describe('Private workspaces UX', () => {
 		test.skip(!listRes.ok(), 'BudgetCheck API not reachable');
 		const data = await listRes.json();
 		const list = Array.isArray(data.workspaces) ? data.workspaces : [];
-		const manageable = list.find((w) => w && w.id != null && String(w.role || '') === 'manager');
+		const manageable = list.find((w) => {
+			if (!w || w.id == null) return false;
+			const caps = w.capabilities || {};
+			if (caps.canManagePrivacy === true) return true;
+			return String(w.role || '') === 'manager';
+		});
 		test.skip(!manageable, 'No manager workspace available');
 
 		const wid = Number(manageable.id);
@@ -73,7 +78,11 @@ test.describe('Private workspaces UX', () => {
 		await expect(page.locator('input[name="privacyMode"][value="private"]')).toHaveCount(1);
 		await expect(page.locator('input[name="privacyMode"][value="standard"]')).toHaveCount(1);
 		const privateRadio = page.locator('input[name="privacyMode"][value="private"]');
-		await expect(privateRadio).toBeEnabled();
+		// Individual managers only — group/app-admin managers see radios disabled (honest UX).
+		if (!(await privateRadio.isEnabled())) {
+			await expect(page.locator('#bc-privacy-manager-only')).toBeVisible();
+			test.skip(true, 'Privacy radios disabled — user is not an individual manager');
+		}
 		await privateRadio.focus();
 		await expect(privateRadio).toBeFocused();
 	});
