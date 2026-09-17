@@ -34,6 +34,17 @@ $enKeysSorted = $enKeys;
 sort($enKeysSorted);
 $ok = true;
 
+// Catch PHP-escape leaks into msgids (e.g. Copy last month\'s …) — those never
+// match $l->t('…\'s…') and become silent orphan extras.
+foreach ($localeFiles as $lang) {
+	foreach (array_keys($catalogs[$lang]['translations'] ?? []) as $key) {
+		if (str_contains($key, "\\'")) {
+			$ok = false;
+			fwrite(STDERR, "Mangled msgid in {$lang}.json (literal backslash-apostrophe): {$key}\n");
+		}
+	}
+}
+
 foreach (array_diff($localeFiles, ['en']) as $lang) {
 	$langKeys = array_keys($catalogs[$lang]['translations'] ?? []);
 	$missing = array_values(array_diff($enKeysSorted, $langKeys));

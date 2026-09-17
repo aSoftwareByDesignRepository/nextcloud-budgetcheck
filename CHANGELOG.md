@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Attachment View/Download 404 with doubled `/index.php/` (#20):** on installs without pretty URLs, `linkToRoute` already returns `/index.php/apps/budgetcheck/...`. The gallery was calling `OC.generateUrl` again and producing `/index.php/index.php/...`. Delete was unaffected (relative API paths). Companion app uses the mobile download API and was not affected.
+- **l10n parity:** dropped orphan msgids with a literal `\'` (PHP-escape leak of “Copy last month's budget…”) from fr/nl/it/pl/pt_BR, reordered catalogs to match `en.json`, and hardened `check-l10n-parity.php` + `sync-l10n-keys-from-en.php` so this class of drift fails CI and is one command to repair.
 
 ## 1.4.0 - 2026-09-10
 
