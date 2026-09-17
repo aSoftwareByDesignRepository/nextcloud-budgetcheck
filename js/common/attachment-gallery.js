@@ -51,11 +51,31 @@
 		return ((steps % 4) + 4) % 4;
 	}
 
+	/**
+	 * Resolve attachment preview/download URLs for media requests and img.src.
+	 *
+	 * Server hydrate() returns IURLGenerator::linkToRoute() paths. On installs
+	 * without pretty URLs those already include `/index.php/` (and possibly a
+	 * subdirectory webroot). Calling OC.generateUrl again would duplicate
+	 * `/index.php/` → 404 (GitHub #20).
+	 *
+	 * - blob: / absolute http(s) / protocol-relative → unchanged
+	 * - already webroot-/index.php-prefixed app paths → unchanged
+	 * - bare `/apps/budgetcheck/...` → OC.generateUrl once (query preserved)
+	 */
 	function resolveMediaUrl(url) {
-		if (!url || url.startsWith('blob:') || /^https?:\/\//i.test(url)) {
+		if (!url || url.startsWith('blob:') || /^https?:\/\//i.test(url) || url.startsWith('//')) {
 			return url || '';
 		}
 		const path = url.startsWith('/') ? url : '/' + url;
+		const appMarker = '/apps/budgetcheck/';
+
+		// linkToRoute (or absolute same-origin stripped to path) already carries
+		// webroot and/or /index.php — do not prefix again.
+		if (path.includes(appMarker) && !path.startsWith(appMarker)) {
+			return path;
+		}
+
 		if (typeof OC !== 'undefined' && typeof OC.generateUrl === 'function') {
 			const q = path.indexOf('?');
 			if (q >= 0) {
