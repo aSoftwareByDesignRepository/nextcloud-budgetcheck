@@ -229,27 +229,6 @@ class TransactionAttachmentService
 			throw new AccessDeniedException();
 		}
 
-		$existingMime = (string)$row['mime_type'];
-		if (!str_starts_with($existingMime, 'image/')) {
-			throw new \InvalidArgumentException('Only image attachments can be edited.');
-		}
-
-		if (!isset($file['error']) || (int)$file['error'] !== UPLOAD_ERR_OK) {
-			throw new \InvalidArgumentException('File upload failed. Please try again.');
-		}
-
-		$validation = $this->validateUploadedFile($file, true);
-		if (($validation['success'] ?? false) !== true) {
-			throw new \InvalidArgumentException((string)($validation['message'] ?? 'Invalid file.'));
-		}
-
-		$mimeType = (string)$validation['mimeType'];
-		$newSize = (int)($file['size'] ?? 0);
-		$tmpPath = (string)($file['tmp_name'] ?? '');
-		if (!is_uploaded_file($tmpPath)) {
-			throw new \InvalidArgumentException('Invalid upload source.');
-		}
-
 		$transactionId = (int)$row['transaction_id'];
 		$storedName = (string)$row['stored_name'];
 		$oldSize = (int)$row['file_size'];
@@ -257,10 +236,35 @@ class TransactionAttachmentService
 
 		$this->db->beginTransaction();
 		try {
+			// Authorization before any content validation: the response must
+			// not leak whether the attachment exists or what file class it
+			// holds (delete/upload resolve authz first — keep parity).
 			$transaction = $this->resolveWritableTransaction($transactionId, $userId);
 			$workspaceId = (int)$transaction['workspace_id'];
 			$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_CONTRIBUTOR);
 			$this->lockTransactionRow($transactionId);
+
+			$existingMime = (string)$row['mime_type'];
+			if (!str_starts_with($existingMime, 'image/')) {
+				throw new \InvalidArgumentException('Only image attachments can be edited.');
+			}
+
+			if (!isset($file['error']) || (int)$file['error'] !== UPLOAD_ERR_OK) {
+				throw new \InvalidArgumentException('File upload failed. Please try again.');
+			}
+
+			$validation = $this->validateUploadedFile($file, true);
+			if (($validation['success'] ?? false) !== true) {
+				throw new \InvalidArgumentException((string)($validation['message'] ?? 'Invalid file.'));
+			}
+
+			$mimeType = (string)$validation['mimeType'];
+			$newSize = (int)($file['size'] ?? 0);
+			$tmpPath = (string)($file['tmp_name'] ?? '');
+			if (!is_uploaded_file($tmpPath)) {
+				throw new \InvalidArgumentException('Invalid upload source.');
+			}
+
 
 			$existing = $this->loadRowsForTransaction($transactionId);
 			$totalSize = $newSize;

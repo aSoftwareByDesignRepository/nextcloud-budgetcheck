@@ -1316,7 +1316,9 @@ OC.L10N.register(
 	"{count} members" : "{count} medlemmer",
 	"Menu" : "Meny",
 	"Open navigation menu" : "Åpne navigasjonsmeny",
-	"Close navigation menu" : "Lukk navigasjonsmeny"
+	"Close navigation menu" : "Lukk navigasjonsmeny",
+	"The server could not complete the request. Please try again." : "Serveren kunne ikke fullføre forespørselen. Prøv igjen.",
+	"The action could not be completed. Please try again." : "Handlingen kunne ikke fullføres. Prøv igjen."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

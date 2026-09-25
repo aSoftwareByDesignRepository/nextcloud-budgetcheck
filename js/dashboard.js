@@ -320,7 +320,10 @@
 			if (seq !== dashLoadSeq) return;
 			Msg.handleApiError(err);
 			if (C) {
-				grid.replaceChildren(C.createElement('p', { class: 'bc-loading', text: t('budgetcheck', 'Could not load the summary.') }));
+				grid.replaceChildren(loadErrorCallout(
+					t('budgetcheck', 'Could not load the summary.'),
+					() => loadAndRender(yearMonth)
+				));
 			}
 			if (isHousehold) {
 				renderHouseholdMonthLedger(null, yearMonth || Dates.currentYearMonth());
@@ -346,6 +349,31 @@
 		}
 	}
 
+	/*
+	 * Honest load-failure block: plain message + next-step hint + a real Retry
+	 * action that re-invokes the loader. Never leave a bare "could not load"
+	 * line as a dead end.
+	 */
+	function loadErrorCallout(message, retry) {
+		const retryBtn = C.createElement('button', {
+			type: 'button',
+			class: 'button',
+			text: t('budgetcheck', 'Retry'),
+			on: { click: () => retry() },
+		});
+		return C.createElement('div', {
+			class: 'bc-callout bc-callout--warning bc-load-error',
+			attrs: { role: 'alert' },
+		}, [
+			C.createElement('p', { class: 'bc-load-error__title', text: message }),
+			C.createElement('p', {
+				class: 'bc-load-error__hint',
+				text: t('budgetcheck', 'Check your connection and try again. The most recent attempt did not complete.'),
+			}),
+			C.createElement('div', { class: 'bc-load-error__actions' }, [retryBtn]),
+		]);
+	}
+
 	function setHouseholdLedgerBusy(busy) {
 		const activityGrid = document.querySelector('[data-bc-dash-activity-grid]');
 		const tbody = document.querySelector('[data-bc-dash-ledger-rows]');
@@ -360,9 +388,21 @@
 		if (!activityGrid || !tbody) return;
 		setHouseholdLedgerBusy(false);
 		if (!summary) {
-			activityGrid.replaceChildren(C.createElement('p', { class: 'bc-loading', text: t('budgetcheck', 'Could not load the summary.') }));
+			activityGrid.replaceChildren(loadErrorCallout(
+				t('budgetcheck', 'Could not load the summary.'),
+				() => loadAndRender(yearMonth)
+			));
+			const retryBtn = C.createElement('button', {
+				type: 'button',
+				class: 'button',
+				text: t('budgetcheck', 'Retry'),
+				on: { click: () => loadAndRender(yearMonth) },
+			});
 			tbody.replaceChildren(C.createElement('tr', null, [
-				C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-loading', text: t('budgetcheck', 'Could not load transactions.') }),
+				C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-load-error-cell' }, [
+					C.createElement('span', { text: t('budgetcheck', 'Could not load transactions.') + ' ' }),
+					retryBtn,
+				]),
 			]));
 			if (footer) footer.hidden = true;
 			return;
@@ -463,7 +503,10 @@
 			items.forEach((tx) => list.appendChild(renderTxListItem(tx)));
 		} catch (err) {
 			Msg.handleApiError(err);
-			list.replaceChildren(C.createElement('li', { class: 'bc-loading', text: t('budgetcheck', 'Could not load transactions.') }));
+			list.replaceChildren(C.createElement('li', { class: 'bc-tx-list__item' }, [loadErrorCallout(
+				t('budgetcheck', 'Could not load transactions.'),
+				() => loadRecent()
+			)]));
 		} finally {
 			list.setAttribute('aria-busy', 'false');
 		}

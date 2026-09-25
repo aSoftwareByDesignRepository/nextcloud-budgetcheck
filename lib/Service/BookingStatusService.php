@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Exception\WorkspaceTypeMismatchException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 
@@ -207,7 +208,13 @@ class BookingStatusService
 	private function ensureProjectWorkspace(array $workspace): void
 	{
 		if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_PROJECT) {
-			throw new \InvalidArgumentException('Booking statuses are available only for project workspaces.');
+			// Match the documented §12.3 convention (422 WORKSPACE_TYPE_MISMATCH)
+			// used by summaries, snapshots, budgets and exports.
+			throw new WorkspaceTypeMismatchException(
+				'project',
+				(string)($workspace['type'] ?? ''),
+				'booking_statuses'
+			);
 		}
 	}
 

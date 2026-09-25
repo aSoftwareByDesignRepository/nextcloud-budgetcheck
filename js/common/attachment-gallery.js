@@ -471,6 +471,14 @@
 		const elSave = toolButton(btnSave);
 		const elDownload = toolButton(btnDownload);
 		const elDelete = toolButton(btnDelete);
+		/*
+		 * iconButton() returns the .bc-attach-gallery__tool-wrap span (button +
+		 * tooltip), never the button itself — disabled/focus/click must go
+		 * through toolButton() or they silently no-op on a non-focusable span.
+		 */
+		const elPrev = toolButton(prevBtn);
+		const elNext = toolButton(nextBtn);
+		const elClose = toolButton(closeBtn);
 		setWrapHidden(btnSave, true);
 
 		function setWrapHidden(wrap, hidden) {
@@ -521,8 +529,8 @@
 			}
 			if (elDownload) elDownload.disabled = busy || !item;
 			if (elDelete) elDelete.disabled = busy || readOnly || !item;
-			prevBtn.disabled = busy || index <= 0;
-			nextBtn.disabled = busy || index >= items.length - 1;
+			if (elPrev) elPrev.disabled = busy || index <= 0;
+			if (elNext) elNext.disabled = busy || index >= items.length - 1;
 		}
 
 		function currentItem() {
@@ -1024,9 +1032,9 @@
 		elSave.addEventListener('click', () => saveImageEdits());
 		elDownload.addEventListener('click', () => downloadCurrent());
 		elDelete.addEventListener('click', () => deleteCurrent());
-		prevBtn.addEventListener('click', () => goTo(index - 1));
-		nextBtn.addEventListener('click', () => goTo(index + 1));
-		closeBtn.addEventListener('click', () => instance.close(false));
+		if (elPrev) elPrev.addEventListener('click', () => goTo(index - 1));
+		if (elNext) elNext.addEventListener('click', () => goTo(index + 1));
+		if (elClose) elClose.addEventListener('click', () => instance.close(false));
 
 		imageViewport.addEventListener('wheel', (event) => {
 			if (itemKind(currentItem()) !== 'image' || imageState.cropMode) return;
@@ -1168,6 +1176,21 @@
 			}
 		};
 		dialog.addEventListener('keydown', onKey);
+		/*
+		 * Escape must work even when focus is not inside the dialog (e.g. a
+		 * host element stole focus, or focus was never established). Capture
+		 * phase on document: exit crop mode first, otherwise close the gallery.
+		 */
+		const onEscCapture = (event) => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (exitCropMode()) {
+				return;
+			}
+			instance.close(false);
+		};
+		document.addEventListener('keydown', onEscCapture, true);
 
 		overlay.addEventListener('click', (event) => {
 			if (event.target === overlay) instance.close(false);
@@ -1201,6 +1224,7 @@
 					viewportResizeObs = null;
 				}
 				dialog.removeEventListener('keydown', onKey);
+				document.removeEventListener('keydown', onEscCapture, true);
 				pdfFrame.removeAttribute('src');
 				imgEl.removeAttribute('src');
 				blobUrls.forEach((url) => revokeBlobUrl(url));
@@ -1218,7 +1242,8 @@
 		openInstance = instance;
 
 		renderCurrent();
-		closeBtn.focus();
+		// Focus the inner <button> — iconButton() returns the tooltip wrap span.
+		(elClose || dialog).focus();
 		return instance;
 	}
 

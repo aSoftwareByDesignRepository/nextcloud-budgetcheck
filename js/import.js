@@ -569,11 +569,16 @@
 				validatedRows = [];
 				lockedImportDefaults = null;
 				lockedImportOptions = null;
-				statusEl.textContent = err.message || t('budgetcheck', 'Validation failed.');
+				// HTTP errors carry raw server text — only locally-thrown
+				// (already localized) messages may reach the status line.
+				const statusText = err.status
+					? t('budgetcheck', 'Validation failed.')
+					: (err.message || t('budgetcheck', 'Validation failed.'));
+				statusEl.textContent = statusText;
 				if (err.status) {
 					Msg.handleApiError(err);
 				} else {
-					Msg.announce(err.message || t('budgetcheck', 'Validation failed.'), 'error');
+					Msg.announce(statusText, 'error');
 				}
 			} finally {
 				if (!commitInFlight) {

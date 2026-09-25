@@ -1316,7 +1316,9 @@ OC.L10N.register(
 	"{count} members" : "{count} członków",
 	"Menu" : "Menu",
 	"Open navigation menu" : "Otwórz menu nawigacji",
-	"Close navigation menu" : "Zamknij menu nawigacji"
+	"Close navigation menu" : "Zamknij menu nawigacji",
+	"The server could not complete the request. Please try again." : "Serwer nie mógł zakończyć żądania. Spróbuj ponownie.",
+	"The action could not be completed. Please try again." : "Nie udało się zakończyć działania. Spróbuj ponownie."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

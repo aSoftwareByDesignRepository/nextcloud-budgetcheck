@@ -1316,7 +1316,9 @@ OC.L10N.register(
 	"{count} members" : "{count} medlemmar",
 	"Menu" : "Meny",
 	"Open navigation menu" : "Öppna navigeringsmeny",
-	"Close navigation menu" : "Stäng navigeringsmeny"
+	"Close navigation menu" : "Stäng navigeringsmeny",
+	"The server could not complete the request. Please try again." : "Servern kunde inte slutföra begäran. Försök igen.",
+	"The action could not be completed. Please try again." : "Åtgärden kunde inte slutföras. Försök igen."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

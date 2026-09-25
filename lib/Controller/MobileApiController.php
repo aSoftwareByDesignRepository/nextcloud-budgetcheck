@@ -230,6 +230,7 @@ class MobileApiController extends Controller
 		});
 	}
 
+	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function home(int $workspaceId): JSONResponse
 	{
@@ -586,15 +587,18 @@ class MobileApiController extends Controller
 				throw new \InvalidArgumentException('Idempotency-Key header is required for create.');
 			}
 			$requestHash = MobileIdempotencyService::hashPayload($payload);
+			// Authorization before the idempotency claim/replay: a revoked
+			// member must never replay a stored response body (post-revocation
+			// read of transaction data).
+			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 			$replay = $this->idempotency->claimOrReplay($userId, $workspaceId, $idemKey, $requestHash);
 			if ($replay !== null) {
 				return $replay['body'];
 			}
 
-			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
-			$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
-			$bookingStatus = $this->resolveBookingStatus($payload['bookingStatusId'] ?? null, $workspaceId, $workspace);
 			try {
+				$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
+				$bookingStatus = $this->resolveBookingStatus($payload['bookingStatusId'] ?? null, $workspaceId, $workspace);
 				$tx = $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus);
 			} catch (\Throwable $e) {
 				$this->idempotency->releaseClaim($userId, $workspaceId, $idemKey);

@@ -664,7 +664,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertSame('VALIDATION', $data['error']['code']);
 	}
 
-	public function testBasicAuthCreatePassesChannelGateThenHitsWorkspace(): void
+	public function testBasicAuthCreateWorkspaceGateRunsBeforeIdempotencyClaim(): void
 	{
 		$this->access->method('currentUserId')->willReturn('alice');
 		$this->request->method('getHeader')->willReturnCallback(
@@ -688,13 +688,15 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		]);
 
 		$workspaces = $this->createMock(WorkspaceService::class);
-		// Rebuild controller with workspace mock that throws AccessDenied so we stop after channel
+		// Workspace/authz gate throws AccessDenied BEFORE the idempotency claim —
+		// a revoked member must never reach claimOrReplay (replay would return
+		// a stored transaction body post-revocation).
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects(self::once())->method('assertAllowed');
 		$idem = $this->createMock(MobileIdempotencyService::class);
-		$idem->expects(self::once())->method('claimOrReplay')->willReturn(null);
+		$idem->expects(self::never())->method('claimOrReplay');
 
 		$controller = new MobileApiController(
 			$this->request,

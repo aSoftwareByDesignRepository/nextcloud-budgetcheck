@@ -526,7 +526,11 @@
 				setStatus('', false);
 			} catch (err) {
 				if (seq !== loadSeq || destroyed) return;
-				setStatus(err.message || t('budgetcheck', 'Could not load attachments.'), true);
+				// HTTP errors carry raw server text — only locally-thrown
+				// (already localized) messages may reach the status line.
+				setStatus(err.status
+					? t('budgetcheck', 'Could not load attachments.')
+					: (err.message || t('budgetcheck', 'Could not load attachments.')), true);
 				state.items = [];
 			} finally {
 				if (seq !== loadSeq || destroyed) return;

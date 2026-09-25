@@ -79,7 +79,21 @@
 			announce(message, 'warning');
 			return;
 		}
-		announce(t('budgetcheck', message), 'error');
+		// NC-core envelopes (e.g. 412 "CSRF check failed" after session loss)
+		// are technical English — surface the session-expired copy instead.
+		if (status === 412) {
+			announce(t('budgetcheck', 'Your session expired. Please reload and sign in again.'), 'error');
+			return;
+		}
+		if (status >= 500) {
+			console.warn('BudgetCheck server error:', err);
+			announce(t('budgetcheck', 'The server could not complete the request. Please try again.'), 'error');
+			return;
+		}
+		// Unmapped 4xx/unknown statuses: never echo raw server text into the
+		// assertive live region — localized generic copy, details in console.
+		console.warn('BudgetCheck unhandled API error:', err);
+		announce(t('budgetcheck', 'The action could not be completed. Please try again.'), 'error');
 	}
 
 	if (!window.BudgetCheck || typeof window.BudgetCheck.define !== 'function') {

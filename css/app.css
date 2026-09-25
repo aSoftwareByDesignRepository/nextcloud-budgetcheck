@@ -367,7 +367,8 @@
 .bc-catalog-picker__clear {
 	flex: 0 0 auto;
 	align-self: stretch;
-	min-width: 2.5rem;
+	/* px, not rem: NC root font is 15px → 2.5rem collapses to 37.5px < 44px */
+	min-width: 44px;
 	padding-inline: var(--bc-space-2);
 	font-size: 1.25rem;
 	line-height: 1;
@@ -1345,6 +1346,108 @@
 	min-height: 44px;
 }
 
+/*
+ * Nextcloud cascade guards — do not weaken.
+ * NC35 core styles native buttons/inputs at ~(0,1,1) specificity and
+ * --default-clickable-area is only 34px, so bare .bc-* class rules (0,1,0)
+ * lose and interactive controls silently shrink below the 44px touch floor.
+ * Body-mounted overlays (.bc-modal, .bc-attach-gallery, .bc-toasts) live
+ * OUTSIDE .bc-app, so their guards must not depend on the app scope.
+ */
+
+/* Dialog buttons (modal mounts on document.body, outside .bc-app) */
+.bc-modal button.button,
+.bc-modal a.button,
+.bc-modal input[type="submit"].button,
+.bc-modal .bc-form-actions .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--bc-space-2);
+	box-sizing: border-box;
+	min-height: 44px;
+	line-height: 1.25;
+	text-align: center;
+	white-space: normal;
+}
+.bc-modal button.bc-modal__close {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Toasts mount on document.body as well */
+.bc-toasts button.bc-toast__close {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Icon/compact buttons whose declared 44px was defeated by core */
+.bc-app button.bc-chip__remove,
+.bc-app button.bc-workspace-card__favorite,
+.bc-app button.bc-hint-dismiss {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Catalog picker clear (×): was 2.5rem = 37.5px */
+.bc-app button.bc-catalog-picker__clear,
+.bc-modal button.bc-catalog-picker__clear {
+	min-width: 44px;
+}
+
+/* Attachment gallery (body-mounted): 2.75rem collapsed to 41.25px at NC's 15px root */
+.bc-attach-gallery button.bc-attach-gallery__close,
+.bc-attach-gallery button.bc-attach-gallery__nav,
+.bc-attach-gallery button.bc-attach-gallery__tool {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/*
+ * Destructive actions: SOLID --color-element-error fill, white label.
+ * --color-error is a light tint (#FFE7E7) and NC35 core applies it (and
+ * primary blue) to buttons with !important — without these guards destructive
+ * confirms rendered as neutral gray, tint, or primary blue
+ * (indistinguishable from Cancel/Save). !important is required to win.
+ */
+#app-content.bc-app .button.danger,
+#app-content.bc-app button.danger,
+.bc-app .button.danger,
+.bc-modal .button.danger,
+.bc-modal button.danger,
+#app-navigation.bc-nav .button.danger,
+.bc-admin-settings .button.danger,
+.bc-danger-zone .button.danger {
+	color: var(--color-primary-element-text, #fff) !important;
+	background: var(--color-element-error, #ba1b1b) !important;
+	border-color: var(--color-element-error, #ba1b1b) !important;
+}
+#app-content.bc-app .button.danger:hover:not(:disabled),
+#app-content.bc-app button.danger:hover:not(:disabled),
+.bc-app .button.danger:hover:not(:disabled),
+.bc-modal .button.danger:hover:not(:disabled),
+.bc-modal button.danger:hover:not(:disabled),
+#app-navigation.bc-nav .button.danger:hover:not(:disabled),
+.bc-admin-settings .button.danger:hover:not(:disabled),
+.bc-danger-zone .button.danger:hover:not(:disabled),
+#app-content.bc-app .button.danger:focus-visible:not(:disabled),
+.bc-app .button.danger:focus-visible:not(:disabled),
+.bc-modal .button.danger:focus-visible:not(:disabled),
+.bc-modal button.danger:focus-visible:not(:disabled) {
+	/* Restate the fill: core's :hover tint is !important too. */
+	background: var(--color-element-error, #ba1b1b) !important;
+	border-color: var(--color-element-error, #ba1b1b) !important;
+	filter: brightness(0.92);
+}
+#app-content.bc-app .button.danger:disabled,
+.bc-app .button.danger:disabled,
+.bc-modal .button.danger:disabled,
+.bc-modal button.danger:disabled,
+.bc-danger-zone .button.danger:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
 /* Tables */
 .bc-table-scroll {
 	overflow-x: auto;
@@ -1931,6 +2034,7 @@
 	word-break: break-word;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
+	line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
 }
@@ -2153,8 +2257,9 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 2.75rem;
-	min-height: 2.75rem;
+	/* px, not rem: NC root font is 15px → 2.75rem collapses to 41.25px < 44px */
+	min-width: 44px;
+	min-height: 44px;
 	padding: 0;
 	border: 1px solid var(--bc-border);
 	border-radius: var(--bc-radius-sm, 6px);
@@ -2284,8 +2389,9 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 2.75rem;
-	min-height: 2.75rem;
+	/* px, not rem: NC root font is 15px → 2.75rem collapses to 41.25px < 44px */
+	min-width: 44px;
+	min-height: 44px;
 	padding: 0;
 	border: 1px solid var(--bc-border);
 	border-radius: 999px;
@@ -2508,8 +2614,9 @@
 		display: none;
 	}
 	.bc-attach-gallery__tool {
-		min-width: 2.75rem;
-		min-height: 2.75rem;
+		/* px, not rem: NC root font is 15px → 2.75rem collapses to 41.25px < 44px */
+		min-width: 44px;
+		min-height: 44px;
 		padding: 0.35rem;
 	}
 }
@@ -3315,6 +3422,29 @@ body.bc-modal-open {
 }
 .bc-modal__form--budget-overrides .bc-table-scroll {
 	margin-bottom: var(--bc-space-4);
+}
+
+/* Honest load-failure blocks: message + next step + retry (see dashboard.js) */
+.bc-load-error {
+	grid-column: 1 / -1;
+}
+.bc-load-error__title {
+	font-weight: 600;
+	margin: 0;
+}
+.bc-load-error__hint {
+	color: var(--bc-muted);
+	margin: var(--bc-space-1) 0 0;
+	font-size: var(--bc-fs-sm);
+}
+.bc-load-error__actions {
+	margin-top: var(--bc-space-3);
+}
+.bc-load-error-cell {
+	padding: var(--bc-space-3) var(--bc-space-4);
+}
+.bc-load-error-cell .button {
+	margin-inline-start: var(--bc-space-2);
 }
 
 /* Toasts */
@@ -4579,9 +4709,11 @@ textarea {
 	margin-bottom: var(--bc-space-4);
 }
 .bc-danger-zone .button.danger {
-	color: var(--color-primary-element-text, #fff);
-	background: var(--color-error, #e9322d);
-	border-color: var(--color-error, #e9322d);
+	color: var(--color-primary-element-text, #fff) !important;
+	/* Solid element fill — --color-error is only a light tint (#FFE7E7)
+	   and core applies it with !important. */
+	background: var(--color-element-error, #ba1b1b) !important;
+	border-color: var(--color-element-error, #ba1b1b) !important;
 }
 .bc-danger-zone .button.danger:hover:not(:disabled),
 .bc-danger-zone .button.danger:focus-visible:not(:disabled) {
