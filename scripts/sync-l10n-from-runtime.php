@@ -37,6 +37,7 @@ $locales = array (
   8 => 'sv',
   9 => 'nb',
   10 => 'pt_BR',
+  11 => 'zh_CN',
 );
 $enPath = $appRoot . '/l10n/en.json';
 $en = json_decode((string)file_get_contents($enPath), true, 512, JSON_THROW_ON_ERROR);

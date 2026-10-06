@@ -145,7 +145,7 @@ final class GetTheAppPageContractTest extends TestCase
 	public function testGetTheAppCopyIsTranslatedInFooterLocales(): void
 	{
 		$allowIdentity = ['BudgetCheck Mobile'];
-		$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR'];
+		$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR', 'zh_CN'];
 		$keys = $this->getTheAppSourceKeys();
 		self::assertNotEmpty($keys);
 		foreach ($locales as $locale) {
