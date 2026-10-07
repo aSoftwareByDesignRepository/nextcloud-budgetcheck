@@ -56,6 +56,10 @@ $assert(!str_contains($ws, 'The new project date window would orphan'), 'ws_orph
 // became 2026-03-02 before checkdate).
 $assert(str_contains($tx, 'checkdate((int)$m[2], (int)$m[3], (int)$m[1])'), 'tx_parse_checkdate');
 $assert(str_contains($ws, 'checkdate((int)$m[2], (int)$m[3], (int)$m[1])'), 'ws_parse_checkdate');
+// Non-project extractProjectFields must return all six slots — the caller
+// destructures six; a 4-element return logs Undefined array key warnings on
+// every household/private workspace creation.
+$assert(str_contains($ws, 'return [null, null, null, null, null, null];'), 'ws_nonproject_returns_six_slots');
 
 // Summary + export: billing-extension bookings must be counted/printed.
 $assert(str_contains($summary, "\$workspace['billingStartDate'] ?? \$workspace['projectStartDate']"), 'summary_effective_start');

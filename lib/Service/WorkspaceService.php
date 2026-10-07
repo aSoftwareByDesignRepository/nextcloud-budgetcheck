@@ -1265,7 +1265,7 @@ class WorkspaceService
 	private function extractProjectFields(array $payload, string $type): array
 	{
 		if ($type !== self::TYPE_PROJECT) {
-			return [null, null, null, null];
+			return [null, null, null, null, null, null];
 		}
 		$startRaw = trim((string)($payload['projectStartDate'] ?? ''));
 		$endRaw = trim((string)($payload['projectEndDate'] ?? ''));
