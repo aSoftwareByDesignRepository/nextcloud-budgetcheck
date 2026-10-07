@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **Export all transactions to CSV and ODS (issue #21):** the transactions page now offers *Export CSV* and *Export ODS* buttons next to the filter bar. The export contains every booking detail of the transactions your filters currently match — date, title, direction, amount and currency, category, booking status (project workspaces), notes, flags, external reference, full tax fields (net, VAT rate, VAT, gross, entry basis), billable/billing state (project workspaces), recurring link, creator/updater, timestamps, and the transaction id. Set the range filter to *All time* for the complete ledger.
+- The CSV is UTF-8 with BOM, comma-delimited, fully quoted, and safe against spreadsheet formula injection; its leading columns match the CSV importer so an export can be re-imported.
+- The ODS file is a spec-conformant OpenDocument Spreadsheet package with typed date, number, and boolean cells and a bold header row — it opens directly in LibreOffice and Excel.
+- Exports are rate-limited, exclude deleted transactions, require workspace membership, and are capped at 10 000 rows per file with a clear message when the set is larger.
+
 ## 1.4.5 - 2026-10-07
 
 ### Fixed

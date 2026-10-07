@@ -91,6 +91,42 @@ class TransactionService
 		];
 	}
 
+	/**
+	 * Hydrated rows for the file export. Shares the exact filter pipeline with
+	 * listForWorkspace so "export what you see" can never diverge from the
+	 * ledger — but forces deleted rows out (a file export has no undelete view),
+	 * ignores client pagination, and enforces a hard row cap so a hostile or
+	 * pathological workspace cannot OOM the request.
+	 *
+	 * @param array<string,mixed> $filters same keys as the list endpoint
+	 * @return array{items: list<array<string,mixed>>, total: int}
+	 *   items is capped at $maxRows; total is the uncapped match count so the
+	 *   caller can refuse with an actionable message instead of truncating.
+	 */
+	public function exportRows(int $workspaceId, string $userId, array $filters, array $workspace, int $maxRows): array
+	{
+		$this->access->ensureMembership($workspaceId, $userId);
+		unset($filters['includeDeleted'], $filters['limit'], $filters['offset']);
+		$total = $this->countForWorkspace($workspaceId, $filters, $workspace);
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_transactions')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
+		$qb->orderBy('booking_date', 'ASC')
+			->addOrderBy('id', 'ASC')
+			// Fetch one row beyond the cap so the caller detects "would have
+			// truncated" atomically instead of trusting the earlier count.
+			->setMaxResults(max(1, $maxRows) + 1);
+		$result = $qb->executeQuery();
+		$rows = [];
+		while ($row = $result->fetch()) {
+			$rows[] = $this->hydrate($row, $workspace['currencyCode']);
+		}
+		$result->closeCursor();
+		return ['items' => $rows, 'total' => $total];
+	}
+
 	private function countForWorkspace(int $workspaceId, array $filters, array $workspace): int
 	{
 		$qb = $this->db->getQueryBuilder();
@@ -1076,6 +1112,8 @@ class TransactionService
 				? (int)$row['budget_id']
 				: null,
 			'isPlanned' => (bool)($row['is_planned'] ?? false),
+			'isBillable' => (bool)($row['is_billable'] ?? false),
+			'billingStatus' => isset($row['billing_status']) ? (string)$row['billing_status'] : null,
 			'version' => (int)$row['version'],
 			'createdBy' => (string)$row['created_by'],
 			'updatedBy' => (string)$row['updated_by'],

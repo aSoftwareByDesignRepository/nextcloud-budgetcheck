@@ -1340,7 +1340,10 @@
 		"bookingDate must lie inside the billing period.": "De boekingsdatum moet binnen de afrekenperiode liggen.",
 		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Kies een datum binnen de afrekenperiode of pas de afrekenperiode aan in de werkruimte-instellingen.",
 		"This calendar month does not overlap the billing period.": "Deze kalendermaand overlapt niet met de afrekenperiode.",
-		"Pick a month that intersects the billing period.": "Kies een maand die de afrekenperiode overlapt."
+		"Pick a month that intersects the billing period.": "Kies een maand die de afrekenperiode overlapt.",
+		"Export CSV": "CSV exporteren",
+		"Export ODS": "ODS exporteren",
+		"Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger.": "Downloadt alle boekingsdetails van de transacties die je filters momenteel treffen — zet Bereik op „Altijd” voor het complete journaal."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

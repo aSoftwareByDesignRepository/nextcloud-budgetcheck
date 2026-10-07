@@ -12,6 +12,7 @@ use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\HouseholdYearlyExportService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\TransactionExportService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\StreamResponse;
@@ -47,7 +48,7 @@ final class EntrypointInvokeCoverageTest extends TestCase
 			'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 		]);
 
-		$controller = new ExportController('budgetcheck', $request, $access, $export, $rate);
+		$controller = new ExportController('budgetcheck', $request, $access, $export, $this->createMock(TransactionExportService::class), $rate);
 		$res = $controller->householdYearly();
 		self::assertInstanceOf(DataDownloadResponse::class, $res);
 		self::assertSame(Http::STATUS_OK, $res->getStatus());
@@ -69,7 +70,7 @@ final class EntrypointInvokeCoverageTest extends TestCase
 			'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 		]);
 
-		$controller = new ExportController('budgetcheck', $request, $access, $export, $rate);
+		$controller = new ExportController('budgetcheck', $request, $access, $export, $this->createMock(TransactionExportService::class), $rate);
 		$res = $controller->projectPeriod();
 		self::assertInstanceOf(DataDownloadResponse::class, $res);
 	}
@@ -84,7 +85,7 @@ final class EntrypointInvokeCoverageTest extends TestCase
 		$export = $this->createMock(HouseholdYearlyExportService::class);
 		$export->method('buildXlsx')->willThrowException(new \OCA\BudgetCheck\Exception\AccessDeniedException());
 
-		$controller = new ExportController('budgetcheck', $request, $access, $export, $rate);
+		$controller = new ExportController('budgetcheck', $request, $access, $export, $this->createMock(TransactionExportService::class), $rate);
 		$res = $controller->householdYearly();
 		self::assertSame(Http::STATUS_FORBIDDEN, $res->getStatus());
 	}

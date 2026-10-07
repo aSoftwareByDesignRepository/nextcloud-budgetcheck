@@ -39,6 +39,7 @@ use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\TransactionExportService;
 use OCA\BudgetCheck\Service\WarningEngine;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Service\WorkspaceDeletionService;
@@ -350,6 +351,15 @@ class Application extends App implements IBootstrap
 				$c->query(SummaryService::class),
 				$c->query(AccessControlService::class),
 				$c->query(\OCP\IDBConnection::class),
+			);
+		});
+
+		$context->registerService(TransactionExportService::class, function ($c): TransactionExportService {
+			return new TransactionExportService(
+				$c->query(WorkspaceService::class),
+				$c->query(TransactionService::class),
+				$c->query(CategoryService::class),
+				$c->query(BookingStatusService::class),
 			);
 		});
 

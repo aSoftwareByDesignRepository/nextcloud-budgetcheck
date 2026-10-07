@@ -352,6 +352,11 @@
 	color: var(--bc-muted);
 	line-height: var(--bc-line-base);
 }
+.bc-tx-export-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--bc-space-2);
+}
 /* Searchable timezone / currency catalog pickers */
 .bc-catalog-picker {
 	display: flex;

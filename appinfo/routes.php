@@ -28,6 +28,7 @@ return [
 			'requirements' => ['section' => 'access|admins|defaults|support']],
 		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
 		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
+['name' => 'export#transactions', 'url' => '/export/transactions', 'verb' => 'GET'],
 
 		// JSON workspace + member routes
 		['name' => 'api#listWorkspaces',     'url' => '/api/workspaces',                   'verb' => 'GET'],

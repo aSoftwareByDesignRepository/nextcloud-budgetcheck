@@ -1340,7 +1340,10 @@
 		"bookingDate must lie inside the billing period.": "Bokføringsdatoen må ligge innenfor avregningsperioden.",
 		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Velg en dato innenfor avregningsperioden, eller juster avregningsperioden i innstillingene for arbeidsområdet.",
 		"This calendar month does not overlap the billing period.": "Denne kalendermåneden overlapper ikke avregningsperioden.",
-		"Pick a month that intersects the billing period.": "Velg en måned som overlapper avregningsperioden."
+		"Pick a month that intersects the billing period.": "Velg en måned som overlapper avregningsperioden.",
+		"Export CSV": "Eksporter CSV",
+		"Export ODS": "Eksporter ODS",
+		"Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger.": "Laster ned alle bookedetaljer for transaksjonene filtrene dine treffer akkurat nå — sett Periode til «Hele perioden» for hele journalen."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

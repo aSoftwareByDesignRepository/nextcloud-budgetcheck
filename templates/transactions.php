@@ -69,6 +69,27 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 					<h2 id="bc-tx-filters-title"><?php p($l->t('Find transactions')); ?></h2>
 					<p class="bc-section__sub"><?php p($l->t('Narrow the ledger by date, category, or text. Filters update the totals and breakdowns above and below.')); ?></p>
 				</div>
+				<div class="bc-section__controls bc-section__controls--stack">
+					<div class="bc-tx-export-actions">
+						<button
+							type="button"
+							class="button"
+							data-bc-tx-export="csv"
+							aria-describedby="bc-tx-export-hint">
+							<?php p($l->t('Export CSV')); ?>
+						</button>
+						<button
+							type="button"
+							class="button"
+							data-bc-tx-export="ods"
+							aria-describedby="bc-tx-export-hint">
+							<?php p($l->t('Export ODS')); ?>
+						</button>
+					</div>
+					<p id="bc-tx-export-hint" class="bc-section__control-hint">
+						<?php p($l->t('Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger.')); ?>
+					</p>
+				</div>
 			</header>
 
 			<form

@@ -1341,7 +1341,10 @@ OC.L10N.register(
 	"bookingDate must lie inside the billing period." : "Data księgowania musi mieścić się w okresie rozliczeniowym.",
 	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Wybierz datę mieszczącą się w okresie rozliczeniowym lub dostosuj okres rozliczeniowy w ustawieniach obszaru roboczego.",
 	"This calendar month does not overlap the billing period." : "Ten miesiąc kalendarzowy nie pokrywa się z okresem rozliczeniowym.",
-	"Pick a month that intersects the billing period." : "Wybierz miesiąc pokrywający się z okresem rozliczeniowym."
+	"Pick a month that intersects the billing period." : "Wybierz miesiąc pokrywający się z okresem rozliczeniowym.",
+	"Export CSV" : "Eksportuj CSV",
+	"Export ODS" : "Eksportuj ODS",
+	"Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger." : "Pobiera wszystkie szczegóły księgowań pasujących do bieżących filtrów — ustaw Zakres na „Cały okres”, aby pobrać pełny dziennik."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

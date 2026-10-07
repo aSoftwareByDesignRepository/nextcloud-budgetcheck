@@ -17,6 +17,7 @@
         "mutate:billing-period": "php tests/Mutation/run-billing-period-mutations.php",
         "mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
         "mutate:epic": "php tests/Mutation/run-epic-gate-mutations.php",
+        "mutate:transactions-export": "php tests/Mutation/run-transactions-export-mutations.php",
         "mutate:upload-errors": "php tests/Mutation/run-upload-error-mutations.php",
         "test:mutation:mobile-links": "php tests/Mutation/run-mobile-app-links-mutations.php",
         "test:mutation:app-feedback": "php tests/Mutation/run-app-feedback-links-mutations.php",

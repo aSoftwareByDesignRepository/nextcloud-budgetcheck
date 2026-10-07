@@ -1341,7 +1341,10 @@ OC.L10N.register(
 	"bookingDate must lie inside the billing period." : "Bokföringsdatumet måste ligga inom avräkningsperioden.",
 	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Välj ett datum inom avräkningsperioden, eller justera avräkningsperioden i arbetsytans inställningar.",
 	"This calendar month does not overlap the billing period." : "Den här kalendermånaden överlappar inte avräkningsperioden.",
-	"Pick a month that intersects the billing period." : "Välj en månad som överlappar avräkningsperioden."
+	"Pick a month that intersects the billing period." : "Välj en månad som överlappar avräkningsperioden.",
+	"Export CSV" : "Exportera CSV",
+	"Export ODS" : "Exportera ODS",
+	"Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger." : "Laddar ner alla bokföringsdetaljer för transaktionerna som dina filter just nu träffar — sätt Intervall till »Hela perioden« för hela journalen."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

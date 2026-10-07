@@ -1340,7 +1340,10 @@
         "bookingDate must lie inside the billing period.": "bookingDate must lie inside the billing period.",
         "Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Pick a date inside the billing period, or adjust the billing period in workspace settings.",
         "This calendar month does not overlap the billing period.": "This calendar month does not overlap the billing period.",
-        "Pick a month that intersects the billing period.": "Pick a month that intersects the billing period."
+        "Pick a month that intersects the billing period.": "Pick a month that intersects the billing period.",
+        "Export CSV": "Export CSV",
+        "Export ODS": "Export ODS",
+        "Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger.": "Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -1340,7 +1340,10 @@
         "bookingDate must lie inside the billing period.": "Das Buchungsdatum muss innerhalb des Abrechnungszeitraums liegen.",
         "Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Wählen Sie ein Datum innerhalb des Abrechnungszeitraums oder passen Sie den Abrechnungszeitraum in den Arbeitsbereichseinstellungen an.",
         "This calendar month does not overlap the billing period.": "Dieser Kalendermonat überschneidet sich nicht mit dem Abrechnungszeitraum.",
-        "Pick a month that intersects the billing period.": "Wählen Sie einen Monat, der sich mit dem Abrechnungszeitraum überschneidet."
+        "Pick a month that intersects the billing period.": "Wählen Sie einen Monat, der sich mit dem Abrechnungszeitraum überschneidet.",
+        "Export CSV": "CSV exportieren",
+        "Export ODS": "ODS exportieren",
+        "Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger.": "Lädt alle Buchungsdetails für die Buchungen herunter, auf die Ihre Filter aktuell zutreffen — wählen Sie als Zeitraum „Gesamtlaufzeit“ für das vollständige Journal."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

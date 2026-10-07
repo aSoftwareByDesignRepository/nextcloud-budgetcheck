@@ -200,6 +200,7 @@
 		wireBreakdownTabs();
 		wireCreateButton();
 		wireClearAll();
+		wireExportButtons();
 		wirePopstate();
 		wireGlobalDismiss();
 		loadCategoriesIntoSelect();
@@ -364,6 +365,62 @@
 		} catch (_) {
 			/* very old browsers; ignore */
 		}
+	}
+
+	function wireExportButtons() {
+		const buttons = Array.from(document.querySelectorAll('[data-bc-tx-export]'));
+		if (!buttons.length) return;
+		buttons.forEach((btn) => {
+			btn.addEventListener('click', () => exportTransactions(btn));
+		});
+	}
+
+	function exportParams(format) {
+		const params = { workspaceId: Ws.workspace.id, format };
+		const f = state.filters;
+		if (f.from) params.from = f.from;
+		if (f.to) params.to = f.to;
+		if (f.categoryId) params.categoryId = f.categoryId;
+		if (f.groupKey) params.groupKey = f.groupKey;
+		if (f.statusId) params.statusId = f.statusId;
+		if (f.q) params.q = f.q;
+		if (f.isSpecial) params.isSpecial = '1';
+		if (f.uncategorized) params.uncategorized = '1';
+		return params;
+	}
+
+	async function exportTransactions(button) {
+		const format = button.getAttribute('data-bc-tx-export');
+		const buttons = Array.from(document.querySelectorAll('[data-bc-tx-export]'));
+		buttons.forEach((b) => { b.disabled = true; b.setAttribute('aria-busy', 'true'); });
+		try {
+			const response = await Api.download('/apps/budgetcheck/export/transactions', exportParams(format));
+			const blob = await response.blob();
+			const name = extractFilename(response) || 'budgetcheck_transactions.' + format;
+			const objectUrl = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = objectUrl;
+			a.download = name;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			window.URL.revokeObjectURL(objectUrl);
+			Msg.announce(t('budgetcheck', 'Export started.'), 'success');
+		} catch (err) {
+			Msg.handleApiError(err);
+		} finally {
+			buttons.forEach((b) => { b.disabled = false; b.removeAttribute('aria-busy'); });
+		}
+	}
+
+	function extractFilename(response) {
+		const cd = response.headers.get('content-disposition') || '';
+		const utf8Match = cd.match(/filename\*=UTF-8''([^;]+)/i);
+		if (utf8Match && utf8Match[1]) {
+			return decodeURIComponent(utf8Match[1]);
+		}
+		const asciiMatch = cd.match(/filename="?([^";]+)"?/i);
+		return asciiMatch && asciiMatch[1] ? asciiMatch[1].trim() : '';
 	}
 
 	function wirePopstate() {

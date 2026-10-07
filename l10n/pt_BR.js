@@ -1341,7 +1341,10 @@ OC.L10N.register(
 	"bookingDate must lie inside the billing period." : "A data de lançamento deve estar dentro do período de faturamento.",
 	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Escolha uma data dentro do período de faturamento ou ajuste o período de faturamento nas configurações do espaço de trabalho.",
 	"This calendar month does not overlap the billing period." : "Este mês não se sobrepõe ao período de faturamento.",
-	"Pick a month that intersects the billing period." : "Escolha um mês que se sobreponha ao período de faturamento."
+	"Pick a month that intersects the billing period." : "Escolha um mês que se sobreponha ao período de faturamento.",
+	"Export CSV" : "Exportar CSV",
+	"Export ODS" : "Exportar ODS",
+	"Downloads every booking detail for the transactions your filters currently match — set Range to “All time” for the complete ledger." : "Baixa todos os detalhes dos lançamentos que seus filtros atuais encontram — defina Faixa como «Todo o tempo» para o livro completo."
 	},
 	"nplurals=2; plural=(n > 1);"
 );
