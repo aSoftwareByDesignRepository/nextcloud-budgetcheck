@@ -7,6 +7,7 @@ namespace OCA\BudgetCheck\Controller;
 use OCA\BudgetCheck\Exception\BudgetCheckException;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
+use OCA\BudgetCheck\Exception\IdempotencyMismatchException;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCA\BudgetCheck\Exception\NotAuthenticatedException;
 use OCA\BudgetCheck\Exception\NotFoundException;
@@ -21,6 +22,7 @@ use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\CurrencyCatalog;
 use OCA\BudgetCheck\Service\ImportPreferencesService;
+use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\SummaryViewPreferencesService;
 use OCA\BudgetCheck\Support\StrictBool;
 use OCA\BudgetCheck\Service\MoneyService;
@@ -83,6 +85,7 @@ class ApiController extends Controller
 		private BudgetPlannedService $budgetPlanned,
 		private BookingStatusService $bookingStatuses,
 		private TransactionImportService $transactionImport,
+		private MobileIdempotencyService $idempotency,
 		private ImportPreferencesService $importPreferences,
 		private SummaryViewPreferencesService $summaryViewPrefs,
 		private SavingsTargetService $savings,
@@ -455,9 +458,33 @@ class ApiController extends Controller
 			}
 			$this->rateLimit->assertAllowed($userId, 'transaction_write', 240, 300);
 			$workspace = $this->workspaces->getForUser($workspaceId, $userId);
-			$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
-			$bookingStatus = $this->resolveBookingStatus(($payload['bookingStatusId'] ?? null), $workspaceId, $workspace);
-			return ['transaction' => $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus)];
+			// Optional Idempotency-Key (same claim/replay store as the mobile
+			// companion, which requires it): clients that send a key get
+			// at-most-once create semantics against double-submits and retried
+			// POSTs. Callers without a key keep the previous behaviour — the
+			// web editor always sends one.
+			$idemKey = trim((string)$this->request->getHeader('Idempotency-Key'));
+			$requestHash = $idemKey !== '' ? MobileIdempotencyService::hashPayload($payload) : '';
+			$replay = $idemKey !== ''
+				? $this->idempotency->claimOrReplay($userId, $workspaceId, $idemKey, $requestHash)
+				: null;
+			if ($replay !== null) {
+				return $replay['body'];
+			}
+			try {
+				$category = $this->resolveCategory((int)($payload['categoryId'] ?? 0), $workspaceId);
+				$bookingStatus = $this->resolveBookingStatus(($payload['bookingStatusId'] ?? null), $workspaceId, $workspace);
+				$body = ['transaction' => $this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $bookingStatus)];
+			} catch (\Throwable $e) {
+				if ($idemKey !== '') {
+					$this->idempotency->releaseClaim($userId, $workspaceId, $idemKey);
+				}
+				throw $e;
+			}
+			if ($idemKey !== '') {
+				$this->idempotency->completeClaim($userId, $workspaceId, $idemKey, $requestHash, ['ok' => true] + $body, 200);
+			}
+			return $body;
 		});
 	}
 
@@ -628,10 +655,11 @@ class ApiController extends Controller
 			$transactionId = $this->validateId($transactionId);
 			$this->ownerWorkspaceForTransaction($transactionId);
 			$this->rateLimit->assertAllowed($userId, 'transaction_attachment_write', 120, 300);
-			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
-				throw new \InvalidArgumentException('No file was uploaded.');
+			$file = $this->request->getUploadedFile('file');
+			if (!is_array($file)) {
+				throw new \InvalidArgumentException($this->missingUploadMessage());
 			}
-			$attachment = $this->transactionAttachments->upload($transactionId, $userId, $_FILES['file']);
+			$attachment = $this->transactionAttachments->upload($transactionId, $userId, $file);
 			return ['attachment' => $attachment];
 		});
 	}
@@ -653,10 +681,11 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId) use ($id): array {
 			$id = $this->validateId($id);
 			$this->rateLimit->assertAllowed($userId, 'transaction_attachment_write', 120, 300);
-			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
-				throw new \InvalidArgumentException('No file was uploaded.');
+			$file = $this->request->getUploadedFile('file');
+			if (!is_array($file)) {
+				throw new \InvalidArgumentException($this->missingUploadMessage());
 			}
-			$attachment = $this->transactionAttachments->replace($id, $userId, $_FILES['file']);
+			$attachment = $this->transactionAttachments->replace($id, $userId, $file);
 			return ['attachment' => $attachment];
 		});
 	}
@@ -1239,6 +1268,25 @@ class ApiController extends Controller
 		return is_array($params) ? $params : [];
 	}
 
+	/**
+	 * PHP silently drops the whole request body once it exceeds
+	 * post_max_size — $_POST and $_FILES both come back empty despite a
+	 * real payload arriving. A plain "no file" message would send users
+	 * chasing the wrong cause, so report the limit when the body was
+	 * dropped rather than absent.
+	 */
+	private function missingUploadMessage(): string
+	{
+		$multipart = str_starts_with(
+			strtolower($this->request->getHeader('CONTENT_TYPE')),
+			'multipart/form-data'
+		);
+		$hasBody = (int)$this->request->getHeader('CONTENT_LENGTH') > 0;
+		return ($multipart && $hasBody && $_FILES === [] && $_POST === [])
+			? 'The file exceeds the maximum upload size configured on this server.'
+			: 'No file was uploaded.';
+	}
+
 	private function validateId(int $id): int
 	{
 		if ($id < 1) {
@@ -1339,6 +1387,8 @@ class ApiController extends Controller
 			return $this->error('Too many requests. Please wait a moment and try again.', 429, 'rate_limit_exceeded');
 		} catch (ConflictException $e) {
 			return $this->error($e->getMessage(), Http::STATUS_CONFLICT, $e->getErrorCode());
+		} catch (IdempotencyMismatchException $e) {
+			return $this->error('Idempotency key was reused with a different request.', Http::STATUS_CONFLICT, 'idempotency_mismatch');
 		} catch (InternalErrorException $e) {
 			$this->logger->warning('budgetcheck internal_error', ['exception' => $e]);
 			return $this->error('Request could not be completed.', Http::STATUS_INTERNAL_SERVER_ERROR, 'internal_error');

@@ -546,9 +546,11 @@
 					const first = firstErr
 						? formatImportRowError(firstErr)
 						: t('budgetcheck', 'Validation failed.');
-					statusEl.textContent = t('budgetcheck', 'Validation failed: {count} invalid rows. First error: {error}')
-						.replace('{count}', String(preview.invalidRows || 0))
-						.replace('{error}', first);
+					const invalidRows = Number(preview.invalidRows || 0);
+					statusEl.textContent = n('budgetcheck',
+						'Validation failed: %n invalid row. First error: {error}',
+						'Validation failed: {count} invalid rows. First error: {error}',
+						invalidRows, { count: invalidRows, error: first });
 					return;
 				}
 				validatedRows = parsed.map(stripImportMeta);
@@ -558,12 +560,15 @@
 				const ready = Number(preview.validRows || parsed.length);
 				const skipped = Number(preview.skippedRows || 0);
 				if (skipped > 0) {
-					statusEl.textContent = t('budgetcheck', 'Validation passed. {count} rows ready; {skipped} duplicates will be skipped.')
-						.replace('{count}', String(ready))
-						.replace('{skipped}', String(skipped));
+					statusEl.textContent = n('budgetcheck',
+						'Validation passed. %n row ready; {skipped} duplicates will be skipped.',
+						'Validation passed. {count} rows ready; {skipped} duplicates will be skipped.',
+						ready, { count: ready, skipped: skipped });
 				} else {
-					statusEl.textContent = t('budgetcheck', 'Validation passed. {count} rows are ready to import.')
-						.replace('{count}', String(ready));
+					statusEl.textContent = n('budgetcheck',
+						'Validation passed. %n row is ready to import.',
+						'Validation passed. {count} rows are ready to import.',
+						ready, { count: ready });
 				}
 			} catch (err) {
 				validatedRows = [];
@@ -625,14 +630,15 @@
 				const skipped = Number(result.skippedCount || 0);
 				if (skipped > 0) {
 					Msg.announce(
-						t('budgetcheck', 'Imported {created} transactions. Skipped {skipped} duplicates.')
-							.replace('{created}', String(created))
-							.replace('{skipped}', String(skipped)),
+						n('budgetcheck',
+							'Imported %n transaction. Skipped {skipped} duplicates.',
+							'Imported {created} transactions. Skipped {skipped} duplicates.',
+							created, { created: created, skipped: skipped }),
 						'success',
 					);
 				} else {
 					Msg.announce(
-						t('budgetcheck', 'Imported {count} transactions successfully.').replace('{count}', String(created)),
+						n('budgetcheck', 'Imported %n transaction successfully.', 'Imported {count} transactions successfully.', created, { count: created }),
 						'success',
 					);
 				}

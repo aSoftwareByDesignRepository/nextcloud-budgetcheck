@@ -52,7 +52,7 @@ $workspace = $_['workspace'] ?? null;
 				<p class="bc-section__sub"><?php p($l->t('Large or unusual entries flagged in this period.')); ?></p>
 			</div>
 		</header>
-		<ul class="bc-tx-list" data-bc-specials-list></ul>
+		<ul class="bc-tx-list" role="list" data-bc-specials-list></ul>
 	</section>
 
 	<section class="bc-card bc-section" aria-labelledby="bc-period-export-title">

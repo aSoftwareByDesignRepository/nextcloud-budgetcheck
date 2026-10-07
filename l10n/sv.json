@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Öppna navigeringsmeny",
 		"Close navigation menu": "Stäng navigeringsmeny",
 		"The server could not complete the request. Please try again.": "Servern kunde inte slutföra begäran. Försök igen.",
-		"The action could not be completed. Please try again.": "Åtgärden kunde inte slutföras. Försök igen."
+		"The action could not be completed. Please try again.": "Åtgärden kunde inte slutföras. Försök igen.",
+		"The file exceeds the maximum upload size configured on this server.": "Filen överskrider den maximala uppladdningsstorlek som är konfigurerad på den här servern.",
+		"The upload was interrupted before it completed. Please try again.": "Uppladdningen avbröts innan den slutfördes. Försök igen.",
+		"No file was uploaded.": "Ingen fil laddades upp.",
+		"%n booking (including planned and deleted drafts)": "%n bokföring (inklusive planerade och raderade utkast)",
+		"%n attachment": "%n bilaga",
+		"%n closed month": "%n stängd månad",
+		"Added %n entry across {rules} rules.": "Lade till %n post över {rules} regler.",
+		"%n rule needed attention.": "%n regel behövde uppmärksamhet.",
+		"Validation failed: %n invalid row. First error: {error}": "Valideringen misslyckades: %n ogiltig rad. Första felet: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Valideringen lyckades. %n rad redo; {skipped} dubbletter hoppas över.",
+		"Validation passed. %n row is ready to import.": "Valideringen lyckades. %n rad är redo att importeras.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n transaktion importerad. {skipped} dubbletter hoppades över.",
+		"Imported %n transaction successfully.": "%n transaktion importerad.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n transaktion faller inom det här datumintervallet. Välj en kalendermånad för att fokusera på en månad.",
+		"bookingDate must lie inside the project date window.": "Bokföringsdatumet måste ligga inom projektperioden.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Välj ett datum inom projektperioden eller förläng projektperioden i arbetsytans inställningar."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

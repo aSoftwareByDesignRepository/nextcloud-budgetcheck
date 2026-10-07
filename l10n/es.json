@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Abrir menú de navegación",
 		"Close navigation menu": "Cerrar menú de navegación",
 		"The server could not complete the request. Please try again.": "El servidor no pudo completar la solicitud. Inténtalo de nuevo.",
-		"The action could not be completed. Please try again.": "No se pudo completar la acción. Inténtalo de nuevo."
+		"The action could not be completed. Please try again.": "No se pudo completar la acción. Inténtalo de nuevo.",
+		"The file exceeds the maximum upload size configured on this server.": "El archivo supera el tamaño máximo de subida configurado en este servidor.",
+		"The upload was interrupted before it completed. Please try again.": "La subida se interrumpió antes de completarse. Inténtalo de nuevo.",
+		"No file was uploaded.": "No se ha subido ningún archivo.",
+		"%n booking (including planned and deleted drafts)": "%n anotación (incluidos borradores planificados y eliminados)",
+		"%n attachment": "%n adjunto",
+		"%n closed month": "%n mes cerrado",
+		"Added %n entry across {rules} rules.": "Se añadió %n entrada en {rules} reglas.",
+		"%n rule needed attention.": "%n regla necesita atención.",
+		"Validation failed: %n invalid row. First error: {error}": "Validación fallida: %n fila no válida. Primer error: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Validación correcta. %n fila lista; se omitirán {skipped} duplicados.",
+		"Validation passed. %n row is ready to import.": "Validación correcta. %n fila lista para importar.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n movimiento importado. {skipped} duplicados omitidos.",
+		"Imported %n transaction successfully.": "%n movimiento importado.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n asiento se encuentra en este rango de fechas. Elija un mes calendario para concentrarse en un mes.",
+		"bookingDate must lie inside the project date window.": "La fecha de registro debe estar dentro del período del proyecto.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Elija una fecha dentro del período del proyecto o amplíe el período del proyecto en los ajustes del espacio de trabajo."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

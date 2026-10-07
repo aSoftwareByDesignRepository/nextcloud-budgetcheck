@@ -75,6 +75,57 @@ final class TransactionAttachmentUploadValidationTest extends TestCase
 		$this->assertFalse($result['success']);
 	}
 
+	public function testDescribeUploadErrorReturnsNullForOk(): void
+	{
+		$this->assertNull(TransactionAttachmentService::describeUploadError(UPLOAD_ERR_OK));
+		$this->assertNull(TransactionAttachmentService::describeUploadError(0));
+		$this->assertNull(TransactionAttachmentService::describeUploadError('0'));
+	}
+
+	public function testDescribeUploadErrorMapsSizeLimits(): void
+	{
+		foreach ([UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE] as $code) {
+			$result = TransactionAttachmentService::describeUploadError($code);
+			$this->assertNotNull($result);
+			$this->assertFalse($result['serverFault']);
+			$this->assertStringContainsString('upload size', $result['message']);
+		}
+	}
+
+	public function testDescribeUploadErrorMapsPartialAndNoFile(): void
+	{
+		$partial = TransactionAttachmentService::describeUploadError(UPLOAD_ERR_PARTIAL);
+		$this->assertNotNull($partial);
+		$this->assertFalse($partial['serverFault']);
+		$this->assertStringContainsString('interrupted', $partial['message']);
+
+		$noFile = TransactionAttachmentService::describeUploadError(UPLOAD_ERR_NO_FILE);
+		$this->assertNotNull($noFile);
+		$this->assertFalse($noFile['serverFault']);
+		$this->assertSame('No file was uploaded.', $noFile['message']);
+	}
+
+	public function testDescribeUploadErrorFlagsHostMisconfiguration(): void
+	{
+		foreach ([UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE, UPLOAD_ERR_EXTENSION, 99] as $code) {
+			$result = TransactionAttachmentService::describeUploadError($code);
+			$this->assertNotNull($result);
+			$this->assertTrue($result['serverFault'], 'error code ' . $code . ' must be a server fault');
+		}
+	}
+
+	public function testDescribeUploadErrorRejectsMalformedShapes(): void
+	{
+		// A multi-file `file[]` shape carries arrays — a bare (int) cast would
+		// collapse to 1 = UPLOAD_ERR_INI_SIZE and misreport a size limit.
+		foreach ([[0], null, true, false, ''] as $malformed) {
+			$result = TransactionAttachmentService::describeUploadError($malformed);
+			$this->assertNotNull($result);
+			$this->assertFalse($result['serverFault']);
+			$this->assertSame('Invalid upload parameters.', $result['message']);
+		}
+	}
+
 	public function testRejectsXmlWithEntityPastFirst8Kilobytes(): void
 	{
 		$payload = '<?xml version="1.0"?>' . str_repeat(' ', 9000) . '<!DOCTYPE foo [<!ENTITY xxe "test">]><Invoice></Invoice>';

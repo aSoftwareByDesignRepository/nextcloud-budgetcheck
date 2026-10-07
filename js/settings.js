@@ -653,14 +653,14 @@
 					const att = Number(impact?.attachmentCount || 0);
 					const closed = Number(impact?.closedMonthCount || 0);
 					stats.appendChild(C.createElement('li', {
-						text: t('budgetcheck', '{count} bookings (including planned and deleted drafts)', { count: tx }),
+						text: n('budgetcheck', '%n booking (including planned and deleted drafts)', '{count} bookings (including planned and deleted drafts)', tx, { count: tx }),
 					}));
 					stats.appendChild(C.createElement('li', {
-						text: t('budgetcheck', '{count} attachments', { count: att }),
+						text: n('budgetcheck', '%n attachment', '{count} attachments', att, { count: att }),
 					}));
 					if (closed > 0) {
 						stats.appendChild(C.createElement('li', {
-							text: t('budgetcheck', '{count} closed months', { count: closed }),
+							text: n('budgetcheck', '%n closed month', '{count} closed months', closed, { count: closed }),
 						}));
 					}
 					root.appendChild(stats);
@@ -1487,9 +1487,7 @@
 				const count = Number.parseInt(String(auto.generated || 0), 10) || 0;
 				const rules = Number.parseInt(String(auto.rulesProcessed || 0), 10) || 0;
 				Msg.announce(
-					t('budgetcheck', 'Added {count} entries across {rules} rules.')
-						.replace('{count}', String(count))
-						.replace('{rules}', String(rules)),
+					n('budgetcheck', 'Added %n entry across {rules} rules.', 'Added {count} entries across {rules} rules.', count, { count: count, rules: rules }),
 					'success',
 				);
 			}
@@ -2257,13 +2255,10 @@
 			if (count === 0 && rules === 0) {
 				message = t('budgetcheck', 'Nothing is due right now.');
 			} else {
-				message = t('budgetcheck', 'Added {count} entries across {rules} rules.')
-					.replace('{count}', String(count))
-					.replace('{rules}', String(rules));
+				message = n('budgetcheck', 'Added %n entry across {rules} rules.', 'Added {count} entries across {rules} rules.', count, { count: count, rules: rules });
 			}
 			if (errCount > 0) {
-				message += ' ' + t('budgetcheck', '{count} rules needed attention.')
-					.replace('{count}', String(errCount));
+				message += ' ' + n('budgetcheck', '%n rule needed attention.', '{count} rules needed attention.', errCount, { count: errCount });
 			}
 			Msg.announce(message, errCount > 0 ? 'error' : 'success');
 			loadRecurring();

@@ -157,6 +157,13 @@
 		let activeTx = tx ? Object.assign({}, tx) : null;
 		let attachmentsController = null;
 		const isEdit = !!tx;
+		// One idempotency key per editor-open for creates: retries of the same
+		// save (double-click, flaky network, resubmit after a failed save)
+		// replay the stored response instead of double-booking. The server
+		// claims the key before inserting (bc_idempotency), so concurrent
+		// submits collapse to one row. A fresh key per modal-open keeps two
+		// deliberately identical bookings distinct.
+		const createIdemKey = isEdit ? null : newCreateIdempotencyKey();
 		const dateHintText = t('budgetcheck', 'Date and month fields use your Nextcloud language. Tables and summaries match. The browser\'s calendar popup may still follow your device language in some setups.');
 		const currencyCode = ctx.workspace.currencyCode || '';
 		const amountLabel = currencyCode
@@ -594,7 +601,9 @@
 						activeTx = savedTx;
 						BC.Messaging.announce(t('budgetcheck', 'Transaction updated.'), 'success');
 					} else {
-						const created = await BC.Api.post('/apps/budgetcheck/api/transactions', payload);
+						const created = await BC.Api.post('/apps/budgetcheck/api/transactions', payload, {
+							headers: createIdemKey ? { 'Idempotency-Key': createIdemKey } : {},
+						});
 						savedTx = created && created.transaction ? created.transaction : null;
 						if (!savedTx || !savedTx.id) {
 							throw new Error(t('budgetcheck', 'Could not save transaction.'));
@@ -637,6 +646,14 @@
 				}
 			},
 		});
+	}
+
+	function newCreateIdempotencyKey() {
+		// Must match the server's ^[A-Za-z0-9._:-]{1,64}$ key grammar.
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+		return 'idem-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 18);
 	}
 
 	function defaultBookingDateForRange(from, to) {

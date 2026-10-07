@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- **Attachment save shows the real rejection reason:** `UPLOAD_ERR_*` codes (server-side `upload_max_filesize`/`post_max_size` below the app's 5 MB cap, dropped request bodies, interrupted uploads, host storage faults) and HTTP 413 now map to actionable messages instead of the generic "action could not be completed" toast. Server `invalid_input` rejections (e.g. booking date outside the project window) surface their message through the localized error map rather than a dead-end generic.
+- **Singular count strings:** count-rendered messages that could show "1 bookings"-style text now use proper plural forms (`n()`), which also fixes French `0` handling.
+- **Booking-date-outside-project-period errors are actionable:** the rejection now carries a field-level hint under the booking-date input plus an "Open workspace settings" link to the project-period fields, and both messages are translated.
+- **Double-submit protection on web transaction create:** the web API now honours an optional `Idempotency-Key` header (same claim/replay store the mobile companion requires) — the editor sends a per-open key, so retried or double-submitted saves replay the stored response instead of double-booking.
+- **List semantics:** transaction lists on Dashboard and Period restore `role="list"` so Safari/VoiceOver announce them as lists despite hidden markers.
+
 ## 1.4.2 - 2026-10-04
 
 ### Fixed

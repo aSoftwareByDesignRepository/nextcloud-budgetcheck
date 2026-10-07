@@ -668,10 +668,17 @@
 				if (lastError) {
 					BC.Messaging.handleApiError(lastError, { reloadOnConflict: false });
 				}
+				// Keep the server-side rejection reason visible after the
+				// toast fades: t() localizes msgids shared with the client,
+				// unknown strings stay as-is (English, still actionable).
+				const reason = (lastError && lastError.status === 400 && lastError.message)
+					? ' ' + t('budgetcheck', String(lastError.message))
+					: '';
 				setStatus(
-					failed === 1
+					(failed === 1
 						? t('budgetcheck', '1 receipt could not be uploaded. Fix the issue below and save again.')
-						: t('budgetcheck', '{count} receipts could not be uploaded. Fix the issue below and save again.').replace('{count}', String(failed)),
+						: t('budgetcheck', '{count} receipts could not be uploaded. Fix the issue below and save again.').replace('{count}', String(failed)))
+						+ reason,
 					true,
 				);
 			}

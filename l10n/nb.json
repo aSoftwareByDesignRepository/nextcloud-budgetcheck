@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Åpne navigasjonsmeny",
 		"Close navigation menu": "Lukk navigasjonsmeny",
 		"The server could not complete the request. Please try again.": "Serveren kunne ikke fullføre forespørselen. Prøv igjen.",
-		"The action could not be completed. Please try again.": "Handlingen kunne ikke fullføres. Prøv igjen."
+		"The action could not be completed. Please try again.": "Handlingen kunne ikke fullføres. Prøv igjen.",
+		"The file exceeds the maximum upload size configured on this server.": "Filen overskrider maksimal opplastingsstørrelse konfigurert på denne serveren.",
+		"The upload was interrupted before it completed. Please try again.": "Opplastingen ble avbrutt før den var fullført. Prøv igjen.",
+		"No file was uploaded.": "Ingen fil ble lastet opp.",
+		"%n booking (including planned and deleted drafts)": "%n postering (inkludert planlagte og slettede utkast)",
+		"%n attachment": "%n vedlegg",
+		"%n closed month": "%n lukket måned",
+		"Added %n entry across {rules} rules.": "La til %n post på tvers av {rules} regler.",
+		"%n rule needed attention.": "%n regel trengte oppmerksomhet.",
+		"Validation failed: %n invalid row. First error: {error}": "Valideringen mislyktes: %n ugyldig rad. Første feil: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Valideringen lyktes. %n rad klar; {skipped} duplikater hoppes over.",
+		"Validation passed. %n row is ready to import.": "Valideringen lyktes. %n rad er klar til import.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n postering importert. Hoppet over {skipped} duplikater.",
+		"Imported %n transaction successfully.": "%n postering importert.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n postering faller innenfor dette datointervallet. Velg en kalendermåned for å fokusere på én måned.",
+		"bookingDate must lie inside the project date window.": "Bokføringsdatoen må ligge innenfor prosjektperioden.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Velg en dato innenfor prosjektperioden, eller forleng prosjektperioden i innstillingene for arbeidsområdet."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

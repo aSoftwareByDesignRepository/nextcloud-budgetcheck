@@ -149,6 +149,9 @@ function checkTranslationCoverage() {
 	const knownKeys = new Set(Object.keys(en.translations || {}));
 	const keyToFiles = new Map();
 	const jsPattern = /\bt\(\s*['"]budgetcheck['"]\s*,\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]/g;
+	// n('budgetcheck', '<singular>', '<plural>', count[, vars]) — check both
+	// msgid positions; n() keys were previously invisible to this gate.
+	const jsPluralPattern = /\bn\(\s*['"]budgetcheck['"]\s*,\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]\s*,\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]/g;
 	const phpPattern = /->t\(\s*['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]/g;
 	const phpFiles = [
 		...listPhpFiles(path.join(ROOT, 'lib')),
@@ -160,6 +163,13 @@ function checkTranslationCoverage() {
 			const key = unescapeJsString(match[1]);
 			if (!keyToFiles.has(key)) keyToFiles.set(key, new Set());
 			keyToFiles.get(key).add(file);
+		}
+		for (const match of text.matchAll(jsPluralPattern)) {
+			for (const raw of [match[1], match[2]]) {
+				const key = unescapeJsString(raw);
+				if (!keyToFiles.has(key)) keyToFiles.set(key, new Set());
+				keyToFiles.get(key).add(file);
+			}
 		}
 	}
 	for (const file of phpFiles) {

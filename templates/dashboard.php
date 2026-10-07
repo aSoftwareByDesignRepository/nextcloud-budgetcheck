@@ -206,7 +206,7 @@ $urls = $_['urls'] ?? [];
 				<a class="button primary" href="#" data-bc-link="transactions"><?php p($l->t('Open transactions')); ?></a>
 			<?php endif; ?>
 		</header>
-		<ul class="bc-tx-list" data-bc-recent-list aria-busy="true">
+		<ul class="bc-tx-list" role="list" data-bc-recent-list aria-busy="true">
 			<li class="bc-loading"><?php p($l->t('Loading…')); ?></li>
 		</ul>
 	</section>

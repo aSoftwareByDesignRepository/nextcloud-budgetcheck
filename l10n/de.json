@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Navigationsmenü öffnen",
 		"Close navigation menu": "Navigationsmenü schließen",
 		"The server could not complete the request. Please try again.": "Der Server konnte die Anfrage nicht abschließen. Bitte versuchen Sie es erneut.",
-		"The action could not be completed. Please try again.": "Die Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+		"The action could not be completed. Please try again.": "Die Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+		"The file exceeds the maximum upload size configured on this server.": "Die Datei überschreitet die auf diesem Server konfigurierte maximale Upload-Größe.",
+		"The upload was interrupted before it completed. Please try again.": "Der Upload wurde vor Abschluss unterbrochen. Bitte versuchen Sie es erneut.",
+		"No file was uploaded.": "Es wurde keine Datei hochgeladen.",
+		"%n booking (including planned and deleted drafts)": "%n Buchung (einschließlich geplanter und gelöschter Entwürfe)",
+		"%n attachment": "%n Anhang",
+		"%n closed month": "%n abgeschlossener Monat",
+		"Added %n entry across {rules} rules.": "%n Eintrag aus {rules} Regeln hinzugefügt.",
+		"%n rule needed attention.": "%n Regel braucht Aufmerksamkeit.",
+		"Validation failed: %n invalid row. First error: {error}": "Prüfung fehlgeschlagen: %n ungültige Zeile. Erster Fehler: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Prüfung erfolgreich. %n Zeile bereit; {skipped} Duplikate werden übersprungen.",
+		"Validation passed. %n row is ready to import.": "Prüfung erfolgreich. %n Zeile ist bereit zum Import.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n Buchung importiert. {skipped} Duplikate übersprungen.",
+		"Imported %n transaction successfully.": "%n Buchung erfolgreich importiert.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n Buchung in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen einzelnen Monat zu fokussieren.",
+		"bookingDate must lie inside the project date window.": "Das Buchungsdatum muss innerhalb des Projektzeitraums liegen.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Wählen Sie ein Datum innerhalb des Projektzeitraums oder verlängern Sie den Projektzeitraum in den Arbeitsbereichseinstellungen."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

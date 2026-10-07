@@ -130,6 +130,22 @@
 			announce(t('budgetcheck', 'Your session expired. Please reload and sign in again.'), 'error');
 			return;
 		}
+		// Web server rejected the request body before PHP could parse it
+		// (client_max_body_size / LimitRequestBody / WAF) — the app never saw
+		// the upload, so a generic retry message would be a dead end.
+		if (status === 413) {
+			announce(t('budgetcheck', 'The file exceeds the maximum upload size configured on this server.'), 'error');
+			return;
+		}
+		// 'invalid_input' 400s carry an authored, user-actionable server
+		// message (fixed strings — never HTML or stack data). Route it
+		// through t() so msgids shared with the client localize and unknown
+		// text stays readable English: a real reason beats a dead-end
+		// generic toast.
+		if (status === 400 && code === 'invalid_input' && message && message.length <= 300) {
+			announce(t('budgetcheck', message), 'error');
+			return;
+		}
 		if (status >= 500) {
 			console.warn('BudgetCheck server error:', err);
 			announce(t('budgetcheck', 'The server could not complete the request. Please try again.'), 'error');

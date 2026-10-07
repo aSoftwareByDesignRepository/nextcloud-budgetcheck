@@ -28,9 +28,46 @@
 			if (fields && typeof fields === 'object'
 				&& window.CheckFieldErrors
 				&& typeof window.CheckFieldErrors.markValidationFields === 'function') {
-				window.CheckFieldErrors.markValidationFields(fields);
+				// Server field messages are authored msgids — run them through
+				// t() so they localize like the top-level message does.
+				const localized = {};
+				Object.keys(fields).forEach((key) => {
+					const msg = String(fields[key] || '');
+					localized[key] = msg === '' ? msg : t('budgetcheck', msg);
+				});
+				window.CheckFieldErrors.markValidationFields(localized);
+				attachProjectWindowRemedy(localized);
 			}
 		} catch (_e) { /* never mask the real error path */ }
+	}
+
+	// The project-window rejection is the most common actionable 400: the
+	// field error names the constraint, this link is the remedy — it opens
+	// the project-period fields under Workspace settings in a new tab so the
+	// pending form state survives (reporter workflow: extend the window,
+	// then retry the save).
+	function attachProjectWindowRemedy(fields) {
+		if (!Object.prototype.hasOwnProperty.call(fields, 'bookingDate')) {
+			return;
+		}
+		const Ws = window.BudgetCheckWorkspace;
+		const section = Ws && Ws.urls && Ws.urls.settingsSections
+			? Ws.urls.settingsSections.workspace : null;
+		if (!section || typeof Ws.withWorkspace !== 'function') {
+			return;
+		}
+		const errEl = document.getElementById('bc-field-error-bookingDate');
+		if (!errEl || errEl.querySelector('a[data-bc-remedy]')) {
+			return;
+		}
+		const link = document.createElement('a');
+		link.href = Ws.withWorkspace(String(section));
+		link.className = 'bc-field-error__link';
+		link.setAttribute('data-bc-remedy', 'project-window');
+		link.setAttribute('target', '_blank');
+		link.setAttribute('rel', 'noopener');
+		link.textContent = ' ' + t('budgetcheck', 'Open workspace settings');
+		errEl.appendChild(link);
 	}
 
 	function csrfToken() {

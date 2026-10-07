@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Ouvrir le menu de navigation",
 		"Close navigation menu": "Fermer le menu de navigation",
 		"The server could not complete the request. Please try again.": "Le serveur n’a pas pu terminer la requête. Veuillez réessayer.",
-		"The action could not be completed. Please try again.": "L’action n’a pas pu aboutir. Veuillez réessayer."
+		"The action could not be completed. Please try again.": "L’action n’a pas pu aboutir. Veuillez réessayer.",
+		"The file exceeds the maximum upload size configured on this server.": "Le fichier dépasse la taille maximale de téléversement configurée sur ce serveur.",
+		"The upload was interrupted before it completed. Please try again.": "Le téléversement a été interrompu avant son achèvement. Veuillez réessayer.",
+		"No file was uploaded.": "Aucun fichier n’a été téléversé.",
+		"%n booking (including planned and deleted drafts)": "%n écriture (y compris les brouillons planifiés et supprimés)",
+		"%n attachment": "%n pièce jointe",
+		"%n closed month": "%n mois clôturé",
+		"Added %n entry across {rules} rules.": "%n écriture ajoutée pour {rules} règles.",
+		"%n rule needed attention.": "%n règle nécessite une attention.",
+		"Validation failed: %n invalid row. First error: {error}": "Contrôle échoué : %n ligne non valide. Première erreur : {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Contrôle réussi. %n ligne prête ; {skipped} doublons seront ignorés.",
+		"Validation passed. %n row is ready to import.": "Contrôle réussi. %n ligne est prête à importer.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n écriture importée. {skipped} doublons ignorés.",
+		"Imported %n transaction successfully.": "%n écriture importée.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n écriture se situe dans cette plage de dates. Choisissez un mois civil pour vous concentrer sur un mois.",
+		"bookingDate must lie inside the project date window.": "La date d’écriture doit se situer dans la période du projet.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Choisissez une date comprise dans la période du projet ou prolongez la période du projet dans les paramètres de l’espace de travail."
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

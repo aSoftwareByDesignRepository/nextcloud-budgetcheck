@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCP\Files\File;
 use OCP\Files\Folder;
@@ -127,9 +128,7 @@ class TransactionAttachmentService
 		$readable = $this->resolveReadableTransaction($transactionId, $userId);
 		$this->access->ensureMinimumRole((int)$readable['workspace_id'], $userId, AccessControlService::ROLE_CONTRIBUTOR);
 
-		if (!isset($file['error']) || (int)$file['error'] !== UPLOAD_ERR_OK) {
-			throw new \InvalidArgumentException('File upload failed. Please try again.');
-		}
+		$this->assertUploadSucceeded($file);
 
 		$validation = $this->validateUploadedFile($file);
 		if (($validation['success'] ?? false) !== true) {
@@ -249,9 +248,7 @@ class TransactionAttachmentService
 				throw new \InvalidArgumentException('Only image attachments can be edited.');
 			}
 
-			if (!isset($file['error']) || (int)$file['error'] !== UPLOAD_ERR_OK) {
-				throw new \InvalidArgumentException('File upload failed. Please try again.');
-			}
+			$this->assertUploadSucceeded($file);
 
 			$validation = $this->validateUploadedFile($file, true);
 			if (($validation['success'] ?? false) !== true) {
@@ -489,6 +486,60 @@ class TransactionAttachmentService
 	public static function isEInvoiceXmlMime(string $mimeType): bool
 	{
 		return in_array($mimeType, ['text/xml', 'application/xml'], true);
+	}
+
+	/**
+	 * Translate a PHP UPLOAD_ERR_* code into an actionable user message.
+	 *
+	 * Returns null for UPLOAD_ERR_OK. `serverFault` marks host-side
+	 * misconfiguration (no tmp dir, unwritable storage, extension veto)
+	 * where retrying cannot help — callers surface it as an internal error
+	 * so it is logged, instead of blaming the upload. A malformed
+	 * (multi-file array) shape is rejected as invalid input rather than
+	 * misread: `(int) $array` collapses to 1 = UPLOAD_ERR_INI_SIZE and
+	 * would send users chasing a file-size cause that does not exist.
+	 *
+	 * @return array{message: string, serverFault: bool}|null
+	 */
+	public static function describeUploadError(mixed $error): ?array
+	{
+		if (is_array($error) || !is_scalar($error) || is_bool($error) || $error === '') {
+			return ['message' => 'Invalid upload parameters.', 'serverFault' => false];
+		}
+		return match ((int)$error) {
+			UPLOAD_ERR_OK => null,
+			UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => [
+				'message' => 'The file exceeds the maximum upload size configured on this server.',
+				'serverFault' => false,
+			],
+			UPLOAD_ERR_PARTIAL => [
+				'message' => 'The upload was interrupted before it completed. Please try again.',
+				'serverFault' => false,
+			],
+			UPLOAD_ERR_NO_FILE => [
+				'message' => 'No file was uploaded.',
+				'serverFault' => false,
+			],
+			default => [
+				'message' => 'Upload storage is misconfigured on this server.',
+				'serverFault' => true,
+			],
+		};
+	}
+
+	/**
+	 * @param array{error?:mixed} $file
+	 */
+	private function assertUploadSucceeded(array $file): void
+	{
+		$failure = self::describeUploadError($file['error'] ?? null);
+		if ($failure === null) {
+			return;
+		}
+		if ($failure['serverFault']) {
+			throw new InternalErrorException();
+		}
+		throw new \InvalidArgumentException($failure['message']);
 	}
 
 	/**

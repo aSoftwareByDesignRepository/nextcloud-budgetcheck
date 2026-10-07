@@ -281,6 +281,12 @@
 	 */
 	function monthlyLedgerHelpLines(summary, yearMonth, htmlLang) {
 		const tr = typeof window.t === 'function' ? window.t : function (_, s) { return s; };
+		const nr = typeof window.n === 'function'
+			? window.n
+			: function (app, sing, plur, count, vars) {
+				const msg = count === 1 ? sing : plur;
+				return msg.replace(/%n|\{count\}/g, String(count)).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
+			};
 		const APP = 'budgetcheck';
 		if (!summary || !summary.ledgerYearMonthSpan) {
 			return { spanLine: '', monthLine: '' };
@@ -309,8 +315,10 @@
 			if (count === 0) {
 				monthLine = tr(APP, 'No bookings in this date range yet.');
 			} else {
-				monthLine = tr(APP, '{count} bookings fall into this date range. Pick a calendar month to focus one month.')
-					.replace('{count}', String(count));
+				monthLine = nr(APP,
+					'%n booking falls into this date range. Pick a calendar month to focus one month.',
+					'{count} bookings fall into this date range. Pick a calendar month to focus one month.',
+					count, { count: count });
 			}
 			return { spanLine: spanLine, monthLine: monthLine };
 		}

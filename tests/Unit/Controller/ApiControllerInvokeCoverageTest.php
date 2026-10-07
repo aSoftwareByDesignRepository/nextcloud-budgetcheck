@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Tests\Unit\Controller;
 
 use OCA\BudgetCheck\Controller\ApiController;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Exception\IdempotencyMismatchException;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetPlannedService;
@@ -23,6 +24,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\SummaryViewPreferencesService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
@@ -92,8 +94,13 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 
 	private ApiController $controller;
 
+	/** @var MobileIdempotencyService&MockObject */
+	private MobileIdempotencyService $idempotency;
+
 	/** @var array<string,mixed> */
 	private array $params = [];
+
+	private string $idemHeader = '';
 
 	protected function setUp(): void
 	{
@@ -108,6 +115,13 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		);
 		$this->request->method('getMethod')->willReturn('POST');
 		$this->request->method('getRequestUri')->willReturn('/apps/budgetcheck/api/test');
+		$this->request->method('getUploadedFile')->willReturnCallback(
+			static fn (string $key) => $_FILES[$key] ?? null
+		);
+		$this->idemHeader = '';
+		$this->request->method('getHeader')->willReturnCallback(
+			fn (string $name): string => $name === 'Idempotency-Key' ? $this->idemHeader : ''
+		);
 
 		$this->access = $this->createMock(AccessControlService::class);
 		$this->access->method('currentUserId')->willReturn('alice');
@@ -305,6 +319,8 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$this->idempotency = $this->createMock(MobileIdempotencyService::class);
+
 		$this->controller = new ApiController(
 			'budgetcheck',
 			$this->request,
@@ -319,6 +335,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$budgetPlanned,
 			$this->bookingStatuses,
 			$this->imports,
+			$this->idempotency,
 			$this->importPrefs,
 			$this->summaryPrefs,
 			$this->savings,
@@ -759,6 +776,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			),
 			$bookingStatuses,
 			$imports,
+			$this->idempotency,
 			$importPrefs,
 			$summaryPrefs,
 			$savings,
@@ -935,5 +953,91 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->assertForbidden($c->listBookingStatuses(), 'listBookingStatuses');
 		$this->params = ['workspaceId' => 7];
 		$this->assertForbidden($c->listRecurringRules(), 'listRecurringRules');
+	}
+
+	private function createParams(): array
+	{
+		return [
+			'workspaceId' => 7,
+			'categoryId' => 3,
+			'direction' => 'expense',
+			'amount' => '10.00',
+			'bookingDate' => '2026-09-01',
+		];
+	}
+
+	/**
+	 * Idempotency-Key on web create: claim before write, complete after —
+	 * the same at-most-once contract the mobile companion enforces.
+	 */
+	public function testCreateTransactionHonoursIdempotencyKey(): void
+	{
+		$this->idemHeader = 'key-42';
+		$this->params = $this->createParams();
+
+		$this->idempotency->expects($this->once())
+			->method('claimOrReplay')
+			->with('alice', 7, 'key-42', self::anything())
+			->willReturn(null);
+		$this->idempotency->expects($this->once())
+			->method('completeClaim')
+			->with(
+				'alice',
+				7,
+				'key-42',
+				self::anything(),
+				self::callback(static fn (array $b): bool => ($b['ok'] ?? false) === true && ($b['transaction']['id'] ?? 0) === 9),
+				200,
+			);
+		$this->idempotency->expects($this->never())->method('releaseClaim');
+
+		$this->assertOk($this->controller->createTransaction(), 'createTransaction');
+	}
+
+	/** A completed claim replays the stored response without touching the ledger. */
+	public function testCreateTransactionReplaysStoredResponse(): void
+	{
+		$this->idemHeader = 'key-42';
+		$this->params = $this->createParams();
+
+		$this->idempotency->method('claimOrReplay')
+			->willReturn(['httpStatus' => 200, 'body' => ['ok' => true, 'transaction' => ['id' => 9, 'version' => 1]]]);
+		$this->idempotency->expects($this->never())->method('completeClaim');
+		$this->transactions->expects($this->never())->method('create');
+
+		$res = $this->controller->createTransaction();
+		$this->assertOk($res, 'createTransaction replay');
+		self::assertSame(9, $res->getData()['transaction']['id'] ?? null);
+	}
+
+	/** Same key + different body fails closed with 409, never a silent merge. */
+	public function testCreateTransactionRejectsMismatchedKeyReuse(): void
+	{
+		$this->idemHeader = 'key-42';
+		$this->params = $this->createParams();
+
+		$this->idempotency->method('claimOrReplay')
+			->willThrowException(new IdempotencyMismatchException());
+		$this->transactions->expects($this->never())->method('create');
+
+		$res = $this->controller->createTransaction();
+		self::assertSame(Http::STATUS_CONFLICT, $res->getStatus());
+		self::assertSame('idempotency_mismatch', $res->getData()['error']['code'] ?? null);
+	}
+
+	/** A failed create releases the pending claim so a retry may reclaim it. */
+	public function testCreateTransactionReleasesClaimOnFailure(): void
+	{
+		$this->idemHeader = 'key-42';
+		$this->params = $this->createParams();
+
+		$this->idempotency->method('claimOrReplay')->willReturn(null);
+		$this->idempotency->expects($this->once())->method('releaseClaim')->with('alice', 7, 'key-42');
+		$this->idempotency->expects($this->never())->method('completeClaim');
+		$this->transactions->method('create')
+			->willThrowException(new \InvalidArgumentException('bookingDate must lie inside the project date window.'));
+
+		$res = $this->controller->createTransaction();
+		self::assertSame(Http::STATUS_BAD_REQUEST, $res->getStatus());
 	}
 }

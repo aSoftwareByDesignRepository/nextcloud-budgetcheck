@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Otwórz menu nawigacji",
 		"Close navigation menu": "Zamknij menu nawigacji",
 		"The server could not complete the request. Please try again.": "Serwer nie mógł zakończyć żądania. Spróbuj ponownie.",
-		"The action could not be completed. Please try again.": "Nie udało się zakończyć działania. Spróbuj ponownie."
+		"The action could not be completed. Please try again.": "Nie udało się zakończyć działania. Spróbuj ponownie.",
+		"The file exceeds the maximum upload size configured on this server.": "Plik przekracza maksymalny rozmiar przesyłania skonfigurowany na tym serwerze.",
+		"The upload was interrupted before it completed. Please try again.": "Przesyłanie zostało przerwane przed zakończeniem. Spróbuj ponownie.",
+		"No file was uploaded.": "Nie przesłano żadnego pliku.",
+		"%n booking (including planned and deleted drafts)": "%n wpis (w tym zaplanowane i usunięte szkice)",
+		"%n attachment": "%n załącznik",
+		"%n closed month": "%n zamknięty miesiąc",
+		"Added %n entry across {rules} rules.": "Dodano %n wpis w {rules} regułach.",
+		"%n rule needed attention.": "%n reguła wymaga uwagi.",
+		"Validation failed: %n invalid row. First error: {error}": "Walidacja nie powiodła się: %n nieprawidłowy wiersz. Pierwszy błąd: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Walidacja zakończona. %n wiersz gotowy; {skipped} duplikatów zostanie pominiętych.",
+		"Validation passed. %n row is ready to import.": "Walidacja zakończona. %n wiersz gotowy do importu.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "Zaimportowano %n księgowanie. Pominięto {skipped} duplikatów.",
+		"Imported %n transaction successfully.": "Zaimportowano %n księgowanie.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n księgowanie w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu.",
+		"bookingDate must lie inside the project date window.": "Data księgowania musi mieścić się w okresie projektu.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Wybierz datę mieszczącą się w okresie projektu lub wydłuż okres projektu w ustawieniach obszaru roboczego."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

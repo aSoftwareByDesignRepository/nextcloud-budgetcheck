@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Navigatiemenu openen",
 		"Close navigation menu": "Navigatiemenu sluiten",
 		"The server could not complete the request. Please try again.": "De server kon het verzoek niet afronden. Probeer het opnieuw.",
-		"The action could not be completed. Please try again.": "De actie kon niet worden voltooid. Probeer het opnieuw."
+		"The action could not be completed. Please try again.": "De actie kon niet worden voltooid. Probeer het opnieuw.",
+		"The file exceeds the maximum upload size configured on this server.": "Het bestand overschrijdt de maximale uploadgrootte die op deze server is geconfigureerd.",
+		"The upload was interrupted before it completed. Please try again.": "De upload werd onderbroken voordat deze voltooid was. Probeer het opnieuw.",
+		"No file was uploaded.": "Er is geen bestand geüpload.",
+		"%n booking (including planned and deleted drafts)": "%n boeking (inclusief geplande en verwijderde concepten)",
+		"%n attachment": "%n bijlage",
+		"%n closed month": "%n afgesloten maand",
+		"Added %n entry across {rules} rules.": "%n regel toegevoegd over {rules} regels.",
+		"%n rule needed attention.": "%n regel vroeg aandacht.",
+		"Validation failed: %n invalid row. First error: {error}": "Validatie mislukt: %n ongeldige rij. Eerste fout: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Validatie geslaagd. %n rij klaar; {skipped} duplicaten worden overgeslagen.",
+		"Validation passed. %n row is ready to import.": "Validatie geslaagd. %n rij is klaar om te importeren.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n boeking geïmporteerd. {skipped} duplicaten overgeslagen.",
+		"Imported %n transaction successfully.": "%n boeking geïmporteerd.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n boeking valt in dit datumbereik. Kies een kalendermaand waar u zich op één maand wilt concentreren.",
+		"bookingDate must lie inside the project date window.": "De boekingsdatum moet binnen de projectperiode liggen.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Kies een datum binnen de projectperiode of verleng de projectperiode in de werkruimte-instellingen."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

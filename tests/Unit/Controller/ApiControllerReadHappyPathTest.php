@@ -23,6 +23,7 @@ use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\SummaryViewPreferencesService;
 use OCA\BudgetCheck\Service\TimezoneCatalog;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
@@ -116,6 +117,7 @@ final class ApiControllerReadHappyPathTest extends TestCase
 			$budgetPlanned,
 			$this->createMock(BookingStatusService::class),
 			$this->createMock(TransactionImportService::class),
+			$this->createMock(MobileIdempotencyService::class),
 			$this->importPrefs,
 			$this->summaryPrefs,
 			$this->savings,

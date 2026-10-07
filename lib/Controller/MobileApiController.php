@@ -788,10 +788,11 @@ class MobileApiController extends Controller
 				throw new NotFoundException('Transaction not found.');
 			}
 			$this->rateLimit->assertAllowed($userId, 'mobile_transaction_attachment_write', 120, 300);
-			if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
-				throw new \InvalidArgumentException('No file was uploaded.');
+			$file = $this->request->getUploadedFile('file');
+			if (!is_array($file)) {
+				throw new \InvalidArgumentException($this->missingUploadMessage());
 			}
-			$attachment = $this->attachments->upload($txId, $userId, $_FILES['file']);
+			$attachment = $this->attachments->upload($txId, $userId, $file);
 			return ['attachment' => $attachment];
 		});
 	}
@@ -1012,6 +1013,25 @@ class MobileApiController extends Controller
 	{
 		$params = $this->request->getParams();
 		return is_array($params) ? $params : [];
+	}
+
+	/**
+	 * PHP silently drops the whole request body once it exceeds
+	 * post_max_size — $_POST and $_FILES both come back empty despite a
+	 * real payload arriving. A plain "no file" message would send users
+	 * chasing the wrong cause, so report the limit when the body was
+	 * dropped rather than absent.
+	 */
+	private function missingUploadMessage(): string
+	{
+		$multipart = str_starts_with(
+			strtolower($this->request->getHeader('CONTENT_TYPE')),
+			'multipart/form-data'
+		);
+		$hasBody = (int)$this->request->getHeader('CONTENT_LENGTH') > 0;
+		return ($multipart && $hasBody && $_FILES === [] && $_POST === [])
+			? 'The file exceeds the maximum upload size configured on this server.'
+			: 'No file was uploaded.';
 	}
 
 	/**

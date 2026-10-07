@@ -1317,7 +1317,23 @@
 		"Open navigation menu": "Apri menu di navigazione",
 		"Close navigation menu": "Chiudi menu di navigazione",
 		"The server could not complete the request. Please try again.": "Il server non ha potuto completare la richiesta. Riprova.",
-		"The action could not be completed. Please try again.": "L’azione non è stata completata. Riprova."
+		"The action could not be completed. Please try again.": "L’azione non è stata completata. Riprova.",
+		"The file exceeds the maximum upload size configured on this server.": "Il file supera la dimensione massima di caricamento configurata su questo server.",
+		"The upload was interrupted before it completed. Please try again.": "Il caricamento è stato interrotto prima del completamento. Riprova.",
+		"No file was uploaded.": "Nessun file è stato caricato.",
+		"%n booking (including planned and deleted drafts)": "%n registrazione (incluse bozze pianificate ed eliminate)",
+		"%n attachment": "%n allegato",
+		"%n closed month": "%n mese chiuso",
+		"Added %n entry across {rules} rules.": "Aggiunta %n voce su {rules} regole.",
+		"%n rule needed attention.": "%n regola richiede attenzione.",
+		"Validation failed: %n invalid row. First error: {error}": "Convalida non riuscita: %n riga non valida. Primo errore: {error}",
+		"Validation passed. %n row ready; {skipped} duplicates will be skipped.": "Convalida riuscita. %n riga pronta; {skipped} duplicati verranno saltati.",
+		"Validation passed. %n row is ready to import.": "Convalida riuscita. %n riga pronta per l’importazione.",
+		"Imported %n transaction. Skipped {skipped} duplicates.": "%n registrazione importata. {skipped} duplicati saltati.",
+		"Imported %n transaction successfully.": "%n registrazione importata.",
+		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n registrazione rientra in questo intervallo di date. Scelga un mese di calendario per concentrarsi su un mese.",
+		"bookingDate must lie inside the project date window.": "La data di registrazione deve rientrare nel periodo del progetto.",
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Scelga una data compresa nel periodo del progetto o estenda il periodo del progetto nelle impostazioni dello spazio di lavoro."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

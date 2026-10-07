@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
+use OCA\BudgetCheck\Exception\ValidationException;
 use OCA\BudgetCheck\Support\StrictBool;
 use OCA\BudgetCheck\Exception\InternalErrorException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -430,7 +431,7 @@ class TransactionService
 		$this->ensureCategoryMatchesDirection($category, $direction);
 		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-			throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
+			throw $this->projectWindowException();
 		}
 		$title = $this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
@@ -563,7 +564,7 @@ class TransactionService
 		$this->ensureCategoryMatchesDirection($category, $direction);
 		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-			throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
+			throw $this->projectWindowException();
 		}
 		$this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$this->normaliseNotes($payload['notes'] ?? null);
@@ -631,7 +632,7 @@ class TransactionService
 		if (array_key_exists('bookingDate', $payload)) {
 			$bookingDate = $this->parseIsoDate((string)$payload['bookingDate'], 'bookingDate');
 			if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-				throw new \InvalidArgumentException('bookingDate must lie inside the project date window.');
+				throw $this->projectWindowException();
 			}
 			if ($bookingDate->format('Y-m-d') !== (string)$existing['booking_date']) {
 				$targetYm = substr($bookingDate->format('Y-m-d'), 0, 7);
@@ -1099,6 +1100,19 @@ class TransactionService
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * The project-window rejection carries a `fields` map so the client can pin
+	 * the inline error to the bookingDate control and offer a recovery link —
+	 * a toast alone left users searching for the project-period setting.
+	 */
+	private function projectWindowException(): ValidationException
+	{
+		return new ValidationException(
+			'bookingDate must lie inside the project date window.',
+			['bookingDate' => 'Pick a date inside the project period, or extend the project period in workspace settings.'],
+		);
 	}
 
 	private function ensureCategoryMatchesDirection(array $category, string $direction): void
