@@ -378,6 +378,8 @@
 		} else {
 			setVal(form, 'projectStartDate', Ws.workspace.projectStartDate ? String(Ws.workspace.projectStartDate) : '');
 			setVal(form, 'projectEndDate', Ws.workspace.projectEndDate ? String(Ws.workspace.projectEndDate) : '');
+			setVal(form, 'billingStartDate', Ws.workspace.billingStartDate ? String(Ws.workspace.billingStartDate) : '');
+			setVal(form, 'billingEndDate', Ws.workspace.billingEndDate ? String(Ws.workspace.billingEndDate) : '');
 			setVal(
 				form,
 				'projectTotalCapMinor',
@@ -571,6 +573,15 @@
 				}
 				payload.projectStartDate = startRaw;
 				payload.projectEndDate = endRaw;
+				const billStart = getVal(form, 'billingStartDate').trim();
+				const billEnd = getVal(form, 'billingEndDate').trim();
+				if ((billStart !== '' && !Dates.isIsoCalendarDay(billStart))
+					|| (billEnd !== '' && !Dates.isIsoCalendarDay(billEnd))) {
+					Msg.announce(t('budgetcheck', 'Invalid calendar date.'), 'error');
+					return;
+				}
+				payload.billingStartDate = billStart === '' ? null : billStart;
+				payload.billingEndDate = billEnd === '' ? null : billEnd;
 				const cap = getVal(form, 'projectTotalCapMinor').trim();
 				if (cap === '') {
 					payload.projectTotalCapMinor = null;

@@ -1333,7 +1333,12 @@
 		"Imported %n transaction successfully.": "Zaimportowano %n księgowanie.",
 		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n księgowanie w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu.",
 		"bookingDate must lie inside the project date window.": "Data księgowania musi mieścić się w okresie projektu.",
-		"Pick a date inside the project period, or extend the project period in workspace settings.": "Wybierz datę mieszczącą się w okresie projektu lub wydłuż okres projektu w ustawieniach obszaru roboczego."
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Wybierz datę mieszczącą się w okresie projektu lub wydłuż okres projektu w ustawieniach obszaru roboczego.",
+		"Billing period start (optional)": "Początek okresu rozliczeniowego (opcjonalnie)",
+		"Billing period end (optional)": "Koniec okresu rozliczeniowego (opcjonalnie)",
+		"Bookings must be dated inside the billing period. Leave it empty to use the project period.": "Księgowania muszą mieć datę w okresie rozliczeniowym. Pozostaw puste, aby użyć okresu projektu.",
+		"bookingDate must lie inside the billing period.": "Data księgowania musi mieścić się w okresie rozliczeniowym.",
+		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Wybierz datę mieszczącą się w okresie rozliczeniowym lub dostosuj okres rozliczeniowy w ustawieniach obszaru roboczego."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -1333,7 +1333,12 @@
         "Imported %n transaction successfully.": "%n Buchung erfolgreich importiert.",
         "%n booking falls into this date range. Pick a calendar month to focus one month.": "%n Buchung in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen einzelnen Monat zu fokussieren.",
         "bookingDate must lie inside the project date window.": "Das Buchungsdatum muss innerhalb des Projektzeitraums liegen.",
-        "Pick a date inside the project period, or extend the project period in workspace settings.": "Wählen Sie ein Datum innerhalb des Projektzeitraums oder verlängern Sie den Projektzeitraum in den Arbeitsbereichseinstellungen."
+        "Pick a date inside the project period, or extend the project period in workspace settings.": "Wählen Sie ein Datum innerhalb des Projektzeitraums oder verlängern Sie den Projektzeitraum in den Arbeitsbereichseinstellungen.",
+        "Billing period start (optional)": "Beginn des Abrechnungszeitraums (optional)",
+        "Billing period end (optional)": "Ende des Abrechnungszeitraums (optional)",
+        "Bookings must be dated inside the billing period. Leave it empty to use the project period.": "Buchungen müssen innerhalb des Abrechnungszeitraums datiert sein. Lassen Sie die Felder leer, um den Projektzeitraum zu verwenden.",
+        "bookingDate must lie inside the billing period.": "Das Buchungsdatum muss innerhalb des Abrechnungszeitraums liegen.",
+        "Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Wählen Sie ein Datum innerhalb des Abrechnungszeitraums oder passen Sie den Abrechnungszeitraum in den Arbeitsbereichseinstellungen an."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

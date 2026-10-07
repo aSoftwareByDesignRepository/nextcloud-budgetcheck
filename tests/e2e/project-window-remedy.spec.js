@@ -40,10 +40,17 @@ test.describe('project window remedy', () => {
 			workspaceId = (await wsRes.json()).workspace.id;
 		}
 
-		// Pin the project window every run so the fixture stays deterministic.
+		// Pin the project window and clear any billing override every run so
+		// the fixture stays deterministic (a set billing period relaxes the
+		// booking-date window and changes the error wording).
 		const winRes = await page.request.put(`/apps/budgetcheck/api/workspaces/${workspaceId}`, {
 			headers: auth,
-			data: { projectStartDate: '2026-01-01', projectEndDate: '2026-12-31' },
+			data: {
+				projectStartDate: '2026-01-01',
+				projectEndDate: '2026-12-31',
+				billingStartDate: null,
+				billingEndDate: null,
+			},
 		});
 		expect(winRes.ok(), 'project window update').toBeTruthy();
 
@@ -74,7 +81,7 @@ test.describe('project window remedy', () => {
 		// The save must be rejected with the inline field error…
 		const err = dialog.locator('#bc-field-error-bookingDate');
 		await expect(err).toBeVisible({ timeout: 10_000 });
-		await expect(err).toContainText('project');
+		await expect(err).toContainText('period');
 
 		// …and the remedy link to the project-period settings section.
 		const link = err.locator('a[data-bc-remedy="project-window"]');

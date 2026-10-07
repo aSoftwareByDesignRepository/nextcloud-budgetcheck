@@ -1333,7 +1333,12 @@
 		"Imported %n transaction successfully.": "%n boeking geïmporteerd.",
 		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n boeking valt in dit datumbereik. Kies een kalendermaand waar u zich op één maand wilt concentreren.",
 		"bookingDate must lie inside the project date window.": "De boekingsdatum moet binnen de projectperiode liggen.",
-		"Pick a date inside the project period, or extend the project period in workspace settings.": "Kies een datum binnen de projectperiode of verleng de projectperiode in de werkruimte-instellingen."
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Kies een datum binnen de projectperiode of verleng de projectperiode in de werkruimte-instellingen.",
+		"Billing period start (optional)": "Begin van de afrekenperiode (optioneel)",
+		"Billing period end (optional)": "Einde van de afrekenperiode (optioneel)",
+		"Bookings must be dated inside the billing period. Leave it empty to use the project period.": "Boekingen moeten binnen de afrekenperiode vallen. Laat leeg om de projectperiode te gebruiken.",
+		"bookingDate must lie inside the billing period.": "De boekingsdatum moet binnen de afrekenperiode liggen.",
+		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Kies een datum binnen de afrekenperiode of pas de afrekenperiode aan in de werkruimte-instellingen."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.4 - 2026-10-07
+
+### Added
+
+- **Billing period for project workspaces:** project workspaces can now carry an optional *billing period* (start/end) alongside the project period. Final invoices routinely land after project handover — a set billing bound replaces the project bound on that side when booking dates are validated, while the customer-visible project period stays untouched. Both bounds are optional and independent; an empty billing period behaves exactly like before.
+- Out-of-window rejections now say *billing period* instead of *project period* when a billing period is set, so the field error and the workspace-settings remedy link stay accurate.
+- Billing period fields are exposed in workspace settings (project workspaces only) and in the mobile workspace serialization.
+
+### Fixed
+
+- Widening or clearing the booking window (project or billing bounds) is refused when it would orphan existing transactions — the same protection that already applied to the project window now covers the effective window.
+
 ## 1.4.3 - 2026-10-07
 
 ### Fixed

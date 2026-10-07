@@ -1333,7 +1333,12 @@
 		"Imported %n transaction successfully.": "%n postering importeret.",
 		"%n booking falls into this date range. Pick a calendar month to focus one month.": "%n postering falder i dette datointerval. Vælg en kalendermåned for at fokusere på én måned.",
 		"bookingDate must lie inside the project date window.": "Bogføringsdatoen skal ligge inden for projektperioden.",
-		"Pick a date inside the project period, or extend the project period in workspace settings.": "Vælg en dato inden for projektperioden, eller forlæng projektperioden i arbejdsområdets indstillinger."
+		"Pick a date inside the project period, or extend the project period in workspace settings.": "Vælg en dato inden for projektperioden, eller forlæng projektperioden i arbejdsområdets indstillinger.",
+		"Billing period start (optional)": "Start for afregningsperiode (valgfri)",
+		"Billing period end (optional)": "Slut for afregningsperiode (valgfri)",
+		"Bookings must be dated inside the billing period. Leave it empty to use the project period.": "Bogføringer skal være dateret inden for afregningsperioden. Lad den stå tom for at bruge projektperioden.",
+		"bookingDate must lie inside the billing period.": "Bogføringsdatoen skal ligge inden for afregningsperioden.",
+		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Vælg en dato inden for afregningsperioden, eller juster afregningsperioden i arbejdsområdets indstillinger."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

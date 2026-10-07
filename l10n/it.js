@@ -1334,7 +1334,12 @@ OC.L10N.register(
 	"Imported %n transaction successfully." : "%n registrazione importata.",
 	"%n booking falls into this date range. Pick a calendar month to focus one month." : "%n registrazione rientra in questo intervallo di date. Scelga un mese di calendario per concentrarsi su un mese.",
 	"bookingDate must lie inside the project date window." : "La data di registrazione deve rientrare nel periodo del progetto.",
-	"Pick a date inside the project period, or extend the project period in workspace settings." : "Scelga una data compresa nel periodo del progetto o estenda il periodo del progetto nelle impostazioni dello spazio di lavoro."
+	"Pick a date inside the project period, or extend the project period in workspace settings." : "Scelga una data compresa nel periodo del progetto o estenda il periodo del progetto nelle impostazioni dello spazio di lavoro.",
+	"Billing period start (optional)" : "Inizio del periodo di fatturazione (facoltativo)",
+	"Billing period end (optional)" : "Fine del periodo di fatturazione (facoltativo)",
+	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Le registrazioni devono essere datate entro il periodo di fatturazione. Lasciare vuoto per usare il periodo del progetto.",
+	"bookingDate must lie inside the billing period." : "La data di registrazione deve rientrare nel periodo di fatturazione.",
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Scelga una data compresa nel periodo di fatturazione o lo modifichi nelle impostazioni dello spazio di lavoro."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

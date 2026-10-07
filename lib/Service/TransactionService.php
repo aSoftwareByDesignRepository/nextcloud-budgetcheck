@@ -431,7 +431,7 @@ class TransactionService
 		$this->ensureCategoryMatchesDirection($category, $direction);
 		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-			throw $this->projectWindowException();
+			throw $this->projectWindowException($workspace);
 		}
 		$title = $this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
@@ -564,7 +564,7 @@ class TransactionService
 		$this->ensureCategoryMatchesDirection($category, $direction);
 		$bookingDate = $this->parseIsoDate((string)($payload['bookingDate'] ?? ''), 'bookingDate');
 		if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-			throw $this->projectWindowException();
+			throw $this->projectWindowException($workspace);
 		}
 		$this->resolveTitle((string)($payload['title'] ?? ''), $category);
 		$this->normaliseNotes($payload['notes'] ?? null);
@@ -632,7 +632,7 @@ class TransactionService
 		if (array_key_exists('bookingDate', $payload)) {
 			$bookingDate = $this->parseIsoDate((string)$payload['bookingDate'], 'bookingDate');
 			if (!$this->bookingDateInsideProjectWindow($workspace, $bookingDate)) {
-				throw $this->projectWindowException();
+				throw $this->projectWindowException($workspace);
 			}
 			if ($bookingDate->format('Y-m-d') !== (string)$existing['booking_date']) {
 				$targetYm = substr($bookingDate->format('Y-m-d'), 0, 7);
@@ -1087,14 +1087,18 @@ class TransactionService
 		if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_PROJECT) {
 			return true;
 		}
-		if ($workspace['projectStartDate'] !== null) {
-			$start = new \DateTimeImmutable($workspace['projectStartDate']);
+		// A defined billing-period bound replaces the project bound on that
+		// side — final invoices legitimately land after project handover.
+		$startRaw = $workspace['billingStartDate'] ?? $workspace['projectStartDate'];
+		$endRaw = $workspace['billingEndDate'] ?? $workspace['projectEndDate'];
+		if ($startRaw !== null) {
+			$start = new \DateTimeImmutable($startRaw);
 			if ($date < $start) {
 				return false;
 			}
 		}
-		if ($workspace['projectEndDate'] !== null) {
-			$end = new \DateTimeImmutable($workspace['projectEndDate']);
+		if ($endRaw !== null) {
+			$end = new \DateTimeImmutable($endRaw);
 			if ($date > $end) {
 				return false;
 			}
@@ -1107,8 +1111,14 @@ class TransactionService
 	 * the inline error to the bookingDate control and offer a recovery link —
 	 * a toast alone left users searching for the project-period setting.
 	 */
-	private function projectWindowException(): ValidationException
+	private function projectWindowException(array $workspace): ValidationException
 	{
+		if (($workspace['billingStartDate'] ?? null) !== null || ($workspace['billingEndDate'] ?? null) !== null) {
+			return new ValidationException(
+				'bookingDate must lie inside the billing period.',
+				['bookingDate' => 'Pick a date inside the billing period, or adjust the billing period in workspace settings.'],
+			);
+		}
 		return new ValidationException(
 			'bookingDate must lie inside the project date window.',
 			['bookingDate' => 'Pick a date inside the project period, or extend the project period in workspace settings.'],

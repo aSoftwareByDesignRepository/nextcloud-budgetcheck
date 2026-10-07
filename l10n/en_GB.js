@@ -1334,7 +1334,12 @@ OC.L10N.register(
 	"Imported %n transaction successfully." : "Imported %n transaction successfully.",
 	"%n booking falls into this date range. Pick a calendar month to focus one month." : "%n booking falls into this date range. Pick a calendar month to focus one month.",
 	"bookingDate must lie inside the project date window." : "bookingDate must lie inside the project date window.",
-	"Pick a date inside the project period, or extend the project period in workspace settings." : "Pick a date inside the project period, or extend the project period in workspace settings."
+	"Pick a date inside the project period, or extend the project period in workspace settings." : "Pick a date inside the project period, or extend the project period in workspace settings.",
+	"Billing period start (optional)" : "Billing period start (optional)",
+	"Billing period end (optional)" : "Billing period end (optional)",
+	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Bookings must be dated inside the billing period. Leave it empty to use the project period.",
+	"bookingDate must lie inside the billing period." : "bookingDate must lie inside the billing period.",
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Pick a date inside the billing period, or adjust the billing period in workspace settings."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

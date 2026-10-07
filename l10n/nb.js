@@ -1334,7 +1334,12 @@ OC.L10N.register(
 	"Imported %n transaction successfully." : "%n postering importert.",
 	"%n booking falls into this date range. Pick a calendar month to focus one month." : "%n postering faller innenfor dette datointervallet. Velg en kalendermåned for å fokusere på én måned.",
 	"bookingDate must lie inside the project date window." : "Bokføringsdatoen må ligge innenfor prosjektperioden.",
-	"Pick a date inside the project period, or extend the project period in workspace settings." : "Velg en dato innenfor prosjektperioden, eller forleng prosjektperioden i innstillingene for arbeidsområdet."
+	"Pick a date inside the project period, or extend the project period in workspace settings." : "Velg en dato innenfor prosjektperioden, eller forleng prosjektperioden i innstillingene for arbeidsområdet.",
+	"Billing period start (optional)" : "Start for avregningsperiode (valgfritt)",
+	"Billing period end (optional)" : "Slutt for avregningsperiode (valgfritt)",
+	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Bokføringer må være datert innenfor avregningsperioden. La den stå tom for å bruke prosjektperioden.",
+	"bookingDate must lie inside the billing period." : "Bokføringsdatoen må ligge innenfor avregningsperioden.",
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Velg en dato innenfor avregningsperioden, eller juster avregningsperioden i innstillingene for arbeidsområdet."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

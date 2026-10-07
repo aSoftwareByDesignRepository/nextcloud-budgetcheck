@@ -1334,7 +1334,12 @@ OC.L10N.register(
 	"Imported %n transaction successfully." : "%n transação importada com sucesso.",
 	"%n booking falls into this date range. Pick a calendar month to focus one month." : "%n reserva se enquadra neste intervalo de datas. Escolha um mês para focar em um mês.",
 	"bookingDate must lie inside the project date window." : "A data de lançamento deve estar dentro do período do projeto.",
-	"Pick a date inside the project period, or extend the project period in workspace settings." : "Escolha uma data dentro do período do projeto ou estenda o período do projeto nas configurações do espaço de trabalho."
+	"Pick a date inside the project period, or extend the project period in workspace settings." : "Escolha uma data dentro do período do projeto ou estenda o período do projeto nas configurações do espaço de trabalho.",
+	"Billing period start (optional)" : "Início do período de faturamento (opcional)",
+	"Billing period end (optional)" : "Fim do período de faturamento (opcional)",
+	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Os lançamentos devem ter data dentro do período de faturamento. Deixe vazio para usar o período do projeto.",
+	"bookingDate must lie inside the billing period." : "A data de lançamento deve estar dentro do período de faturamento.",
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Escolha uma data dentro do período de faturamento ou ajuste o período de faturamento nas configurações do espaço de trabalho."
 	},
 	"nplurals=2; plural=(n > 1);"
 );

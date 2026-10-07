@@ -145,6 +145,15 @@ $bcHtmlLang = $bcHtmlLang ?? (string)(($_['clientHints']['htmlLang'] ?? null) ?:
 				<span class="bc-field__label"><?php p($l->t('Project end')); ?></span>
 				<input type="date" name="projectEndDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?>>
 			</label>
+			<label class="bc-field">
+				<span class="bc-field__label"><?php p($l->t('Billing period start (optional)')); ?></span>
+				<input type="date" name="billingStartDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-billing-period-hint">
+			</label>
+			<label class="bc-field">
+				<span class="bc-field__label"><?php p($l->t('Billing period end (optional)')); ?></span>
+				<input type="date" name="billingEndDate" class="bc-input" lang="<?php p($bcHtmlLang); ?>" autocomplete="off" <?php p($canManage ? '' : 'disabled'); ?> aria-describedby="bc-billing-period-hint">
+			</label>
+			<p class="bc-field__hint bc-field--full-width" id="bc-billing-period-hint"><?php p($l->t('Bookings must be dated inside the billing period. Leave it empty to use the project period.')); ?></p>
 			<label class="bc-field bc-field--full-width">
 				<span class="bc-field__label"><?php p($l->t('Project cap (optional)')); ?></span>
 				<input type="text" inputmode="decimal" name="projectTotalCapMinor" class="bc-input" <?php p($canManage ? '' : 'disabled'); ?>>

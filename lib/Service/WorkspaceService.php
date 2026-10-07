@@ -141,7 +141,7 @@ class WorkspaceService
 		$overspendThreshold = $this->normaliseNullableMinor($payload['overspendThresholdMinor'] ?? null);
 		[$defaultSavingsMode, $defaultSavingsPercentBp, $defaultSavingsMinor] = $this->normaliseSavingsDefaults($payload, $type, $currency);
 
-		[$projectStart, $projectEnd, $projectCap, $defaultVatRate] = $this->extractProjectFields($payload, $type);
+		[$projectStart, $projectEnd, $projectCap, $defaultVatRate, $billingStart, $billingEnd] = $this->extractProjectFields($payload, $type);
 		$primaryPlanningYear = null;
 		if ($type === self::TYPE_HOUSEHOLD) {
 			$primaryPlanningYear = $this->normalisePrimaryPlanningYear($payload['primaryPlanningYear'] ?? null);
@@ -156,7 +156,7 @@ class WorkspaceService
 
 		// Household workspaces must not carry project payload fields.
 		if ($type === self::TYPE_HOUSEHOLD) {
-			foreach (['projectStartDate', 'projectEndDate', 'projectTotalCapMinor'] as $forbidden) {
+			foreach (['projectStartDate', 'projectEndDate', 'projectTotalCapMinor', 'billingStartDate', 'billingEndDate'] as $forbidden) {
 				if (array_key_exists($forbidden, $payload) && $payload[$forbidden] !== null && $payload[$forbidden] !== '') {
 					throw new \InvalidArgumentException('Household workspaces do not accept project fields.');
 				}
@@ -184,6 +184,8 @@ class WorkspaceService
 					'project_total_cap_minor' => $qb->createNamedParameter($projectCap, $projectCap === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'project_start_date' => $qb->createNamedParameter($projectStart),
 					'project_end_date' => $qb->createNamedParameter($projectEnd),
+					'billing_start_date' => $qb->createNamedParameter($billingStart),
+					'billing_end_date' => $qb->createNamedParameter($billingEnd),
 					'default_vat_rate_bp' => $qb->createNamedParameter($defaultVatRate, $defaultVatRate === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'default_savings_target_mode' => $qb->createNamedParameter($defaultSavingsMode, $defaultSavingsMode === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR),
 					BudgetCheckTableCatalog::COL_DEF_SAV_TGT_PCT_BP => $qb->createNamedParameter($defaultSavingsPercentBp, $defaultSavingsPercentBp === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
@@ -359,11 +361,42 @@ class WorkspaceService
 				if ($endDate < $startDate) {
 					throw new \InvalidArgumentException('projectEndDate must not be before projectStartDate.');
 				}
-				$this->ensureNoOrphans($workspaceId, $startDate, $endDate);
 				$updates['project_start_date'] = $startDate->format('Y-m-d');
 				$updates['project_end_date'] = $endDate->format('Y-m-d');
 				$logChanges['projectStartDate'] = $updates['project_start_date'];
 				$logChanges['projectEndDate'] = $updates['project_end_date'];
+			}
+			$billingStartProvided = array_key_exists('billingStartDate', $payload);
+			$billingEndProvided = array_key_exists('billingEndDate', $payload);
+			if ($billingStartProvided || $billingEndProvided) {
+				$billingStart = $billingStartProvided
+					? $this->parseNullableDate($payload['billingStartDate'] ?? null, 'billingStartDate')
+					: $this->parseNullableDate($workspace['billingStartDate'] ?? null, 'billingStartDate');
+				$billingEnd = $billingEndProvided
+					? $this->parseNullableDate($payload['billingEndDate'] ?? null, 'billingEndDate')
+					: $this->parseNullableDate($workspace['billingEndDate'] ?? null, 'billingEndDate');
+				$updates['billing_start_date'] = $billingStart?->format('Y-m-d');
+				$updates['billing_end_date'] = $billingEnd?->format('Y-m-d');
+				$logChanges['billingStartDate'] = $updates['billing_start_date'];
+				$logChanges['billingEndDate'] = $updates['billing_end_date'];
+			}
+			if ($startProvided || $endProvided || $billingStartProvided || $billingEndProvided) {
+				$effStart = $this->parseNullableDate(
+					($billingStartProvided || $billingEndProvided)
+						? ($updates['billing_start_date'] ?? $workspace['projectStartDate'])
+						: ($workspace['billingStartDate'] ?? $updates['project_start_date'] ?? $workspace['projectStartDate']),
+					'effectiveStart'
+				);
+				$effEnd = $this->parseNullableDate(
+					($billingStartProvided || $billingEndProvided)
+						? ($updates['billing_end_date'] ?? $workspace['projectEndDate'])
+						: ($workspace['billingEndDate'] ?? $updates['project_end_date'] ?? $workspace['projectEndDate']),
+					'effectiveEnd'
+				);
+				if ($effStart === null || $effEnd === null || $effEnd < $effStart) {
+					throw new \InvalidArgumentException('billingEndDate must not be before the effective booking start date.');
+				}
+				$this->ensureNoOrphans($workspaceId, $effStart, $effEnd);
 			}
 			if (array_key_exists('projectTotalCapMinor', $payload)) {
 				$cap = $this->normaliseNullableMinor($payload['projectTotalCapMinor']);
@@ -379,7 +412,7 @@ class WorkspaceService
 			}
 		} else {
 			// Reject project payload fields silently arriving on a household workspace.
-			foreach (['projectStartDate', 'projectEndDate', 'projectTotalCapMinor'] as $forbidden) {
+			foreach (['projectStartDate', 'projectEndDate', 'projectTotalCapMinor', 'billingStartDate', 'billingEndDate'] as $forbidden) {
 				if (array_key_exists($forbidden, $payload) && $payload[$forbidden] !== null && $payload[$forbidden] !== '') {
 					throw new \InvalidArgumentException('Household workspaces do not accept project fields.');
 				}
@@ -959,6 +992,8 @@ class WorkspaceService
 			'projectTotalCapMinor' => $row['project_total_cap_minor'] === null ? null : (int)$row['project_total_cap_minor'],
 			'projectStartDate' => $row['project_start_date'] !== null ? (string)$row['project_start_date'] : null,
 			'projectEndDate' => $row['project_end_date'] !== null ? (string)$row['project_end_date'] : null,
+			'billingStartDate' => ($row['billing_start_date'] ?? null) !== null ? (string)$row['billing_start_date'] : null,
+			'billingEndDate' => ($row['billing_end_date'] ?? null) !== null ? (string)$row['billing_end_date'] : null,
 			'defaultVatRateBp' => $row['default_vat_rate_bp'] === null ? null : (int)$row['default_vat_rate_bp'],
 			'defaultSavingsTargetMode' => isset($row['default_savings_target_mode']) && $row['default_savings_target_mode'] !== null
 				? (string)$row['default_savings_target_mode']
@@ -1234,6 +1269,11 @@ class WorkspaceService
 		if ($end < $start) {
 			throw new \InvalidArgumentException('projectEndDate must not be before projectStartDate.');
 		}
+		$billingStart = $this->parseNullableDate($payload['billingStartDate'] ?? null, 'billingStartDate');
+		$billingEnd = $this->parseNullableDate($payload['billingEndDate'] ?? null, 'billingEndDate');
+		if (($billingEnd ?? $end) < ($billingStart ?? $start)) {
+			throw new \InvalidArgumentException('billingEndDate must not be before the effective booking start date.');
+		}
 		$cap = $this->normaliseNullableMinor($payload['projectTotalCapMinor'] ?? null);
 		$rate = null;
 		if (isset($payload['defaultVatRateBp']) && $payload['defaultVatRateBp'] !== '' && $payload['defaultVatRateBp'] !== null) {
@@ -1242,7 +1282,22 @@ class WorkspaceService
 				throw new \InvalidArgumentException('defaultVatRateBp out of range.');
 			}
 		}
-		return [$start->format('Y-m-d'), $end->format('Y-m-d'), $cap, $rate];
+		return [
+			$start->format('Y-m-d'),
+			$end->format('Y-m-d'),
+			$cap,
+			$rate,
+			$billingStart?->format('Y-m-d'),
+			$billingEnd?->format('Y-m-d'),
+		];
+	}
+
+	private function parseNullableDate(mixed $value, string $field): ?\DateTimeImmutable
+	{
+		if ($value === null || trim((string)$value) === '') {
+			return null;
+		}
+		return $this->parseDate((string)$value, $field);
 	}
 
 	private function parseDate(string $value, string $field): \DateTimeImmutable
