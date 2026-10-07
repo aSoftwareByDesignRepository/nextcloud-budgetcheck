@@ -28,6 +28,7 @@ use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\TransactionExportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Service\WorkspaceDeletionService;
@@ -38,6 +39,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\DataDisplayResponse;
+use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\StreamResponse;
 use OCP\Authentication\Exceptions\ExpiredTokenException;
@@ -80,6 +82,7 @@ class MobileApiController extends Controller
 		private readonly MobilePushService $push,
 		private readonly RateLimitService $rateLimit,
 		private readonly TransactionAttachmentService $attachments,
+		private readonly TransactionExportService $transactionExport,
 		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,
@@ -111,6 +114,7 @@ class MobileApiController extends Controller
 					'tax' => true,
 					'recurringSuggestions' => true,
 					'attachments' => true,
+					'transactionsExport' => true,
 					'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
 					'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
 					'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
@@ -853,22 +857,65 @@ class MobileApiController extends Controller
 			}
 			return $response;
 		} catch (\InvalidArgumentException $e) {
-			return $this->attachmentDownloadError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+			return $this->downloadError($e->getMessage(), Http::STATUS_BAD_REQUEST);
 		} catch (RateLimitExceededException) {
-			return $this->attachmentDownloadError(
+			return $this->downloadError(
 				'Too many requests. Please wait a moment and try again.',
 				Http::STATUS_TOO_MANY_REQUESTS,
 			);
 		} catch (NotAuthenticatedException) {
-			return $this->attachmentDownloadError('Authentication required.', Http::STATUS_UNAUTHORIZED);
+			return $this->downloadError('Authentication required.', Http::STATUS_UNAUTHORIZED);
 		} catch (AccessDeniedException) {
-			return $this->attachmentDownloadError('Access denied.', Http::STATUS_FORBIDDEN);
+			return $this->downloadError('Access denied.', Http::STATUS_FORBIDDEN);
 		} catch (\Throwable) {
-			return $this->attachmentDownloadError('Attachment could not be loaded.', Http::STATUS_NOT_FOUND);
+			return $this->downloadError('Attachment could not be loaded.', Http::STATUS_NOT_FOUND);
 		}
 	}
 
-	private function attachmentDownloadError(string $message, int $status): DataDisplayResponse
+	/**
+	 * CSV/ODS export of the ledger for the companion (Basic/Bearer), same
+	 * "what you see" filter subset as {@see listTransactions}. Read-only GET —
+	 * no mutation channel required. Binary body, not the JSON envelope.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function exportTransactions(int $workspaceId): DataDownloadResponse|DataDisplayResponse
+	{
+		try {
+			$userId = $this->access->currentUserId();
+			$workspaceId = $this->validateId($workspaceId);
+			$this->rateLimit->assertAllowed($userId, 'mobile_transactions_export', 20, 300);
+			$format = (string)$this->request->getParam('format', TransactionExportService::FORMAT_CSV);
+			$filters = array_filter([
+				'from' => $this->stringParam('from'),
+				'to' => $this->stringParam('to'),
+				'categoryId' => $this->intParamOrNull('categoryId'),
+				'statusId' => $this->intParamOrNull('statusId'),
+				'q' => $this->stringParam('q'),
+				'uncategorized' => $this->boolParamOrNull('uncategorized'),
+			], static fn ($value): bool => $value !== null);
+			$file = $this->transactionExport->build($workspaceId, $userId, $format, $filters);
+			$response = new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
+			$response->addHeader('X-Content-Type-Options', 'nosniff');
+			$response->addHeader('Cache-Control', 'private, no-store, must-revalidate');
+			return $response;
+		} catch (\InvalidArgumentException $e) {
+			return $this->downloadError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+		} catch (RateLimitExceededException) {
+			return $this->downloadError(
+				'Too many requests. Please wait a moment and try again.',
+				Http::STATUS_TOO_MANY_REQUESTS,
+			);
+		} catch (NotAuthenticatedException) {
+			return $this->downloadError('Authentication required.', Http::STATUS_UNAUTHORIZED);
+		} catch (AccessDeniedException) {
+			return $this->downloadError('Access denied.', Http::STATUS_FORBIDDEN);
+		} catch (\Throwable) {
+			return $this->downloadError('Export could not be created.', Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	private function downloadError(string $message, int $status): DataDisplayResponse
 	{
 		$response = new DataDisplayResponse($message, $status);
 		$response->addHeader('X-Content-Type-Options', 'nosniff');

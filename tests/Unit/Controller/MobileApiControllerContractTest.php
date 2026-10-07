@@ -45,6 +45,7 @@ final class MobileApiControllerContractTest extends TestCase
 		'listRecurringSuggestions',
 		'listTransactionAttachments',
 		'downloadTransactionAttachment',
+		'exportTransactions',
 	];
 
 	public function testMobileMutationsAllowNoCsrfForBasicAuth(): void

@@ -14,6 +14,7 @@ use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
+use OCA\BudgetCheck\Service\TransactionExportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
@@ -46,6 +47,8 @@ final class MobileApiControllerBehaviorTest extends TestCase
 	private IUserManager $userManager;
 	/** @var TransactionService&MockObject */
 	private TransactionService $transactions;
+	/** @var TransactionExportService&MockObject */
+	private TransactionExportService $transactionExport;
 
 	private MobileApiController $controller;
 
@@ -58,6 +61,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->transactions = $this->createMock(TransactionService::class);
+		$this->transactionExport = $this->createMock(TransactionExportService::class);
 
 		$alice = $this->createMock(IUser::class);
 		$alice->method('getUID')->willReturn('alice');
@@ -92,6 +96,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->transactionExport,
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -158,6 +163,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -228,6 +234,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -299,6 +306,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -362,6 +370,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -411,6 +420,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -481,6 +491,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -532,6 +543,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -623,6 +635,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -715,6 +728,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -828,6 +842,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -881,6 +896,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -981,6 +997,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1052,6 +1069,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1096,6 +1114,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1143,6 +1162,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1224,6 +1244,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1308,6 +1329,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1370,6 +1392,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
 			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
@@ -1378,6 +1401,122 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$response = $controller->home(1);
 		self::assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		self::assertSame('VALIDATION', $response->getData()['error']['code']);
+	}
+
+	public function testExportTransactionsReturnsDownloadResponse(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static fn (string $name, mixed $default = null) => $default
+		);
+		$this->transactionExport->expects(self::once())
+			->method('build')
+			->with(7, 'alice', 'csv', [])
+			->willReturn([
+				'filename' => 'books_transactions_2026-10-07.csv',
+				'mimeType' => 'text/csv; charset=utf-8',
+				'content' => "bookingDate,title\n2026-10-07,Groceries\n",
+			]);
+
+		$response = $this->controller->exportTransactions(7);
+		self::assertInstanceOf(\OCP\AppFramework\Http\DataDownloadResponse::class, $response);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+		self::assertSame('nosniff', $response->getHeaders()['X-Content-Type-Options'] ?? null);
+	}
+
+	public function testExportTransactionsPassesFiltersThrough(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$params = [
+			'format' => 'ods',
+			'from' => '2026-01-01',
+			'to' => '2026-12-31',
+			'categoryId' => '5',
+			'statusId' => '3',
+			'q' => 'beer',
+			'uncategorized' => '1',
+		];
+		$this->request->method('getParam')->willReturnCallback(
+			static fn (string $name, mixed $default = null) => $params[$name] ?? $default
+		);
+		$this->transactionExport->expects(self::once())
+			->method('build')
+			->with(7, 'alice', 'ods', [
+				'from' => '2026-01-01',
+				'to' => '2026-12-31',
+				'categoryId' => 5,
+				'statusId' => 3,
+				'q' => 'beer',
+				'uncategorized' => true,
+			])
+			->willReturn(['filename' => 'f.ods', 'mimeType' => 'x', 'content' => 'c']);
+
+		$response = $this->controller->exportTransactions(7);
+		self::assertSame(Http::STATUS_OK, $response->getStatus());
+	}
+
+	public function testExportTransactionsRejectsBadFormat(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static fn (string $name, mixed $default = null) => $name === 'format' ? 'xls' : $default
+		);
+		$this->transactionExport->method('build')
+			->willThrowException(new \InvalidArgumentException('Unsupported export format.'));
+
+		$response = $this->controller->exportTransactions(7);
+		self::assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	public function testExportTransactionsDeniesNonMember(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static fn (string $name, mixed $default = null) => $default
+		);
+		$this->transactionExport->method('build')
+			->willThrowException(new \OCA\BudgetCheck\Exception\AccessDeniedException());
+
+		$response = $this->controller->exportTransactions(7);
+		self::assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+	}
+
+	public function testExportTransactionsRateLimited(): void
+	{
+		$this->access->method('currentUserId')->willReturn('alice');
+		$this->request->method('getParam')->willReturnCallback(
+			static fn (string $name, mixed $default = null) => $default
+		);
+		$rateLimit = $this->createMock(RateLimitService::class);
+		$rateLimit->method('assertAllowed')
+			->willThrowException(new \OCA\BudgetCheck\Exception\RateLimitExceededException());
+
+		$l10n = $this->createMock(IL10N::class);
+		$controller = new MobileApiController(
+			$this->request,
+			$this->userSession,
+			$this->userManager,
+			$this->createMock(IProvider::class),
+			$this->access,
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\WorkspaceDeletionService::class),
+			$this->createMock(CategoryService::class),
+			$this->transactions,
+			$this->createMock(BookingStatusService::class),
+			$this->createMock(SummaryService::class),
+			$this->createMock(RecurringRuleService::class),
+			$this->createMock(MobileIdempotencyService::class),
+			$this->createMock(MobilePushService::class),
+			$rateLimit,
+			$this->createMock(TransactionAttachmentService::class),
+			$this->transactionExport,
+			$this->appManager,
+			$l10n,
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$response = $controller->exportTransactions(7);
+		self::assertSame(Http::STATUS_TOO_MANY_REQUESTS, $response->getStatus());
 	}
 
 }

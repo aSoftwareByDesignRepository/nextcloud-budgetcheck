@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The CSV is UTF-8 with BOM, comma-delimited, fully quoted, and safe against spreadsheet formula injection; its leading columns match the CSV importer so an export can be re-imported.
 - The ODS file is a spec-conformant OpenDocument Spreadsheet package with typed date, number, and boolean cells and a bold header row — it opens directly in LibreOffice and Excel.
 - Exports are rate-limited, exclude deleted transactions, require workspace membership, and are capped at 10 000 rows per file with a clear message when the set is larger.
+- **Companion API 8 — ledger export for BudgetCheck Mobile:** `GET /api/mobile/v1/workspaces/{id}/transactions/export?format=csv|ods` serves the same export over Basic/app-password auth with the mobile list's filter subset and its own rate-limit bucket; `bootstrap` advertises it via `capabilities.transactionsExport`.
 
 ## 1.4.5 - 2026-10-07
 

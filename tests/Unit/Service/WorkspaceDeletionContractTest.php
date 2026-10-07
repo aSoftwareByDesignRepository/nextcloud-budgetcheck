@@ -106,7 +106,7 @@ final class WorkspaceDeletionContractTest extends TestCase
 		);
 		self::assertStringContainsString('function deleteWorkspace(int $workspaceId)', $mobile);
 		self::assertStringContainsString("assertAllowed(\$userId, 'workspace_delete', 5, 3600)", $mobile);
-		self::assertStringContainsString('COMPANION_API = 7', $caps);
+		self::assertStringContainsString('COMPANION_API = 8', $caps);
 	}
 
 	public function testAttachmentPurgeApisExist(): void

@@ -120,6 +120,7 @@ return [
 		['name' => 'mobile_api#listCategories', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/categories', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listBookingStatuses', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/booking-statuses', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listTransactions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#exportTransactions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/export', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#getTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#createTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#updateTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
