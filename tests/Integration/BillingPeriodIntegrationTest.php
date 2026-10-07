@@ -218,6 +218,106 @@ final class BillingPeriodIntegrationTest extends TestCase
 		]);
 	}
 
+	public function testSameRequestProjectNarrowPlusBillingClearUsesNewBounds(): void
+	{
+		// Regression: when billing keys and project keys arrive together and
+		// the resolved billing bound is null, the effective window must fall
+		// back to the NEW project dates — not the stored ones. Falling back to
+		// stored values here would commit an inverted window (start > end)
+		// with a live transaction stranded inside the stale bounds.
+		$ws = $this->createProjectWorkspace('Billing IT narrow');
+		$category = $this->expenseCategory((int)$ws['id']);
+		$this->tryCreate((int)$ws['id'], $ws, $category, '2026-06-15');
+		/** @var WorkspaceService $workspaces */
+		$workspaces = \OC::$server->get(WorkspaceService::class);
+
+		// New project start 2027-01-01 + billing cleared → effective
+		// [2027-01-01, 2026-09-30] is inverted and must be refused.
+		$this->expectException(\InvalidArgumentException::class);
+		$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
+			'projectStartDate' => '2027-01-01',
+			'billingStartDate' => null,
+		]);
+	}
+
+	public function testSameRequestProjectShrinkPlusBillingClearOrphansBooking(): void
+	{
+		// Second shape of the same regression: project end narrows in the same
+		// request that clears billingEnd — the orphan guard must evaluate the
+		// transaction against the NEW end, not the stored one.
+		$ws = $this->createProjectWorkspace('Billing IT shrink', [
+			'billingStartDate' => '2025-06-01',
+		]);
+		$category = $this->expenseCategory((int)$ws['id']);
+		$this->tryCreate((int)$ws['id'], $ws, $category, '2026-08-15');
+		/** @var WorkspaceService $workspaces */
+		$workspaces = \OC::$server->get(WorkspaceService::class);
+
+		// Effective end becomes 2026-07-01 → booking 2026-08-15 orphaned → refuse.
+		$this->expectException(\InvalidArgumentException::class);
+		$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
+			'projectEndDate' => '2026-07-01',
+			'billingEndDate' => null,
+		]);
+	}
+
+	public function testImpossibleCalendarDatesRejectedOnUpdate(): void
+	{
+		$ws = $this->createProjectWorkspace('Billing IT bad date');
+		/** @var WorkspaceService $workspaces */
+		$workspaces = \OC::$server->get(WorkspaceService::class);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
+			'billingEndDate' => '2026-02-30',
+		]);
+	}
+
+	public function testProjectPeriodSummaryCoversBillingExtensionBookings(): void
+	{
+		// Bookings valid under the billing period must appear in the period
+		// summary (web Period view, xlsx export, mobile) — otherwise the
+		// feature lets users create bookings that vanish from every total.
+		$ws = $this->createProjectWorkspace('Billing IT summary', [
+			'billingEndDate' => '2026-11-30',
+		]);
+		$category = $this->expenseCategory((int)$ws['id']);
+		$this->tryCreate((int)$ws['id'], $ws, $category, '2026-10-15');
+		/** @var \OCA\BudgetCheck\Service\SummaryService $summaries */
+		$summaries = \OC::$server->get(\OCA\BudgetCheck\Service\SummaryService::class);
+
+		$full = $summaries->projectPeriod((int)$ws['id'], self::OWNER, null);
+		self::assertSame('2026-11-30', $full['window']['to']);
+		self::assertSame(100, (int)$full['totals']['expense']['minor']);
+
+		// The billing month itself must be selectable, not rejected as
+		// "outside the project window".
+		$month = $summaries->projectPeriod((int)$ws['id'], self::OWNER, '2026-10');
+		self::assertSame('2026-10-01', $month['window']['from']);
+		self::assertSame('2026-10-31', $month['window']['to']);
+		self::assertSame(100, (int)$month['totals']['expense']['minor']);
+	}
+
+	public function testProjectPeriodWithoutBillingKeepsProjectWindow(): void
+	{
+		$ws = $this->createProjectWorkspace('Billing IT summary legacy');
+		$category = $this->expenseCategory((int)$ws['id']);
+		$this->tryCreate((int)$ws['id'], $ws, $category, '2026-06-15');
+		/** @var \OCA\BudgetCheck\Service\SummaryService $summaries */
+		$summaries = \OC::$server->get(\OCA\BudgetCheck\Service\SummaryService::class);
+
+		$full = $summaries->projectPeriod((int)$ws['id'], self::OWNER, null);
+		self::assertSame('2026-09-30', $full['window']['to']);
+
+		// A month fully outside the project window is still rejected.
+		try {
+			$summaries->projectPeriod((int)$ws['id'], self::OWNER, '2026-12');
+			$this->fail('expected month-outside-window rejection');
+		} catch (ValidationException $e) {
+			self::assertStringContainsString('project', $e->getMessage());
+		}
+	}
+
 	public function testHouseholdRejectsBillingFields(): void
 	{
 		/** @var WorkspaceService $workspaces */

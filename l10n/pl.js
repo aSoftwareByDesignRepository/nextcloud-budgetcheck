@@ -1339,7 +1339,9 @@ OC.L10N.register(
 	"Billing period end (optional)" : "Koniec okresu rozliczeniowego (opcjonalnie)",
 	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Księgowania muszą mieć datę w okresie rozliczeniowym. Pozostaw puste, aby użyć okresu projektu.",
 	"bookingDate must lie inside the billing period." : "Data księgowania musi mieścić się w okresie rozliczeniowym.",
-	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Wybierz datę mieszczącą się w okresie rozliczeniowym lub dostosuj okres rozliczeniowy w ustawieniach obszaru roboczego."
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Wybierz datę mieszczącą się w okresie rozliczeniowym lub dostosuj okres rozliczeniowy w ustawieniach obszaru roboczego.",
+	"This calendar month does not overlap the billing period." : "Ten miesiąc kalendarzowy nie pokrywa się z okresem rozliczeniowym.",
+	"Pick a month that intersects the billing period." : "Wybierz miesiąc pokrywający się z okresem rozliczeniowym."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

@@ -1339,7 +1339,9 @@ OC.L10N.register(
 	"Billing period end (optional)" : "Slut för avräkningsperiod (valfritt)",
 	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Bokföringar måste dateras inom avräkningsperioden. Lämna tomt för att använda projektperioden.",
 	"bookingDate must lie inside the billing period." : "Bokföringsdatumet måste ligga inom avräkningsperioden.",
-	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Välj ett datum inom avräkningsperioden, eller justera avräkningsperioden i arbetsytans inställningar."
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Välj ett datum inom avräkningsperioden, eller justera avräkningsperioden i arbetsytans inställningar.",
+	"This calendar month does not overlap the billing period." : "Den här kalendermånaden överlappar inte avräkningsperioden.",
+	"Pick a month that intersects the billing period." : "Välj en månad som överlappar avräkningsperioden."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

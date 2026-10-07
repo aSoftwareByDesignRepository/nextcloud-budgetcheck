@@ -1339,7 +1339,9 @@ OC.L10N.register(
 	"Billing period end (optional)" : "Fim do período de faturamento (opcional)",
 	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Os lançamentos devem ter data dentro do período de faturamento. Deixe vazio para usar o período do projeto.",
 	"bookingDate must lie inside the billing period." : "A data de lançamento deve estar dentro do período de faturamento.",
-	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Escolha uma data dentro do período de faturamento ou ajuste o período de faturamento nas configurações do espaço de trabalho."
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Escolha uma data dentro do período de faturamento ou ajuste o período de faturamento nas configurações do espaço de trabalho.",
+	"This calendar month does not overlap the billing period." : "Este mês não se sobrepõe ao período de faturamento.",
+	"Pick a month that intersects the billing period." : "Escolha um mês que se sobreponha ao período de faturamento."
 	},
 	"nplurals=2; plural=(n > 1);"
 );

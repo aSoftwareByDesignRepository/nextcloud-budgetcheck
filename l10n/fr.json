@@ -1338,7 +1338,9 @@
 		"Billing period end (optional)": "Fin de la période de facturation (facultatif)",
 		"Bookings must be dated inside the billing period. Leave it empty to use the project period.": "Les écritures doivent être datées dans la période de facturation. Laissez vide pour utiliser la période du projet.",
 		"bookingDate must lie inside the billing period.": "La date d’écriture doit se situer dans la période de facturation.",
-		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Choisissez une date comprise dans la période de facturation ou ajustez la période de facturation dans les paramètres de l’espace de travail."
+		"Pick a date inside the billing period, or adjust the billing period in workspace settings.": "Choisissez une date comprise dans la période de facturation ou ajustez la période de facturation dans les paramètres de l’espace de travail.",
+		"This calendar month does not overlap the billing period.": "Ce mois civil ne chevauche pas la période de facturation.",
+		"Pick a month that intersects the billing period.": "Choisissez un mois qui chevauche la période de facturation."
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

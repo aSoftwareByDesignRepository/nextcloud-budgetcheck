@@ -409,8 +409,11 @@ class TransactionService
 		$to = isset($filters['to']) && $filters['to'] !== '' ? $this->parseIsoDate((string)$filters['to'], 'to')->format('Y-m-d') : null;
 
 		if (($workspace['type'] ?? null) === WorkspaceService::TYPE_PROJECT) {
-			$ws_from = $workspace['projectStartDate'];
-			$ws_to = $workspace['projectEndDate'];
+			// Clamp to the effective window: a billing bound replaces the
+			// project bound on that side, matching booking-date validation.
+			// Without this, post-project billing bookings are unreachable.
+			$ws_from = $workspace['billingStartDate'] ?? $workspace['projectStartDate'];
+			$ws_to = $workspace['billingEndDate'] ?? $workspace['projectEndDate'];
 			if ($from === null || $from < $ws_from) {
 				$from = $ws_from;
 			}
@@ -1453,14 +1456,15 @@ class TransactionService
 	private function parseIsoDate(string $value, string $field): \DateTimeImmutable
 	{
 		$value = trim($value);
-		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
 			throw new \InvalidArgumentException($field . ' must be in YYYY-MM-DD format.');
 		}
-		try {
-			return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
-		} catch (\Throwable) {
+		// DateTimeImmutable silently normalises impossible dates (2026-02-30 →
+		// 2026-03-02); only checkdate rejects them outright.
+		if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
 			throw new \InvalidArgumentException($field . ' is not a valid date.');
 		}
+		return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
 	}
 
 	private function utcNow(): string

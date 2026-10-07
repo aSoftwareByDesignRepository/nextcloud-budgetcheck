@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.5 - 2026-10-07
+
+### Fixed
+
+- **Impossible calendar dates rejected instead of silently shifted:** `bookingDate`, project and billing date inputs like `2026-02-30` were normalised by PHP to `2026-03-02` and stored without any error. All date parsers now validate the calendar day.
+- **Billing-period bookings visible everywhere:** transactions in the billing extension could be created but were unreachable — the ledger clamped list ranges to the project window, the Period summary and the xlsx project export bounded by project dates only. All retrieval paths now use the effective window (billing bound replaces the project bound on that side).
+- **Workspace updates validate the correct window:** changing project dates and billing bounds in one save could validate the orphan guard against stale bounds — silently stranding transactions or committing an inverted window.
+- The no-orphans rejection message and the month-picker error now say "booking window"/"billing period" instead of always naming the project window.
+
 ## 1.4.4 - 2026-10-07
 
 ### Added

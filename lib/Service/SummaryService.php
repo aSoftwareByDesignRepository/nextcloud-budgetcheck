@@ -209,23 +209,34 @@ class SummaryService
 		if ($workspace['type'] !== WorkspaceService::TYPE_PROJECT) {
 			throw new WorkspaceTypeMismatchException('project', $workspace['type'], 'project_period_summary');
 		}
-			if ($yearMonth !== null && $yearMonth !== '') {
+		// A set billing bound replaces the project bound on that side — the
+		// summary must cover bookings that are valid under the billing period,
+		// or post-project invoices would vanish from totals and exports.
+		$effStartRaw = $workspace['billingStartDate'] ?? $workspace['projectStartDate'];
+		$effEndRaw = $workspace['billingEndDate'] ?? $workspace['projectEndDate'];
+		if ($yearMonth !== null && $yearMonth !== '') {
 			$ym = $this->validateYearMonth($yearMonth);
 			[$monthStart, $monthEnd] = $this->monthBounds($ym);
-			$projectStart = $workspace['projectStartDate'] !== null ? new \DateTimeImmutable($workspace['projectStartDate']) : $monthStart;
-			$projectEnd = $workspace['projectEndDate'] !== null ? new \DateTimeImmutable($workspace['projectEndDate']) : $monthEnd;
-			$start = $monthStart > $projectStart ? $monthStart : $projectStart;
-			$end = $monthEnd < $projectEnd ? $monthEnd : $projectEnd;
+			$windowStart = $effStartRaw !== null ? new \DateTimeImmutable($effStartRaw) : $monthStart;
+			$windowEnd = $effEndRaw !== null ? new \DateTimeImmutable($effEndRaw) : $monthEnd;
+			$start = $monthStart > $windowStart ? $monthStart : $windowStart;
+			$end = $monthEnd < $windowEnd ? $monthEnd : $windowEnd;
 			if ($end < $start) {
+				$hasBilling = ($workspace['billingStartDate'] ?? null) !== null
+					|| ($workspace['billingEndDate'] ?? null) !== null;
 				throw new ValidationException(
-					'This calendar month does not overlap the project date window.',
-					['yearMonth' => 'Pick a month that intersects the project start and end dates.'],
+					$hasBilling
+						? 'This calendar month does not overlap the billing period.'
+						: 'This calendar month does not overlap the project date window.',
+					['yearMonth' => $hasBilling
+						? 'Pick a month that intersects the billing period.'
+						: 'Pick a month that intersects the project start and end dates.'],
 				);
 			}
 		} else {
 			$ym = null;
-			$start = $workspace['projectStartDate'] !== null ? new \DateTimeImmutable($workspace['projectStartDate']) : new \DateTimeImmutable('1970-01-01');
-			$end = $workspace['projectEndDate'] !== null ? new \DateTimeImmutable($workspace['projectEndDate']) : $this->timeFactory->getDateTime('now')->setTime(0, 0)->modify('+10 years');
+			$start = $effStartRaw !== null ? new \DateTimeImmutable($effStartRaw) : new \DateTimeImmutable('1970-01-01');
+			$end = $effEndRaw !== null ? new \DateTimeImmutable($effEndRaw) : $this->timeFactory->getDateTime('now')->setTime(0, 0)->modify('+10 years');
 		}
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
 		$rows = $this->loadTransactionsForRange($workspaceId, $start, $end);
@@ -233,8 +244,8 @@ class SummaryService
 
 		$allTimeRows = $this->loadTransactionsForRange(
 			$workspaceId,
-			$workspace['projectStartDate'] !== null ? new \DateTimeImmutable($workspace['projectStartDate']) : new \DateTimeImmutable('1970-01-01'),
-			$workspace['projectEndDate'] !== null ? new \DateTimeImmutable($workspace['projectEndDate']) : $this->timeFactory->getDateTime('now')->setTime(23, 59, 59)
+			$effStartRaw !== null ? new \DateTimeImmutable($effStartRaw) : new \DateTimeImmutable('1970-01-01'),
+			$effEndRaw !== null ? new \DateTimeImmutable($effEndRaw) : $this->timeFactory->getDateTime('now')->setTime(23, 59, 59)
 		);
 		$allTimeFigures = $this->aggregateMonth($workspace, $allTimeRows, $uncatIds);
 

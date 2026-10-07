@@ -148,6 +148,67 @@ final class TransactionDateWindowTest extends TestCase
 		$this->assertSame('bookingDate must lie inside the project date window.', $legacy->getMessage());
 	}
 
+	public function testListWindowClampsToEffectiveWindowNotJustProject(): void
+	{
+		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
+		$method->setAccessible(true);
+		$ws = [
+			'type' => WorkspaceService::TYPE_PROJECT,
+			'projectStartDate' => '2026-01-01',
+			'projectEndDate' => '2026-09-30',
+			'billingStartDate' => '2025-11-01',
+			'billingEndDate' => '2026-10-31',
+		];
+
+		// Default bounds must cover the billing extension, else post-project
+		// bookings are invisible in the ledger.
+		$window = $method->invoke($this->service(), $ws, []);
+		$this->assertSame('2025-11-01', $window[0]);
+		$this->assertSame('2026-10-31', $window[1]);
+
+		// Explicit bounds inside the billing extension must not be clamped
+		// back to the project window.
+		$window = $method->invoke($this->service(), $ws, [
+			'from' => '2026-10-01',
+			'to' => '2026-10-31',
+		]);
+		$this->assertSame('2026-10-01', $window[0]);
+		$this->assertSame('2026-10-31', $window[1]);
+	}
+
+	public function testListWindowWithoutBillingBoundsClampsToProject(): void
+	{
+		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
+		$method->setAccessible(true);
+		$window = $method->invoke($this->service(), [
+			'type' => WorkspaceService::TYPE_PROJECT,
+			'projectStartDate' => '2026-01-01',
+			'projectEndDate' => '2026-09-30',
+			'billingStartDate' => null,
+			'billingEndDate' => null,
+		], []);
+		$this->assertSame('2026-01-01', $window[0]);
+		$this->assertSame('2026-09-30', $window[1]);
+	}
+
+	public function testParseIsoDateRejectsImpossibleCalendarDates(): void
+	{
+		$method = new ReflectionMethod(TransactionService::class, 'parseIsoDate');
+		$method->setAccessible(true);
+		$service = $this->service();
+
+		foreach (['2026-02-30', '2026-02-29', '2026-04-31', '2026-00-10'] as $bad) {
+			try {
+				$method->invoke($service, $bad, 'bookingDate');
+				$this->fail("expected rejection for {$bad}");
+			} catch (\InvalidArgumentException) {
+			}
+		}
+
+		$ok = $method->invoke($service, '2024-02-29', 'bookingDate');
+		$this->assertSame('2024-02-29', $ok->format('Y-m-d'));
+	}
+
 	private function service(): TransactionService
 	{
 		return new TransactionService(

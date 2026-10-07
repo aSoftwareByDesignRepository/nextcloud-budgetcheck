@@ -1339,7 +1339,9 @@ OC.L10N.register(
 	"Billing period end (optional)" : "Einde van de afrekenperiode (optioneel)",
 	"Bookings must be dated inside the billing period. Leave it empty to use the project period." : "Boekingen moeten binnen de afrekenperiode vallen. Laat leeg om de projectperiode te gebruiken.",
 	"bookingDate must lie inside the billing period." : "De boekingsdatum moet binnen de afrekenperiode liggen.",
-	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Kies een datum binnen de afrekenperiode of pas de afrekenperiode aan in de werkruimte-instellingen."
+	"Pick a date inside the billing period, or adjust the billing period in workspace settings." : "Kies een datum binnen de afrekenperiode of pas de afrekenperiode aan in de werkruimte-instellingen.",
+	"This calendar month does not overlap the billing period." : "Deze kalendermaand overlapt niet met de afrekenperiode.",
+	"Pick a month that intersects the billing period." : "Kies een maand die de afrekenperiode overlapt."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

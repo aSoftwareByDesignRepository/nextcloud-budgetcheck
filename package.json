@@ -1,6 +1,6 @@
 {
     "name": "budgetcheck",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "private": true,
     "scripts": {
         "db:naming-check": "bash scripts/check-db-naming.sh",
@@ -14,6 +14,7 @@
         "e2e:smoke:safe": "bash ./e2e/run-safe.sh",
         "test:a11y": "playwright test tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
         "test:ui:gauntlet": "playwright test e2e/shell-a11y-smoke.spec.js e2e/dashboard-warnings-summary.spec.js tests/e2e/a11y-smoke.spec.js tests/e2e/theme-responsive-a11y.spec.js",
+        "mutate:billing-period": "php tests/Mutation/run-billing-period-mutations.php",
         "mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
         "mutate:epic": "php tests/Mutation/run-epic-gate-mutations.php",
         "mutate:upload-errors": "php tests/Mutation/run-upload-error-mutations.php",

@@ -228,11 +228,15 @@ class HouseholdYearlyExportService
 	 */
 	private function projectExportBounds(array $workspace): array
 	{
-		$start = $workspace['projectStartDate'] !== null
-			? new \DateTimeImmutable((string)$workspace['projectStartDate'])
+		// A set billing bound replaces the project bound on that side — final
+		// invoices legitimately postdate project handover and must be exported.
+		$startRaw = $workspace['billingStartDate'] ?? $workspace['projectStartDate'];
+		$endRaw = $workspace['billingEndDate'] ?? $workspace['projectEndDate'];
+		$start = $startRaw !== null
+			? new \DateTimeImmutable((string)$startRaw)
 			: new \DateTimeImmutable('1970-01-01');
-		$end = $workspace['projectEndDate'] !== null
-			? new \DateTimeImmutable((string)$workspace['projectEndDate'])
+		$end = $endRaw !== null
+			? new \DateTimeImmutable((string)$endRaw)
 			: new \DateTimeImmutable('today');
 		return [$start, $end];
 	}

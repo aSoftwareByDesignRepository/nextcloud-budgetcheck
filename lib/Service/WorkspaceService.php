@@ -381,15 +381,19 @@ class WorkspaceService
 				$logChanges['billingEndDate'] = $updates['billing_end_date'];
 			}
 			if ($startProvided || $endProvided || $billingStartProvided || $billingEndProvided) {
+				// Effective bounds must follow the same resolution the booking
+				// check uses: new billing bound ?? new project bound ?? stored
+				// project bound. Falling back to the stored project date here
+				// would validate the wrong window when both change together.
 				$effStart = $this->parseNullableDate(
 					($billingStartProvided || $billingEndProvided)
-						? ($updates['billing_start_date'] ?? $workspace['projectStartDate'])
+						? ($updates['billing_start_date'] ?? $updates['project_start_date'] ?? $workspace['projectStartDate'])
 						: ($workspace['billingStartDate'] ?? $updates['project_start_date'] ?? $workspace['projectStartDate']),
 					'effectiveStart'
 				);
 				$effEnd = $this->parseNullableDate(
 					($billingStartProvided || $billingEndProvided)
-						? ($updates['billing_end_date'] ?? $workspace['projectEndDate'])
+						? ($updates['billing_end_date'] ?? $updates['project_end_date'] ?? $workspace['projectEndDate'])
 						: ($workspace['billingEndDate'] ?? $updates['project_end_date'] ?? $workspace['projectEndDate']),
 					'effectiveEnd'
 				);
@@ -1048,8 +1052,12 @@ class WorkspaceService
 		if (($workspace['type'] ?? null) !== self::TYPE_PROJECT) {
 			return true;
 		}
-		$start = $workspace['projectStartDate'] !== null ? new \DateTimeImmutable($workspace['projectStartDate']) : null;
-		$end = $workspace['projectEndDate'] !== null ? new \DateTimeImmutable($workspace['projectEndDate']) : null;
+		// A set billing bound replaces the project bound on that side — keep in
+		// sync with TransactionService::bookingDateInsideProjectWindow.
+		$startRaw = $workspace['billingStartDate'] ?? $workspace['projectStartDate'];
+		$endRaw = $workspace['billingEndDate'] ?? $workspace['projectEndDate'];
+		$start = $startRaw !== null ? new \DateTimeImmutable($startRaw) : null;
+		$end = $endRaw !== null ? new \DateTimeImmutable($endRaw) : null;
 		if ($start !== null && $date < $start) {
 			return false;
 		}
@@ -1074,7 +1082,7 @@ class WorkspaceService
 		$row = $result->fetch();
 		$result->closeCursor();
 		if ((int)($row['count'] ?? 0) > 0) {
-			throw new \InvalidArgumentException('The new project date window would orphan existing transactions. Move or delete them first.');
+			throw new \InvalidArgumentException('The new booking date window would orphan existing transactions. Move or delete them first.');
 		}
 	}
 
@@ -1303,14 +1311,15 @@ class WorkspaceService
 	private function parseDate(string $value, string $field): \DateTimeImmutable
 	{
 		$value = trim($value);
-		if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
 			throw new \InvalidArgumentException($field . ' must be in YYYY-MM-DD format.');
 		}
-		try {
-			return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
-		} catch (\Throwable) {
+		// DateTimeImmutable silently normalises impossible dates (2026-02-30 →
+		// 2026-03-02); only checkdate rejects them outright.
+		if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
 			throw new \InvalidArgumentException($field . ' is not a valid date.');
 		}
+		return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
 	}
 
 	private function utcNow(): string
