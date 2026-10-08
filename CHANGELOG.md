@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 1.4.6 - 2026-10-08
 
 ### Added
 
@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The ODS file is a spec-conformant OpenDocument Spreadsheet package with typed date, number, and boolean cells and a bold header row — it opens directly in LibreOffice and Excel.
 - Exports are rate-limited, exclude deleted transactions, require workspace membership, and are capped at 10 000 rows per file with a clear message when the set is larger.
 - **Companion API 8 — ledger export for BudgetCheck Mobile:** `GET /api/mobile/v1/workspaces/{id}/transactions/export?format=csv|ods` serves the same export over Basic/app-password auth with the mobile list's filter subset and its own rate-limit bucket; `bootstrap` advertises it via `capabilities.transactionsExport`.
+
+### Fixed
+
+- **PHP warnings on household/private workspace creation:** creating a non-project workspace logged `Undefined array key` warnings because the project-field extractor returned fewer slots than the caller destructures (1.4.4 regression).
 
 ## 1.4.5 - 2026-10-07
 
