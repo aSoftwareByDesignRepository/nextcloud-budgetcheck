@@ -103,27 +103,42 @@ class CategoryService
 		$isSavingsTransfer = $this->normaliseIsSavingsTransfer($payload['isSavingsTransfer'] ?? false, $type);
 		$taxMode = $this->normaliseTaxMode((string)($payload['taxHandlingMode'] ?? 'inherit_workspace'));
 
-		$this->ensureUniqueActive($workspaceId, $name, $type);
-
 		$now = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_categories')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'name' => $qb->createNamedParameter($name),
-				'type' => $qb->createNamedParameter($type),
-				'group_key' => $qb->createNamedParameter($groupKey),
-				'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
-				'is_savings_transfer' => $qb->createNamedParameter($isSavingsTransfer, \PDO::PARAM_BOOL),
-				'tax_handling_mode' => $qb->createNamedParameter($taxMode),
-				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
-				'created_by' => $qb->createNamedParameter($userId),
-				'created_at' => $qb->createNamedParameter($now),
-				'updated_at' => $qb->createNamedParameter($now),
-			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_categories');
-		$this->audit->record($userId, 'category_created', 'category', (string)$id, ['type' => $type, 'name' => $name], $workspaceId);
+		$id = 0;
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete (no FKs — see
+			// WorkspaceDeletionService::CHILD_TABLES) and concurrent same-name
+			// creates: the uniqueness invariant lives in the service layer, so
+			// the check must run under the workspace row lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$this->ensureUniqueActive($workspaceId, $name, $type);
+
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_categories')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'name' => $qb->createNamedParameter($name),
+					'type' => $qb->createNamedParameter($type),
+					'group_key' => $qb->createNamedParameter($groupKey),
+					'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
+					'is_savings_transfer' => $qb->createNamedParameter($isSavingsTransfer, \PDO::PARAM_BOOL),
+					'tax_handling_mode' => $qb->createNamedParameter($taxMode),
+					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'created_by' => $qb->createNamedParameter($userId),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+				]);
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_categories');
+			$this->audit->record($userId, 'category_created', 'category', (string)$id, ['type' => $type, 'name' => $name], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		return $this->loadById($id);
 	}
 
@@ -137,64 +152,81 @@ class CategoryService
 
 		$updates = [];
 		$logChanges = [];
+		$this->db->beginTransaction();
+		try {
+			// Serialize the name-uniqueness check + update under the workspace
+			// lock — the invariant lives in the service layer (no unique index).
+			WorkspaceRowLock::acquire($this->db, $category['workspaceId']);
+			$category = $this->loadById($categoryId);
+			if ($category === null) {
+				throw new AccessDeniedException();
+			}
 
-		if (array_key_exists('name', $payload)) {
-			$name = $this->normaliseName((string)$payload['name']);
-			if ($name !== $category['name']) {
-				$this->ensureUniqueActive($category['workspaceId'], $name, $category['type'], $categoryId);
-				$updates['name'] = $name;
-				$logChanges['name'] = $name;
+			if (array_key_exists('name', $payload)) {
+				$name = $this->normaliseName((string)$payload['name']);
+				if ($name !== $category['name']) {
+					$this->ensureUniqueActive($category['workspaceId'], $name, $category['type'], $categoryId);
+					$updates['name'] = $name;
+					$logChanges['name'] = $name;
+				}
 			}
-		}
-		if (array_key_exists('groupKey', $payload)) {
-			$groupKey = $this->normaliseGroupKey($payload['groupKey']);
-			if ($groupKey !== $category['groupKey']) {
-				$updates['group_key'] = $groupKey;
-				$logChanges['groupKey'] = $groupKey;
+			if (array_key_exists('groupKey', $payload)) {
+				$groupKey = $this->normaliseGroupKey($payload['groupKey']);
+				if ($groupKey !== $category['groupKey']) {
+					$updates['group_key'] = $groupKey;
+					$logChanges['groupKey'] = $groupKey;
+				}
 			}
-		}
-		if (array_key_exists('isSpecial', $payload)) {
-			$isSpecial = StrictBool::field($payload, 'isSpecial');
-			if ($isSpecial !== $category['isSpecial']) {
-				$updates['is_special'] = $isSpecial;
-				$logChanges['isSpecial'] = $isSpecial;
+			if (array_key_exists('isSpecial', $payload)) {
+				$isSpecial = StrictBool::field($payload, 'isSpecial');
+				if ($isSpecial !== $category['isSpecial']) {
+					$updates['is_special'] = $isSpecial;
+					$logChanges['isSpecial'] = $isSpecial;
+				}
 			}
-		}
-		if (array_key_exists('isSavingsTransfer', $payload)) {
-			$isSavingsTransfer = $this->normaliseIsSavingsTransfer($payload['isSavingsTransfer'], $category['type']);
-			if ($isSavingsTransfer !== $category['isSavingsTransfer']) {
-				$updates['is_savings_transfer'] = $isSavingsTransfer;
-				$logChanges['isSavingsTransfer'] = $isSavingsTransfer;
+			if (array_key_exists('isSavingsTransfer', $payload)) {
+				$isSavingsTransfer = $this->normaliseIsSavingsTransfer($payload['isSavingsTransfer'], $category['type']);
+				if ($isSavingsTransfer !== $category['isSavingsTransfer']) {
+					$updates['is_savings_transfer'] = $isSavingsTransfer;
+					$logChanges['isSavingsTransfer'] = $isSavingsTransfer;
+				}
 			}
-		}
-		if (array_key_exists('taxHandlingMode', $payload)) {
-			$mode = $this->normaliseTaxMode((string)$payload['taxHandlingMode']);
-			if ($mode !== $category['taxHandlingMode']) {
-				$updates['tax_handling_mode'] = $mode;
-				$logChanges['taxHandlingMode'] = $mode;
+			if (array_key_exists('taxHandlingMode', $payload)) {
+				$mode = $this->normaliseTaxMode((string)$payload['taxHandlingMode']);
+				if ($mode !== $category['taxHandlingMode']) {
+					$updates['tax_handling_mode'] = $mode;
+					$logChanges['taxHandlingMode'] = $mode;
+				}
 			}
-		}
-		// We intentionally do NOT allow changing `type` after creation. Direction
-		// is structural: existing transactions reference a typed category, and
-		// flipping the type would silently change every historical row's sign.
+			// We intentionally do NOT allow changing `type` after creation. Direction
+			// is structural: existing transactions reference a typed category, and
+			// flipping the type would silently change every historical row's sign.
 
-		if ($updates === []) {
-			return $category;
+			if ($updates === []) {
+				$this->db->commit();
+				return $category;
+			}
+			$updates['updated_at'] = $this->utcNow();
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_categories');
+			foreach ($updates as $col => $value) {
+				$type = match (true) {
+					is_bool($value) => \PDO::PARAM_BOOL,
+					$value === null => \PDO::PARAM_NULL,
+					default => \PDO::PARAM_STR,
+				};
+				$qb->set($col, $qb->createNamedParameter($value, $type));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->audit->record($userId, 'category_updated', 'category', (string)$categoryId, $logChanges, $category['workspaceId']);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$updates['updated_at'] = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_categories');
-		foreach ($updates as $col => $value) {
-			$type = match (true) {
-				is_bool($value) => \PDO::PARAM_BOOL,
-				$value === null => \PDO::PARAM_NULL,
-				default => \PDO::PARAM_STR,
-			};
-			$qb->set($col, $qb->createNamedParameter($value, $type));
-		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
-		$this->audit->record($userId, 'category_updated', 'category', (string)$categoryId, $logChanges, $category['workspaceId']);
 		return $this->loadById($categoryId);
 	}
 
@@ -211,40 +243,53 @@ class CategoryService
 		if (!$category['isActive']) {
 			return $category;
 		}
-		// Recurring rules pointing at this category are deactivated in the same
-		// breath so background suggestions stop using a vanished bucket.
-		$rqb = $this->db->getQueryBuilder();
-		$rqb->update('bc_recurring_rules')
-			->set('is_active', $rqb->createNamedParameter(false, \PDO::PARAM_BOOL))
-			->set('updated_at', $rqb->createNamedParameter($this->utcNow()))
-			->where($rqb->expr()->eq('category_id', $rqb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
-		$rqb->executeStatement();
+		$plannedRemoved = 0;
+		$this->db->beginTransaction();
+		try {
+			// Rules + planned placeholders + the category flip must commit or
+			// fail together, serialized against workspace delete/close.
+			WorkspaceRowLock::acquire($this->db, $category['workspaceId']);
+			// Recurring rules pointing at this category are deactivated in the same
+			// breath so background suggestions stop using a vanished bucket.
+			$rqb = $this->db->getQueryBuilder();
+			$rqb->update('bc_recurring_rules')
+				->set('is_active', $rqb->createNamedParameter(false, \PDO::PARAM_BOOL))
+				->set('updated_at', $rqb->createNamedParameter($this->utcNow()))
+				->where($rqb->expr()->eq('category_id', $rqb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
+			$rqb->executeStatement();
 
-		// Live planned placeholders can never be matched again (bookings in a
-		// deactivated category are rejected), so retire them now. Real bookings
-		// stay untouched. Planned rows never feed close evidence, so this is
-		// safe regardless of month state.
-		$now = $this->utcNow();
-		$pqb = $this->db->getQueryBuilder();
-		$pqb->update('bc_transactions')
-			->set('deleted_at', $pqb->createNamedParameter($now))
-			->set('updated_by', $pqb->createNamedParameter($userId))
-			->set('updated_at', $pqb->createNamedParameter($now))
-			->set('version', $pqb->createFunction('version + 1'))
-			->where($pqb->expr()->eq('category_id', $pqb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
-			->andWhere($pqb->expr()->eq('is_planned', $pqb->createNamedParameter(true, \PDO::PARAM_BOOL)))
-			->andWhere($pqb->expr()->isNull('deleted_at'));
-		$plannedRemoved = $pqb->executeStatement();
+			// Live planned placeholders can never be matched again (bookings in a
+			// deactivated category are rejected), so retire them now. Real bookings
+			// stay untouched. Planned rows never feed close evidence, so this is
+			// safe regardless of month state.
+			$now = $this->utcNow();
+			$pqb = $this->db->getQueryBuilder();
+			$pqb->update('bc_transactions')
+				->set('deleted_at', $pqb->createNamedParameter($now))
+				->set('updated_by', $pqb->createNamedParameter($userId))
+				->set('updated_at', $pqb->createNamedParameter($now))
+				->set('version', $pqb->createFunction('version + 1'))
+				->where($pqb->expr()->eq('category_id', $pqb->createNamedParameter($categoryId, \PDO::PARAM_INT)))
+				->andWhere($pqb->expr()->eq('is_planned', $pqb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+				->andWhere($pqb->expr()->isNull('deleted_at'));
+			$plannedRemoved = $pqb->executeStatement();
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_categories')
-			->set('is_active', $qb->createNamedParameter(false, \PDO::PARAM_BOOL))
-			->set('updated_at', $qb->createNamedParameter($this->utcNow()))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
-		$this->audit->record($userId, 'category_deactivated', 'category', (string)$categoryId, [
-			'plannedRemoved' => $plannedRemoved,
-		], $category['workspaceId']);
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_categories')
+				->set('is_active', $qb->createNamedParameter(false, \PDO::PARAM_BOOL))
+				->set('updated_at', $qb->createNamedParameter($this->utcNow()))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($categoryId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->audit->record($userId, 'category_deactivated', 'category', (string)$categoryId, [
+				'plannedRemoved' => $plannedRemoved,
+			], $category['workspaceId']);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		return $this->loadById($categoryId);
 	}
 
@@ -273,6 +318,7 @@ class CategoryService
 
 		$this->db->beginTransaction();
 		try {
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			if ($this->internalUncategorizedCategoryId($workspaceId) !== null) {
 				$this->db->commit();
 				return;

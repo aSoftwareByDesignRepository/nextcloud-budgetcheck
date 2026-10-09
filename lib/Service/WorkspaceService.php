@@ -7,6 +7,7 @@ namespace OCA\BudgetCheck\Service;
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
+use OCA\BudgetCheck\Exception\ValidationException;
 use OCA\BudgetCheck\Support\StrictBool;
 use OCA\BudgetCheck\Migration\BudgetCheckTableCatalog;
 use OCA\BudgetCheck\Exception\InternalErrorException;
@@ -359,7 +360,10 @@ class WorkspaceService
 				$startDate = $this->parseDate((string)$rawStart, 'projectStartDate');
 				$endDate = $this->parseDate((string)$rawEnd, 'projectEndDate');
 				if ($endDate < $startDate) {
-					throw new \InvalidArgumentException('projectEndDate must not be before projectStartDate.');
+					throw new ValidationException(
+						'projectEndDate must not be before projectStartDate.',
+						['projectEndDate' => 'The end date must not be before the start date.']
+					);
 				}
 				$updates['project_start_date'] = $startDate->format('Y-m-d');
 				$updates['project_end_date'] = $endDate->format('Y-m-d');
@@ -397,10 +401,28 @@ class WorkspaceService
 						: ($workspace['billingEndDate'] ?? $updates['project_end_date'] ?? $workspace['projectEndDate']),
 					'effectiveEnd'
 				);
+				// Pin the error to the controls that form the effective window:
+				// a non-null billing bound owns that side, otherwise the project
+				// bound does. Mirrors the effStart/effEnd resolution above —
+				// a cleared (null) billing bound must NOT pin the billing field.
+				$effStartVal = ($billingStartProvided || $billingEndProvided)
+					? $updates['billing_start_date']
+					: ($workspace['billingStartDate'] ?? null);
+				$effEndVal = ($billingStartProvided || $billingEndProvided)
+					? $updates['billing_end_date']
+					: ($workspace['billingEndDate'] ?? null);
+				$effStartField = $effStartVal !== null ? 'billingStartDate' : 'projectStartDate';
+				$effEndField = $effEndVal !== null ? 'billingEndDate' : 'projectEndDate';
 				if ($effStart === null || $effEnd === null || $effEnd < $effStart) {
-					throw new \InvalidArgumentException('billingEndDate must not be before the effective booking start date.');
+					throw new ValidationException(
+						'billingEndDate must not be before the effective booking start date.',
+						[
+							$effStartField => 'The booking window start must not be after its end.',
+							$effEndField => 'The booking window end must not be before its start.',
+						]
+					);
 				}
-				$this->ensureNoOrphans($workspaceId, $effStart, $effEnd);
+				$this->ensureNoOrphans($workspaceId, $effStart, $effEnd, [$effStartField, $effEndField]);
 			}
 			if (array_key_exists('projectTotalCapMinor', $payload)) {
 				$cap = $this->normaliseNullableMinor($payload['projectTotalCapMinor']);
@@ -663,23 +685,35 @@ class WorkspaceService
 			throw new \InvalidArgumentException('Unknown user.');
 		}
 		$role = $this->normaliseRole((string)($payload['role'] ?? AccessControlService::ROLE_VIEWER));
-		// Conflict only on an existing *direct* membership. A user may already
-		// reach the workspace through a group; adding an individual role on top
-		// (e.g. promoting one person to manager) is legitimate, and the
-		// effective role is the strongest of the two.
-		if ($this->individualMemberId($workspaceId, $candidate) !== null) {
-			throw new \InvalidArgumentException('User is already a member of this workspace.');
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete (no FKs) and
+			// concurrent double-adds — the unique check must run under the lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			// Conflict only on an existing *direct* membership. A user may already
+			// reach the workspace through a group; adding an individual role on top
+			// (e.g. promoting one person to manager) is legitimate, and the
+			// effective role is the strongest of the two.
+			if ($this->individualMemberId($workspaceId, $candidate) !== null) {
+				throw new \InvalidArgumentException('User is already a member of this workspace.');
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_workspace_members')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'user_id' => $qb->createNamedParameter($candidate),
+					'role' => $qb->createNamedParameter($role),
+					'created_at' => $qb->createNamedParameter($this->utcNow()),
+				]);
+			$qb->executeStatement();
+			$this->audit->record($userId, 'workspace_member_added', 'workspace_member', $candidate, ['role' => $role], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_workspace_members')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'user_id' => $qb->createNamedParameter($candidate),
-				'role' => $qb->createNamedParameter($role),
-				'created_at' => $qb->createNamedParameter($this->utcNow()),
-			]);
-		$qb->executeStatement();
-		$this->audit->record($userId, 'workspace_member_added', 'workspace_member', $candidate, ['role' => $role], $workspaceId);
 		return $this->listMembers($workspaceId, $userId);
 	}
 
@@ -813,19 +847,31 @@ class WorkspaceService
 			throw new \InvalidArgumentException('Unknown group.');
 		}
 		$role = $this->normaliseGroupRole((string)($payload['role'] ?? AccessControlService::ROLE_VIEWER));
-		if ($this->groupAssignmentId($workspaceId, $gid) !== null) {
-			throw new \InvalidArgumentException('This group is already assigned to the workspace.');
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete (no FKs) and
+			// concurrent double-assignments — the check must run under the lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			if ($this->groupAssignmentId($workspaceId, $gid) !== null) {
+				throw new \InvalidArgumentException('This group is already assigned to the workspace.');
+			}
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_workspace_groups')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'gid' => $qb->createNamedParameter($gid),
+					'role' => $qb->createNamedParameter($role),
+					'created_at' => $qb->createNamedParameter($this->utcNow()),
+				]);
+			$qb->executeStatement();
+			$this->audit->record($userId, 'workspace_group_added', 'workspace_group', $gid, ['role' => $role], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_workspace_groups')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'gid' => $qb->createNamedParameter($gid),
-				'role' => $qb->createNamedParameter($role),
-				'created_at' => $qb->createNamedParameter($this->utcNow()),
-			]);
-		$qb->executeStatement();
-		$this->audit->record($userId, 'workspace_group_added', 'workspace_group', $gid, ['role' => $role], $workspaceId);
 		return $this->listMembers($workspaceId, $userId);
 	}
 
@@ -1067,7 +1113,10 @@ class WorkspaceService
 		return true;
 	}
 
-	private function ensureNoOrphans(int $workspaceId, \DateTimeImmutable $start, \DateTimeImmutable $end): void
+	/**
+	 * @param array<int, string> $fieldNames form fields the window error pins to
+	 */
+	private function ensureNoOrphans(int $workspaceId, \DateTimeImmutable $start, \DateTimeImmutable $end, array $fieldNames = []): void
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*', 'count'))
@@ -1082,7 +1131,12 @@ class WorkspaceService
 		$row = $result->fetch();
 		$result->closeCursor();
 		if ((int)($row['count'] ?? 0) > 0) {
-			throw new \InvalidArgumentException('The new booking date window would orphan existing transactions. Move or delete them first.');
+			$message = 'The new booking date window would orphan existing transactions. Move or delete them first.';
+			$fields = [];
+			foreach ($fieldNames as $fieldName) {
+				$fields[$fieldName] = $message;
+			}
+			throw new ValidationException($message, $fields);
 		}
 	}
 
@@ -1270,17 +1324,35 @@ class WorkspaceService
 		$startRaw = trim((string)($payload['projectStartDate'] ?? ''));
 		$endRaw = trim((string)($payload['projectEndDate'] ?? ''));
 		if ($startRaw === '' || $endRaw === '') {
-			throw new \InvalidArgumentException('Project workspaces require projectStartDate and projectEndDate.');
+			$missing = [];
+			if ($startRaw === '') {
+				$missing['projectStartDate'] = 'Project workspaces require a project start date.';
+			}
+			if ($endRaw === '') {
+				$missing['projectEndDate'] = 'Project workspaces require a project end date.';
+			}
+			throw new ValidationException('Project workspaces require projectStartDate and projectEndDate.', $missing);
 		}
 		$start = $this->parseDate($startRaw, 'projectStartDate');
 		$end = $this->parseDate($endRaw, 'projectEndDate');
 		if ($end < $start) {
-			throw new \InvalidArgumentException('projectEndDate must not be before projectStartDate.');
+			throw new ValidationException(
+				'projectEndDate must not be before projectStartDate.',
+				['projectEndDate' => 'The end date must not be before the start date.']
+			);
 		}
 		$billingStart = $this->parseNullableDate($payload['billingStartDate'] ?? null, 'billingStartDate');
 		$billingEnd = $this->parseNullableDate($payload['billingEndDate'] ?? null, 'billingEndDate');
 		if (($billingEnd ?? $end) < ($billingStart ?? $start)) {
-			throw new \InvalidArgumentException('billingEndDate must not be before the effective booking start date.');
+			throw new ValidationException(
+				'billingEndDate must not be before the effective booking start date.',
+				[
+					($billingStart !== null ? 'billingStartDate' : 'projectStartDate')
+						=> 'The booking window start must not be after its end.',
+					($billingEnd !== null ? 'billingEndDate' : 'projectEndDate')
+						=> 'The booking window end must not be before its start.',
+				]
+			);
 		}
 		$cap = $this->normaliseNullableMinor($payload['projectTotalCapMinor'] ?? null);
 		$rate = null;
@@ -1312,12 +1384,18 @@ class WorkspaceService
 	{
 		$value = trim($value);
 		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
-			throw new \InvalidArgumentException($field . ' must be in YYYY-MM-DD format.');
+			throw new ValidationException(
+				$field . ' must be in YYYY-MM-DD format.',
+				[$field => 'Invalid calendar date.']
+			);
 		}
 		// DateTimeImmutable silently normalises impossible dates (2026-02-30 →
 		// 2026-03-02); only checkdate rejects them outright.
 		if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
-			throw new \InvalidArgumentException($field . ' is not a valid date.');
+			throw new ValidationException(
+				$field . ' is not a valid date.',
+				[$field => 'Invalid calendar date.']
+			);
 		}
 		return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTime(0, 0);
 	}

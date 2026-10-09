@@ -25,7 +25,7 @@ use OCP\IDBConnection;
 class WorkspaceDeletionService
 {
 	/** Child tables deleted by workspace_id (attachments handled separately). */
-	private const CHILD_TABLES = [
+	public const CHILD_TABLES = [
 		'bc_transactions',
 		'bc_recurring_rules',
 		'bc_budgets',

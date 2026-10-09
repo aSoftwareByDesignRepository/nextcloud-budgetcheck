@@ -104,4 +104,31 @@ final class EntrypointCoverageContractTest extends TestCase
 		self::assertContains('export#projectPeriod', $names);
 		self::assertContains('attachment#download', $names);
 	}
+
+	public function testNumericRouteParamsRequireDigits(): void
+	{
+		// bc-m1: without a \d+ requirement the AppFramework casts '2e3'->2000,
+		// '2.9'->2 and ' 5'->5 BEFORE the controller's validateId() runs —
+		// float/sci ids then mutate real rows. Every id-shaped placeholder
+		// must carry a digits-only requirement (mobile routes already did).
+		$routes = include dirname(__DIR__, 3) . '/appinfo/routes.php';
+		$numericParams = ['id', 'workspaceId', 'transactionId', 'txId', 'ruleId', 'attachmentId', 'memberId'];
+		foreach ($routes['routes'] as $route) {
+			$url = (string)($route['url'] ?? '');
+			if (!preg_match_all('/\{([a-zA-Z]+)\}/', $url, $m)) {
+				continue;
+			}
+			foreach ($m[1] as $param) {
+				if (!in_array($param, $numericParams, true)) {
+					continue;
+				}
+				$req = $route['requirements'][$param] ?? null;
+				self::assertSame(
+					'\\d+',
+					$req,
+					sprintf('route %s %s param {%s} lacks a \\d+ requirement', $route['verb'] ?? '?', $url, $param)
+				);
+			}
+		}
+	}
 }

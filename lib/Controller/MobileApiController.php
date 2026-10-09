@@ -722,6 +722,15 @@ class MobileApiController extends Controller
 			$nextDue = (string)($ruleRow['nextDueDate'] ?? '');
 			if ($nextDue !== '' && $nextDue <= $today) {
 				$batch = $this->recurring->generateDue($ruleId, $userId, $workspace, $this->transactions, $category);
+				if ((int)($batch['count'] ?? 0) < 1) {
+					// Nothing was written — a null transaction must never read as
+					// a successful apply (dutycheck suggest-fill class).
+					throw new \InvalidArgumentException(
+						(int)($batch['skippedClosed'] ?? 0) > 0
+							? 'Month is closed. Reopen it before generating this due date.'
+							: 'An entry already exists for the next due date.'
+					);
+				}
 				$ids = is_array($batch['transactionIds'] ?? null) ? $batch['transactionIds'] : [];
 				$firstId = isset($ids[0]) ? (int)$ids[0] : 0;
 				$transaction = $firstId > 0

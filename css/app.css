@@ -657,7 +657,7 @@
 	box-sizing: border-box;
 	min-height: 44px;
 	padding: 0.5rem 0.65rem;
-	border: 1px solid var(--color-border);
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--color-border)));
 	border-radius: var(--border-radius-element);
 	background: var(--color-main-background);
 	color: var(--color-main-text);
@@ -715,7 +715,9 @@
 }
 .bc-entity-picker__noresult--err {
 	color: var(--color-main-text);
-	border-left: 3px solid var(--color-error);
+	/* --color-error is a pale surface tint (~1.1:1) — the accent must use the
+	   error TEXT/element token so the error affordance stays visible. */
+	border-left: 3px solid var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
 	margin: 0.4rem 0.5rem 0.5rem;
 	padding: 0.4rem 0.5rem 0.45rem 0.6rem;
 	background: var(--color-background-darker);
@@ -1049,7 +1051,7 @@
 	box-sizing: border-box;
 	accent-color: var(--color-primary-element);
 	background-color: var(--bc-bg-card, var(--color-main-background, #fff));
-	border: 1px solid var(--bc-border-strong, var(--color-border-dark, #999));
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--color-border-dark, #999)));
 	border-radius: 3px;
 	color-scheme: inherit;
 	appearance: auto;
@@ -1140,7 +1142,7 @@
 	box-sizing: border-box;
 	accent-color: var(--color-primary-element);
 	background-color: var(--bc-bg-card, var(--color-main-background, #fff));
-	border: 1px solid var(--bc-border-strong, var(--color-border-dark, #999));
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--color-border-dark, #999)));
 	border-radius: 50%;
 	color-scheme: inherit;
 	appearance: auto;
@@ -1226,6 +1228,15 @@
 .bc-form-grid > .bc-fieldset,
 .bc-modal .bc-form-grid > .bc-fieldset {
 	grid-column: 1 / -1;
+}
+/*
+ * Nested grid whose fields share one block hint row (e.g. billing period):
+ * the real hint replaces the reserved ::after spacer, which would otherwise
+ * push it away from the inputs. Equal specificity to the base spacer rule —
+ * must stay ordered after it.
+ */
+.bc-form-grid--shared-hint > .bc-field:not(.bc-field--inline):not(.bc-field--radio):not(:has(.bc-field__hint))::after {
+	content: none;
 }
 .bc-modal__optional {
 	margin: 0;
@@ -2721,7 +2732,7 @@
 	justify-content: center;
 	gap: var(--bc-space-2);
 	padding: var(--bc-space-2) var(--bc-space-3);
-	border: 1px solid var(--bc-border);
+	border: 1px solid var(--bc-form-border);
 	border-radius: var(--bc-radius-sm);
 	background: transparent;
 	color: var(--color-main-text);
@@ -3019,7 +3030,7 @@
 	justify-content: flex-start;
 	gap: var(--bc-space-2);
 	padding: var(--bc-space-4);
-	border: 1px solid var(--bc-border);
+	border: 1px solid var(--bc-form-border);
 	border-radius: var(--bc-radius-sm);
 	background: var(--bc-bg-card);
 	text-decoration: none;
@@ -3311,7 +3322,10 @@ body.bc-modal-open {
 .bc-modal textarea.bc-input {
 	background: var(--color-main-background, var(--bc-bg-card));
 	color: var(--color-main-text);
-	border: 1px solid var(--bc-border-strong);
+	/* Modal dialogs are body-mounted — outside the #app-content cascade guard —
+	   so they must pin the control border to the >=3:1 form token themselves
+	   (WCAG 1.4.11). --bc-border-strong (~1.6:1) is surface-only. */
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--bc-border-strong)));
 }
 .bc-modal .bc-input::placeholder {
 	color: var(--bc-muted);
@@ -3458,7 +3472,15 @@ body.bc-modal-open {
 .bc-modal input[aria-invalid="true"],
 .bc-modal select[aria-invalid="true"],
 .bc-modal textarea[aria-invalid="true"],
-.bc-modal .bc-input[aria-invalid="true"] {
+.bc-modal .bc-input[aria-invalid="true"],
+/* NC core inputs.css `input:not(...):not(:disabled):hover/:focus/:active`
+   reaches (0,3,1) and repaints focused/hovered invalid controls to
+   --color-main-text + a 2px main-background ring — silently dropping the
+   error paint exactly when the field has focus. Tie specificity via the
+   .bc-modal__dialog hop (0,3,1) so this later-loaded sheet wins. */
+.bc-modal .bc-modal__dialog input[aria-invalid="true"],
+.bc-modal .bc-modal__dialog select[aria-invalid="true"],
+.bc-modal .bc-modal__dialog textarea[aria-invalid="true"] {
 	border-color: var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
 	box-shadow: 0 0 0 1px var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
 }
@@ -3737,6 +3759,11 @@ body.bc-modal-open {
 	.bc-form-grid,
 	.bc-filter-grid {
 		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+	/* Fieldset sub-grids keep empty tracks (auto-fill) so a 2-field group uses
+	   the same column width as sibling groups whose extra rows fill more tracks. */
+	.bc-fieldset > .bc-form-grid {
+		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 	}
 	/* Modals are body-mounted and width-capped — never force a 220px floor that
 	   overflows the dialog. Transaction form stays single-column. */
@@ -4824,3 +4851,29 @@ textarea {
 	margin: 0.15rem 0;
 }
 
+
+/*
+ * Control-border baseline (WCAG 1.4.11 >= 3:1 vs background) — DESIGN-SYSTEM §3.6.0.
+ * NC core styles every button/input with the faint `--color-border-dark`, and its
+ * `button:disabled` rule (0,2,1) outranks page-level `.button.secondary` (0,2,0),
+ * so disabled controls silently lose their frame. This rule only re-colours
+ * borders that are already drawn — borderless icon buttons are unaffected —
+ * and state classes keep their semantic borders.
+ */
+#app-content input:not([type='range'], [type='hidden'], [type='color'], [type='file'], [type='image'], [type='submit'], [type='button'], [type='reset'], .form-input--error, .form-input--success, .form-input--warning, .has-error, [aria-invalid='true'], .has-error *),
+#app-content select:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content textarea:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+#app-content .button:not(.primary, .error, .warning, .success, .danger),
+.bc-modal input:not([type='range'], [type='hidden'], [type='color'], [type='file'], [type='image'], [type='submit'], [type='button'], [type='reset'], .form-input--error, .form-input--success, .form-input--warning, .has-error, [aria-invalid='true'], .has-error *),
+.bc-modal select:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+.bc-modal textarea:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+.bc-modal button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+.bc-modal .button:not(.primary, .error, .warning, .success, .danger),
+.oc-dialog input:not([type='range'], [type='hidden'], [type='color'], [type='file'], [type='image'], [type='submit'], [type='button'], [type='reset'], .form-input--error, .form-input--success, .form-input--warning, .has-error, [aria-invalid='true'], .has-error *),
+.oc-dialog select:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+.oc-dialog textarea:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+.oc-dialog button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+.oc-dialog .button:not(.primary, .error, .warning, .success, .danger) {
+	border-color: var(--bc-form-border, var(--color-border-maxcontrast, var(--color-border)));
+}

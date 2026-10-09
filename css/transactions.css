@@ -114,7 +114,10 @@
 	/* Override NC/browser search defaults that can reinsert icon + reset padding. */
 	background-color: var(--color-main-background, var(--bc-bg-card)) !important;
 	color: var(--color-main-text) !important;
-	border: 1px solid var(--bc-border-strong) !important;
+	/* Keep the >=3:1 form-border token even under !important — re-pinning to
+	   --bc-border-strong here would flatten the control-border cascade guard
+	   (#app-content guard has no !important). WCAG 1.4.11. */
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--bc-border-strong))) !important;
 	background-image: none !important;
 	padding-left: calc(var(--bc-space-4) + 18px + var(--bc-space-3)) !important;
 	padding-right: calc(var(--bc-space-3) + 28px) !important;

@@ -71,36 +71,50 @@ class SavingsTargetService
 		}
 
 		$now = $this->utcNow();
-		$existing = $this->loadRow($workspaceId, $ym);
-		if ($existing === null) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('bc_savings_targets')
-				->values([
-					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-					'year_month' => $qb->createNamedParameter($ym),
-					'target_mode' => $qb->createNamedParameter($mode),
-					'target_percent_bp' => $qb->createNamedParameter($percent, $percent === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-					'target_minor' => $qb->createNamedParameter($absolute, $absolute === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-					'updated_by' => $qb->createNamedParameter($userId),
-					'updated_at' => $qb->createNamedParameter($now),
-				]);
-			$qb->executeStatement();
-		} else {
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('bc_savings_targets')
-				->set('target_mode', $qb->createNamedParameter($mode))
-				->set('target_percent_bp', $qb->createNamedParameter($percent, $percent === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
-				->set('target_minor', $qb->createNamedParameter($absolute, $absolute === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
-				->set('updated_by', $qb->createNamedParameter($userId))
-				->set('updated_at', $qb->createNamedParameter($now))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-			$qb->executeStatement();
+		$this->db->beginTransaction();
+		try {
+			// Serialize the loadRow->insert upsert under the workspace lock:
+			// without it, concurrent saves both see "no row" and the second
+			// insert dies on the (workspace_id, year_month) unique index, and a
+			// concurrent workspace delete could orphan the new row (no FKs).
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$existing = $this->loadRow($workspaceId, $ym);
+			if ($existing === null) {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('bc_savings_targets')
+					->values([
+						'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+						'year_month' => $qb->createNamedParameter($ym),
+						'target_mode' => $qb->createNamedParameter($mode),
+						'target_percent_bp' => $qb->createNamedParameter($percent, $percent === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+						'target_minor' => $qb->createNamedParameter($absolute, $absolute === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+						'updated_by' => $qb->createNamedParameter($userId),
+						'updated_at' => $qb->createNamedParameter($now),
+					]);
+				$qb->executeStatement();
+			} else {
+				$qb = $this->db->getQueryBuilder();
+				$qb->update('bc_savings_targets')
+					->set('target_mode', $qb->createNamedParameter($mode))
+					->set('target_percent_bp', $qb->createNamedParameter($percent, $percent === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
+					->set('target_minor', $qb->createNamedParameter($absolute, $absolute === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
+					->set('updated_by', $qb->createNamedParameter($userId))
+					->set('updated_at', $qb->createNamedParameter($now))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+				$qb->executeStatement();
+			}
+			$this->audit->record($userId, 'savings_target_saved', 'savings_target', $ym, [
+				'mode' => $mode,
+				'percentBp' => $percent,
+				'minor' => $absolute,
+			], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		$this->audit->record($userId, 'savings_target_saved', 'savings_target', $ym, [
-			'mode' => $mode,
-			'percentBp' => $percent,
-			'minor' => $absolute,
-		], $workspaceId);
 		$row = $this->loadRow($workspaceId, $ym);
 		return $this->hydrate($row, $currencyCode);
 	}

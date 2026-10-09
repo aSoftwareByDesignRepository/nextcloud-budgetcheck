@@ -8,8 +8,10 @@ use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
 use OCA\BudgetCheck\Service\AccessControlService;
+use OCA\BudgetCheck\Service\WorkspaceDeletionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IUserManager;
 use Test\TestCase;
 
@@ -69,29 +71,32 @@ final class PrivateWorkspacesAclIntegrationTest extends TestCase
 		}
 		/** @var AccessControlService $access */
 		$access = \OC::$server->get(AccessControlService::class);
-		/** @var WorkspaceService $workspaces */
-		$workspaces = \OC::$server->get(WorkspaceService::class);
+		/** @var IDBConnection $db */
+		$db = \OC::$server->get(IDBConnection::class);
 		foreach ($this->workspaceIds as $id) {
 			try {
-				// Soft-delete via SQL if needed — remove memberships first.
-				$db = \OC::$server->get(\OCP\IDBConnection::class);
-				$qb = $db->getQueryBuilder();
-				$qb->delete('bc_workspace_members')
-					->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
-				$qb->executeStatement();
-				$qb = $db->getQueryBuilder();
-				$qb->delete('bc_workspace_groups')
-					->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
-				$qb->executeStatement();
-				$qb = $db->getQueryBuilder();
-				$qb->delete('bc_workspaces')
-					->where($qb->expr()->eq('id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
-				$qb->executeStatement();
+				// Cascade every workspace-scoped child table (incl. the seeded
+				// "Uncategorized" category from createWorkspace) before the
+				// workspace row — same contract as WorkspaceDeletionService.
+				foreach (WorkspaceDeletionService::CHILD_TABLES as $table) {
+					if (!$db->tableExists($table)) {
+						continue;
+					}
+					$qb = $db->getQueryBuilder();
+					$qb->delete($table)
+						->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
+					$qb->executeStatement();
+				}
+				if ($db->tableExists('bc_workspaces')) {
+					$qb = $db->getQueryBuilder();
+					$qb->delete('bc_workspaces')
+						->where($qb->expr()->eq('id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
+					$qb->executeStatement();
+				}
 				$access->forgetPrivacyModeCache($id);
 			} catch (\Throwable) {
 				// best-effort cleanup
 			}
-			unset($workspaces);
 		}
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);

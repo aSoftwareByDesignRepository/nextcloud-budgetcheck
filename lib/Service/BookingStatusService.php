@@ -56,21 +56,35 @@ class BookingStatusService
 		$sort = $this->normaliseSort($payload['sortOrder'] ?? 100);
 		$now = $this->utcNow();
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_booking_statuses')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'name' => $qb->createNamedParameter($name),
-				'sort_order' => $qb->createNamedParameter($sort, \PDO::PARAM_INT),
-				// `is_done` is reserved for potential future semantics; currently unused.
-				'is_done' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
-				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
-				'created_at' => $qb->createNamedParameter($now),
-				'updated_at' => $qb->createNamedParameter($now),
-			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_booking_statuses');
-		$this->audit->record($userId, 'booking_status_created', 'booking_status', (string)$id, ['name' => $name], $workspaceId);
+		$id = 0;
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete (no FKs) — see
+			// WorkspaceDeletionService::CHILD_TABLES.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$this->ensureUniqueName($workspaceId, $name);
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_booking_statuses')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'name' => $qb->createNamedParameter($name),
+					'sort_order' => $qb->createNamedParameter($sort, \PDO::PARAM_INT),
+					// `is_done` is reserved for potential future semantics; currently unused.
+					'is_done' => $qb->createNamedParameter(false, \PDO::PARAM_BOOL),
+					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+				]);
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_booking_statuses');
+			$this->audit->record($userId, 'booking_status_created', 'booking_status', (string)$id, ['name' => $name], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		return $this->loadForWorkspace($id, $workspaceId);
 	}
 
@@ -85,46 +99,64 @@ class BookingStatusService
 		$this->ensureProjectWorkspace($workspace);
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 
-		$updates = [];
-		$changes = [];
-		if (array_key_exists('name', $payload)) {
-			$name = $this->normaliseName((string)$payload['name']);
-			if ($name !== (string)$row['name']) {
-				$updates['name'] = $name;
-				$changes['name'] = $name;
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete and same-name
+			// creates/renames — the uniqueness check must run under the lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$row = $this->loadRow($statusId);
+			if ($row === null) {
+				throw new AccessDeniedException();
 			}
-		}
-		if (array_key_exists('sortOrder', $payload)) {
-			$sort = $this->normaliseSort($payload['sortOrder']);
-			if ($sort !== (int)$row['sort_order']) {
-				$updates['sort_order'] = $sort;
-				$changes['sortOrder'] = $sort;
+			$updates = [];
+			$changes = [];
+			if (array_key_exists('name', $payload)) {
+				$name = $this->normaliseName((string)$payload['name']);
+				if ($name !== (string)$row['name']) {
+					$this->ensureUniqueName($workspaceId, $name, $statusId);
+					$updates['name'] = $name;
+					$changes['name'] = $name;
+				}
 			}
-		}
-		if ($updates === []) {
-			$shouldNormalizeDone = array_key_exists('isDone', $payload);
-			$needsNormalizeDone = $shouldNormalizeDone && (bool)($row['is_done'] ?? false) === true;
-			if (!$needsNormalizeDone) {
-				return $this->hydrate($row);
+			if (array_key_exists('sortOrder', $payload)) {
+				$sort = $this->normaliseSort($payload['sortOrder']);
+				if ($sort !== (int)$row['sort_order']) {
+					$updates['sort_order'] = $sort;
+					$changes['sortOrder'] = $sort;
+				}
 			}
+			if ($updates === []) {
+				$shouldNormalizeDone = array_key_exists('isDone', $payload);
+				$needsNormalizeDone = $shouldNormalizeDone && (bool)($row['is_done'] ?? false) === true;
+				if (!$needsNormalizeDone) {
+					$this->db->commit();
+					return $this->hydrate($row);
+				}
+			}
+			// Booking status workflow semantics are intentionally not using `is_done`.
+			// Normalize to `false` whenever we touch a status (metadata edit or stale client input).
+			$updates['is_done'] = false;
+			$updates['updated_at'] = $this->utcNow();
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_booking_statuses');
+			foreach ($updates as $col => $value) {
+				$type = match (true) {
+					is_bool($value) => \PDO::PARAM_BOOL,
+					is_int($value) => \PDO::PARAM_INT,
+					default => \PDO::PARAM_STR,
+				};
+				$qb->set($col, $qb->createNamedParameter($value, $type));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($statusId, \PDO::PARAM_INT)));
+			$qb->executeStatement();
+			$this->audit->record($userId, 'booking_status_updated', 'booking_status', (string)$statusId, $changes, $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
 		}
-		// Booking status workflow semantics are intentionally not using `is_done`.
-		// Normalize to `false` whenever we touch a status (metadata edit or stale client input).
-		$updates['is_done'] = false;
-		$updates['updated_at'] = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_booking_statuses');
-		foreach ($updates as $col => $value) {
-			$type = match (true) {
-				is_bool($value) => \PDO::PARAM_BOOL,
-				is_int($value) => \PDO::PARAM_INT,
-				default => \PDO::PARAM_STR,
-			};
-			$qb->set($col, $qb->createNamedParameter($value, $type));
-		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($statusId, \PDO::PARAM_INT)));
-		$qb->executeStatement();
-		$this->audit->record($userId, 'booking_status_updated', 'booking_status', (string)$statusId, $changes, $workspaceId);
 		return $this->loadForWorkspace($statusId, $workspaceId);
 	}
 
@@ -141,6 +173,9 @@ class BookingStatusService
 
 		$this->db->beginTransaction();
 		try {
+			// Serialize transaction mutation against monthly close/snapshot reads
+			// and concurrent workspace delete — see WorkspaceDeletionService.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			$tx = $this->db->getQueryBuilder();
 			$tx->update('bc_transactions')
 				->set('booking_status_id', $tx->createNamedParameter(null, \PDO::PARAM_NULL))
@@ -215,6 +250,24 @@ class BookingStatusService
 				(string)($workspace['type'] ?? ''),
 				'booking_statuses'
 			);
+		}
+	}
+
+	private function ensureUniqueName(int $workspaceId, string $name, ?int $excludeId = null): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'count'))
+			->from('bc_booking_statuses')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('name', $qb->createNamedParameter($name)));
+		if ($excludeId !== null) {
+			$qb->andWhere($qb->expr()->neq('id', $qb->createNamedParameter($excludeId, \PDO::PARAM_INT)));
+		}
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		if ((int)($row['count'] ?? 0) > 0) {
+			throw new \InvalidArgumentException('A booking status with this name already exists.');
 		}
 	}
 

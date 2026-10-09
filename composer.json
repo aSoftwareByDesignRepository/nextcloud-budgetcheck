@@ -36,7 +36,8 @@
 		"mutate:closeout": "php tests/Mutation/run-closeout-mutations.php",
 		"mutate:rate-limit-key": "php tests/Mutation/run-rate-limit-key-length-mutations.php",
 		"mutate:transactions-export": "php tests/Mutation/run-transactions-export-mutations.php",
-		"mutate:upload-errors": "php tests/Mutation/run-upload-error-mutations.php"
+		"mutate:upload-errors": "php tests/Mutation/run-upload-error-mutations.php",
+		"mutate:import-split-columns": "php tests/Mutation/run-import-split-columns-mutations.php"
 	},
 	"config": {
 		"optimize-autoloader": true,

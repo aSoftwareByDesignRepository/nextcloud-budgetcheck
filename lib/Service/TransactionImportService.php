@@ -19,6 +19,7 @@ class TransactionImportService
 		private AuditLogService $audit,
 		private AccessControlService $access,
 		private \OCP\IDBConnection $db,
+		private SnapshotService $snapshots,
 	) {
 	}
 
@@ -33,6 +34,7 @@ class TransactionImportService
 		$normalizedRows = $this->normalizeRows($rows);
 		$importOptions = $this->normalizeImportOptions($options);
 		$ctx = $this->buildImportContext($workspaceId, $userId, $defaults);
+		$ctx['closedMonths'] = $this->closedMonthsForRows($workspaceId, $normalizedRows);
 		$skipIndexes = $this->resolveSkipIndexes($workspaceId, $workspace, $normalizedRows, $importOptions);
 
 		$ok = 0;
@@ -82,37 +84,48 @@ class TransactionImportService
 		$normalizedRows = $this->normalizeRows($rows);
 		$importOptions = $this->normalizeImportOptions($options);
 		$ctx = $this->buildImportContext($workspaceId, $userId, $defaults);
-		$skipIndexes = $this->resolveSkipIndexes($workspaceId, $workspace, $normalizedRows, $importOptions);
-
-		$errors = [];
-		$resolved = [];
-		foreach ($normalizedRows as $i => $row) {
-			if (isset($skipIndexes[$i])) {
-				$resolved[$i] = null;
-				continue;
-			}
-			try {
-				$resolved[$i] = $this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $this->displayRowNumber($row, $i + 1));
-			} catch (\InvalidArgumentException|AccessDeniedException $e) {
-				$errors[] = [
-					'rowNumber' => $this->displayRowNumber($row, $i + 1),
-					'message' => $e->getMessage(),
-				];
-			}
-		}
-		if ($errors !== []) {
-			return [
-				'createdCount' => 0,
-				'skippedCount' => 0,
-				'errorCount' => count($errors),
-				'errors' => array_slice($errors, 0, self::MAX_ERRORS_RETURNED),
-			];
-		}
 
 		$createdCount = 0;
-		$skippedCount = count($skipIndexes);
+		$skippedCount = 0;
 		$this->db->beginTransaction();
 		try {
+			// Serialize dedup lookup, validation and insert under the workspace
+			// row lock: resolveSkipIndexes reads already-imported refs, so it
+			// must run AFTER the lock — a pre-lock lookup lets two concurrent
+			// commits both pass dedup and double-insert every row (TOCTOU).
+			// TransactionService::create re-acquires the same lock per row
+			// (no-op once held).
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$ctx['closedMonths'] = $this->closedMonthsForRows($workspaceId, $normalizedRows);
+			$skipIndexes = $this->resolveSkipIndexes($workspaceId, $workspace, $normalizedRows, $importOptions);
+
+			$errors = [];
+			$resolved = [];
+			foreach ($normalizedRows as $i => $row) {
+				if (isset($skipIndexes[$i])) {
+					$resolved[$i] = null;
+					continue;
+				}
+				try {
+					$resolved[$i] = $this->validateRow($workspaceId, $userId, $workspace, $row, $ctx, $this->displayRowNumber($row, $i + 1));
+				} catch (\InvalidArgumentException|AccessDeniedException $e) {
+					$errors[] = [
+						'rowNumber' => $this->displayRowNumber($row, $i + 1),
+						'message' => $e->getMessage(),
+					];
+				}
+			}
+			if ($errors !== []) {
+				$this->db->rollBack();
+				return [
+					'createdCount' => 0,
+					'skippedCount' => 0,
+					'errorCount' => count($errors),
+					'errors' => array_slice($errors, 0, self::MAX_ERRORS_RETURNED),
+				];
+			}
+
+			$skippedCount = count($skipIndexes);
 			foreach ($normalizedRows as $i => $row) {
 				if (isset($skipIndexes[$i])) {
 					continue;
@@ -129,7 +142,12 @@ class TransactionImportService
 			}
 			$this->db->commit();
 		} catch (\InvalidArgumentException|AccessDeniedException $e) {
-			$this->db->rollBack();
+			// TransactionService::create rolls back internally on failure — under
+			// DBAL nested transactions that rolls back this batch too, so only
+			// roll back if the transaction is still active.
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
 			return [
 				'createdCount' => 0,
 				'skippedCount' => 0,
@@ -140,7 +158,9 @@ class TransactionImportService
 				]],
 			];
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
 			throw $e;
 		}
 
@@ -336,6 +356,31 @@ class TransactionImportService
 	}
 
 	/**
+	 * Distinct closed year-months across the batch — one lookup per month,
+	 * not per row.
+	 *
+	 * @param list<array<string,mixed>> $rows
+	 * @return array<string, true>
+	 */
+	private function closedMonthsForRows(int $workspaceId, array $rows): array
+	{
+		$months = [];
+		foreach ($rows as $row) {
+			$ym = substr(trim((string)($row['bookingDate'] ?? '')), 0, 7);
+			if ($ym !== '') {
+				$months[$ym] = true;
+			}
+		}
+		$closed = [];
+		foreach (array_keys($months) as $ym) {
+			if ($this->snapshots->isMonthClosed($workspaceId, $ym)) {
+				$closed[$ym] = true;
+			}
+		}
+		return $closed;
+	}
+
+	/**
 	 * @param array{expenseCategoryId?:int,incomeCategoryId?:int} $defaults
 	 * @return array{byName: array<string,list<array<string,mixed>>>, defaults: array{expenseCategoryId:int,incomeCategoryId:int}}
 	 */
@@ -394,6 +439,15 @@ class TransactionImportService
 			$this->transactions->validateCreatePayload($workspaceId, $userId, $payload, $workspace, $category, $status);
 		} catch (\InvalidArgumentException $e) {
 			throw new \InvalidArgumentException('Row ' . $rowNumber . ': ' . $e->getMessage());
+		}
+		// Closed months are a write-path check — TransactionService::create
+		// rejects them. Run the same check during validation so the preview
+		// predicts the per-row outcome the commit will actually produce.
+		$ym = substr(trim((string)($row['bookingDate'] ?? '')), 0, 7);
+		if (isset($ctx['closedMonths'][$ym])) {
+			throw new \InvalidArgumentException(
+				'Row ' . $rowNumber . ': this booking falls into a closed month. Reopen the month before importing.',
+			);
 		}
 		return [$category, $status];
 	}

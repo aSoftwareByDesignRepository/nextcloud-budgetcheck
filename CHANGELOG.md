@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **CSV import: separate income and expense columns (issue #23):** bank exports that split the amount into two columns — one value per row, the other left blank — now import without editing the file. Recognised headers include “Expenses”/“Income”, “Ausgaben”/“Einnahmen”, and “Debit”/“Credit” or “Soll”/“Haben” pairs when they contain amounts; a minus sign on the expense column is accepted, and a bare dash counts as empty. Ambiguous header names are decided by their data, so a single “Debit” column holding debit/credit keywords still works as a direction column. Extra columns such as a running balance are ignored.
+
 ## 1.4.6 - 2026-10-08
 
 ### Added

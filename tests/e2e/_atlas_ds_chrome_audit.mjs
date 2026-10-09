@@ -16,8 +16,13 @@ import { chromium } from 'playwright'
 import AxeBuilder from '@axe-core/playwright'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 import { login } from './helpers/auth.js'
+
+const require2 = createRequire(join(dirname(fileURLToPath(import.meta.url)), 'audit.js'))
+const { setUserTheme: setUserThemeCanonical } = require2('../../e2e/helpers/theming.js')
 
 const BASE = (process.env.E2E_BASE || process.env.BASE_URL || 'http://localhost:8081').replace(/\/$/, '')
 const PASS = process.env.E2E_PASS || process.env.E2E_PASSWORD || ''
@@ -111,21 +116,17 @@ async function loginState(browser, role) {
 	return state
 }
 
+/**
+ * Delegate to e2e/helpers/theming.js — the canonical implementation wipes the
+ * legacy typed `enabled-themes` user setting via occ before OCS enable (a stale
+ * INT row makes the PUT fail 400 → theme silently never applied; the 2026-10-09
+ * light-highcontrast sweep shipped mislabeled plain-light PNGs that way), then
+ * reloads and asserts body[data-theme-<id>] actually rendered.
+ */
 async function setUserTheme(page, themeId) {
-	const failures = await page.evaluate(async ({ target, all }) => {
-		const token = (window.OC && window.OC.requestToken)
-			|| document.querySelector('head[data-requesttoken]')?.getAttribute('data-requesttoken') || ''
-		const headers = { requesttoken: token, 'OCS-APIRequest': 'true', Accept: 'application/json' }
-		const problems = []
-		for (const id of all.filter((t) => t !== target)) {
-			const res = await fetch(`/ocs/v2.php/apps/theming/api/v1/theme/${id}`, { method: 'DELETE', credentials: 'same-origin', headers })
-			if (!res.ok && res.status !== 400) problems.push(`disable ${id}: HTTP ${res.status}`)
-		}
-		const res = await fetch(`/ocs/v2.php/apps/theming/api/v1/theme/${target}/enable`, { method: 'PUT', credentials: 'same-origin', headers })
-		if (!res.ok && res.status !== 400) problems.push(`enable ${target}: HTTP ${res.status}`)
-		return problems
-	}, { target: themeId, all: THEMES })
-	if (failures.length) throw new Error(`theme ${themeId}: ${failures.join(';')}`)
+	await setUserThemeCanonical(page, themeId)
+	const applied = await page.evaluate((t) => document.body.hasAttribute(`data-theme-${t}`), themeId)
+	if (!applied) throw new Error(`theme ${themeId}: body[data-theme-${themeId}] missing after reload — refusing to fake the capture`)
 }
 
 async function checkOverflow(page) {

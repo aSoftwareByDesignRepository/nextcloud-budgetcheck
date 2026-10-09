@@ -291,18 +291,29 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$expr->method('isNotNull')->willReturn('isNotNull');
 		$expr->method('gte')->willReturn('gte');
 		$expr->method('lte')->willReturn('lte');
+		// WorkspaceRowLock::acquire selects from bc_workspaces — answer that
+		// query with a row so the lock succeeds; everything else stays empty.
+		$lockResult = $this->createMock(\OCP\DB\IResult::class);
+		$lockResult->method('fetch')->willReturn(['id' => 1]);
+		$lockResult->method('closeCursor');
 		$result = $this->createMock(\OCP\DB\IResult::class);
 		$result->method('fetch')->willReturn(false);
 		$result->method('closeCursor');
 		$qb = $this->createMock(\OCP\DB\QueryBuilder\IQueryBuilder::class);
 		$qb->method('expr')->willReturn($expr);
 		$qb->method('select')->willReturnSelf();
-		$qb->method('from')->willReturnSelf();
+		$fromTable = '';
+		$qb->method('from')->willReturnCallback(static function ($table) use ($qb, &$fromTable) {
+			$fromTable = (string)$table;
+			return $qb;
+		});
 		$qb->method('where')->willReturnSelf();
 		$qb->method('andWhere')->willReturnSelf();
 		$qb->method('orderBy')->willReturnSelf();
 		$qb->method('createNamedParameter')->willReturn('p');
-		$qb->method('executeQuery')->willReturn($result);
+		$qb->method('executeQuery')->willReturnCallback(static function () use ($lockResult, $result, &$fromTable) {
+			return $fromTable === 'bc_workspaces' ? $lockResult : $result;
+		});
 		$db->method('getQueryBuilder')->willReturn($qb);
 
 		$budgetPlanned = new BudgetPlannedService(

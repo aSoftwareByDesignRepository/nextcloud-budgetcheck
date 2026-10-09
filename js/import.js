@@ -28,6 +28,8 @@
 		bookingDate: ['bookingdate', 'date', 'transactiondate', 'valuta', 'buchungstag', 'buchungsdatum', 'buchung'],
 		title: ['title', 'description', 'text', 'memo', 'payee', 'name', 'verwendungszweck', 'buchungstext', 'purpose'],
 		amount: ['amount', 'value', 'betrag', 'sum', 'umsatz'],
+		incomeAmount: ['income', 'incomes', 'incomeamount', 'einnahmen', 'einnahmenbetrag', 'eingangsbetrag', 'paidin', 'moneyin', 'inflow'],
+		expenseAmount: ['expense', 'expenses', 'expenseamount', 'ausgaben', 'ausgabebetrag', 'paidout', 'moneyout', 'outflow'],
 		direction: ['direction', 'incomeexpense', 'sollhaben', 'debit', 'credit', 'buchungstyp'],
 		category: ['category', 'kategorie', 'categoryname'],
 		categoryId: ['categoryid'],
@@ -40,6 +42,18 @@
 		],
 		bookingStatus: ['bookingstatus'],
 		bookingStatusId: ['bookingstatusid'],
+	};
+
+	/**
+	 * Header words that can mean either a keyword direction column (bank
+	 * "type" columns such as Debit/Credit or Soll/Haben) or one of a pair of
+	 * split amount columns holding only that side's values. buildColumnIndex()
+	 * looks at the column's cells: every non-blank value parses as an amount →
+	 * split amount column; anything else → direction column (legacy behavior).
+	 */
+	const SPLIT_SIDE_HEADERS = {
+		expense: ['debit', 'dr', 'soll', 'ausgabe', 'belastung', 'belastungen', 'auszahlung', 'auszahlungen', 'withdrawal', 'withdrawals', 'charge', 'charges'],
+		income: ['credit', 'cr', 'haben', 'einnahme', 'gutschrift', 'gutschriften', 'eingang', 'eingänge', 'einzahlung', 'einzahlungen', 'deposit', 'deposits'],
 	};
 
 	let validatedRows = [];
@@ -763,7 +777,14 @@
 			throw new Error(t('budgetcheck', 'CSV must include a header row and at least one data row.'));
 		}
 		const header = records[0].map((h) => String(h || '').trim());
-		const col = buildColumnIndex(header);
+		const dataRecords = [];
+		records.slice(1).forEach((cols, idx) => {
+			const lineNumber = idx + 2;
+			if (cols.some((v) => String(v || '').trim() !== '')) {
+				dataRecords.push({ cols, lineNumber });
+			}
+		});
+		const col = buildColumnIndex(header, dataRecords);
 		const defaults = getDefaultCategories();
 		const directionMode = getDirectionMode();
 
@@ -773,20 +794,13 @@
 		if (col.title === undefined) {
 			throw new Error(t('budgetcheck', 'Missing a title column (for example “title” or “description”).'));
 		}
-		if (col.amount === undefined) {
-			throw new Error(t('budgetcheck', 'Missing an amount column (for example “amount” or “value”).'));
+		if (col.amount === undefined && col.incomeAmount === undefined && col.expenseAmount === undefined) {
+			throw new Error(t('budgetcheck', 'Missing an amount column (for example “amount” or “value”, or separate income and expense columns).'));
 		}
 
 		const hasCategoryCol = col.category !== undefined || col.categoryId !== undefined;
-		const hasDirectionCol = col.direction !== undefined;
+		const hasDirectionCol = col.direction !== undefined || col.incomeAmount !== undefined || col.expenseAmount !== undefined;
 
-		const dataRecords = [];
-		records.slice(1).forEach((cols, idx) => {
-			const lineNumber = idx + 2;
-			if (cols.some((v) => String(v || '').trim() !== '')) {
-				dataRecords.push({ cols, lineNumber });
-			}
-		});
 		if (dataRecords.length > MAX_ROWS) {
 			throw new Error(t('budgetcheck', 'Too many rows. Maximum is {max}.').replace('{max}', String(MAX_ROWS)));
 		}
@@ -822,16 +836,51 @@
 		return out;
 	}
 
-	function buildColumnIndex(header) {
+	function buildColumnIndex(header, dataRecords) {
 		const index = {};
 		const isProject = isProjectWorkspace();
 		header.forEach((cell, i) => {
+			const compact = normalizeKey(cell).replace(/\s+/g, '');
+			if (!compact) return;
+			const splitSide = splitSideForHeader(compact);
+			if (splitSide) {
+				if (columnLooksLikeAmounts(dataRecords, i)) {
+					const canon = splitSide === 'income' ? 'incomeAmount' : 'expenseAmount';
+					if (index[canon] === undefined) index[canon] = i;
+				} else if (index.direction === undefined) {
+					index.direction = i;
+				}
+				return;
+			}
 			const canon = resolveCanonicalColumn(cell, isProject);
 			if (canon && index[canon] === undefined) {
 				index[canon] = i;
 			}
 		});
 		return index;
+	}
+
+	function splitSideForHeader(compactHeader) {
+		for (const [side, names] of Object.entries(SPLIT_SIDE_HEADERS)) {
+			if (names.includes(compactHeader)) return side;
+		}
+		return '';
+	}
+
+	function columnLooksLikeAmounts(dataRecords, columnIndex) {
+		let hasValue = false;
+		for (const rec of dataRecords) {
+			const raw = rec.cols[columnIndex] == null ? '' : String(rec.cols[columnIndex]);
+			if (isBlankAmountCell(raw)) continue;
+			hasValue = true;
+			const unsigned = stripCurrencyDecorations(stripAmountSign(raw).amount);
+			try {
+				Money.parseHuman(unsigned, currencyDecimals());
+			} catch (_) {
+				return false;
+			}
+		}
+		return hasValue;
 	}
 
 	function resolveCanonicalColumn(label, isProject) {
@@ -871,6 +920,35 @@
 
 		let amountRaw = get('amount');
 		let direction = normalizeDirection(get('direction'));
+
+		let splitDirection = '';
+		if (col.expenseAmount !== undefined || col.incomeAmount !== undefined) {
+			const expenseCell = get('expenseAmount');
+			const incomeCell = get('incomeAmount');
+			const expenseFilled = !isBlankAmountCell(expenseCell);
+			const incomeFilled = !isBlankAmountCell(incomeCell);
+			if (expenseFilled && incomeFilled) {
+				throw new Error(t('budgetcheck', 'Row {row}: both income and expense columns contain an amount. Fill only one per row.')
+					.replace('{row}', String(rowNumber)));
+			}
+			if (expenseFilled || incomeFilled) {
+				if (!isBlankAmountCell(amountRaw)) {
+					throw new Error(t('budgetcheck', 'Row {row}: fill either the amount column or the income/expense columns, not both.')
+						.replace('{row}', String(rowNumber)));
+				}
+				splitDirection = incomeFilled ? 'income' : 'expense';
+				amountRaw = incomeFilled ? incomeCell : expenseCell;
+			} else if (isBlankAmountCell(amountRaw)) {
+				throw new Error(t('budgetcheck', 'Row {row}: amount is required.').replace('{row}', String(rowNumber)));
+			}
+		}
+		if (direction && splitDirection && direction !== splitDirection) {
+			throw new Error(t('budgetcheck', 'Row {row}: the direction column does not match the income/expense column.')
+				.replace('{row}', String(rowNumber)));
+		}
+		if (!direction) {
+			direction = splitDirection;
+		}
 
 		if (!direction && opts.directionMode !== 'auto') {
 			direction = opts.directionMode;
@@ -961,6 +1039,11 @@
 	function currencyDecimals() {
 		const ws = Ws.workspace;
 		return ws && Number.isInteger(ws.currencyDecimals) ? ws.currencyDecimals : 2;
+	}
+
+	function isBlankAmountCell(value) {
+		const v = String(value || '').trim();
+		return v === '' || v === '-' || v === '–' || v === '—';
 	}
 
 	function stripAmountSign(raw) {

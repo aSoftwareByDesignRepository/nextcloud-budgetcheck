@@ -9,6 +9,7 @@ use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\MoneyService;
+use OCA\BudgetCheck\Service\SnapshotService;
 use OCA\BudgetCheck\Service\TransactionImportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
@@ -136,6 +137,40 @@ final class TransactionImportServiceTest extends TestCase
 		$this->assertSame(0, $result['invalidRows']);
 	}
 
+	public function testPreviewFlagsClosedMonthRowsSoTheyCannotSurpriseCommit(): void
+	{
+		// Parity guard: TransactionService::create() rejects closed-month rows
+		// at write time — the preview must mark the same rows invalid instead
+		// of promising rows the commit then refuses (suggest-fill class).
+		$expenseCategory = ['id' => 10, 'name' => 'Groceries', 'type' => CategoryService::TYPE_EXPENSE];
+		$transactions = $this->createMock(TransactionService::class);
+		$transactions->expects($this->exactly(2))->method('validateCreatePayload');
+
+		$snapshots = $this->createMock(SnapshotService::class);
+		$snapshots->method('isMonthClosed')
+			->willReturnCallback(static fn (int $ws, string $ym): bool => $ym === '2025-11');
+
+		$service = $this->makeService([$expenseCategory], $transactions, $snapshots);
+		$result = $service->preview(1, 'user1', $this->sampleWorkspace(), [
+			[
+				'bookingDate' => '2025-11-15',
+				'title' => 'Closed month row',
+				'direction' => CategoryService::TYPE_EXPENSE,
+				'amount' => '10,00',
+			],
+			[
+				'bookingDate' => '2026-01-15',
+				'title' => 'Open month row',
+				'direction' => CategoryService::TYPE_EXPENSE,
+				'amount' => '20,00',
+			],
+		], ['expenseCategoryId' => 10]);
+
+		$this->assertSame(1, $result['validRows']);
+		$this->assertSame(1, $result['invalidRows']);
+		$this->assertStringContainsString('closed month', (string)($result['errors'][0]['message'] ?? ''));
+	}
+
 	public function testPreviewUsesDefaultCategoryForEmptyCategoryCell(): void
 	{
 		$expenseCategory = ['id' => 10, 'name' => 'Groceries', 'type' => CategoryService::TYPE_EXPENSE];
@@ -198,7 +233,7 @@ final class TransactionImportServiceTest extends TestCase
 	/**
 	 * @param list<array<string,mixed>> $categories
 	 */
-	private function makeService(array $categories, TransactionService $transactions): TransactionImportService
+	private function makeService(array $categories, TransactionService $transactions, ?SnapshotService $snapshots = null): TransactionImportService
 	{
 		$categoriesSvc = $this->createMock(CategoryService::class);
 		$categoriesSvc->method('listForWorkspace')->willReturn($categories);
@@ -217,6 +252,10 @@ final class TransactionImportServiceTest extends TestCase
 		$audit = $this->createMock(AuditLogService::class);
 		$bookingStatuses = $this->createMock(BookingStatusService::class);
 		$db = $this->createMock(IDBConnection::class);
+		if ($snapshots === null) {
+			$snapshots = $this->createMock(SnapshotService::class);
+			$snapshots->method('isMonthClosed')->willReturn(false);
+		}
 
 		return new TransactionImportService(
 			$categoriesSvc,
@@ -226,6 +265,7 @@ final class TransactionImportServiceTest extends TestCase
 			$audit,
 			$access,
 			$db,
+			$snapshots,
 		);
 	}
 

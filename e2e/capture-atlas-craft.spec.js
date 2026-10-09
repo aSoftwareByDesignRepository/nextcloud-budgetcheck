@@ -13,6 +13,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const { login } = require('../tests/e2e/helpers/auth.js');
+const { forgetLastUsedWorkspace } = require('./helpers/theming.js');
 
 const BASE = (process.env.E2E_BASE || process.env.BASE_URL || 'http://localhost:8081').replace(/\/$/, '');
 const OUT = path.resolve(__dirname, '../../../../.cursor/atlas-farm-v3/artifacts/budgetcheck/craft/web');
@@ -163,7 +164,7 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 
 		// --- primary views (light, populated workspace) ---
 		const views = [
-			['/', 'dashboard'],
+			['/dashboard', 'dashboard'],
 			['/transactions', 'transactions'],
 			['/budgets', 'budgets'],
 			['/monthly', 'monthly'],
@@ -189,13 +190,24 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 		for (const [route, name] of views) {
 			const wsScoped = ['/budgets', '/monthly', '/period', '/yearly', '/import'].includes(route)
 				|| route.startsWith('/settings/');
-			const url = wsScoped ? `${route}?workspaceId=${WS}` : (route === '/' ? `/?workspaceId=${WS}` : route);
+			// NB: '/?workspaceId=N' 303s to /dashboard and DROPS the query — the
+			// populated dashboard must be addressed as /dashboard?workspaceId=N
+			// (2026-10-09: bc-dashboard-*.png were silently picker captures).
+			const url = wsScoped || route === '/dashboard' ? `${route}?workspaceId=${WS}` : route;
 			await gotoView(page, url, 'light');
 			await shot(page, `bc-${name}-light.png`);
 		}
 
 		// --- empty workspace picker (dashboard without workspaceId) ---
+		// resolveWorkspaceContext falls back to the lastUsedWorkspaceId pref —
+		// clear it or `/` silently renders the populated dashboard again and the
+		// "picker" craft is byte-identical to bc-dashboard-light.png.
+		forgetLastUsedWorkspace();
 		await gotoView(page, '/');
+		await expect(
+			page.locator('#bc-empty-title'),
+			'picker capture must render the empty/pick-a-workspace state',
+		).toBeVisible({ timeout: 10_000 });
 		await shot(page, 'bc-dashboard-picker-light.png');
 
 		// --- transactions: open create dialog ---
@@ -239,7 +251,7 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 		// --- dark ---
 		await applyTheme(page, 'dark');
 		for (const [route, name] of [
-			[`/?workspaceId=${WS}`, 'dashboard'],
+			[`/dashboard?workspaceId=${WS}`, 'dashboard'],
 			[`/transactions?workspaceId=${WS}`, 'transactions'],
 			[`/budgets?workspaceId=${WS}`, 'budgets'],
 			['/workspaces', 'workspaces'],
@@ -251,7 +263,7 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 		// --- dark high contrast ---
 		await applyTheme(page, 'dark-highcontrast');
 		for (const [route, name] of [
-			[`/?workspaceId=${WS}`, 'dashboard'],
+			[`/dashboard?workspaceId=${WS}`, 'dashboard'],
 			[`/transactions?workspaceId=${WS}`, 'transactions'],
 		]) {
 			await gotoView(page, route, 'dark-highcontrast');
@@ -261,7 +273,7 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 		// --- light high contrast ---
 		await applyTheme(page, 'light-highcontrast');
 		for (const [route, name] of [
-			[`/?workspaceId=${WS}`, 'dashboard'],
+			[`/dashboard?workspaceId=${WS}`, 'dashboard'],
 			[`/settings/workspace?workspaceId=${WS}`, 'settings-workspace'],
 		]) {
 			await gotoView(page, route, 'light-highcontrast');

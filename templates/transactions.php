@@ -187,19 +187,19 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 								</select>
 							</label>
 						<?php endif; ?>
-						<label class="bc-field bc-field--full-width bc-field--boolean">
+						<div class="bc-field bc-field--full-width bc-field--boolean" role="group">
 							<span class="bc-field__label"><?php p($l->t('Quick toggles')); ?></span>
 							<span class="bc-tx-filterbar__toggles">
-								<span class="bc-boolean-control bc-boolean-control--filter-row">
+								<label class="bc-boolean-control bc-boolean-control--filter-row">
 									<input type="checkbox" name="isSpecial" value="1" data-bc-filter="isSpecial">
 									<span class="bc-boolean-control__text"><?php p($l->t('Specials only')); ?></span>
-								</span>
-								<span class="bc-boolean-control bc-boolean-control--filter-row">
+								</label>
+								<label class="bc-boolean-control bc-boolean-control--filter-row">
 									<input type="checkbox" name="uncategorized" value="1" data-bc-filter="uncategorized">
 									<span class="bc-boolean-control__text"><?php p($l->t('Uncategorized expenses only')); ?></span>
-								</span>
+								</label>
 							</span>
-						</label>
+						</div>
 					</div>
 					<div class="bc-tx-filterbar__advanced-actions">
 						<button type="reset" class="button"><?php p($l->t('Reset filters')); ?></button>

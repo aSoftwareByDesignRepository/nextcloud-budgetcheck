@@ -67,6 +67,9 @@ body,
 	--bc-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
 	--bc-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	--bc-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+	/* Interactive controls need >=3:1 (WCAG 1.4.11): maxcontrast is NC's own
+	   input border; --color-border / --bc-border stay surface-only. */
+	--bc-form-border: var(--color-border-maxcontrast, var(--bc-border-strong));
 	--bc-muted: var(--color-text-maxcontrast);
 	--bc-text: var(--color-main-text);
 
@@ -114,4 +117,13 @@ body,
 		--bc-shadow-sm: 0 0 0 1px var(--bc-border-strong);
 		--bc-shadow-md: 0 0 0 1px var(--bc-border-strong);
 	}
+}
+
+/* Aliases for dead-name refs (literal fallbacks masked them). */
+body {
+	--bc-bg: var(--bc-bg-card);
+	--bc-danger-ink: var(--color-error-text, var(--color-error));
+	--bc-primary: var(--color-primary-element);
+	--bc-radius-pill: var(--border-radius-pill, 999px);
+	--bc-touch: 44px;
 }

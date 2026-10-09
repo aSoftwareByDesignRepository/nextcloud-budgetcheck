@@ -170,8 +170,13 @@ final class BillingPeriodIntegrationTest extends TestCase
 				'billingEndDate' => null,
 			]);
 			$this->fail('expected orphan-guard rejection when clearing billing end');
-		} catch (\InvalidArgumentException $e) {
+		} catch (ValidationException $e) {
 			self::assertStringContainsString('orphan', $e->getMessage());
+			// The orphan guard must pin the effective window fields so the web
+			// settings form renders inline errors — toast-only fails WCAG 3.3.1.
+			// Clearing billing end falls back to the project bounds.
+			self::assertArrayHasKey('projectStartDate', $e->getFields());
+			self::assertArrayHasKey('projectEndDate', $e->getFields());
 		}
 
 		// Once the offending booking is gone, clearing restores the project window.
@@ -211,11 +216,18 @@ final class BillingPeriodIntegrationTest extends TestCase
 		/** @var WorkspaceService $workspaces */
 		$workspaces = \OC::$server->get(WorkspaceService::class);
 
-		$this->expectException(\InvalidArgumentException::class);
-		$this->expectExceptionMessage('billingEndDate');
-		$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
-			'billingEndDate' => '2025-06-01',
-		]);
+		try {
+			$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
+				'billingEndDate' => '2025-06-01',
+			]);
+			$this->fail('expected effective-window rejection');
+		} catch (ValidationException $e) {
+			self::assertStringContainsString('billingEndDate', $e->getMessage());
+			// billingEndDate owns the effective end (set in this request); the
+			// effective start is the project bound → both must be pinned.
+			self::assertArrayHasKey('billingEndDate', $e->getFields());
+			self::assertArrayHasKey('projectStartDate', $e->getFields());
+		}
 	}
 
 	public function testSameRequestProjectNarrowPlusBillingClearUsesNewBounds(): void
@@ -267,10 +279,15 @@ final class BillingPeriodIntegrationTest extends TestCase
 		/** @var WorkspaceService $workspaces */
 		$workspaces = \OC::$server->get(WorkspaceService::class);
 
-		$this->expectException(\InvalidArgumentException::class);
-		$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
-			'billingEndDate' => '2026-02-30',
-		]);
+		try {
+			$workspaces->updateWorkspace((int)$ws['id'], self::OWNER, [
+				'billingEndDate' => '2026-02-30',
+			]);
+			$this->fail('expected invalid-date rejection');
+		} catch (ValidationException $e) {
+			// Field-pinned so the form renders an inline error + aria-invalid.
+			self::assertArrayHasKey('billingEndDate', $e->getFields());
+		}
 	}
 
 	public function testProjectPeriodSummaryCoversBillingExtensionBookings(): void

@@ -2223,10 +2223,17 @@
 			);
 			if (fullPeriod || dueCatchUp) {
 				const count = Number.parseInt(String(response?.generated?.count || 0), 10) || 0;
+				const skippedClosed = Number.parseInt(String(response?.generated?.skippedClosed || 0), 10) || 0;
 				const asPlanned = !!(response?.generated?.asPlanned);
 				let message;
+				let kind = 'success';
 				if (count === 0) {
-					message = t('budgetcheck', 'Nothing new to add — everything due is already on Transactions.');
+					if (skippedClosed > 0) {
+						message = t('budgetcheck', 'Nothing was booked — the due date falls in a closed month. Reopen the month to book it.');
+						kind = 'warning';
+					} else {
+						message = t('budgetcheck', 'Nothing new to add — everything due is already on Transactions.');
+					}
 				} else if (asPlanned) {
 					message = count === 1
 						? t('budgetcheck', '1 planned reminder added.')
@@ -2236,7 +2243,11 @@
 						? t('budgetcheck', '1 transaction booked.')
 						: t('budgetcheck', '{count} transactions booked.').replace('{count}', String(count));
 				}
-				Msg.announce(message, 'success');
+				if (count > 0 && skippedClosed > 0) {
+					message += ' ' + n('budgetcheck', '%n occurrence skipped — the month is closed.', '{count} occurrences skipped — the month is closed.', skippedClosed, { count: skippedClosed });
+					kind = 'warning';
+				}
+				Msg.announce(message, kind);
 			} else {
 				const isPlan = rule.postingMode === 'plan';
 				Msg.announce(
@@ -2261,17 +2272,30 @@
 			const g = response?.generated || {};
 			const count = Number.parseInt(String(g.generated || 0), 10) || 0;
 			const rules = Number.parseInt(String(g.rulesProcessed || 0), 10) || 0;
+			const skippedClosed = Number.parseInt(String(g.skippedClosed || 0), 10) || 0;
 			const errCount = Array.isArray(g.errors) ? g.errors.length : 0;
 			let message;
+			let kind = 'success';
 			if (count === 0 && rules === 0) {
 				message = t('budgetcheck', 'Nothing is due right now.');
+			} else if (count === 0) {
+				if (skippedClosed > 0) {
+					message = t('budgetcheck', 'Nothing was booked — occurrences fell into closed months. Reopen a month to book them.');
+					kind = 'warning';
+				} else {
+					message = t('budgetcheck', 'Nothing new to add — everything due is already on Transactions.');
+				}
 			} else {
 				message = n('budgetcheck', 'Added %n entry across {rules} rules.', 'Added {count} entries across {rules} rules.', count, { count: count, rules: rules });
+			}
+			if (count > 0 && skippedClosed > 0) {
+				message += ' ' + n('budgetcheck', '%n occurrence skipped — the month is closed.', '{count} occurrences skipped — the month is closed.', skippedClosed, { count: skippedClosed });
+				kind = 'warning';
 			}
 			if (errCount > 0) {
 				message += ' ' + n('budgetcheck', '%n rule needed attention.', '{count} rules needed attention.', errCount, { count: errCount });
 			}
-			Msg.announce(message, errCount > 0 ? 'error' : 'success');
+			Msg.announce(message, errCount > 0 ? 'error' : kind);
 			loadRecurring();
 		} catch (err) {
 			Msg.handleApiError(err);

@@ -61,7 +61,7 @@
 	gap: var(--bc-space-1);
 	padding: var(--bc-space-3);
 	border-radius: var(--bc-radius-sm);
-	border: 1px solid var(--bc-border);
+	border: 1px solid var(--bc-form-border);
 	background: var(--bc-bg-soft);
 }
 
@@ -79,7 +79,7 @@
 	cursor: pointer;
 	accent-color: var(--color-primary-element);
 	background-color: var(--bc-bg-card, var(--color-main-background, #fff));
-	border: 1px solid var(--bc-border-strong, var(--color-border-dark, #999));
+	border: 1px solid var(--bc-form-border, var(--color-border-maxcontrast, var(--color-border-dark, #999)));
 	border-radius: 3px;
 	color-scheme: inherit;
 	appearance: auto;

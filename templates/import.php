@@ -41,6 +41,7 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 		<ul>
 			<li><?php p($l->t('Pick a default category in the form below (expense-only bank exports: choose “Treat every row as an expense”).')); ?></li>
 			<li><?php p($l->t('If amounts are signed: negative = expense, positive = income. If all amounts are positive, use the direction option below.')); ?></li>
+			<li><?php p($l->t('Separate income and expense columns are recognised automatically — only one of them needs a value per row.')); ?></li>
 			<li><?php p($l->t('Column names like “Date”, “Description”, and “Amount” are recognised automatically.')); ?></li>
 			<li><?php p($l->t('Bank “Status” columns are ignored in household workspaces — they will not block your import.')); ?></li>
 		</ul>
@@ -82,10 +83,12 @@ $isProject = is_array($workspace) && (string)($workspace['type'] ?? '') === 'pro
 		</header>
 		<p><strong><?php p($l->t('Required:')); ?></strong> <?php p($l->t('date + title + amount (or signed amount with defaults)')); ?></p>
 		<p><strong><?php p($l->t('Optional:')); ?></strong> <code>direction</code>, <code>category</code>, <code>notes</code>, <code>isSpecial</code>, <code>externalRef</code><?php if ($isProject): ?>, <code>bookingStatus</code><?php endif; ?></p>
-		<p><strong><?php p($l->t('Recognised date columns:')); ?></strong> <?php p($l->t('bookingDate, date, valuta, Buchungsdatum')); ?></p>
-		<p><strong><?php p($l->t('Recognised title columns:')); ?></strong> <?php p($l->t('title, description, memo, Verwendungszweck')); ?></p>
+		<p><strong><?php p($l->t('Recognised date columns:')); ?></strong> <code>bookingDate, date, valuta, Buchungsdatum</code></p>
+		<p><strong><?php p($l->t('Recognised title columns:')); ?></strong> <code>title, description, memo, Verwendungszweck</code></p>
 		<p><strong><?php p($l->t('Recognised amount columns:')); ?></strong> <?php p($l->t('amount, value, betrag (comma, semicolon, or tab-separated files are supported)')); ?></p>
-		<p><strong><?php p($l->t('Recognised direction columns:')); ?></strong> <?php p($l->t('direction, Soll/Haben, debit/credit (rename a bank “type” column to “direction” if needed)')); ?></p>
+		<p><strong><?php p($l->t('Separate income and expense columns:')); ?></strong> <?php p($l->t('also recognised — for example “Expenses” and “Income”, “Ausgaben” and “Einnahmen”, or “Debit” and “Credit”, with a value in only one of them per row. A minus sign on the expense column is fine.')); ?></p>
+		<p><strong><?php p($l->t('Recognised direction columns:')); ?></strong> <code>direction, Soll/Haben, debit/credit</code> <?php p($l->t('Rename a bank “type” column to “direction” if needed.')); ?></p>
+		<p><strong><?php p($l->t('Extra columns:')); ?></strong> <?php p($l->t('Columns BudgetCheck does not need — like a running balance — are simply ignored.')); ?></p>
 		<div class="bc-import-format-note" role="note">
 			<p><strong><?php p($l->t('Amount formats')); ?></strong></p>
 			<p><?php p($l->t('Both European (1.234,56) and English (1,234.56) number formats are accepted. Spaces as thousands separators also work. Do not put currency symbols in the amount column.')); ?></p>

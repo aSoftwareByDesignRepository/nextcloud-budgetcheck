@@ -56,6 +56,9 @@ final class BudgetPlannedService
 
 		$this->db->beginTransaction();
 		try {
+			// Serialize against concurrent workspace delete (no FKs) — see
+			// WorkspaceDeletionService::CHILD_TABLES.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			foreach ($plannedMap as $categoryKey => $plannedMinor) {
 				$categoryId = (int)$categoryKey;
 				if ($categoryId < 1) {
@@ -347,7 +350,9 @@ final class BudgetPlannedService
 			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter($version, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('is_planned', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
 			->andWhere($qb->expr()->isNull('deleted_at'));
-		$qb->executeStatement();
+		if ($qb->executeStatement() === 0) {
+			throw new \RuntimeException('Failed to delete planned transaction.');
+		}
 	}
 
 	private function cleanupStaleBudgetPlanned(

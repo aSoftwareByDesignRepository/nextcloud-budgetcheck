@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 
 const flowUrl = process.argv[2];
 const user = process.env.NC_ADMIN_USER || 'bc_atlas_e2e';
-const pass = process.env.NC_ADMIN_PASS || 'BcAtlasE2e9xK';
+const pass = process.env.NC_ADMIN_PASS || 'BCatlas-UJ6RdIEqOJE3utw';
 if (!flowUrl) { console.error('need flow url'); process.exit(2); }
 
 const browser = await chromium.launch({ headless: true });

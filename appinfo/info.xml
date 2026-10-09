@@ -252,6 +252,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 		</install>
 		<post-migration>
 			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
+			<step>OCA\BudgetCheck\Repair\PruneOrphanedChildRows</step>
 		</post-migration>
 		<uninstall>
 			<step>OCA\BudgetCheck\Repair\UninstallDropTables</step>

@@ -40,12 +40,14 @@ foreach ($locales as $lang) {
 	}
 	$cat = json_decode((string)file_get_contents($jsonPath), true, 512, JSON_THROW_ON_ERROR);
 	$translations = $cat['translations'] ?? [];
-	$pluralForm = $cat['pluralForm'] ?? null;
 
+	// CSP / Nextcloud ≥26: OC.L10N.register takes (appId, translations) only.
+	// A third gettext pluralForm argument is compiled via new Function() by
+	// legacy shims and violates strict script-src (no 'unsafe-eval'). Plural
+	// rules come from getPlural() inside @nextcloud/l10n. Keep this in sync
+	// with scripts/build-l10n-js.js.
 	$lines = ["OC.L10N.register(\n", "\t\"budgetcheck\",\n", "\t{\n"];
-	$first = true;
 	foreach ($translations as $key => $val) {
-		$first = false;
 		$k = json_encode($key, JSON_UNESCAPED_UNICODE);
 		if (is_array($val)) {
 			$v = json_encode($val, JSON_UNESCAPED_UNICODE);
@@ -57,14 +59,7 @@ foreach ($locales as $lang) {
 	$last = array_pop($lines);
 	$last = rtrim($last, ",\n") . "\n";
 	$lines[] = $last;
-	if ($pluralForm !== null && $pluralForm !== '') {
-		$lines[] = "\t},\n";
-		$lines[] = "\t" . json_encode($pluralForm) . "\n";
-		$lines[] = ");\n";
-	} else {
-		$lines[] = "\t}\n";
-		$lines[] = ");\n";
-	}
+	$lines[] = "});\n";
 	file_put_contents($jsPath, implode('', $lines));
 	echo "Wrote $jsPath (" . count($translations) . " keys)\n";
 }

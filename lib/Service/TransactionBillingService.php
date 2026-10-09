@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
+use OCA\BudgetCheck\Exception\ConflictException;
 use OCA\BudgetCheck\Public\BillableItem;
 use OCA\BudgetCheck\Util\BillingStatus;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -139,7 +140,7 @@ class TransactionBillingService
 
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$qb = $this->db->getQueryBuilder();
-		$qb->update('bc_transactions')
+		$affected = $qb->update('bc_transactions')
 			->set('is_billable', $qb->createNamedParameter($billable, \PDO::PARAM_BOOL))
 			->set('updated_at', $qb->createNamedParameter($now))
 			->set('updated_by', $qb->createNamedParameter($actorUid))
@@ -147,6 +148,11 @@ class TransactionBillingService
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($transactionId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter((int) $row['version'], \PDO::PARAM_INT)))
 			->executeStatement();
+		// CAS must fail closed — a concurrent update must surface as a conflict,
+		// not silently become last-writer-wins.
+		if ($affected !== 1) {
+			throw new ConflictException();
+		}
 
 		$this->audit->record($actorUid, 'transaction.billable', 'transaction', (string) $transactionId, [
 			'isBillable' => $billable,

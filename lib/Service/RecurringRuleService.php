@@ -129,34 +129,47 @@ class RecurringRuleService
 		$postingMode = $this->normalisePostingMode($payload['postingMode'] ?? $payload['posting_mode'] ?? self::POSTING_BOOK);
 
 		$now = $this->utcNow();
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('bc_recurring_rules')
-			->values([
-				'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
-				'category_id' => $qb->createNamedParameter($category['id'], \PDO::PARAM_INT),
-				'direction' => $qb->createNamedParameter($direction),
-				'title' => $qb->createNamedParameter($title),
-				'amount_minor' => $qb->createNamedParameter($amount, \PDO::PARAM_INT),
-				'frequency' => $qb->createNamedParameter($frequency),
-				'interval_count' => $qb->createNamedParameter($intervalCount, \PDO::PARAM_INT),
-				'start_date' => $qb->createNamedParameter($startDate->format('Y-m-d')),
-				'end_date' => $qb->createNamedParameter($endDate?->format('Y-m-d')),
-				'next_due_date' => $qb->createNamedParameter($nextDue->format('Y-m-d')),
-				'schedule_json' => $qb->createNamedParameter($schedule !== null ? self::encodeSchedule($schedule) : null),
-				'posting_mode' => $qb->createNamedParameter($postingMode),
-				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
-				'created_by' => $qb->createNamedParameter($userId),
-				'created_at' => $qb->createNamedParameter($now),
-				'updated_at' => $qb->createNamedParameter($now),
-			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_recurring_rules');
-		$this->audit->record($userId, 'recurring_rule_created', 'recurring_rule', (string)$id, [
-			'frequency' => $frequency,
-			'amountMinor' => $amount,
-			'postingMode' => $postingMode,
-			'scheduleCount' => $schedule !== null ? count($schedule) : null,
-		], $workspaceId);
+		$id = 0;
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete (no FKs) — see
+			// WorkspaceDeletionService::CHILD_TABLES.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('bc_recurring_rules')
+				->values([
+					'workspace_id' => $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT),
+					'category_id' => $qb->createNamedParameter($category['id'], \PDO::PARAM_INT),
+					'direction' => $qb->createNamedParameter($direction),
+					'title' => $qb->createNamedParameter($title),
+					'amount_minor' => $qb->createNamedParameter($amount, \PDO::PARAM_INT),
+					'frequency' => $qb->createNamedParameter($frequency),
+					'interval_count' => $qb->createNamedParameter($intervalCount, \PDO::PARAM_INT),
+					'start_date' => $qb->createNamedParameter($startDate->format('Y-m-d')),
+					'end_date' => $qb->createNamedParameter($endDate?->format('Y-m-d')),
+					'next_due_date' => $qb->createNamedParameter($nextDue->format('Y-m-d')),
+					'schedule_json' => $qb->createNamedParameter($schedule !== null ? self::encodeSchedule($schedule) : null),
+					'posting_mode' => $qb->createNamedParameter($postingMode),
+					'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+					'created_by' => $qb->createNamedParameter($userId),
+					'created_at' => $qb->createNamedParameter($now),
+					'updated_at' => $qb->createNamedParameter($now),
+				]);
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_recurring_rules');
+			$this->audit->record($userId, 'recurring_rule_created', 'recurring_rule', (string)$id, [
+				'frequency' => $frequency,
+				'amountMinor' => $amount,
+				'postingMode' => $postingMode,
+				'scheduleCount' => $schedule !== null ? count($schedule) : null,
+			], $workspaceId);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		return $this->loadHydrated($id, $workspace['currencyCode']);
 	}
 

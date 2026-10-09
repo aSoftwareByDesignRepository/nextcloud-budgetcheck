@@ -8,6 +8,7 @@ use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
+use OCA\BudgetCheck\Service\WorkspaceDeletionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\IConfig;
 use OCP\IDBConnection;
@@ -76,29 +77,17 @@ final class SettingsPersistReloadIntegrationTest extends TestCase
 		$db = \OC::$server->get(IDBConnection::class);
 		foreach ($this->workspaceIds as $id) {
 			try {
-				foreach ([
-					'bc_transactions',
-					'bc_recurring_rules',
-					'bc_budgets',
-					'bc_budget_defaults',
-					'bc_savings_targets',
-					'bc_monthly_snapshots',
-					'bc_categories',
-					'bc_booking_statuses',
-					'bc_idempotency',
-					'bc_workspace_members',
-					'bc_workspace_groups',
-					'bc_workspaces',
-				] as $table) {
+				foreach (WorkspaceDeletionService::CHILD_TABLES as $table) {
 					if (!$db->tableExists($table)) {
 						continue;
 					}
 					$qb = $db->getQueryBuilder();
-					if ($table === 'bc_workspaces') {
-						$qb->delete($table)->where($qb->expr()->eq('id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
-					} else {
-						$qb->delete($table)->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
-					}
+					$qb->delete($table)->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
+					$qb->executeStatement();
+				}
+				if ($db->tableExists('bc_workspaces')) {
+					$qb = $db->getQueryBuilder();
+					$qb->delete('bc_workspaces')->where($qb->expr()->eq('id', $qb->createNamedParameter($id, \PDO::PARAM_INT)));
 					$qb->executeStatement();
 				}
 			} catch (\Throwable) {

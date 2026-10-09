@@ -16,6 +16,7 @@ use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCA\BudgetCheck\Listener\GroupDeletedListener;
 use OCA\BudgetCheck\Listener\UserDeletedListener;
 use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
+use OCA\BudgetCheck\Repair\PruneOrphanedChildRows;
 use OCA\BudgetCheck\Repair\UninstallDropTables;
 use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
@@ -236,6 +237,7 @@ class Application extends App implements IBootstrap
 				$c->query(AuditLogService::class),
 				$c->query(AccessControlService::class),
 				$c->query(\OCP\IDBConnection::class),
+				$c->query(SnapshotService::class),
 			);
 		});
 
@@ -394,6 +396,12 @@ class Application extends App implements IBootstrap
 			return new EnsureBudgetCheckSchema(
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(\OCP\IConfig::class),
+			);
+		});
+
+		$context->registerService(PruneOrphanedChildRows::class, function ($c): PruneOrphanedChildRows {
+			return new PruneOrphanedChildRows(
+				$c->query(\OCP\IDBConnection::class),
 			);
 		});
 
