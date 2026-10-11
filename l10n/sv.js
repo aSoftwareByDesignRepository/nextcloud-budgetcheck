@@ -1152,7 +1152,7 @@ OC.L10N.register(
 	"Varies (default {amount})" : "Varierar (standard {amount})",
 	"VAT rate" : "VAT-sats",
 	"VAT rate must be between 0 and 5000 basis points." : "VAT-satsen måste vara mellan 0 och 5000 basispunkter.",
-	"VAT {rate}%" : "VAT {rate}%",
+	"VAT {rate}%" : "Moms {rate} %",
 	"View" : "Visa",
 	"View and add entries in the ledger." : "Visa och lägg till poster i huvudboken.",
 	"View controls" : "Vy",

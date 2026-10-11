@@ -1152,7 +1152,7 @@ OC.L10N.register(
 	"Varies (default {amount})" : "Zmienna (domyślnie {amount})",
 	"VAT rate" : "Stawka VAT",
 	"VAT rate must be between 0 and 5000 basis points." : "Stawka VAT musi być między 0 a 5000 punktów bazowych.",
-	"VAT {rate}%" : "MwSt. {rate}%",
+	"VAT {rate}%" : "VAT {rate}%",
 	"View" : "Wyświetl",
 	"View and add entries in the ledger." : "Przeglądaj i dodawaj pozycje w księdze.",
 	"View controls" : "Widok",
