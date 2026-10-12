@@ -13,7 +13,7 @@ declare(strict_types=1);
  */
 
 $base = dirname(__DIR__) . '/l10n';
-$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR'];
+$locales = ['de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR', 'zh_CN'];
 
 /**
  * Encode a catalog with tab indentation (Nextcloud / committed style).
