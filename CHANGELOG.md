@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.8 - 2026-10-12
+
+### Added
+
+- **Simplified Chinese localization (issue #24):** BudgetCheck is now fully translated into 简体中文 — workspaces, bookings, CSV import and export, recurring bookings, and settings ship a complete zh_CN catalog. Thanks to the community contribution that started this catalog; the remaining strings were completed and reviewed for terminology consistency with the BudgetCheck mobile companion app.
+- **Plural strings are now translatable in every locale:** the fifteen message pairs used for counts (transactions, recurring generations, import rows, …) previously always rendered in English. They are now real catalog entries with the correct number of plural forms per language.
+
+### Fixed
+
+- **Literal percent signs no longer show as “%%”:** a hardening pass had escaped percent signs for the PHP formatter but also hit JavaScript-rendered texts — labels such as “10 %” or the VAT rate would have displayed a doubled “%%”. Each string now carries the escaping its renderer actually needs.
+- Corrected untranslated and case-only-differing values across the existing catalogs.
+
+### Changed
+
+- The translation checker now validates plural message sets and percent escaping per renderer, so both defect classes above are caught before release.
+- Maintenance: dropped deprecated `clip: rect()` styles and cleaned the shared app-feedback regex (fleet-wide sync).
+
 ## 1.4.7 - 2026-10-10
 
 ### Changed
