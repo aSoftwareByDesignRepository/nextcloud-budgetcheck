@@ -10,15 +10,42 @@ declare(strict_types=1);
  */
 
 $base = __DIR__ . '/../l10n';
-$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'zh_CN'];
+$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_BR', 'zh_CN'];
 
 /**
+ * Scan printf-style percent tokens in a msgid/msgstr.
+ *
+ * Literal percent signs keep their escaped form as the token: `%%` yields
+ * '%%' and a bare `%` (literal, or the leading % of %n/%.0f-style tokens the
+ * checker does not track individually) yields '%'. Escaped form must match
+ * the msgid exactly: PHP-rendered msgids carry `%%` (vsprintf safety) and so
+ * must their msgstr, while JS-rendered msgids carry a bare `%` and their
+ * msgstr must too — `%%` in a JS-bound msgstr renders literally to users.
+ *
  * @return list<string>
  */
 function bcPrintfPlaceholders(string $s): array {
-	preg_match_all('/%%|%(?:\d+\$)?[sd]/', $s, $m);
+	$tokens = [];
+	$len = strlen($s);
+	for ($i = 0; $i < $len; $i++) {
+		if ($s[$i] !== '%') {
+			continue;
+		}
+		$next = $s[$i + 1] ?? '';
+		if ($next === '%') {
+			$tokens[] = '%%';
+			$i++;
+			continue;
+		}
+		if (preg_match('/\G%(?:\d+\$)?[sd]/', $s, $m, 0, $i)) {
+			$tokens[] = $m[0];
+			$i += strlen($m[0]) - 1;
+			continue;
+		}
+		$tokens[] = '%';
+	}
 
-	return $m[0];
+	return $tokens;
 }
 
 /**
@@ -52,7 +79,60 @@ foreach ($enT as $key => $enVal) {
 		if (!isset($langT[$key])) {
 			continue;
 		}
-		$val = (string) $langT[$key];
+		$val = $langT[$key];
+
+		if (is_array($val)) {
+			// Plural-bundle entries (n() msgid `_sing_::_plur_`) hold one msgstr
+			// per plural form. Every form may only use placeholders that exist
+			// in the msgid, and the union of forms must cover all of them —
+			// nplurals=1 locales legitimately collapse both sides into one
+			// form. The count itself may be rendered either as %n (bare '%'
+			// printf token) or as a named count param ({count}/{created});
+			// either mechanism satisfies the other's coverage requirement.
+			$countNames = ['{count}' => true, '{created}' => true];
+			$coveredPrintf = [];
+			$coveredNamed = [];
+			foreach ($val as $form) {
+				$form = (string) $form;
+				$formPrintf = bcPrintfPlaceholders($form);
+				$formNamed = bcNamedPlaceholders($form);
+				if (array_diff($formPrintf, $keyPrintf) !== [] || array_diff($formNamed, $keyNamed) !== []) {
+					$failed = true;
+					fwrite(STDERR, "{$lang}.json plural-form placeholder mismatch for key: $key\n");
+					fwrite(STDERR, '  form: ' . $form . "\n");
+					fwrite(STDERR, '  expected placeholders from msgid: ' . implode(', ', array_merge($keyPrintf, $keyNamed)) . "\n");
+					break;
+				}
+				$coveredPrintf = array_merge($coveredPrintf, $formPrintf);
+				$coveredNamed = array_merge($coveredNamed, $formNamed);
+			}
+			$countCovered = in_array('%', $coveredPrintf, true)
+				|| array_intersect($coveredNamed, array_keys($countNames)) !== [];
+			foreach ($keyPrintf as $token) {
+				$ok = $token === '%'
+					? $countCovered
+					: in_array($token, $coveredPrintf, true);
+				if (!$ok) {
+					$failed = true;
+					fwrite(STDERR, "{$lang}.json plural-bundle coverage mismatch for key: $key\n");
+					fwrite(STDERR, "  missing printf token: $token\n");
+					break;
+				}
+			}
+			foreach ($keyNamed as $token) {
+				$ok = in_array($token, $coveredNamed, true)
+					|| (isset($countNames[$token]) && in_array('%', $coveredPrintf, true));
+				if (!$ok) {
+					$failed = true;
+					fwrite(STDERR, "{$lang}.json plural-bundle coverage mismatch for key: $key\n");
+					fwrite(STDERR, "  missing named placeholder: $token\n");
+					break;
+				}
+			}
+			continue;
+		}
+
+		$val = (string) $val;
 
 		$valPrintf = bcPrintfPlaceholders($val);
 		if ($keyPrintf !== $valPrintf) {

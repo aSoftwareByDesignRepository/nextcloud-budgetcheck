@@ -11,7 +11,7 @@
         "%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:": "%s ist auf Ihrer Nextcloud kostenlos (AGPL). Fehler und Ideen über GitHub bleiben willkommen — das gehört zur kostenlosen Open-Source-Pflege. Wenn Ihre Organisation planbare Hilfe mit Rechnung braucht, wählen Sie unten eine Option:",
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:": "%s ist auf Ihrer Nextcloud kostenlos (AGPL). GitHub-Issues für Fehler und Ideen bleiben willkommen. Wenn Sie planbare Unterstützung mit Rechnung möchten — Einrichtung, Stundenkontingent, Auftragsentwicklung — oder die offizielle Mobile-App:",
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, or commissioned work:": "%s ist auf Ihrer Nextcloud kostenlos (AGPL). GitHub-Issues für Fehler und Ideen bleiben willkommen. Wenn Sie planbare Unterstützung mit Rechnung möchten — Einrichtung, Stundenkontingent oder Auftragsentwicklung:",
-        "0 % (none)": "0 %% (keine)",
+        "0 % (none)": "0 % (keine)",
         "0%% (none)": "0 %% (keine)",
         "1 attachment added.": "1 Anhang hinzugefügt.",
         "1 booking in this window.": "1 Buchung in diesem Zeitraum.",
@@ -24,23 +24,23 @@
         "1 receipt could not be uploaded. Fix the issue below and save again.": "1 Beleg konnte nicht hochgeladen werden. Behebe den Fehler unten und speichere erneut.",
         "1 transaction generated for the full period.": "1 Buchung für den kompletten Zeitraum erzeugt.",
         "1 transaction matches these filters.": "1 Buchung entspricht diesen Filtern.",
-        "10 %": "10 %%",
+        "10 %": "10 %",
         "10%%": "10 %%",
-        "13 %": "13 %%",
+        "13 %": "13 %",
         "13%%": "13 %%",
-        "15 %": "15 %%",
+        "15 %": "15 %",
         "15%%": "15 %%",
-        "19 %": "19 %%",
+        "19 %": "19 %",
         "19%%": "19 %%",
-        "20 %": "20 %%",
+        "20 %": "20 %",
         "20%%": "20 %%",
-        "21 %": "21 %%",
+        "21 %": "21 %",
         "21%%": "21 %%",
-        "25 %": "25 %%",
+        "25 %": "25 %",
         "25%%": "25 %%",
-        "5 %": "5 %%",
+        "5 %": "5 %",
         "5%%": "5 %%",
-        "7 %": "7 %%",
+        "7 %": "7 %",
         "7%%": "7 %%",
         "A household can save by percentage of income, an absolute amount, or whichever is larger.": "Ein Haushalt kann prozentual vom Einkommen, mit einem festen Betrag oder mit dem jeweils höheren Wert sparen.",
         "A household can save by percentage of income, an absolute amount, or whichever is larger. Progress appears on the dashboard and yearly overview—no need to tag individual transactions.": "Ein Haushalt kann prozentual vom Einkommen, mit einem festen Betrag oder dem jeweils höheren Wert sparen. Fortschritt erscheint auf dem Dashboard und in der Jahresübersicht — einzelne Buchungen müssen nicht markiert werden.",
@@ -1151,7 +1151,7 @@
         "Varies (default {amount})": "Variiert (Standard {amount})",
         "VAT rate": "MwSt.-Satz",
         "VAT rate must be between 0 and 5000 basis points.": "Der USt.-Satz muss zwischen 0 und 5000 Basispunkten liegen.",
-        "VAT {rate}%": "MwSt. {rate}%%",
+        "VAT {rate}%": "MwSt. {rate}%",
         "View": "Ansehen",
         "View and add entries in the ledger.": "Einträge im Hauptbuch ansehen und erfassen.",
         "View controls": "Ansicht",
@@ -1355,7 +1355,67 @@
         "The end date must not be before the start date.": "Das Enddatum darf nicht vor dem Startdatum liegen.",
         "Project workspaces require a project start date.": "Projekt-Arbeitsbereiche benötigen ein Startdatum für das Projekt.",
         "Project workspaces require a project end date.": "Projekt-Arbeitsbereiche benötigen ein Enddatum für das Projekt.",
-        "A booking status with this name already exists.": "Ein Buchungsstatus mit diesem Namen existiert bereits."
+        "A booking status with this name already exists.": "Ein Buchungsstatus mit diesem Namen existiert bereits.",
+        "_%n attachment_::_{count} attachments_": [
+            "%n attachment",
+            "{count} attachments"
+        ],
+        "_%n closed month_::_{count} closed months_": [
+            "%n closed month",
+            "{count} closed months"
+        ],
+        "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
+            "Added %n entry across {rules} rules.",
+            "Added {count} entries across {rules} rules."
+        ],
+        "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
+            "%n occurrence skipped — the month is closed.",
+            "{count} occurrences skipped — the month is closed."
+        ],
+        "_%n rule needed attention._::_{count} rules needed attention._": [
+            "%n rule needed attention.",
+            "{count} rules needed attention."
+        ],
+        "_%n workspace visible_::_%n workspaces visible_": [
+            "%n workspace visible",
+            "%n workspaces visible"
+        ],
+        "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
+            "Validation failed: %n invalid row. First error: {error}",
+            "Validation failed: {count} invalid rows. First error: {error}"
+        ],
+        "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
+            "Validation passed. %n row ready; {skipped} duplicates will be skipped.",
+            "Validation passed. {count} rows ready; {skipped} duplicates will be skipped."
+        ],
+        "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
+            "Validation passed. %n row is ready to import.",
+            "Validation passed. {count} rows are ready to import."
+        ],
+        "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
+            "Imported %n transaction. Skipped {skipped} duplicates.",
+            "Imported {created} transactions. Skipped {skipped} duplicates."
+        ],
+        "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
+            "Imported %n transaction successfully.",
+            "Imported {count} transactions successfully."
+        ],
+        "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
+            "%n booking (including planned and deleted drafts)",
+            "{count} bookings (including planned and deleted drafts)"
+        ],
+        "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
+            "%n booking falls into this date range. Pick a calendar month to focus one month.",
+            "{count} bookings fall into this date range. Pick a calendar month to focus one month."
+        ],
+        "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
+            "%n uncategorized expense remains without a category. It counts toward the total but not toward any budget.",
+            "%n uncategorized expenses remain without a category. They count toward the total but not toward any budget."
+        ],
+        "_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
+            "%n uncategorized expense remains without a category.",
+            "%n uncategorized expenses remain without a category."
+        ]
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -1356,5 +1356,20 @@ OC.L10N.register(
 	"The end date must not be before the start date." : "The end date must not be before the start date.",
 	"Project workspaces require a project start date." : "Project workspaces require a project start date.",
 	"Project workspaces require a project end date." : "Project workspaces require a project end date.",
-	"A booking status with this name already exists." : "A booking status with this name already exists."
+	"A booking status with this name already exists." : "A booking status with this name already exists.",
+	"_%n attachment_::_{count} attachments_" : ["%n attachment","{count} attachments"],
+	"_%n closed month_::_{count} closed months_" : ["%n closed month","{count} closed months"],
+	"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._" : ["Added %n entry across {rules} rules.","Added {count} entries across {rules} rules."],
+	"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._" : ["%n occurrence skipped — the month is closed.","{count} occurrences skipped — the month is closed."],
+	"_%n rule needed attention._::_{count} rules needed attention._" : ["%n rule needed attention.","{count} rules needed attention."],
+	"_%n workspace visible_::_%n workspaces visible_" : ["%n workspace visible","%n workspaces visible"],
+	"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_" : ["Validation failed: %n invalid row. First error: {error}","Validation failed: {count} invalid rows. First error: {error}"],
+	"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._" : ["Validation passed. %n row ready; {skipped} duplicates will be skipped.","Validation passed. {count} rows ready; {skipped} duplicates will be skipped."],
+	"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._" : ["Validation passed. %n row is ready to import.","Validation passed. {count} rows are ready to import."],
+	"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._" : ["Imported %n transaction. Skipped {skipped} duplicates.","Imported {created} transactions. Skipped {skipped} duplicates."],
+	"_Imported %n transaction successfully._::_Imported {count} transactions successfully._" : ["Imported %n transaction successfully.","Imported {count} transactions successfully."],
+	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["%n booking (including planned and deleted drafts)","{count} bookings (including planned and deleted drafts)"],
+	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["%n booking falls into this date range. Pick a calendar month to focus one month.","{count} bookings fall into this date range. Pick a calendar month to focus one month."],
+	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["%n uncategorised expense remains without a category. It counts toward the total but not toward any budget.","%n uncategorised expenses remain without a category. They count toward the total but not toward any budget."],
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n uncategorised expense remains without a category.","%n uncategorised expenses remain without a category."]
 });
