@@ -25,23 +25,23 @@
 		"1 transaction generated for the full period.": "1 transaksjon generert for hele perioden.",
 		"1 transaction matches these filters.": "1 transaksjon matcher disse filtrene.",
 		"10 %": "10 %",
-		"10%%": "10%%",
+		"10%%": "10 %%",
 		"13 %": "13 %",
-		"13%%": "13%%",
+		"13%%": "13 %%",
 		"15 %": "15 %",
-		"15%%": "15%%",
+		"15%%": "15 %%",
 		"19 %": "19 %",
-		"19%%": "19%%",
+		"19%%": "19 %%",
 		"20 %": "20 %",
-		"20%%": "20%%",
+		"20%%": "20 %%",
 		"21 %": "21 %",
-		"21%%": "21%%",
+		"21%%": "21 %%",
 		"25 %": "25 %",
-		"25%%": "25%%",
+		"25%%": "25 %%",
 		"5 %": "5 %",
-		"5%%": "5%%",
+		"5%%": "5 %%",
 		"7 %": "7 %",
-		"7%%": "7%%",
+		"7%%": "7 %%",
 		"A household can save by percentage of income, an absolute amount, or whichever is larger.": "En husholdning kan spare som en prosentandel av inntekten, et fast beløp eller det høyeste av de to.",
 		"A household can save by percentage of income, an absolute amount, or whichever is larger. Progress appears on the dashboard and yearly overview—no need to tag individual transactions.": "En husholdning kan spare en prosentandel av inntekten, et fast beløp eller det som er størst. Fremdrift vises på dashbordet og i årsrapporten — trenger ikke merke enkeltposteringer.",
 		"A placeholder booking from Generate on a recurring rule or from category budget targets. Recurring placeholders match amount; budget placeholders match category (any amount). A real booking in the same or neighbouring month removes the plan.": "En plassholderpostering fra Generer på en gjentakende regel eller fra kategoribudsjettmål. Gjentakende plassholdere matcher beløp; budsjettplassholdere matcher kategori (ethvert beløp). En reell postering samme eller nabomåned fjerner planen.",
@@ -402,7 +402,7 @@
 		"Everyday totals exclude transactions marked as special. Turn this on to see the full ledger. Your choice is saved to your account.": "Daglige totaler ekskluderer transaksjoner merket som spesielle. Aktiver for å se hele hovedboken. Valget lagres på kontoen.",
 		"Everyone in the group gets the chosen role. Groups can be contributors or viewers; assign managers to individual people so responsibility stays clear.": "Alle i gruppen får den valgte rollen. Grupper kan være bidragsytere eller lesere; tildel lederrollen til enkeltpersoner slik at ansvaret er tydelig.",
 		"Everyone reaching this workspace only through this group will lose access. People with their own role keep it.": "Alle som bare når dette arbeidsområdet gjennom denne gruppen, mister tilgangen. Personer med egen rolle beholder den.",
-		"Example: 1900 = 19%%": "Eksempel: 1900 = 19%%",
+		"Example: 1900 = 19%%": "Eksempel: 1900 = 19 %%",
 		"Example: salary payment": "Eksempel: lønnsutbetaling",
 		"Example: weekly groceries": "Eksempel: ukentlige dagligvarer",
 		"Extra columns:": "Ekstra kolonner:",
@@ -1356,21 +1356,66 @@
 		"Project workspaces require a project start date.": "Prosjektarbeidsområder krever en startdato for prosjektet.",
 		"Project workspaces require a project end date.": "Prosjektarbeidsområder krever en sluttdato for prosjektet.",
 		"A booking status with this name already exists.": "det finnes allerede en bokføringsstatus med dette navnet.",
-		"_%n attachment_::_{count} attachments_": ["%n attachment","{count} attachments"],
-		"_%n closed month_::_{count} closed months_": ["%n closed month","{count} closed months"],
-		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": ["Added %n entry across {rules} rules.","Added {count} entries across {rules} rules."],
-		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": ["%n occurrence skipped — the month is closed.","{count} occurrences skipped — the month is closed."],
-		"_%n rule needed attention._::_{count} rules needed attention._": ["%n rule needed attention.","{count} rules needed attention."],
-		"_%n workspace visible_::_%n workspaces visible_": ["%n workspace visible","%n workspaces visible"],
-		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": ["Validation failed: %n invalid row. First error: {error}","Validation failed: {count} invalid rows. First error: {error}"],
-		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": ["Validation passed. %n row ready; {skipped} duplicates will be skipped.","Validation passed. {count} rows ready; {skipped} duplicates will be skipped."],
-		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": ["Validation passed. %n row is ready to import.","Validation passed. {count} rows are ready to import."],
-		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": ["Imported %n transaction. Skipped {skipped} duplicates.","Imported {created} transactions. Skipped {skipped} duplicates."],
-		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": ["Imported %n transaction successfully.","Imported {count} transactions successfully."],
-		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": ["%n booking (including planned and deleted drafts)","{count} bookings (including planned and deleted drafts)"],
-		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": ["%n booking falls into this date range. Pick a calendar month to focus one month.","{count} bookings fall into this date range. Pick a calendar month to focus one month."],
-		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": ["%n uncategorized expense remains without a category. It counts toward the total but not toward any budget.","%n uncategorized expenses remain without a category. They count toward the total but not toward any budget."],
-		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": ["%n uncategorized expense remains without a category.","%n uncategorized expenses remain without a category."]
+		"_%n attachment_::_{count} attachments_": [
+			"%n vedlegg",
+			"{count} vedlegg"
+		],
+		"_%n closed month_::_{count} closed months_": [
+			"%n avsluttet måned",
+			"{count} avsluttede måneder"
+		],
+		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
+			"%n post lagt til på tvers av {rules} regler.",
+			"{count} poster lagt til på tvers av {rules} regler."
+		],
+		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
+			"%n forekomst hoppet over — måneden er avsluttet.",
+			"{count} forekomster hoppet over — måneden er avsluttet."
+		],
+		"_%n rule needed attention._::_{count} rules needed attention._": [
+			"%n regel trengte oppfølging.",
+			"{count} regler trengte oppfølging."
+		],
+		"_%n workspace visible_::_%n workspaces visible_": [
+			"%n arbeidsområde synlig",
+			"%n arbeidsområder synlige"
+		],
+		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
+			"Validering mislyktes: %n ugyldig rad. Første feil: {error}",
+			"Validering mislyktes: {count} ugyldige rader. Første feil: {error}"
+		],
+		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
+			"Validering bestått. %n rad klar; {skipped} duplikater hoppes over.",
+			"Validering bestått. {count} rader klare; {skipped} duplikater hoppes over."
+		],
+		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
+			"Validering bestått. %n rad er klar for import.",
+			"Validering bestått. {count} rader er klare for import."
+		],
+		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
+			"%n transaksjon importert. {skipped} duplikater hoppet over.",
+			"{created} transaksjoner importert. {skipped} duplikater hoppet over."
+		],
+		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
+			"%n transaksjon importert.",
+			"{count} transaksjoner importert."
+		],
+		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
+			"%n postering (inkl. planlagte og slettede utkast)",
+			"{count} posteringer (inkl. planlagte og slettede utkast)"
+		],
+		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
+			"%n postering faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned.",
+			"{count} posteringer faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned."
+		],
+		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
+			"%n ukategorisert utgift mangler kategori. Den teller mot totalsummen, men ikke mot noe budsjett.",
+			"%n ukategoriserte utgifter mangler kategori. De teller mot totalsummen, men ikke mot noe budsjett."
+		],
+		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
+			"%n ukategorisert utgift mangler kategori.",
+			"%n ukategoriserte utgifter mangler kategori."
+		]
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }
