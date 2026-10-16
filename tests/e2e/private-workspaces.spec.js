@@ -109,18 +109,25 @@ test.describe('Private workspaces UX', () => {
 		test.skip(!(await privateRadio.isEnabled()), 'Privacy radios disabled for this user');
 		await privateRadio.check();
 
-		/** @type {string|null} */
-		let confirmText = null;
-		page.once('dialog', async (dialog) => {
-			confirmText = dialog.message();
-			await dialog.dismiss();
-		});
-
 		await page.locator('[data-bc-workspace-form] button[type="submit"]').click();
-		await expect.poll(() => confirmText, { timeout: 5000 }).not.toBeNull();
+
+		// The privacy switch uses the app-owned confirm modal (BC.Components
+		// .confirmDialog), not a native window.confirm — assert the rendered
+		// DOM dialog and read its body copy.
+		const dialog = page.locator('.bc-modal [role="dialog"]');
+		await expect(dialog).toBeVisible({ timeout: 5000 });
+		const confirmText = await dialog.locator('.bc-modal__body').textContent();
 		expect(String(confirmText)).toMatch(/database|server access|recover|Datenbank|wiederherstellen|récupér|base de datos/i);
 		expect(String(confirmText)).toMatch(/groups|Gruppen|groupes|grupos|manager|Manager|gestionnaire|gestor/i);
 		expect(String(confirmText).toLowerCase()).not.toMatch(/two managers|you need two managers|zwei manager brauchen|besoin de deux/i);
 		expect(String(confirmText).toLowerCase()).not.toMatch(/zero-knowledge|end-to-end encrypted|ende-zu-ende-verschlüsselt/);
+
+		// Cancel via the dialog's own control; the write must not happen.
+		await dialog.locator('.bc-modal__actions .button:not(.primary)').first().click();
+		await expect(dialog).toHaveCount(0);
+		const reread = await page.request.get(`/apps/budgetcheck/api/workspaces/${wid}`);
+		expect(reread.ok()).toBeTruthy();
+		const rereadData = await reread.json();
+		expect(String((rereadData.workspace || {}).privacyMode || 'standard')).toBe('standard');
 	});
 });

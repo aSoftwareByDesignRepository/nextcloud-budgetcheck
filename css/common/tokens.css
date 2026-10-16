@@ -77,9 +77,9 @@ body,
 	 * Mix INTO main-background (not transparent) so tints stay visible on every
 	 * Nextcloud theme, including high-contrast and custom accent branding.
 	 */
-	--bc-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
-	--bc-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
-	--bc-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--bc-tint-success: color-mix(in srgb, var(--color-success-text, #46ba61) 18%, var(--color-main-background));
+	--bc-tint-warning: color-mix(in srgb, var(--color-warning-text, #c98600) 22%, var(--color-main-background));
+	--bc-tint-danger: color-mix(in srgb, var(--color-error-text, #cc4646) 18%, var(--color-main-background));
 	--bc-tint-critical: var(--bc-tint-danger);
 	--bc-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
 	--bc-tint-receipt: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
@@ -89,10 +89,10 @@ body,
 	--bc-tint-project: var(--bc-tint-info);
 
 	/* Signed money surfaces — always mixed into main-background for AA contrast */
-	--bc-amount-income-surface: color-mix(in srgb, var(--color-success-text, var(--color-success)) 14%, var(--color-main-background));
-	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error-text, var(--color-error)) 14%, var(--color-main-background));
-	--bc-amount-income-line: var(--color-success-text, var(--color-success));
-	--bc-amount-expense-line: var(--color-error-text, var(--color-error));
+	--bc-amount-income-surface: color-mix(in srgb, var(--color-success-text, #46ba61) 14%, var(--color-main-background));
+	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error-text, #cc4646) 14%, var(--color-main-background));
+	--bc-amount-income-line: var(--color-success-text, #46ba61);
+	--bc-amount-expense-line: var(--color-error-text, #cc4646);
 
 	/* Overlay scrims (gallery crop / modal backdrops) — theme ink, never #000 */
 	--bc-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
@@ -122,7 +122,7 @@ body,
 /* Aliases for dead-name refs (literal fallbacks masked them). */
 body {
 	--bc-bg: var(--bc-bg-card);
-	--bc-danger-ink: var(--color-error-text, var(--color-error));
+	--bc-danger-ink: var(--color-error-text, #cc4646);
 	--bc-primary: var(--color-primary-element);
 	--bc-radius-pill: var(--border-radius-pill, 999px);
 	--bc-touch: 44px;

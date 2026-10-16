@@ -139,8 +139,8 @@
 			renderActivity(activityGrid, state.summary.activity || null);
 			renderMonthTransactions(txRows, state.summary.monthTransactions || []);
 			if (txLink && ws) {
-				txLink.href = '/index.php/apps/budgetcheck/transactions?workspaceId='
-					+ encodeURIComponent(String(ws.id))
+				txLink.href = OC.generateUrl('/apps/budgetcheck/transactions')
+					+ '?workspaceId=' + encodeURIComponent(String(ws.id))
 					+ '&yearMonth=' + encodeURIComponent(String(state.yearMonth));
 			}
 			updateActionButtons(state.summary.isClosed);
@@ -247,7 +247,7 @@
 	function monthlyCategoryLink(categoryId) {
 		const wsId = ws ? String(ws.id) : '';
 		const ym = String(state.yearMonth || '');
-		return '/index.php/apps/budgetcheck/transactions?workspaceId='
+		return OC.generateUrl('/apps/budgetcheck/transactions') + '?workspaceId='
 			+ encodeURIComponent(wsId)
 			+ '&yearMonth=' + encodeURIComponent(ym)
 			+ '&categoryId=' + encodeURIComponent(String(categoryId || ''));

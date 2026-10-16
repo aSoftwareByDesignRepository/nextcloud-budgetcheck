@@ -17,10 +17,10 @@ $localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt_
  *
  * Literal percent signs keep their escaped form as the token: `%%` yields
  * '%%' and a bare `%` (literal, or the leading % of %n/%.0f-style tokens the
- * checker does not track individually) yields '%'. Escaped form must match
- * the msgid exactly: PHP-rendered msgids carry `%%` (vsprintf safety) and so
- * must their msgstr, while JS-rendered msgids carry a bare `%` and their
- * msgstr must too — `%%` in a JS-bound msgstr renders literally to users.
+ * checker does not track individually) yields '%'. A bare '%' in the msgid may
+ * be carried as '%' or '%%' in the msgstr: '%%' is the vsprintf-safe form the
+ * fleet quality sweep requires, and JS call sites unescape it
+ * (.replace(/%%/g, '%')). A '%%' in the msgid must stay '%%'.
  *
  * @return list<string>
  */
@@ -46,6 +46,22 @@ function bcPrintfPlaceholders(string $s): array {
 	}
 
 	return $tokens;
+}
+
+/**
+ * Token multiset match: msgstr '%%' satisfies a msgid bare '%', but a msgid
+ * '%%' requires '%%' in the msgstr (PHP vsprintf safety).
+ *
+ * @param list<string> $expected
+ * @param list<string> $actual
+ */
+function bcPrintfTokensMatch(array $expected, array $actual): bool {
+	$norm = static fn (string $t): string => $t === '%%' ? '%' : $t;
+	if (array_count_values(array_map($norm, $expected)) != array_count_values(array_map($norm, $actual))) {
+		return false;
+	}
+	return count(array_filter($actual, static fn (string $t): bool => $t === '%%'))
+		>= count(array_filter($expected, static fn (string $t): bool => $t === '%%'));
 }
 
 /**
@@ -96,7 +112,10 @@ foreach ($enT as $key => $enVal) {
 				$form = (string) $form;
 				$formPrintf = bcPrintfPlaceholders($form);
 				$formNamed = bcNamedPlaceholders($form);
-				if (array_diff($formPrintf, $keyPrintf) !== [] || array_diff($formNamed, $keyNamed) !== []) {
+				$badPrintf = array_filter($formPrintf, static fn (string $t): bool =>
+					!in_array($t, $keyPrintf, true)
+					&& !($t === '%%' && in_array('%', $keyPrintf, true)));
+				if ($badPrintf !== [] || array_diff($formNamed, $keyNamed) !== []) {
 					$failed = true;
 					fwrite(STDERR, "{$lang}.json plural-form placeholder mismatch for key: $key\n");
 					fwrite(STDERR, '  form: ' . $form . "\n");
@@ -110,7 +129,7 @@ foreach ($enT as $key => $enVal) {
 				|| array_intersect($coveredNamed, array_keys($countNames)) !== [];
 			foreach ($keyPrintf as $token) {
 				$ok = $token === '%'
-					? $countCovered
+					? ($countCovered || in_array('%%', $coveredPrintf, true))
 					: in_array($token, $coveredPrintf, true);
 				if (!$ok) {
 					$failed = true;
@@ -135,7 +154,7 @@ foreach ($enT as $key => $enVal) {
 		$val = (string) $val;
 
 		$valPrintf = bcPrintfPlaceholders($val);
-		if ($keyPrintf !== $valPrintf) {
+		if (!bcPrintfTokensMatch($keyPrintf, $valPrintf)) {
 			$failed = true;
 			fwrite(STDERR, "{$lang}.json printf placeholder mismatch for key: $key\n");
 			fwrite(STDERR, '  expected: ' . implode(', ', $keyPrintf) . "\n");

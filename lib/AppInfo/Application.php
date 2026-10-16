@@ -20,6 +20,7 @@ use OCA\BudgetCheck\Repair\PruneOrphanedChildRows;
 use OCA\BudgetCheck\Repair\UninstallDropTables;
 use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
+use OCA\BudgetCheck\Support\NavGate;
 use OCA\BudgetCheck\Service\AuditLogService;
 use OCA\BudgetCheck\Service\BudgetService;
 use OCA\BudgetCheck\Service\BudgetPlannedService;
@@ -441,36 +442,17 @@ class Application extends App implements IBootstrap
 
 	public function boot(IBootContext $context): void
 	{
-		$this->registerNavigationWhenAllowed();
-	}
-
-	private function registerNavigationWhenAllowed(): void
-	{
-		try {
-			$container = $this->getContainer();
-			$user = $container->get(\OCP\IUserSession::class)->getUser();
-			if ($user === null) {
-				return;
-			}
-			$access = $container->get(AccessControlService::class);
-			if (!$access->canUseApp($user->getUID())) {
-				return;
-			}
-			$navigationManager = $container->get(INavigationManager::class);
-			$urlGenerator = $container->get(\OCP\IURLGenerator::class);
-			$l10nFactory = $container->get(IFactory::class);
-			$navigationManager->add(function () use ($urlGenerator, $l10nFactory): array {
-				return [
-					'id' => self::APP_ID,
-					'app' => self::APP_ID,
-					'order' => 11,
-					'href' => $urlGenerator->linkToRoute('budgetcheck.page.index'),
-					'icon' => $urlGenerator->imagePath(self::APP_ID, 'app.svg'),
-					'name' => $l10nFactory->get(self::APP_ID)->t('BudgetCheck'),
-				];
-			});
-		} catch (\Throwable) {
-			// Navigation registration is best-effort.
-		}
+		$app = $context->getAppContainer();
+		// Menu entry only for users with app access — the predicate runs lazily
+		// inside NavigationManager::init(), i.e. after basic-auth login on OCS
+		// requests. An eager check here sees no user and strips the entry.
+		NavGate::register(
+			$app,
+			'budgetcheck.page.index',
+			'app.svg',
+			'BudgetCheck',
+			11,
+			static fn(string $uid): bool => $app->get(AccessControlService::class)->canUseApp($uid),
+		);
 	}
 }

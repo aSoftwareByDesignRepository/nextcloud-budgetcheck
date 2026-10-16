@@ -818,19 +818,31 @@
 			announce(t('budgetcheck', 'Showing {name}').replace('{name}', name));
 		}
 
-		function goTo(nextIndex) {
+		async function goTo(nextIndex) {
 			if (nextIndex < 0 || nextIndex >= items.length || nextIndex === index) return;
 			if (saving || loadingMedia || loadingXml) return;
-			if (!confirmDiscardDirty()) return;
+			if (!(await confirmDiscardDirty())) return;
 			index = nextIndex;
 			renderCurrent();
 		}
 
-		function confirmDiscardDirty() {
+		async function confirmDiscardDirty() {
 			if (readOnly || !imageState.dirty) {
 				return true;
 			}
-			return window.confirm(t('budgetcheck', 'Discard unsaved image changes?'));
+			if (instance._discardPromptOpen) {
+				return false;
+			}
+			instance._discardPromptOpen = true;
+			try {
+				return await BC.Components.confirmDialog({
+					body: t('budgetcheck', 'Discard unsaved image changes?'),
+					confirmLabel: t('budgetcheck', 'Confirm'),
+					danger: true,
+				});
+			} finally {
+				instance._discardPromptOpen = false;
+			}
 		}
 
 		/**
@@ -1214,9 +1226,9 @@
 		}
 
 		const instance = {
-			close(result, force) {
+			async close(result, force) {
 				if (!instance._open) return;
-				if (!force && !confirmDiscardDirty()) return;
+				if (!force && !(await confirmDiscardDirty())) return;
 				instance._open = false;
 				loadSeq += 1;
 				if (viewportResizeObs) {

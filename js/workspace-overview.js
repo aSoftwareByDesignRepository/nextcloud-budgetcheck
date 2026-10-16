@@ -123,7 +123,7 @@
 				? t('budgetcheck', 'Contributor')
 				: (workspace.role === 'viewer' ? t('budgetcheck', 'Viewer') : String(workspace.role || '')));
 		const card = C.createElement('article', { class: 'bc-workspace-card' });
-		const openUrl = String((Ws.urls && Ws.urls.dashboard) || '/apps/budgetcheck/dashboard') + '?workspaceId=' + encodeURIComponent(String(id));
+		const openUrl = String((Ws.urls && Ws.urls.dashboard) || OC.generateUrl('/apps/budgetcheck/dashboard')) + '?workspaceId=' + encodeURIComponent(String(id));
 		const favoriteButton = C.createElement('button', {
 			type: 'button',
 			class: 'bc-workspace-card__favorite' + (isFavorite ? ' is-active' : ''),
@@ -221,7 +221,7 @@
 			const id = Number(w.id);
 			const isActive = activeId !== null && id === activeId;
 			const type = String(w.type || 'household');
-			const href = String((Ws.urls && Ws.urls.dashboard) || '/apps/budgetcheck/dashboard') + '?workspaceId=' + encodeURIComponent(String(id));
+			const href = String((Ws.urls && Ws.urls.dashboard) || OC.generateUrl('/apps/budgetcheck/dashboard')) + '?workspaceId=' + encodeURIComponent(String(id));
 			const icon = iconTemplates[type]
 				? iconTemplates[type].cloneNode(true)
 				: C.createElement('span', { class: 'bc-switcher__icon', attrs: { 'aria-hidden': 'true' } }, [type === 'project' ? '▣' : '⌂']);

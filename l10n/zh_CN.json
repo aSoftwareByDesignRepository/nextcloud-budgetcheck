@@ -11,7 +11,7 @@
 		"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:": "%s 在你的 Nextcloud 上保持免费（AGPL）。GitHub 上的问题反馈和想法始终欢迎——这是免费的开源支持。如果你的组织需要可开票的付费协助，请在下方选择一项：",
 		"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:": "%s 在你的 Nextcloud 上保持免费（AGPL）。GitHub 上的问题反馈和想法始终欢迎。如需可开票的付费协助——部署、小时包、定制开发——或官方移动应用：",
 		"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, or commissioned work:": "%s 在你的 Nextcloud 上保持免费（AGPL）。GitHub 上的问题反馈和想法始终欢迎。如需可开票的付费协助——部署、小时包或定制开发：",
-		"0 % (none)": "0 %（无）",
+		"0 % (none)": "0 %%（无）",
 		"0%% (none)": "0%%（无）",
 		"1 attachment added.": "已添加 1 个附件。",
 		"1 booking in this window.": "此时间范围内有 1 笔记账。",
@@ -24,23 +24,23 @@
 		"1 receipt could not be uploaded. Fix the issue below and save again.": "有 1 张收据上传失败。请修复下方问题后重新保存。",
 		"1 transaction generated for the full period.": "已为整个周期生成 1 笔交易。",
 		"1 transaction matches these filters.": "有 1 笔交易符合这些筛选条件。",
-		"10 %": "10 %",
+		"10 %": "10 %%",
 		"10%%": "10%%",
-		"13 %": "13 %",
+		"13 %": "13 %%",
 		"13%%": "13%%",
-		"15 %": "15 %",
+		"15 %": "15 %%",
 		"15%%": "15%%",
-		"19 %": "19 %",
+		"19 %": "19 %%",
 		"19%%": "19%%",
-		"20 %": "20 %",
+		"20 %": "20 %%",
 		"20%%": "20%%",
-		"21 %": "21 %",
+		"21 %": "21 %%",
 		"21%%": "21%%",
-		"25 %": "25 %",
+		"25 %": "25 %%",
 		"25%%": "25%%",
-		"5 %": "5 %",
+		"5 %": "5 %%",
 		"5%%": "5%%",
-		"7 %": "7 %",
+		"7 %": "7 %%",
 		"7%%": "7%%",
 		"A household can save by percentage of income, an absolute amount, or whichever is larger.": "家庭可以按收入的百分比、固定金额，或两者中较大的一个来储蓄。",
 		"A household can save by percentage of income, an absolute amount, or whichever is larger. Progress appears on the dashboard and yearly overview—no need to tag individual transactions.": "家庭可以按收入的百分比、固定金额，或两者中较大的一个来储蓄。进度会显示在仪表盘和年度概览中——无需给每笔交易单独打标签。",
@@ -1151,7 +1151,7 @@
 		"Varies (default {amount})": "不定（默认 {amount}）",
 		"VAT rate": "增值税率",
 		"VAT rate must be between 0 and 5000 basis points.": "增值税率必须介于 0 和 5000 个基点之间。",
-		"VAT {rate}%": "增值税 {rate}%",
+		"VAT {rate}%": "增值税 {rate}%%",
 		"View": "查看",
 		"View and add entries in the ledger.": "在台账中查看和添加条目。",
 		"View controls": "视图控制",
@@ -1356,21 +1356,51 @@
 		"Project workspaces require a project start date.": "项目工作区需要设置项目开始日期。",
 		"Project workspaces require a project end date.": "项目工作区需要设置项目结束日期。",
 		"A booking status with this name already exists.": "已存在同名的记账状态。",
-		"_%n attachment_::_{count} attachments_": ["{count} 个附件"],
-		"_%n closed month_::_{count} closed months_": ["{count} 个已关账月份"],
-		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": ["{count} 个条目已添加到 {rules} 条规则中。"],
-		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": ["已跳过 {count} 个周期项——该月已关账。"],
-		"_%n rule needed attention._::_{count} rules needed attention._": ["{count} 条规则需要处理。"],
-		"_%n workspace visible_::_%n workspaces visible_": ["%n 个可见工作区"],
-		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": ["校验失败：{count} 行无效。首个错误：{error}"],
-		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": ["校验通过。{count} 行就绪；{skipped} 条重复项将被跳过。"],
-		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": ["校验通过。{count} 行可以导入。"],
-		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": ["已导入 {created} 笔交易，跳过 {skipped} 条重复项。"],
-		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": ["已成功导入 {count} 笔交易。"],
-		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": ["{count} 笔记账（含计划和已删除的草稿）"],
-		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": ["该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"],
-		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": ["还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"],
-		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": ["还有 %n 笔未分类支出尚未归类。"]
+		"_%n attachment_::_{count} attachments_": [
+			"{count} 个附件"
+		],
+		"_%n closed month_::_{count} closed months_": [
+			"{count} 个已关账月份"
+		],
+		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
+			"{count} 个条目已添加到 {rules} 条规则中。"
+		],
+		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
+			"已跳过 {count} 个周期项——该月已关账。"
+		],
+		"_%n rule needed attention._::_{count} rules needed attention._": [
+			"{count} 条规则需要处理。"
+		],
+		"_%n workspace visible_::_%n workspaces visible_": [
+			"%n 个可见工作区"
+		],
+		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
+			"校验失败：{count} 行无效。首个错误：{error}"
+		],
+		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
+			"校验通过。{count} 行就绪；{skipped} 条重复项将被跳过。"
+		],
+		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
+			"校验通过。{count} 行可以导入。"
+		],
+		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
+			"已导入 {created} 笔交易，跳过 {skipped} 条重复项。"
+		],
+		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
+			"已成功导入 {count} 笔交易。"
+		],
+		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
+			"{count} 笔记账（含计划和已删除的草稿）"
+		],
+		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
+			"该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"
+		],
+		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
+			"还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"
+		],
+		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
+			"还有 %n 笔未分类支出尚未归类。"
+		]
 	},
 	"pluralForm": "nplurals=1; plural=0;"
 }

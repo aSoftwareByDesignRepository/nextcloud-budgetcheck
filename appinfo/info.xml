@@ -231,14 +231,9 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<settings>
 		<admin>OCA\BudgetCheck\Settings\AdminSettings</admin>
 	</settings>
-	<navigations>
-		<navigation>
-			<name>BudgetCheck</name>
-			<route>budgetcheck.page.index</route>
-			<icon>app.svg</icon>
-			<order>11</order>
-		</navigation>
-	</navigations>
+	<!-- No <navigation> here: the menu entry is registered conditionally in
+	     Application::boot (canUseApp) — a static entry would advertise the
+	     app to excluded users when access is restricted. -->
 	<background-jobs>
 		<job>OCA\BudgetCheck\BackgroundJob\RecurringDueJob</job>
 	</background-jobs>

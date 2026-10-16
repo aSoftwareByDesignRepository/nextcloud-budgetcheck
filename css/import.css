@@ -112,8 +112,8 @@
 	margin-top: var(--bc-space-3);
 	padding: var(--bc-space-4);
 	border-radius: var(--bc-radius-sm);
-	border: 1px solid var(--color-error-text, var(--color-error));
-	background: color-mix(in srgb, var(--color-error-text, var(--color-error)) 8%, var(--bc-bg-card) 92%);
+	border: 1px solid var(--color-error-text, #cc4646);
+	background: color-mix(in srgb, var(--color-error-text, #cc4646) 8%, var(--bc-bg-card) 92%);
 }
 
 .bc-import-errors__title {

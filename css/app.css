@@ -245,9 +245,9 @@
 }
 .bc-badge--household {
 	background: var(--bc-tint-household);
-	border-color: color-mix(in srgb, var(--color-success-text, var(--color-success)) 40%, var(--bc-border));
+	border-color: color-mix(in srgb, var(--color-success-text, #46ba61) 40%, var(--bc-border));
 }
-.bc-badge--household::before { background: var(--color-success-text, var(--color-success)); }
+.bc-badge--household::before { background: var(--color-success-text, #46ba61); }
 .bc-badge--project {
 	background: var(--bc-tint-project);
 	border-color: color-mix(in srgb, var(--color-primary-element) 40%, var(--bc-border));
@@ -256,12 +256,12 @@
 .bc-badge--user { background: var(--bc-tint-project); }
 .bc-badge--user::before { background: var(--color-primary-element); }
 .bc-badge--group { background: var(--bc-tint-household); }
-.bc-badge--group::before { background: var(--color-success-text, var(--color-success)); }
+.bc-badge--group::before { background: var(--color-success-text, #46ba61); }
 .bc-badge--warning {
 	background: var(--bc-tint-warning);
-	border-color: var(--color-warning-text, var(--color-warning));
+	border-color: var(--color-warning-text, #c98600);
 }
-.bc-badge--warning::before { background: var(--color-warning-text, var(--color-warning)); }
+.bc-badge--warning::before { background: var(--color-warning-text, #c98600); }
 
 /* Member cell: principal name with an optional secondary note below it. */
 .bc-member-name {
@@ -463,7 +463,7 @@
 	line-height: var(--bc-line-base);
 }
 .bc-catalog-picker__status--error {
-	color: var(--color-error-text, var(--color-error));
+	color: var(--color-error-text, #cc4646);
 	font-weight: 600;
 }
 .bc-catalog-picker__status[hidden] {
@@ -571,7 +571,7 @@
 	display: block;
 	margin: var(--bc-space-2) 0 0;
 	padding: var(--bc-space-2) var(--bc-space-3);
-	border-left: 3px solid var(--color-warning-text, var(--color-warning));
+	border-left: 3px solid var(--color-warning-text, #c98600);
 	background: var(--bc-tint-warning);
 	color: var(--color-main-text);
 	font-size: var(--bc-fs-sm);
@@ -717,7 +717,7 @@
 	color: var(--color-main-text);
 	/* --color-error is a pale surface tint (~1.1:1) — the accent must use the
 	   error TEXT/element token so the error affordance stays visible. */
-	border-left: 3px solid var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
+	border-left: 3px solid var(--color-error-text, var(--bc-danger-ink, #cc4646));
 	margin: 0.4rem 0.5rem 0.5rem;
 	padding: 0.4rem 0.5rem 0.45rem 0.6rem;
 	background: var(--color-background-darker);
@@ -1916,8 +1916,8 @@
 	min-width: 0;
 }
 .bc-warning--info { border-left-color: var(--color-primary-element); background: var(--bc-tint-info); }
-.bc-warning--warning { border-left-color: var(--color-warning-text, var(--color-warning)); background: var(--bc-tint-warning); }
-.bc-warning--critical { border-left-color: var(--color-error-text, var(--color-error)); background: var(--bc-tint-critical); }
+.bc-warning--warning { border-left-color: var(--color-warning-text, #c98600); background: var(--bc-tint-warning); }
+.bc-warning--critical { border-left-color: var(--color-error-text, #cc4646); background: var(--bc-tint-critical); }
 .bc-warning__title {
 	font-weight: 600;
 	overflow-wrap: anywhere;
@@ -2136,8 +2136,8 @@
 	height: 44px;
 }
 .bc-tx-attachments__action--danger {
-	color: var(--color-error-text, var(--color-error));
-	border-color: color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, var(--bc-border) 65%);
+	color: var(--color-error-text, #cc4646);
+	border-color: color-mix(in srgb, var(--color-error-text, #cc4646) 35%, var(--bc-border) 65%);
 }
 .bc-tx-attachments .bc-file-picker {
 	position: relative;
@@ -2354,8 +2354,8 @@
 	max-width: calc(100% - 2rem);
 }
 .bc-attach-gallery__stage-status--error {
-	color: var(--color-error-text, var(--color-error));
-	border: 1px solid color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, var(--bc-border) 65%);
+	color: var(--color-error-text, #cc4646);
+	border: 1px solid color-mix(in srgb, var(--color-error-text, #cc4646) 35%, var(--bc-border) 65%);
 }
 .bc-attach-gallery__panel {
 	display: none;
@@ -2616,16 +2616,16 @@
 	color: var(--color-primary-element-text, var(--color-primary-text));
 }
 .bc-attach-gallery__tool--danger {
-	color: var(--color-error-text, var(--color-error));
-	border-color: color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, var(--bc-border) 65%);
+	color: var(--color-error-text, #cc4646);
+	border-color: color-mix(in srgb, var(--color-error-text, #cc4646) 35%, var(--bc-border) 65%);
 }
 .bc-attach-gallery__tool--danger .bc-attach-gallery__tool-caption {
-	color: color-mix(in srgb, var(--color-error-text, var(--color-error)) 75%, var(--bc-muted) 25%);
+	color: color-mix(in srgb, var(--color-error-text, #cc4646) 75%, var(--bc-muted) 25%);
 }
 .bc-attach-gallery__tool--danger:hover:not(:disabled),
 .bc-attach-gallery__tool--danger:focus-visible {
-	background: color-mix(in srgb, var(--color-error-text, var(--color-error)) 10%, var(--color-background-hover) 90%);
-	border-color: color-mix(in srgb, var(--color-error-text, var(--color-error)) 45%, var(--bc-border) 55%);
+	background: color-mix(in srgb, var(--color-error-text, #cc4646) 10%, var(--color-background-hover) 90%);
+	border-color: color-mix(in srgb, var(--color-error-text, #cc4646) 45%, var(--bc-border) 55%);
 }
 .bc-attach-gallery__tool[aria-pressed="true"] {
 	background: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-background-hover) 86%);
@@ -3078,13 +3078,13 @@ button.bc-dash-action {
 	background: var(--color-primary-element-light, var(--bc-tint-info));
 }
 .bc-dash-action--accent {
-	border-color: var(--color-success-text, var(--color-success));
+	border-color: var(--color-success-text, #46ba61);
 	background: var(--bc-tint-success);
 }
 .bc-dash-action--accent:hover,
 .bc-dash-action--accent:focus-visible {
-	border-color: var(--color-success-text, var(--color-success));
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success-text, var(--color-success)) 35%, transparent);
+	border-color: var(--color-success-text, #46ba61);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success-text, #46ba61) 35%, transparent);
 }
 .bc-dash-activity-grid {
 	margin-bottom: var(--bc-space-4);
@@ -3215,7 +3215,7 @@ button.bc-dash-action {
 	font-weight: 600;
 }
 .bc-tx-kpi-tile--planned .bc-summary-tile__value { font-size: var(--bc-fs-md); }
-.bc-month-card--over { border-color: var(--color-error-text, var(--color-error)); }
+.bc-month-card--over { border-color: var(--color-error-text, #cc4646); }
 .bc-month-card--closed { background: var(--bc-tint-info); }
 
 /* Yearly summary help */
@@ -3280,11 +3280,11 @@ button.bc-dash-action {
 }
 .bc-cap__bar-fill {
 	height: 100%;
-	background: var(--color-success-text, var(--color-success));
+	background: var(--color-success-text, #46ba61);
 	transition: width 250ms ease;
 }
-.bc-cap--warning .bc-cap__bar-fill { background: var(--color-warning-text, var(--color-warning)); }
-.bc-cap--critical .bc-cap__bar-fill { background: var(--color-error-text, var(--color-error)); }
+.bc-cap--warning .bc-cap__bar-fill { background: var(--color-warning-text, #c98600); }
+.bc-cap--critical .bc-cap__bar-fill { background: var(--color-error-text, #cc4646); }
 .bc-cap__legend { display: flex; gap: var(--bc-space-4); margin-top: var(--bc-space-2); font-size: var(--bc-fs-sm); color: var(--bc-muted); }
 
 /* Modal
@@ -3481,15 +3481,15 @@ body.bc-modal-open {
 .bc-modal .bc-modal__dialog input[aria-invalid="true"],
 .bc-modal .bc-modal__dialog select[aria-invalid="true"],
 .bc-modal .bc-modal__dialog textarea[aria-invalid="true"] {
-	border-color: var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
-	box-shadow: 0 0 0 1px var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
+	border-color: var(--color-error-text, var(--bc-danger-ink, #cc4646));
+	box-shadow: 0 0 0 1px var(--color-error-text, var(--bc-danger-ink, #cc4646));
 }
 .bc-modal .bc-field-error {
 	margin: 0.25rem 0 0;
 	font-size: 0.875rem;
 	font-weight: 600;
 	line-height: 1.4;
-	color: var(--color-error-text, var(--bc-danger-ink, var(--color-error)));
+	color: var(--color-error-text, var(--bc-danger-ink, #cc4646));
 }
 
 /* Budget override modal: use available width, prevent clipped table columns */
@@ -3584,9 +3584,9 @@ body.bc-modal-open {
 .bc-toast__content .bc-nav-footer__toast-link {
 	margin-top: var(--bc-space-1, 0.25rem);
 }
-.bc-toast--success { border-left-color: var(--color-success-text, var(--color-success)); }
-.bc-toast--error { border-left-color: var(--color-error-text, var(--color-error)); }
-.bc-toast--warning { border-left-color: var(--color-warning-text, var(--color-warning)); }
+.bc-toast--success { border-left-color: var(--color-success-text, #46ba61); }
+.bc-toast--error { border-left-color: var(--color-error-text, #cc4646); }
+.bc-toast--warning { border-left-color: var(--color-warning-text, #c98600); }
 .bc-toast__close {
 	margin-left: auto;
 	display: inline-flex;
@@ -3872,7 +3872,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 }
 
 .bc-field__hint--error {
-	color: var(--color-error-text, var(--color-error));
+	color: var(--color-error-text, #cc4646);
 	font-weight: 600;
 }
 
@@ -4812,11 +4812,11 @@ textarea {
 
 /* Workspace delete danger zone */
 .bc-danger-zone {
-	border: 1px solid color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, var(--color-border, transparent));
+	border: 1px solid color-mix(in srgb, var(--color-error-text, #cc4646) 35%, var(--color-border, transparent));
 	margin-top: var(--bc-space-6);
 }
 .bc-danger-zone .bc-section__header h2 {
-	color: var(--color-error-text, var(--color-error));
+	color: var(--color-error-text, #cc4646);
 	font-size: var(--bc-fs-lg, 1.15rem);
 	margin: 0 0 var(--bc-space-2);
 }

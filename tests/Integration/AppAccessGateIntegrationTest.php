@@ -6,11 +6,13 @@ namespace OCA\BudgetCheck\Tests\Integration;
 
 use OCA\BudgetCheck\AppInfo\Application;
 use OCA\BudgetCheck\Controller\ApiController;
+use OCA\BudgetCheck\Controller\PageController;
 use OCA\BudgetCheck\Exception\AppAccessDeniedException;
 use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IUserManager;
@@ -84,22 +86,9 @@ final class AppAccessGateIntegrationTest extends TestCase
 
 	public function testDeniedUserBlockedByMiddlewareAndReceivesJson403(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		$userManager->createUser(self::ALLOWED, self::PASSWORD);
-		$userManager->createUser(self::DENIED, self::PASSWORD);
-		$denied = $userManager->get(self::DENIED);
+		$this->createGateUsersAndRestrictToAllowed();
+		$denied = \OC::$server->get(IUserManager::class)->get(self::DENIED);
 		self::assertNotNull($denied);
-
-		/** @var IConfig $config */
-		$config = \OC::$server->get(IConfig::class);
-		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_RESTRICTION, '1');
-		$config->setAppValue(
-			Application::APP_ID,
-			AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS,
-			json_encode([self::ALLOWED], JSON_THROW_ON_ERROR),
-		);
-		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
 		/** @var ApiController $controller */
 		$controller = \OC::$server->get(ApiController::class);
@@ -124,13 +113,51 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$this->assertSame('access_denied', $data['error']['code'] ?? null);
 	}
 
+	public function testDeniedUserPageRouteReceivesHtml403Not200(): void
+	{
+		// deny_page_status_200: a denied HTML surface must fail closed at the
+		// HTTP layer (403), not answer 200 with an access-denied template —
+		// status scanners and upstream caches must not read it as success.
+		$this->createGateUsersAndRestrictToAllowed();
+		$denied = \OC::$server->get(IUserManager::class)->get(self::DENIED);
+		self::assertNotNull($denied);
+
+		/** @var PageController $controller */
+		$controller = \OC::$server->get(PageController::class);
+		$middleware = $this->middlewareWithUser(
+			$denied,
+			'/apps/budgetcheck/dashboard',
+			'text/html',
+		);
+
+		$response = $middleware->afterException(
+			$controller,
+			'dashboard',
+			new AppAccessDeniedException('app_access_denied', 0, null, AccessControlService::DENIAL_RESTRICTION),
+		);
+		$this->assertInstanceOf(TemplateResponse::class, $response);
+		$this->assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+		$this->assertSame('access-denied', $response->getTemplateName());
+	}
+
 	public function testAllowedUserWithoutWorkspacePassesMiddlewareGate(): void
+	{
+		$this->createGateUsersAndRestrictToAllowed();
+		$allowed = \OC::$server->get(IUserManager::class)->get(self::ALLOWED);
+		self::assertNotNull($allowed);
+
+		/** @var ApiController $controller */
+		$controller = \OC::$server->get(ApiController::class);
+		$this->middlewareWithUser($allowed)->beforeController($controller, 'listWorkspaces');
+		$this->addToAssertionCount(1);
+	}
+
+	private function createGateUsersAndRestrictToAllowed(): void
 	{
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
 		$userManager->createUser(self::ALLOWED, self::PASSWORD);
-		$allowed = $userManager->get(self::ALLOWED);
-		self::assertNotNull($allowed);
+		$userManager->createUser(self::DENIED, self::PASSWORD);
 
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
@@ -140,21 +167,20 @@ final class AppAccessGateIntegrationTest extends TestCase
 			AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS,
 			json_encode([self::ALLOWED], JSON_THROW_ON_ERROR),
 		);
-
-		/** @var ApiController $controller */
-		$controller = \OC::$server->get(ApiController::class);
-		$this->middlewareWithUser($allowed)->beforeController($controller, 'listWorkspaces');
-		$this->addToAssertionCount(1);
+		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 	}
 
-	private function middlewareWithUser(\OCP\IUser $user): AppAccessMiddleware
-	{
+	private function middlewareWithUser(
+		\OCP\IUser $user,
+		string $path = '/apps/budgetcheck/api/workspaces',
+		string $accept = 'application/json',
+	): AppAccessMiddleware {
 		$request = $this->createMock(IRequest::class);
-		$request->method('getPathInfo')->willReturn('/apps/budgetcheck/api/workspaces');
+		$request->method('getPathInfo')->willReturn($path);
 		$request->method('getMethod')->willReturn('GET');
 		$request->method('getHeader')->willReturnCallback(
 			static fn (string $name): string => match (strtolower($name)) {
-				'accept' => 'application/json',
+				'accept' => $accept,
 				default => '',
 			},
 		);

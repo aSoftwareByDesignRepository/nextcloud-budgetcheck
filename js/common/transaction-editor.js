@@ -318,16 +318,16 @@
 					);
 
 					vatPresetSelect = BC.Components.createElement('select', { name: 'vatPreset', class: 'bc-input' }, [
-						BC.Components.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)') }),
-						BC.Components.createElement('option', { value: '500', text: t('budgetcheck', '5 %') }),
-						BC.Components.createElement('option', { value: '700', text: t('budgetcheck', '7 %') }),
-						BC.Components.createElement('option', { value: '1000', text: t('budgetcheck', '10 %') }),
-						BC.Components.createElement('option', { value: '1300', text: t('budgetcheck', '13 %') }),
-						BC.Components.createElement('option', { value: '1500', text: t('budgetcheck', '15 %') }),
-						BC.Components.createElement('option', { value: '1900', text: t('budgetcheck', '19 %') }),
-						BC.Components.createElement('option', { value: '2000', text: t('budgetcheck', '20 %') }),
-						BC.Components.createElement('option', { value: '2100', text: t('budgetcheck', '21 %') }),
-						BC.Components.createElement('option', { value: '2500', text: t('budgetcheck', '25 %') }),
+						BC.Components.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '500', text: t('budgetcheck', '5 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '700', text: t('budgetcheck', '7 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '1000', text: t('budgetcheck', '10 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '1300', text: t('budgetcheck', '13 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '1500', text: t('budgetcheck', '15 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '1900', text: t('budgetcheck', '19 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '2000', text: t('budgetcheck', '20 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '2100', text: t('budgetcheck', '21 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '2500', text: t('budgetcheck', '25 %').replace(/%%/g, '%') }),
 						BC.Components.createElement('option', { value: 'custom', text: t('budgetcheck', 'Custom…') }),
 					]);
 					const initialRate = tx && Number.isFinite(tx.vatRateBp) ? String(tx.vatRateBp) : String(ctx.workspace.defaultVatRateBp ?? 0);

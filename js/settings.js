@@ -608,7 +608,12 @@
 				const confirmMsg = nextPrivacy === 'private'
 					? t('budgetcheck', 'Make this workspace private? App administrators who are not members will no longer see it. Remove any groups first. If you are the only manager and your account is removed, this workspace cannot be opened in BudgetCheck — only someone with database access can recover it. Database operators can still read stored data.')
 					: t('budgetcheck', 'Switch back to standard? App administrators will be able to see and manage this workspace again.');
-				if (!window.confirm(confirmMsg)) {
+				const ok = await C.confirmDialog({
+					body: confirmMsg,
+					confirmLabel: t('budgetcheck', 'Confirm'),
+					danger: nextPrivacy === 'private',
+				});
+				if (!ok) {
 					return;
 				}
 			}
@@ -1416,7 +1421,7 @@
 			resultKey: 'users',
 			requireEnabled: true,
 			currentIds: currentMemberUserIds,
-			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members',
+			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/members', // urlgate:ok — fed to Api.post → OC.generateUrl
 			payload: (picked) => ({ userId: picked.id }),
 			strings: {
 				noResults: t('budgetcheck', 'No matching accounts.'),
@@ -1444,7 +1449,7 @@
 			resultKey: 'groups',
 			requireEnabled: false,
 			currentIds: currentMemberGroupIds,
-			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/group-members',
+			postUrl: () => '/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/group-members', // urlgate:ok — fed to Api.post → OC.generateUrl
 			payload: (picked) => ({ groupId: picked.id }),
 			strings: {
 				noResults: t('budgetcheck', 'No matching groups.'),
