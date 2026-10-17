@@ -590,6 +590,7 @@ class PageController extends Controller
 		// Soft keyboard: keep focused notes/inputs above the IME on phones.
 		Util::addScript(Application::APP_ID, 'common/keep-focused-visible');
 		Util::addScript(Application::APP_ID, 'common/money');
+		Util::addScript(Application::APP_ID, 'common/csv');
 		Util::addScript(Application::APP_ID, 'common/workspace');
 		// In-page Menu + drawer (Atlas ATLAS_MOBILE_NAV_CONTRACT / AZC#33).
 		Util::addScript(Application::APP_ID, 'common/mobile-nav');

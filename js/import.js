@@ -5,6 +5,7 @@
 (function () {
 	'use strict';
 
+	const CSV = window.BudgetCheckCsv;
 	/** @type {any} */
 	let Api;
 	/** @type {any} */
@@ -427,8 +428,8 @@
 			rows[1].push('');
 		}
 
-		const lines = [headers.map(csvEscape).join(',')];
-		rows.forEach((row) => lines.push(row.map(csvEscape).join(',')));
+		const lines = [headers.map((v) => CSV.cell(v)).join(',')];
+		rows.forEach((row) => lines.push(row.map((v) => CSV.cell(v)).join(',')));
 		const filename = 'budgetcheck-import-template-' + sanitizeFilename(Ws.workspace.name || 'workspace') + '.csv';
 		downloadTextFile(filename, lines.join('\n'));
 	}
@@ -1244,14 +1245,6 @@
 		const d = new Date();
 		const pad = (n) => (n < 10 ? '0' + n : String(n));
 		return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-	}
-
-	function csvEscape(value) {
-		const s = String(value == null ? '' : value);
-		if (/[",\n\r]/.test(s)) {
-			return '"' + s.replace(/"/g, '""') + '"';
-		}
-		return s;
 	}
 
 	function sanitizeFilename(value) {
