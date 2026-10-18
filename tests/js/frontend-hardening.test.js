@@ -233,6 +233,7 @@ function rel(file) {
 
 	// Producers require BudgetCheck.define — bootstrap must load first.
 	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'bootstrap.js'), 'utf8'), sandbox, { filename: 'bootstrap.js' });
+	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'check-dates.js'), 'utf8'), sandbox, { filename: 'check-dates.js' });
 	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'dates.js'), 'utf8'), sandbox, { filename: 'dates.js' });
 	vm.runInNewContext(fs.readFileSync(path.join(JS_DIR, 'common', 'workspace.js'), 'utf8'), sandbox, { filename: 'workspace.js' });
 

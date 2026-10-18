@@ -581,6 +581,7 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/field-errors');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
+		Util::addScript(Application::APP_ID, 'common/check-dates');
 		Util::addScript(Application::APP_ID, 'common/dates');
 		Util::addScript(Application::APP_ID, 'common/components');
 		Util::addScript(Application::APP_ID, 'common/icons');

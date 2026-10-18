@@ -21,6 +21,7 @@ const SRC = [
 	'js/common/csv.js',
 	'js/common/bootstrap.js',
 	'js/common/money.js',
+	'js/common/check-dates.js',
 	'js/common/dates.js',
 	'js/import.js',
 ].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');

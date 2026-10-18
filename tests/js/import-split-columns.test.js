@@ -177,7 +177,8 @@ function buildSandbox(categories) {
 	const src = [
 		'js/common/bootstrap.js',
 		'js/common/money.js',
-		'js/common/dates.js',
+		'js/common/check-dates.js',
+	'js/common/dates.js',
 		'js/common/csv.js',
 		'js/import.js',
 	].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
