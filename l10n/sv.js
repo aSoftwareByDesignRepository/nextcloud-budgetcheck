@@ -407,6 +407,7 @@ OC.L10N.register(
 	"Example: salary payment" : "Exempel: löneutbetalning",
 	"Example: weekly groceries" : "Exempel: veckohandling",
 	"Extra columns:" : "Extra kolumner:",
+	"_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_" : ["%n privat arbetsyta (namn dolda för administratörer som inte är medlemmar)","%n privata arbetsytor (namn dolda för administratörer som inte är medlemmar)"],
 	"Excluded special expense: {amount}" : "Exkluderad specialutgift: {amount}",
 	"Excluded special income: {amount}" : "Exkluderad specialinkomst: {amount}",
 	"Existing transactions generated from this rule remain." : "Befintliga transaktioner som genererats från den här regeln finns kvar.",

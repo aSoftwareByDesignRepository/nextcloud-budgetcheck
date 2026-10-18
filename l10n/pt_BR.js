@@ -407,6 +407,7 @@ OC.L10N.register(
 	"Example: salary payment" : "Exemplo: pagamento de salário",
 	"Example: weekly groceries" : "Exemplo: compras semanais",
 	"Extra columns:" : "Colunas extras:",
+	"_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_" : ["%n área de trabalho privada (nomes ocultos para administradores que não são membros)","%n áreas de trabalho privadas (nomes ocultos para administradores que não são membros)"],
 	"Excluded special expense: {amount}" : "Despesa especial excluída: {amount}",
 	"Excluded special income: {amount}" : "Renda especial excluída: {amount}",
 	"Existing transactions generated from this rule remain." : "As transações existentes geradas a partir desta regra permanecem.",

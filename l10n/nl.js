@@ -407,6 +407,7 @@ OC.L10N.register(
 	"Example: salary payment" : "Voorbeeld: salarisbetaling",
 	"Example: weekly groceries" : "Voorbeeld: wekelijkse boodschappen",
 	"Extra columns:" : "Extra kolommen:",
+	"_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_" : ["%n privéwerkruimte (namen verborgen voor beheerders die geen lid zijn)","%n privéwerkruimten (namen verborgen voor beheerders die geen lid zijn)"],
 	"Excluded special expense: {amount}" : "Uitgesloten speciale uitgave: {amount}",
 	"Excluded special income: {amount}" : "Uitgesloten speciale inkomst: {amount}",
 	"Existing transactions generated from this rule remain." : "Bestaande transacties die op basis van deze regel zijn gegenereerd, blijven bestaan.",

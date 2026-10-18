@@ -406,6 +406,7 @@
 		"Example: salary payment": "Eksempel: lønnsutbetaling",
 		"Example: weekly groceries": "Eksempel: ukentlige dagligvarer",
 		"Extra columns:": "Ekstra kolonner:",
+		"_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": ["%n privat arbeidsområde (navn skjult for administratorer som ikke er medlemmer)","%n private arbeidsområder (navn skjult for administratorer som ikke er medlemmer)"],
 		"Excluded special expense: {amount}": "Ekskludert spesiell utgift: {amount}",
 		"Excluded special income: {amount}": "Ekskludert spesiell inntekt: {amount}",
 		"Existing transactions generated from this rule remain.": "Eksisterende transaksjoner generert fra denne regelen forblir.",

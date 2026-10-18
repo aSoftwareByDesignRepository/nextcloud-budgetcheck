@@ -406,6 +406,7 @@
 		"Example: salary payment": "例如：工资发放",
 		"Example: weekly groceries": "例如：每周日用杂货",
 		"Extra columns:": "其他列：",
+		"_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": ["%n 个私有工作区（对非成员的管理员隐藏名称）"],
 		"Excluded special expense: {amount}": "已排除的特殊支出：{amount}",
 		"Excluded special income: {amount}": "已排除的特殊收入：{amount}",
 		"Existing transactions generated from this rule remain.": "由该规则生成的现有交易会保留。",

@@ -406,6 +406,7 @@
         "Example: salary payment": "Ejemplo: pago de salario",
         "Example: weekly groceries": "Ejemplo: compra semanal",
         "Extra columns:": "Columnas adicionales:",
+        "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": ["%n espacio de trabajo privado (nombres ocultos para administradores que no son miembros)","%n espacios de trabajo privados (nombres ocultos para administradores que no son miembros)"],
         "Excluded special expense: {amount}": "Gasto especial excluido: {amount}",
         "Excluded special income: {amount}": "Ingreso especial excluido: {amount}",
         "Existing transactions generated from this rule remain.": "Las movimientos existentes generadas a partir de esta regla permanecen.",
