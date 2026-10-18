@@ -17,6 +17,8 @@ function resolveStorageState() {
 module.exports = defineConfig({
 	globalSetup: require.resolve('./e2e/global-setup.js'),
 	testDir: '.',
+	globalTeardown: './e2e/global-teardown.mjs',
+
 	testMatch: ['e2e/**/*.spec.js', 'tests/e2e/**/*.spec.js'],
 	timeout: 60_000,
 	expect: { timeout: 10_000 },
