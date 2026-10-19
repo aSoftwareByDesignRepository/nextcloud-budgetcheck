@@ -1,0 +1,73 @@
+/*
+ * BudgetCheck — admin settings section.
+ *
+ * Rendered inside Nextcloud's /settings/admin/additional via ISettings
+ * (Settings/AdminSettings::getForm wires Util::addStyle for this file plus
+ * common/tokens.css). css/app.css is deliberately NOT loaded on this surface:
+ * it carries unscoped input/textarea rules that would leak into core settings
+ * chrome. Every selector below is scoped to .bc-admin-settings.
+ */
+
+.bc-admin-settings {
+	max-width: 72ch;
+}
+
+.bc-admin-settings .bc-admin-intro__lead {
+	max-width: 64ch;
+}
+
+/*
+ * Neutralise Nextcloud core apps.css definition-list chrome —
+ * dt { width: 130px; white-space: nowrap; text-align: end } plus
+ * dt,dd { display: inline-block; padding }. Without this, labels longer than
+ * ~118px overflow the pinned dt box and paint over the neighbouring value,
+ * worst in compound-label locales.
+ */
+.bc-admin-settings .bc-admin-summary {
+	margin: 0;
+	padding: var(--bc-space-3, 0.75rem) 0;
+	display: grid;
+	grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
+	gap: var(--bc-space-2, 0.5rem) var(--bc-space-4, 1rem);
+	align-items: baseline;
+}
+
+.bc-admin-settings .bc-admin-summary dt,
+.bc-admin-settings .bc-admin-summary dd {
+	display: block;
+	float: none;
+	width: auto;
+	max-width: 100%;
+	padding: 0;
+	margin: 0;
+	text-align: start;
+	white-space: normal;
+}
+
+.bc-admin-settings .bc-admin-summary dt {
+	font-weight: 600;
+	color: var(--color-text-maxcontrast);
+}
+
+.bc-admin-settings .bc-admin-summary dd {
+	color: var(--color-main-text);
+	overflow-wrap: anywhere;
+}
+
+/* Same 44px control floor the app's shared button guard enforces in app.css. */
+.bc-admin-settings .button,
+.bc-admin-settings a.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 44px;
+	white-space: normal;
+}
+
+/* min-width owns the integer breakpoint; max-width ends at B-0.02. */
+@media (max-width: 479.98px) {
+	.bc-admin-settings .bc-admin-summary {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

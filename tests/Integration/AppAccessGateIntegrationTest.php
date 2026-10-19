@@ -84,7 +84,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$session->setUser(null);
 	}
 
-	public function testDeniedUserBlockedByMiddlewareAndReceivesJson403(): void
+	public function testDeniedUserBlockedByMiddlewareAndReceivesUniformJson404(): void
 	{
 		$this->createGateUsersAndRestrictToAllowed();
 		$denied = \OC::$server->get(IUserManager::class)->get(self::DENIED);
@@ -101,23 +101,27 @@ final class AppAccessGateIntegrationTest extends TestCase
 			$this->assertSame(AccessControlService::DENIAL_RESTRICTION, $exception->getDenialReason());
 		}
 
+		// Restricted mode must be indistinguishable from an absent app: a 403
+		// (or an 'access_denied' code) is an existence oracle for excluded
+		// users probing whether the app is installed.
 		$response = $middleware->afterException(
 			$controller,
 			'listWorkspaces',
 			new AppAccessDeniedException('app_access_denied', 0, null, AccessControlService::DENIAL_RESTRICTION),
 		);
 		$this->assertInstanceOf(JSONResponse::class, $response);
-		$this->assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
 		$data = $response->getData();
 		$this->assertIsArray($data);
-		$this->assertSame('access_denied', $data['error']['code'] ?? null);
+		$this->assertSame('NOT_FOUND', $data['error']['code'] ?? null);
+		$this->assertStringNotContainsString('denied', strtolower(json_encode($data) ?: ''));
 	}
 
-	public function testDeniedUserPageRouteReceivesHtml403Not200(): void
+	public function testDeniedUserPageRouteReceivesCore404(): void
 	{
-		// deny_page_status_200: a denied HTML surface must fail closed at the
-		// HTTP layer (403), not answer 200 with an access-denied template —
-		// status scanners and upstream caches must not read it as success.
+		// restricted_door_status_oracle: a denied HTML surface must answer
+		// like a missing app — core 404, never a 403 or a branded
+		// access-denied template (both disclose "installed but excluded").
 		$this->createGateUsersAndRestrictToAllowed();
 		$denied = \OC::$server->get(IUserManager::class)->get(self::DENIED);
 		self::assertNotNull($denied);
@@ -136,8 +140,8 @@ final class AppAccessGateIntegrationTest extends TestCase
 			new AppAccessDeniedException('app_access_denied', 0, null, AccessControlService::DENIAL_RESTRICTION),
 		);
 		$this->assertInstanceOf(TemplateResponse::class, $response);
-		$this->assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
-		$this->assertSame('access-denied', $response->getTemplateName());
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame('404', $response->getTemplateName());
 	}
 
 	public function testAllowedUserWithoutWorkspacePassesMiddlewareGate(): void
@@ -192,8 +196,6 @@ final class AppAccessGateIntegrationTest extends TestCase
 			$session,
 			\OC::$server->get(AccessControlService::class),
 			$request,
-			\OC::$server->get(\OCP\IURLGenerator::class),
-			\OC::$server->get(\OCP\L10N\IFactory::class),
 			\OC::$server->get(\Psr\Log\LoggerInterface::class),
 		);
 	}

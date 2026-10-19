@@ -45,7 +45,7 @@ $patterns = [
 
 $scanDirs = $scanAll
 	? [$appRoot . '/lib', $appRoot . '/templates', $appRoot . '/js']
-	: [$appRoot . '/lib/Middleware', $appRoot . '/templates/access-denied.php', $appRoot . '/js/common/api.js'];
+	: [$appRoot . '/lib/Middleware', $appRoot . '/js/common/api.js'];
 
 $found = [];
 $scanFiles = function (string $path) use ($patterns, &$found): void {

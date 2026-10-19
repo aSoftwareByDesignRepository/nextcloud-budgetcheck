@@ -26,7 +26,7 @@ final class AccessControlSaveAppPolicyScopeTest extends TestCase
 	/** @var array<string, string> */
 	private array $appValues = [];
 
-	public function testMissingSettingsSectionStillDoesFullReplace(): void
+	public function testMissingSettingsSectionFailsClosed(): void
 	{
 		$service = $this->serviceWithSeed([
 			AccessControlService::KEY_APP_ADMINS => json_encode(['admin1'], JSON_THROW_ON_ERROR),
@@ -37,28 +37,22 @@ final class AccessControlSaveAppPolicyScopeTest extends TestCase
 			AccessControlService::KEY_DEFAULT_CURRENCY => 'EUR',
 		]);
 
-		$admin = $this->createMock(IUser::class);
-		$admin->method('isEnabled')->willReturn(true);
-		$userManager = $this->createMock(IUserManager::class);
-		$userManager->method('get')->willReturnCallback(static fn (string $uid): ?IUser => $uid === 'admin9' ? $admin : null);
+		try {
+			$service->saveAppPolicy([
+				'defaultTimezone' => 'America/New_York',
+				'defaultCurrency' => 'USD',
+			]);
+			self::fail('missing settings_section must not fall into a legacy full replace');
+		} catch (\InvalidArgumentException) {
+		}
 
-		$service = $this->serviceWithSeed($this->appValues, $userManager);
-		$policy = $service->saveAppPolicy([
-			'appAdminUserIds' => ['admin9'],
-			'accessRestrictionEnabled' => false,
-			'allowedUserIds' => [],
-			'allowedGroupIds' => [],
-			'defaultTimezone' => 'America/New_York',
-			'defaultCurrency' => 'USD',
-		]);
-
-		self::assertSame(['admin9'], $policy['appAdminUserIds']);
-		self::assertFalse($policy['accessRestrictionEnabled']);
-		self::assertSame([], $policy['allowedUserIds']);
-		self::assertSame('America/New_York', $policy['defaultTimezone']);
-		self::assertSame('USD', $policy['defaultCurrency']);
-		self::assertArrayHasKey('privateWorkspaceCount', $policy);
-		self::assertSame(0, $policy['privateWorkspaceCount']);
+		$policy = $service->getAppPolicy();
+		self::assertSame(['admin1'], $policy['appAdminUserIds']);
+		self::assertTrue($policy['accessRestrictionEnabled']);
+		self::assertSame(['u1'], $policy['allowedUserIds']);
+		self::assertSame(['g1'], $policy['allowedGroupIds']);
+		self::assertSame('Europe/Berlin', $policy['defaultTimezone']);
+		self::assertSame('EUR', $policy['defaultCurrency']);
 	}
 
 	public function testAdminsScopeDoesNotWipeAccessAllowlists(): void

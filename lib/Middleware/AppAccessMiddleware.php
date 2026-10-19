@@ -12,9 +12,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Middleware;
 use OCP\IRequest;
-use OCP\IURLGenerator;
 use OCP\IUserSession;
-use OCP\L10N\IFactory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -28,8 +26,6 @@ class AppAccessMiddleware extends Middleware
 		private IUserSession $userSession,
 		private AccessControlService $accessControl,
 		private IRequest $request,
-		private IURLGenerator $urlGenerator,
-		private IFactory $l10nFactory,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -78,22 +74,20 @@ class AppAccessMiddleware extends Middleware
 			|| str_contains($contentType, 'application/json')
 			|| $xRequestedWith === 'xmlhttprequest';
 
+		// Restricted mode is indistinguishable from absent: a missing app
+		// answers 404, so any 403/'access denied' shape would leak
+		// "installed but you are excluded" to unlisted users (uniform-not-found
+		// rule, restricted_door_status_oracle class).
 		if ($isApi || $wantsJson) {
 			return new JSONResponse([
 				'ok' => false,
-				'error' => ['code' => 'access_denied'],
-				'message' => 'access_denied',
-			], Http::STATUS_FORBIDDEN);
+				'message' => 'Not found.',
+				'error' => ['code' => 'NOT_FOUND', 'message' => 'Not found.'],
+			], Http::STATUS_NOT_FOUND);
 		}
 
-		$l = $this->l10nFactory->get(Application::APP_ID);
-		$message = $l->t('You do not have access to BudgetCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access.');
-		$response = new TemplateResponse(Application::APP_ID, 'access-denied', [
-			'message' => $message,
-			'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
-		]);
-		$response->setStatus(Http::STATUS_FORBIDDEN);
-		$response->renderAs(TemplateResponse::RENDER_AS_USER);
+		$response = new TemplateResponse('core', '404', [], 'guest');
+		$response->setStatus(Http::STATUS_NOT_FOUND);
 		return $response;
 	}
 }

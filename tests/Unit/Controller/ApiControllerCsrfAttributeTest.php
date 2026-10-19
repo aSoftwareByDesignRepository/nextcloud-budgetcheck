@@ -20,6 +20,7 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 	private const MUTATION_METHODS = [
 		'createWorkspace',
 		'updateWorkspace',
+		'deleteWorkspace',
 		'updateTaxMode',
 		'saveWorkspaceFavorites',
 		'createBookingStatus',
@@ -74,6 +75,30 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 			}
 		}
 		self::assertSame([], $missing, 'These mutation methods must NOT use NoCSRFRequired');
+	}
+
+	public function testEveryMutatingApiRouteIsPinned(): void
+	{
+		// security_contract_list_drift: a new mutating route must land in
+		// MUTATION_METHODS or the tripwire silently misses it. Mobile routes
+		// are covered by the bearer-channel contract instead.
+		$routes = include dirname(__DIR__, 3) . '/appinfo/routes.php';
+		$unpinned = [];
+		foreach ($routes['routes'] as $route) {
+			$verb = strtoupper((string)($route['verb'] ?? ''));
+			$name = (string)($route['name'] ?? '');
+			if (!in_array($verb, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+				continue;
+			}
+			if (!str_starts_with($name, 'api#')) {
+				continue;
+			}
+			$action = substr($name, strlen('api#'));
+			if (!in_array($action, self::MUTATION_METHODS, true)) {
+				$unpinned[] = $verb . ' ' . $name;
+			}
+		}
+		self::assertSame([], $unpinned, 'Mutating api# routes missing from MUTATION_METHODS pin list');
 	}
 
 	public function testReadHelpersMaySkipCsrf(): void

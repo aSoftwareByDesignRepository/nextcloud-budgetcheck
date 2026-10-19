@@ -1724,7 +1724,7 @@
 .bc-schedule-editor__status {
 	margin: 0;
 }
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
 	.bc-schedule-editor__row {
 		grid-template-columns: 1fr;
 	}
@@ -1930,7 +1930,7 @@
 	word-break: break-word;
 }
 .bc-warning__action { align-self: center; }
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
 	.bc-warning {
 		grid-template-columns: 24px minmax(0, 1fr);
 	}
@@ -2228,7 +2228,7 @@
 	/* Prefer soft wraps at spaces/· before mid-word breaks. */
 	word-break: normal;
 }
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
 	.bc-tx-attachments__grid {
 		grid-template-columns: 1fr;
 	}
@@ -2647,7 +2647,7 @@
 .bc-attach-gallery__tool-group[hidden] {
 	display: none !important;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	.bc-attach-gallery {
 		padding: 0;
 	}
@@ -3007,7 +3007,7 @@
 .bc-ic-compose__actions .button {
 	min-height: 44px;
 }
-@media (max-width: 479px) {
+@media (max-width: 479.98px) {
 	.bc-ic-compose__actions {
 		flex-direction: column;
 	}
@@ -3057,7 +3057,7 @@
 	font-size: var(--bc-fs-sm);
 	line-height: 1.45;
 }
-@media (max-width: 479px) {
+@media (max-width: 479.98px) {
 	.bc-dash-action {
 		padding: var(--bc-space-3);
 		min-height: 5rem;
@@ -3100,7 +3100,7 @@ button.bc-dash-action {
 	margin: var(--bc-space-3) 0 0;
 	text-align: center;
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	/* Keep the ledger scroll region inside the card — never widen #app-content. */
 	[data-bc-dash-month-ledger] {
 		min-width: 0;
@@ -3565,13 +3565,17 @@ body.bc-modal-open {
 	border-radius: var(--bc-radius-sm);
 	box-shadow: var(--bc-shadow-sm);
 	display: flex;
+	flex-wrap: wrap;
 	gap: var(--bc-space-2);
 	align-items: center;
 }
 .bc-toast > span {
 	color: inherit;
-	flex: 1;
+	/* basis:auto so an over-wide message wraps onto its own line at narrow
+	   viewports instead of crushing beside the 44px close button. */
+	flex: 1 1 auto;
 	min-width: 0;
+	overflow-wrap: anywhere;
 }
 /* Content column: message text, then the "Report this problem" mailto on
    error toasts (its 44px min-height must not stretch the row layout). */
@@ -3663,15 +3667,7 @@ body.bc-modal-open {
 	margin-block-end: var(--bc-space-3);
 }
 
-/* Access denied page */
-.bc-app--access-denied { display: grid; place-items: center; min-height: 60vh; }
-.bc-app--access-denied {
-	min-height: 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-}
+/* Workspace-scope denial card (in-app; app-level door answers core 404). */
 .bc-denied {
 	padding: var(--bc-space-5);
 	width: 100%;
@@ -4120,7 +4116,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	border: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	.bc-support-us__options {
 		grid-template-columns: 1fr;
 	}
@@ -4219,7 +4215,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	color: var(--color-main-text, #222);
 	font-weight: 700;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	.bc-settings-nav {
 		flex-direction: column;
 	}
@@ -4565,7 +4561,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	.bc-get-app__play {
 		width: 100%;
 	}

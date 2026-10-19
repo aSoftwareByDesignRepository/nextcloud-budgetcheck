@@ -18,9 +18,10 @@
 	let policyCurrencyPicker = null;
 
 	/**
-	 * Merge-on-save helper: AccessControlService::saveAppPolicy replaces ALL
-	 * fields, so section pages must overlay ONLY their scope onto the current
-	 * server policy before POSTing.
+	 * Merge-on-save helper: AccessControlService::saveAppPolicy requires a
+	 * settings_section discriminator and fails closed without one; section
+	 * pages overlay ONLY their scope onto the current server policy before
+	 * POSTing so sibling scopes are never wiped.
 	 *
 	 * @param {'access'|'admins'|'defaults'|string} scope
 	 * @param {object} formState fields collected from this section's form

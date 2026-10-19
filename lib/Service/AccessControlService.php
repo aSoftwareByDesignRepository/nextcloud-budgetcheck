@@ -653,10 +653,10 @@ class AccessControlService
 	/**
 	 * Persist app policy.
 	 *
-	 * Optional `settings_section` scopes the write (ProjectCheck parity):
-	 * - missing key → full replace ("all") for legacy/API clients
+	 * Required `settings_section` scopes the write (ProjectCheck parity):
 	 * - access|admins|defaults → merge that scope onto the current policy
-	 * - unknown / empty → reject (never coerce to full wipe)
+	 * - all → explicit full replace (caller must send every section's fields)
+	 * - missing / unknown / empty → reject (never coerce to full wipe)
 	 *
 	 * @param array<string, mixed> $payload
 	 * @return array<string, mixed>
@@ -664,15 +664,11 @@ class AccessControlService
 	public function saveAppPolicy(array $payload): array
 	{
 		$allowedSections = ['access', 'admins', 'defaults', 'all'];
-		if (!array_key_exists('settings_section', $payload)) {
-			$settingsSection = 'all';
-		} else {
-			$rawSection = strtolower(trim((string) $payload['settings_section']));
-			if (!in_array($rawSection, $allowedSections, true)) {
-				throw new \InvalidArgumentException('Invalid settings_section. Reload the page and try again.');
-			}
-			$settingsSection = $rawSection;
+		$rawSection = strtolower(trim((string)($payload['settings_section'] ?? '')));
+		if (!in_array($rawSection, $allowedSections, true)) {
+			throw new \InvalidArgumentException('Invalid settings_section. Reload the page and try again.');
 		}
+		$settingsSection = $rawSection;
 
 		$current = $this->getAppPolicy();
 		$merged = $current;

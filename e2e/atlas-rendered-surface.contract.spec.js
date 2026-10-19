@@ -11,7 +11,7 @@
  * workspace id comes from BC_CRAFT_WS (default 100). Pages without a
  * workspace render the picker instead of main content — those cells skip.
  */
-const { test } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 const { assertAtlasRenderedSurface } = require('../../_shared/e2e/atlas-rendered-surface-contract');
 const fs = require('fs');
 const path = require('path');
@@ -105,4 +105,33 @@ test.describe('Rendered-surface contract', () => {
 			});
 		});
 	}
+
+	// The admin settings panel renders inside /settings/admin/additional —
+	// outside #bc-main-content — so it gets its own leg: the dedicated scoped
+	// stylesheet must be wired (addStyle) and the core dt pin
+	// (width:130px; white-space:nowrap; text-align:end) must be defeated.
+	test('ATLAS_RENDERED_SURFACE_CONTRACT admin settings dl defeats core dt pin', async ({ page }) => {
+		test.skip(
+			!process.env.E2E_USER && !process.env.BASE_URL && !resolveStorageState(),
+			'Set BASE_URL / E2E_USER or storage state',
+		);
+		await page.goto(`${BASE}/settings/admin/additional`, { waitUntil: 'domcontentloaded' });
+		const panel = page.locator('.bc-admin-settings');
+		await panel.waitFor({ state: 'visible', timeout: 30_000 });
+
+		const wired = await page.locator('link[href*="budgetcheck"][href*="admin-settings"]').count();
+		expect(wired).toBeGreaterThan(0);
+
+		const cells = await page.locator('.bc-admin-summary dt, .bc-admin-summary dd').evaluateAll((els) =>
+			els.map((el) => {
+				const cs = getComputedStyle(el);
+				return { tag: el.tagName, ws: cs.whiteSpace, w: cs.width, client: el.clientWidth, scroll: el.scrollWidth };
+			}),
+		);
+		expect(cells.length).toBeGreaterThan(0);
+		for (const cell of cells) {
+			expect(cell.ws).not.toBe('nowrap');
+			expect(cell.scroll).toBeLessThanOrEqual(cell.client + 1);
+		}
+	});
 });

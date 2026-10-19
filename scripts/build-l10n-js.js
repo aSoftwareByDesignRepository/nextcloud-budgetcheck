@@ -18,17 +18,23 @@ const l10nDir = path.join(__dirname, '..', 'l10n');
 
 function buildJs(lang) {
 	const jsonPath = path.join(l10nDir, `${lang}.json`);
+	if (!fs.existsSync(jsonPath)) {
+		return;
+	}
 	const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
 	const translations = data.translations || {};
-	const lines = ['OC.L10N.register(', `    "${APP_ID}",`, '    {'];
+	// PHP json_encode parity: escape `/` so the emitted bytes match
+	// regenerate-l10n-js.php (and any byte-match integrity test).
+	const enc = (s) => JSON.stringify(s).replace(/\//g, '\\/');
+	const lines = ['OC.L10N.register(', `\t"${APP_ID}",`, '\t{'];
 	const entries = Object.entries(translations);
 	entries.forEach(([key, value], i) => {
 		const comma = i < entries.length - 1 ? ',' : '';
 		if (Array.isArray(value)) {
-			const parts = value.map((v) => JSON.stringify(v)).join(', ');
-			lines.push(`    ${JSON.stringify(key)} : [${parts}]${comma}`);
+			const parts = value.map((v) => enc(v)).join(',');
+			lines.push(`\t${enc(key)} : [${parts}]${comma}`);
 		} else {
-			lines.push(`    ${JSON.stringify(key)} : ${JSON.stringify(value)}${comma}`);
+			lines.push(`\t${enc(key)} : ${enc(value)}${comma}`);
 		}
 	});
 	lines.push('});');

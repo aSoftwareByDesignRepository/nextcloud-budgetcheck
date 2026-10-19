@@ -22,6 +22,7 @@ use OCP\IConfig;
 use OCP\IURLGenerator;
 use OCP\L10N\IFactory;
 use OCP\Settings\ISettings;
+use OCP\Util;
 
 final class AdminSettings implements ISettings
 {
@@ -35,6 +36,12 @@ final class AdminSettings implements ISettings
 
 	public function getForm(): TemplateResponse
 	{
+		// This surface lives outside the app shell, so PageController's style
+		// stack never runs here — load the token block plus the dedicated
+		// scoped sheet (app.css is not loaded: its unscoped input/textarea
+		// rules would leak into core settings chrome).
+		Util::addStyle(Application::APP_ID, 'common/tokens');
+		Util::addStyle(Application::APP_ID, 'admin-settings');
 		$l = $this->l10nFactory->get(Application::APP_ID);
 		$policy = $this->access->getAppPolicy();
 

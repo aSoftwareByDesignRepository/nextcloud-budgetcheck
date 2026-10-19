@@ -98,8 +98,6 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\IUserSession::class),
 				$c->query(AccessControlService::class),
 				$c->query(\OCP\IRequest::class),
-				$c->query(\OCP\IURLGenerator::class),
-				$c->query(\OCP\L10N\IFactory::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
