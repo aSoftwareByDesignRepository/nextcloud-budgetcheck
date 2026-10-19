@@ -469,7 +469,7 @@
 	height: 44px;
 	border-radius: 999px;
 	background: var(--bc-tint-info);
-	color: var(--color-primary-element);
+	color: var(--bc-accent-ink, var(--color-primary-element));
 	align-items: center;
 	justify-content: center;
 }
@@ -545,7 +545,7 @@
 }
 .bc-tx-tabs__tab:hover { color: var(--color-main-text); }
 .bc-tx-tabs__tab[aria-selected="true"] {
-	color: var(--color-primary-element);
+	color: var(--bc-accent-ink, var(--color-primary-element));
 	border-bottom-color: var(--color-primary-element);
 }
 .bc-tx-tabs__tab:focus-visible {
@@ -566,7 +566,7 @@
 	border: 0;
 	border-radius: var(--bc-radius-sm);
 	background: transparent;
-	color: var(--color-primary-element);
+	color: var(--bc-accent-ink, var(--color-primary-element));
 	font: inherit;
 	font-weight: 600;
 	text-align: start;

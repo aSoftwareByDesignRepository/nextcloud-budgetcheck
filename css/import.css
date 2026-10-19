@@ -210,7 +210,7 @@
 	height: 44px;
 	border-radius: var(--bc-radius-sm);
 	background: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
-	color: var(--color-primary-element);
+	color: var(--bc-accent-ink, var(--color-primary-element));
 }
 
 .bc-file-picker__icon .bc-icon,

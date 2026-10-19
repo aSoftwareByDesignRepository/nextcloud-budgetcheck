@@ -11,6 +11,8 @@ const { chromium } = require('@playwright/test');
 module.exports = async function globalSetup() {
 	const { acquireSharedInstanceLock } = await import('./shared-instance-lock.mjs')
 	await acquireSharedInstanceLock('budgetcheck')
+	const { resetE2eUserState } = await import('../../_shared/e2e/reset-e2e-user-state.mjs')
+	resetE2eUserState()
 	const agentUser = process.env.E2E_USER;
 	const agentPass = process.env.E2E_PASSWORD || process.env.E2E_PASS;
 	if (!agentUser || !agentPass) {
