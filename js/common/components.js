@@ -180,9 +180,6 @@
 		if (appLang) {
 			dialog.setAttribute('lang', appLang);
 		}
-		if (window.BudgetCheckDates && typeof window.BudgetCheckDates.applyLocaleToTemporalInputs === 'function') {
-			window.BudgetCheckDates.applyLocaleToTemporalInputs(dialog);
-		}
 
 		const actionChildren = [];
 		if (opts.showCancel) {
@@ -235,6 +232,11 @@
 		dialog.appendChild(header);
 		dialog.appendChild(bodyContainer);
 		dialog.appendChild(actions);
+		// Must run after the body is inside `dialog` — scanning the empty
+		// element above silently decorates nothing (date chrome never applied).
+		if (window.BudgetCheckDates && typeof window.BudgetCheckDates.applyLocaleToTemporalInputs === 'function') {
+			window.BudgetCheckDates.applyLocaleToTemporalInputs(dialog);
+		}
 
 		const overlay = createElement('div', {
 			class: 'bc-modal',

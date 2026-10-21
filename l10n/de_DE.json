@@ -1419,7 +1419,8 @@
         "_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
             "%n nicht zugeordnete Ausgabe bleibt ohne Kategorie.",
             "%n nicht zugeordnete Ausgaben bleiben ohne Kategorie."
-        ]
+        ],
+        "Choose date": "Datum wählen"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

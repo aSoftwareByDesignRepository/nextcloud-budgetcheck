@@ -1357,66 +1357,22 @@
 		"Project workspaces require a project start date.": "Gli spazi di lavoro di progetto richiedono una data di inizio del progetto.",
 		"Project workspaces require a project end date.": "Gli spazi di lavoro di progetto richiedono una data di fine del progetto.",
 		"A booking status with this name already exists.": "Esiste già uno stato di registrazione con questo nome.",
-		"_%n attachment_::_{count} attachments_": [
-			"%n allegato",
-			"{count} allegati"
-		],
-		"_%n closed month_::_{count} closed months_": [
-			"%n mese chiuso",
-			"{count} mesi chiusi"
-		],
-		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-			"%n movimento aggiunto su {rules} regole.",
-			"{count} movimenti aggiunti su {rules} regole."
-		],
-		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-			"%n occorrenza saltata — il mese è chiuso.",
-			"{count} occorrenze saltate — il mese è chiuso."
-		],
-		"_%n rule needed attention._::_{count} rules needed attention._": [
-			"%n regola richiedeva attenzione.",
-			"{count} regole richiedevano attenzione."
-		],
-		"_%n workspace visible_::_%n workspaces visible_": [
-			"%n spazio di lavoro visibile",
-			"%n spazi di lavoro visibili"
-		],
-		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-			"Validazione non riuscita: %n riga non valida. Primo errore: {error}",
-			"Validazione non riuscita: {count} righe non valide. Primo errore: {error}"
-		],
-		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-			"Validazione superata. %n riga pronta; {skipped} duplicati verranno saltati.",
-			"Validazione superata. {count} righe pronte; {skipped} duplicati verranno saltati."
-		],
-		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-			"Validazione superata. %n riga è pronta per l’importazione.",
-			"Validazione superata. {count} righe sono pronte per l’importazione."
-		],
-		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-			"%n movimento importato. {skipped} duplicati saltati.",
-			"{created} movimenti importati. {skipped} duplicati saltati."
-		],
-		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-			"%n movimento importato con successo.",
-			"{count} movimenti importati con successo."
-		],
-		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-			"%n movimento (incluse le bozze pianificate ed eliminate)",
-			"{count} movimenti (incluse le bozze pianificate ed eliminate)"
-		],
-		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-			"%n movimento rientra in questo intervallo di date. Scelga un mese di calendario per focalizzare un mese.",
-			"{count} movimenti rientrano in questo intervallo di date. Scelga un mese di calendario per focalizzare un mese."
-		],
-		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
-			"%n spesa non categorizzata resta senza categoria. Conta nel totale ma non in alcun budget.",
-			"%n spese non categorizzate restano senza categoria. Contano nel totale ma non in alcun budget."
-		],
-		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
-			"%n spesa non categorizzata resta senza categoria.",
-			"%n spese non categorizzate restano senza categoria."
-		]
+		"_%n attachment_::_{count} attachments_": ["%n allegato","{count} allegati"],
+		"_%n closed month_::_{count} closed months_": ["%n mese chiuso","{count} mesi chiusi"],
+		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": ["%n movimento aggiunto su {rules} regole.","{count} movimenti aggiunti su {rules} regole."],
+		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": ["%n occorrenza saltata — il mese è chiuso.","{count} occorrenze saltate — il mese è chiuso."],
+		"_%n rule needed attention._::_{count} rules needed attention._": ["%n regola richiedeva attenzione.","{count} regole richiedevano attenzione."],
+		"_%n workspace visible_::_%n workspaces visible_": ["%n spazio di lavoro visibile","%n spazi di lavoro visibili"],
+		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": ["Validazione non riuscita: %n riga non valida. Primo errore: {error}","Validazione non riuscita: {count} righe non valide. Primo errore: {error}"],
+		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": ["Validazione superata. %n riga pronta; {skipped} duplicati verranno saltati.","Validazione superata. {count} righe pronte; {skipped} duplicati verranno saltati."],
+		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": ["Validazione superata. %n riga è pronta per l’importazione.","Validazione superata. {count} righe sono pronte per l’importazione."],
+		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": ["%n movimento importato. {skipped} duplicati saltati.","{created} movimenti importati. {skipped} duplicati saltati."],
+		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": ["%n movimento importato con successo.","{count} movimenti importati con successo."],
+		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": ["%n movimento (incluse le bozze pianificate ed eliminate)","{count} movimenti (incluse le bozze pianificate ed eliminate)"],
+		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": ["%n movimento rientra in questo intervallo di date. Scelga un mese di calendario per focalizzare un mese.","{count} movimenti rientrano in questo intervallo di date. Scelga un mese di calendario per focalizzare un mese."],
+		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": ["%n spesa non categorizzata resta senza categoria. Conta nel totale ma non in alcun budget.","%n spese non categorizzate restano senza categoria. Contano nel totale ma non in alcun budget."],
+		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": ["%n spesa non categorizzata resta senza categoria.","%n spese non categorizzate restano senza categoria."],
+		"Choose date": "Scegli data"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

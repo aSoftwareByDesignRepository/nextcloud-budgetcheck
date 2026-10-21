@@ -1372,5 +1372,6 @@ OC.L10N.register(
 	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["{count} 笔记账（含计划和已删除的草稿）"],
 	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"],
 	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"],
-	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["还有 %n 笔未分类支出尚未归类。"]
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["还有 %n 笔未分类支出尚未归类。"],
+	"Choose date" : "选择日期"
 });

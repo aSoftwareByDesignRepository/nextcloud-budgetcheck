@@ -1372,5 +1372,6 @@ OC.L10N.register(
 	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["%n booking (including planned and deleted drafts)","{count} bookings (including planned and deleted drafts)"],
 	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["%n booking falls into this date range. Pick a calendar month to focus one month.","{count} bookings fall into this date range. Pick a calendar month to focus one month."],
 	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["%n uncategorised expense remains without a category. It counts toward the total but not toward any budget.","%n uncategorised expenses remain without a category. They count toward the total but not toward any budget."],
-	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n uncategorised expense remains without a category.","%n uncategorised expenses remain without a category."]
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n uncategorised expense remains without a category.","%n uncategorised expenses remain without a category."],
+	"Choose date" : "Choose date"
 });

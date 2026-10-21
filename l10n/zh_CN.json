@@ -1357,51 +1357,22 @@
 		"Project workspaces require a project start date.": "项目工作区需要设置项目开始日期。",
 		"Project workspaces require a project end date.": "项目工作区需要设置项目结束日期。",
 		"A booking status with this name already exists.": "已存在同名的记账状态。",
-		"_%n attachment_::_{count} attachments_": [
-			"{count} 个附件"
-		],
-		"_%n closed month_::_{count} closed months_": [
-			"{count} 个已关账月份"
-		],
-		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-			"{count} 个条目已添加到 {rules} 条规则中。"
-		],
-		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-			"已跳过 {count} 个周期项——该月已关账。"
-		],
-		"_%n rule needed attention._::_{count} rules needed attention._": [
-			"{count} 条规则需要处理。"
-		],
-		"_%n workspace visible_::_%n workspaces visible_": [
-			"%n 个可见工作区"
-		],
-		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-			"校验失败：{count} 行无效。首个错误：{error}"
-		],
-		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-			"校验通过。{count} 行就绪；{skipped} 条重复项将被跳过。"
-		],
-		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-			"校验通过。{count} 行可以导入。"
-		],
-		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-			"已导入 {created} 笔交易，跳过 {skipped} 条重复项。"
-		],
-		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-			"已成功导入 {count} 笔交易。"
-		],
-		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-			"{count} 笔记账（含计划和已删除的草稿）"
-		],
-		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-			"该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"
-		],
-		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
-			"还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"
-		],
-		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
-			"还有 %n 笔未分类支出尚未归类。"
-		]
+		"_%n attachment_::_{count} attachments_": ["{count} 个附件"],
+		"_%n closed month_::_{count} closed months_": ["{count} 个已关账月份"],
+		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": ["{count} 个条目已添加到 {rules} 条规则中。"],
+		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": ["已跳过 {count} 个周期项——该月已关账。"],
+		"_%n rule needed attention._::_{count} rules needed attention._": ["{count} 条规则需要处理。"],
+		"_%n workspace visible_::_%n workspaces visible_": ["%n 个可见工作区"],
+		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": ["校验失败：{count} 行无效。首个错误：{error}"],
+		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": ["校验通过。{count} 行就绪；{skipped} 条重复项将被跳过。"],
+		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": ["校验通过。{count} 行可以导入。"],
+		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": ["已导入 {created} 笔交易，跳过 {skipped} 条重复项。"],
+		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": ["已成功导入 {count} 笔交易。"],
+		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": ["{count} 笔记账（含计划和已删除的草稿）"],
+		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": ["该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"],
+		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": ["还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"],
+		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": ["还有 %n 笔未分类支出尚未归类。"],
+		"Choose date": "选择日期"
 	},
 	"pluralForm": "nplurals=1; plural=0;"
 }

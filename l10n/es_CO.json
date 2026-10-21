@@ -1419,7 +1419,8 @@
         "_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
             "%n gasto sin categorizar queda sin categoría.",
             "%n gastos sin categorizar quedan sin categoría."
-        ]
+        ],
+        "Choose date": "Elegir fecha"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

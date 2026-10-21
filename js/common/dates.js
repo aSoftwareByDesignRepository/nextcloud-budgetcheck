@@ -34,6 +34,20 @@
 		return D.currentYearMonth();
 	}
 
+	function tr(text) {
+		return typeof window.t === 'function' ? window.t('budgetcheck', text) : text;
+	}
+
+	/**
+	 * Locale chrome for temporal inputs under `root`, with the picker button's
+	 * aria-label translated by default (callers may still override options).
+	 */
+	function applyLocaleToTemporalInputs(root, options) {
+		return D.applyLocaleToTemporalInputs(root, Object.assign({
+			pickerLabel: tr('Choose date'),
+		}, options || {}));
+	}
+
 	/**
 	 * When from/to span exactly one calendar month (first through last day), return YYYY-MM.
 	 * @returns {string|null}
@@ -150,7 +164,7 @@
 		resolveTemporalInputLang: D.resolveTemporalInputLang,
 		enrichTemporalHtmlLang: window.CheckDates.enrichTemporalHtmlLang,
 		applyLocaleToTemporalInput: D.applyLocaleToTemporalInput,
-		applyLocaleToTemporalInputs: D.applyLocaleToTemporalInputs,
+		applyLocaleToTemporalInputs,
 		compareYearMonth: D.compareYearMonth,
 		yearMonthFromDateRange,
 		monthlyLedgerHelpLines,

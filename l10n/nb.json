@@ -1357,66 +1357,22 @@
 		"Project workspaces require a project start date.": "Prosjektarbeidsområder krever en startdato for prosjektet.",
 		"Project workspaces require a project end date.": "Prosjektarbeidsområder krever en sluttdato for prosjektet.",
 		"A booking status with this name already exists.": "det finnes allerede en bokføringsstatus med dette navnet.",
-		"_%n attachment_::_{count} attachments_": [
-			"%n vedlegg",
-			"{count} vedlegg"
-		],
-		"_%n closed month_::_{count} closed months_": [
-			"%n avsluttet måned",
-			"{count} avsluttede måneder"
-		],
-		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-			"%n post lagt til på tvers av {rules} regler.",
-			"{count} poster lagt til på tvers av {rules} regler."
-		],
-		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-			"%n forekomst hoppet over — måneden er avsluttet.",
-			"{count} forekomster hoppet over — måneden er avsluttet."
-		],
-		"_%n rule needed attention._::_{count} rules needed attention._": [
-			"%n regel trengte oppfølging.",
-			"{count} regler trengte oppfølging."
-		],
-		"_%n workspace visible_::_%n workspaces visible_": [
-			"%n arbeidsområde synlig",
-			"%n arbeidsområder synlige"
-		],
-		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-			"Validering mislyktes: %n ugyldig rad. Første feil: {error}",
-			"Validering mislyktes: {count} ugyldige rader. Første feil: {error}"
-		],
-		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-			"Validering bestått. %n rad klar; {skipped} duplikater hoppes over.",
-			"Validering bestått. {count} rader klare; {skipped} duplikater hoppes over."
-		],
-		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-			"Validering bestått. %n rad er klar for import.",
-			"Validering bestått. {count} rader er klare for import."
-		],
-		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-			"%n transaksjon importert. {skipped} duplikater hoppet over.",
-			"{created} transaksjoner importert. {skipped} duplikater hoppet over."
-		],
-		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-			"%n transaksjon importert.",
-			"{count} transaksjoner importert."
-		],
-		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-			"%n postering (inkl. planlagte og slettede utkast)",
-			"{count} posteringer (inkl. planlagte og slettede utkast)"
-		],
-		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-			"%n postering faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned.",
-			"{count} posteringer faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned."
-		],
-		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
-			"%n ukategorisert utgift mangler kategori. Den teller mot totalsummen, men ikke mot noe budsjett.",
-			"%n ukategoriserte utgifter mangler kategori. De teller mot totalsummen, men ikke mot noe budsjett."
-		],
-		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
-			"%n ukategorisert utgift mangler kategori.",
-			"%n ukategoriserte utgifter mangler kategori."
-		]
+		"_%n attachment_::_{count} attachments_": ["%n vedlegg","{count} vedlegg"],
+		"_%n closed month_::_{count} closed months_": ["%n avsluttet måned","{count} avsluttede måneder"],
+		"_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": ["%n post lagt til på tvers av {rules} regler.","{count} poster lagt til på tvers av {rules} regler."],
+		"_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": ["%n forekomst hoppet over — måneden er avsluttet.","{count} forekomster hoppet over — måneden er avsluttet."],
+		"_%n rule needed attention._::_{count} rules needed attention._": ["%n regel trengte oppfølging.","{count} regler trengte oppfølging."],
+		"_%n workspace visible_::_%n workspaces visible_": ["%n arbeidsområde synlig","%n arbeidsområder synlige"],
+		"_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": ["Validering mislyktes: %n ugyldig rad. Første feil: {error}","Validering mislyktes: {count} ugyldige rader. Første feil: {error}"],
+		"_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": ["Validering bestått. %n rad klar; {skipped} duplikater hoppes over.","Validering bestått. {count} rader klare; {skipped} duplikater hoppes over."],
+		"_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": ["Validering bestått. %n rad er klar for import.","Validering bestått. {count} rader er klare for import."],
+		"_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": ["%n transaksjon importert. {skipped} duplikater hoppet over.","{created} transaksjoner importert. {skipped} duplikater hoppet over."],
+		"_Imported %n transaction successfully._::_Imported {count} transactions successfully._": ["%n transaksjon importert.","{count} transaksjoner importert."],
+		"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": ["%n postering (inkl. planlagte og slettede utkast)","{count} posteringer (inkl. planlagte og slettede utkast)"],
+		"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": ["%n postering faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned.","{count} posteringer faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned."],
+		"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": ["%n ukategorisert utgift mangler kategori. Den teller mot totalsummen, men ikke mot noe budsjett.","%n ukategoriserte utgifter mangler kategori. De teller mot totalsummen, men ikke mot noe budsjett."],
+		"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": ["%n ukategorisert utgift mangler kategori.","%n ukategoriserte utgifter mangler kategori."],
+		"Choose date": "Velg dato"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

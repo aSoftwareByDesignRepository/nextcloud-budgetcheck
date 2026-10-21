@@ -1372,5 +1372,6 @@ OC.L10N.register(
 	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["%n postering (inkl. planlagte og slettede utkast)","{count} posteringer (inkl. planlagte og slettede utkast)"],
 	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["%n postering faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned.","{count} posteringer faller innenfor dette datoområdet. Velg en kalendermåned for å fokusere én måned."],
 	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["%n ukategorisert utgift mangler kategori. Den teller mot totalsummen, men ikke mot noe budsjett.","%n ukategoriserte utgifter mangler kategori. De teller mot totalsummen, men ikke mot noe budsjett."],
-	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n ukategorisert utgift mangler kategori.","%n ukategoriserte utgifter mangler kategori."]
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n ukategorisert utgift mangler kategori.","%n ukategoriserte utgifter mangler kategori."],
+	"Choose date" : "Velg dato"
 });

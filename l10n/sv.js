@@ -1372,5 +1372,6 @@ OC.L10N.register(
 	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["%n bokföring (inkl. planerade och raderade utkast)","{count} bokföringar (inkl. planerade och raderade utkast)"],
 	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["%n bokföring faller inom det här datumintervallet. Välj en kalendermånad för att fokusera en månad.","{count} bokföringar faller inom det här datumintervallet. Välj en kalendermånad för att fokusera en månad."],
 	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["%n okategoriserad utgift saknar kategori. Den räknas in i totalsumman men inte i någon budget.","%n okategoriserade utgifter saknar kategori. De räknas in i totalsumman men inte i någon budget."],
-	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n okategoriserad utgift saknar kategori.","%n okategoriserade utgifter saknar kategori."]
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n okategoriserad utgift saknar kategori.","%n okategoriserade utgifter saknar kategori."],
+	"Choose date" : "Välj datum"
 });

@@ -1372,5 +1372,6 @@ OC.L10N.register(
 	"_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_" : ["%n asiento (incluidos los borradores planificados y eliminados)","{count} asientos (incluidos los borradores planificados y eliminados)"],
 	"_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._" : ["%n asiento cae en este rango de fechas. Elija un mes natural para centrarse en un mes.","{count} asientos caen en este rango de fechas. Elija un mes natural para centrarse en un mes."],
 	"_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._" : ["%n gasto sin categorizar queda sin categoría. Cuenta para el total pero no para ningún presupuesto.","%n gastos sin categorizar quedan sin categoría. Cuentan para el total pero no para ningún presupuesto."],
-	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n gasto sin categorizar queda sin categoría.","%n gastos sin categorizar quedan sin categoría."]
+	"_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._" : ["%n gasto sin categorizar queda sin categoría.","%n gastos sin categorizar quedan sin categoría."],
+	"Choose date" : "Elegir fecha"
 });

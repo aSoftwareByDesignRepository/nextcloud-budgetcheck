@@ -567,6 +567,9 @@ class PageController extends Controller
 		Util::addStyle(Application::APP_ID, 'common/mobile-nav');
 		// Inline field errors for server VALIDATION `fields` maps (WCAG 3.3.1/3.3.3).
 		Util::addStyle(Application::APP_ID, 'common/field-errors');
+		// Chrome for common/check-dates.js — without it the .bc-date-display
+		// overlay and .bc-date-picker button render unstyled on every date input.
+		Util::addStyle(Application::APP_ID, 'common/check-dates');
 		if ($pageScript === 'transactions') {
 			Util::addStyle(Application::APP_ID, 'transactions');
 		}
