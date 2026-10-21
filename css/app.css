@@ -1533,6 +1533,10 @@
 	text-align: left;
 	vertical-align: middle;
 	border-bottom: 1px solid var(--bc-border);
+	/* Cells must wrap: core table nowrap forces min-content width and pushes
+	 * the actions column behind the horizontal scroll wrap. Columns that need
+	 * nowrap (amounts, action buttons) pin it on their own rule. */
+	white-space: normal;
 }
 .bc-table thead th {
 	background: var(--bc-bg-stripe);
@@ -1553,7 +1557,7 @@
 .bc-table tbody tr:nth-child(even) td {
 	background: color-mix(in srgb, var(--bc-bg-card) 96%, var(--color-main-text) 4%);
 }
-.bc-table__col--num { text-align: right; }
+.bc-table__col--num { text-align: right; white-space: nowrap; }
 /* Shared action columns (categories, recurring, booking statuses): keep buttons usable. */
 .bc-table-actions-cell,
 .bc-recurring-actions-cell {
