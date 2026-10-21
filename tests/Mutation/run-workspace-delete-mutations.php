@@ -104,6 +104,10 @@ foreach ($mutations as $name => $m) {
 		$failed[] = $name . ' (replace failed)';
 		continue;
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($path, $mutated);
 	echo "Mutating {$name}...\n";
 	$killed = mutation_killed($appRoot, $phpFilter, !empty($m['node']));
