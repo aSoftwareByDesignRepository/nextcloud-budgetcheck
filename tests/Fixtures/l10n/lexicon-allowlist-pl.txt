@@ -1,0 +1,6 @@
+# pl target-lexicon allowlist — reviewed 2026-10-23
+# Legit Polish words the flat pl_PL wordlist misses.
+# Markers: shared|loanword|proper|abbrev.
+przych # abbrev — przychód (income), 'Przych. {income}'
+snapshotu # loanword — snapshot genitive
+wyszukiwalny # shared — wyszukiwać participle (searchable)

@@ -642,7 +642,7 @@ OC.L10N.register(
 	"Near project cap" : "Blisko limitu projektu",
 	"Net" : "Netto",
 	"Net result" : "Wynik netto",
-	"Net {net} · VAT {vat} · Gross {gross}" : "Netto {net} · MwSt. {vat} · Brutto {gross}",
+	"Net {net} · VAT {vat} · Gross {gross}" : "Netto {net} · VAT {vat} · Brutto {gross}",
 	"Network error. Please retry." : "Błąd sieci. Spróbuj ponownie.",
 	"New" : "Nowy",
 	"New booking status" : "Nowy status księgowania",

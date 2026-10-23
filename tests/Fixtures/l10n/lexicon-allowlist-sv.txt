@@ -1,0 +1,32 @@
+# sv target-lexicon allowlist — reviewed 2026-10-23
+# Legit Swedish compounds/abbrevs the flat sv_SE wordlist misses.
+# Markers: shared|loanword|proper|abbrev.
+arbetsyteansvariga # shared — arbetsyta+ansvariga compound
+arbetsytedetaljer # shared — arbetsyta+detaljer compound
+arbetsyteinställning # shared — arbetsyta+inställning compound
+arbetsyteinställningar # shared — plural
+arbetsyteinställningarna # shared — definite plural
+arbetsytekontext # shared — arbetsyta+kontext compound
+arbetsytemedlemmar # shared — arbetsyta+medlemmar compound
+arbetsytemedlemskap # shared — arbetsyta+medlemskap compound
+arbetsytepolicy # shared — arbetsyta+policy compound
+arbetsyteskatt # shared — arbetsyta+skatt compound
+arbetsytetypen # shared — arbetsyta+typen definite compound
+arbetsyteverktyg # shared — arbetsyta+verktyg compound
+arbetsyteöversikt # shared — arbetsyta+översikt compound
+engångs # shared — engångs- compound prefix (engångsposter/-köp)
+fjärronboarding # shared — fjärr+onboarding reviewed compound
+inkl # abbrev — inklusive
+kalenderpopup # shared — kalender+popup loan compound
+omöppning # shared — om+öppning (reopening)
+planeringsvy # shared — planering+vy compound
+särkategorier # shared — sär+kategorier compound
+särpost # shared — sär+post (special entry)
+särposter # shared — plural
+särtransaktion # shared — sär+transaktion compound
+särtransaktioner # shared — plural
+särutgift # shared — sär+utgift compound
+tabb # shared — tab (UI element)
+tabbseparerade # shared — tabb+separerade compound
+vat # abbrev — VAT, consistent catalog convention (16 values)
+ärv # shared — ärva imperative/stem ('Ärv arbetsyteinställning')

@@ -1,0 +1,20 @@
+# nb target-lexicon allowlist — reviewed 2026-10-23
+# Legit Bokmål compounds/abbrevs/loans the flat nb_NO wordlist misses.
+# Markers: shared|loanword|proper|abbrev.
+arbeidskø # shared — arbeid+kø compound (work queue)
+atomisk # shared — atomisk (atomic)
+deaktiver # shared — deaktivere imperative
+deaktivert # shared — deaktivere participle
+forespørselstoken # shared — forespørsel+token reviewed compound
+hurtigtilgang # shared — hurtig+tilgang compound (quick access)
+hurtigtilgangs # shared — genitive/compound stem
+mva # abbrev — merverdiavgift, consistent catalog convention
+organisasjonsplasslisens # shared — organisasjonsplass+lisens compound
+pauset # shared — pause participle/adjective
+ukategorisert # shared — u+kategorisert (uncategorized)
+ukategoriserte # shared — plural/definite
+widgeten # loanword — widget + definite -en
+årsarbeidsbok # shared — år+arbeidsbok compound (yearly workbook)
+årsbildet # shared — årsbilde definite (year picture)
+årslisten # shared — årsliste definite
+årstotaler # shared — år+totaler compound (annual totals)
