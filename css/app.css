@@ -1168,7 +1168,7 @@
 	padding: var(--bc-space-2) var(--bc-space-3);
 	border-radius: var(--bc-radius-sm);
 	border: 1px solid var(--bc-border-strong);
-	background: var(--bc-bg-card);
+	background-color: var(--bc-bg-card);
 	color: var(--color-main-text);
 	font: inherit;
 }
@@ -3324,7 +3324,7 @@ body.bc-modal-open {
 .bc-modal .bc-input,
 .bc-modal select.bc-input,
 .bc-modal textarea.bc-input {
-	background: var(--color-main-background, var(--bc-bg-card));
+	background-color: var(--color-main-background, var(--bc-bg-card));
 	color: var(--color-main-text);
 	/* Modal dialogs are body-mounted — outside the #app-content cascade guard —
 	   so they must pin the control border to the >=3:1 form token themselves
