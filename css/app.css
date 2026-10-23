@@ -763,7 +763,7 @@
 	gap: var(--bc-space-3);
 	align-items: end;
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	/* 768px = NC tablet: member invite row becomes search + role + submit. */
 	.bc-member-invite__grid {
 		grid-template-columns: minmax(0, 1.4fr) minmax(10rem, 12rem) auto;
@@ -1256,7 +1256,7 @@
 	grid-template-columns: minmax(0, 1fr);
 	align-items: start;
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.bc-form-grid > .bc-tx-title-amount-row {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -2938,7 +2938,7 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.bc-quickstart {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
@@ -3104,7 +3104,7 @@ button.bc-dash-action {
 	margin: var(--bc-space-3) 0 0;
 	text-align: center;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	/* Keep the ledger scroll region inside the card — never widen #app-content. */
 	[data-bc-dash-month-ledger] {
 		min-width: 0;
@@ -3553,7 +3553,7 @@ body.bc-modal-open {
 	z-index: 1200;
 	max-width: min(400px, calc(100vw - 2 * var(--bc-space-4)));
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.bc-toasts {
 		inset-inline-start: auto;
 		inset-inline-end: calc(var(--bc-space-4) + env(safe-area-inset-right, 0px));
@@ -3744,7 +3744,7 @@ body.bc-modal-open {
 }
 
 /* 768px = NC tablet: multi-column forms, filter toggles, catalog picker cap, table scroll. */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	#app-content.bc-app,
 	.bc-app {
 		--bc-fs-xs: 0.75rem;
@@ -4120,7 +4120,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	border: 0;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.bc-support-us__options {
 		grid-template-columns: 1fr;
 	}
@@ -4565,7 +4565,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	}
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.bc-get-app__play {
 		width: 100%;
 	}

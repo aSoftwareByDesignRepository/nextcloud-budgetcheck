@@ -102,7 +102,7 @@ final class DesignSystemCssContractTest extends TestCase {
 
 	public function testDashLedgerDoesNotForceFiveFortyOnMobile(): void {
 		self::assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767\.98px\)[\s\S]*?\.bc-table-scroll \.bc-dash-ledger-table\s*\{[^}]*min-width:\s*0/s',
+			'/@media \(max-width:\s*768\.98px\)[\s\S]*?\.bc-table-scroll \.bc-dash-ledger-table\s*\{[^}]*min-width:\s*0/s',
 			$this->appCss,
 			'Dashboard ledger must not force 540px min-width under 768px (WCAG reflow / shell overflow)',
 		);

@@ -45,7 +45,7 @@
 	gap: var(--bc-space-3);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.bc-import-defaults {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}

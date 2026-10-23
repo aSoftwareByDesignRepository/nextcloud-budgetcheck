@@ -671,7 +671,7 @@
 }
 
 /* 768px = NC tablet: restore table layout, filter row, KPI auto-fit, ledger scroll. */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.bc-tx-tabs__panel .bc-table tbody tr td:first-child > .button--text,
 	.bc-tx-tabs__panel .bc-table tbody tr td .button--text {
 		min-height: 32px;
