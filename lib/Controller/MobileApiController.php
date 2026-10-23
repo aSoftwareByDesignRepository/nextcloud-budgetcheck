@@ -919,7 +919,8 @@ class MobileApiController extends Controller
 			return $this->downloadError('Authentication required.', Http::STATUS_UNAUTHORIZED);
 		} catch (AccessDeniedException) {
 			return $this->downloadError('Access denied.', Http::STATUS_FORBIDDEN);
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			\OCP\Log\logger('budgetcheck')->error('MobileApiController::exportTransactions failed: ' . $e->getMessage(), ['exception' => $e]);
 			return $this->downloadError('Export could not be created.', Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
