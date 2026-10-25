@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.9 - 2026-10-25
+
+### Fixed
+
+- strip doubled zero-width spaces in nl + pt_BR catalogs
+- restore select picker affordance — background: → background-color:
+- close real-lexicon bleeds nb Budgetsaldo + pl MwSt
+- log swallowed exportTransactions exception
+- 769px boundary family migration — mobile owns integer 768
+- sync check-dates programmatic-write repaint (canonical 2026-10-22)
+- let bc-table cells wrap so action columns stay on-canvas
+- register check-dates stylesheet + decorate dialog date inputs
+- uniform-404 access gate + fail-closed settings + admin surface
+- dark-theme accent-ink token + e2e user-state reset
+- adopt check-dates module; add pt to l10n regen list
+- neutralize formula-lead chars in client-side CSV template
+- atlas 3.5.15 r4 closures — NavGate, l10n placeholder gate, field errors, tests
+
+### Changed
+
+- baseline-green guard for settings/delete runners
+- assert intro substitutes %s, never literal (shared pack re-sync)
+- normalize tarball modes + host-side signature audit (GH #47)
+- catalog sync
+- shared e2e instance-lock harness
+- app-feedback footer parity + contract test sync
+- add UpgradeBackupStateGuard test support; sync contract tests + l10n catalogs
+
 ## 1.4.8 - 2026-10-12
 
 ### Added
