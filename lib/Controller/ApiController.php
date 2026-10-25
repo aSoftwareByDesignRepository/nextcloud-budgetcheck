@@ -628,9 +628,12 @@ class ApiController extends Controller
 			$payload = $this->payload();
 			$expectedVersion = null;
 			if (array_key_exists('version', $payload) && $payload['version'] !== null && $payload['version'] !== '') {
-				$expectedVersion = (int)$payload['version'];
+				// Strict digit check — '2.9'/'2e3'/' 5' must not silently cast.
+				$expectedVersion = is_int($payload['version']) ? $payload['version']
+					: (ctype_digit((string)$payload['version']) ? (int)$payload['version'] : null);
 			} elseif ($this->request->getParam('version') !== null && $this->request->getParam('version') !== '') {
-				$expectedVersion = (int)$this->request->getParam('version');
+				$pv = (string)$this->request->getParam('version');
+				$expectedVersion = ctype_digit($pv) ? (int)$pv : null;
 			}
 			if ($expectedVersion === null) {
 				throw new \InvalidArgumentException('version is required for deletes.');

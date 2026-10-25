@@ -332,8 +332,12 @@ class CategorizationRuleService
 		$workspaceId = (int)$row['workspace_id'];
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		// CAS: the client must send back the version it read (fail closed).
-		if (!isset($payload['version']) || (int)$payload['version'] !== (int)$row['version']) {
-			throw new ConflictException('The rule was changed by someone else. Reload and try again.', 'version_conflict');
+		// Missing or malformed tokens ("2.9", "2e3", " 5") reject the same way —
+		// never cast-then-compare, which would silently bind a stale base.
+		$version = $payload['version'] ?? null;
+		if ((!is_int($version) && !ctype_digit((string)$version))
+			|| (int)$version !== (int)$row['version']) {
+			throw new ConflictException('version_conflict', 'The rule was changed by someone else. Reload and try again.');
 		}
 		$fields = $this->validatePayload($workspaceId, array_merge($row, $payload), $row);
 		// Correction path: isActive lets a PUT reactivate a deactivated rule —
@@ -358,7 +362,7 @@ class CategorizationRuleService
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($ruleId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('version', $qb->createNamedParameter((int)$row['version'], IQueryBuilder::PARAM_INT)));
 		if ($qb->executeStatement() === 0) {
-			throw new ConflictException('The rule was changed by someone else. Reload and try again.', 'version_conflict');
+			throw new ConflictException('version_conflict', 'The rule was changed by someone else. Reload and try again.');
 		}
 		$this->audit->record($userId, 'categorization_rule_updated', 'categorization_rule', (string)$ruleId, [], $workspaceId);
 		return $this->loadForWorkspace($ruleId, $workspaceId) ?? [];
@@ -419,8 +423,9 @@ class CategorizationRuleService
 			return ['scanned' => 0, 'matched' => 0, 'updated' => 0, 'perRule' => []];
 		}
 		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
+		$closedYm = $this->closedYearMonths($workspaceId);
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('t.id', 't.title', 't.notes', 't.direction', 't.category_id', 'p.name', 't.payee_id')
+		$qb->select('t.id', 't.title', 't.notes', 't.direction', 't.category_id', 't.booking_date', 't.payee_id')
 			->selectAlias('p.name', 'payee_name')
 			->from('bc_transactions', 't')
 			->leftJoin('t', 'bc_payees', 'p', $qb->expr()->eq('t.payee_id', 'p.id'))
@@ -432,6 +437,7 @@ class CategorizationRuleService
 		$matched = 0;
 		$updated = 0;
 		$perRule = [];
+		$candidates = [];
 		$now = $this->now();
 		while ($row = $result->fetch()) {
 			$scanned++;
@@ -439,10 +445,18 @@ class CategorizationRuleService
 			if (!in_array($cid, $uncatIds, true)) {
 				continue;
 			}
+			// Closed months are sealed evidence — recategorizing a booked entry
+			// would silently diverge the live ledger from the snapshot hash.
+			// Identical in dry-run and apply so the preview cannot promise a
+			// write the commit must refuse.
+			$ym = substr((string)$row['booking_date'], 0, 7);
+			if (isset($closedYm[$ym])) {
+				continue;
+			}
 			$rule = $this->evaluate($rules, [
 				'title' => (string)$row['title'],
 				'payeeName' => (string)($row['payee_name'] ?? ''),
-				'notes' => (string)($row['notes'] ?? ''),
+				'notes' => (string)$row['notes'] ?? '',
 				'direction' => (string)$row['direction'],
 			]);
 			if ($rule === null) {
@@ -451,18 +465,54 @@ class CategorizationRuleService
 			$matched++;
 			$perRule[(int)$rule['id']] = ($perRule[(int)$rule['id']] ?? 0) + 1;
 			if (!$dryRun) {
-				$u = $this->db->getQueryBuilder();
-				$u->update('bc_transactions')
-					->set('category_id', $u->createNamedParameter((int)$rule['category_id'], IQueryBuilder::PARAM_INT))
-					->set('updated_by', $u->createNamedParameter($userId))
-					->set('updated_at', $u->createNamedParameter($now))
-					->where($u->expr()->eq('id', $u->createNamedParameter((int)$row['id'], IQueryBuilder::PARAM_INT)));
-				$updated += $u->executeStatement();
+				$candidates[] = [
+					'id' => (int)$row['id'],
+					'ym' => $ym,
+					'categoryId' => (int)$rule['category_id'],
+					'ruleId' => (int)$rule['id'],
+				];
 			}
 		}
 		$result->closeCursor();
-		if (!$dryRun && $perRule !== []) {
-			$this->recordHits($perRule);
+		if (!$dryRun && $candidates !== []) {
+			$this->db->beginTransaction();
+			try {
+				// Serialize the bulk rewrite against ledger writers and monthly
+				// close — the whole batch commits or none of it does.
+				WorkspaceRowLock::acquire($this->db, $workspaceId);
+				// A month that closed between the outer scan and this lock must
+				// not be rewritten either — re-read the sealed set under lock.
+				$closedNow = $this->closedYearMonths($workspaceId);
+				$hits = [];
+				foreach ($candidates as $c) {
+					if (isset($closedNow[$c['ym']])) {
+						continue;
+					}
+					$u = $this->db->getQueryBuilder();
+					$u->update('bc_transactions')
+						->set('category_id', $u->createNamedParameter($c['categoryId'], IQueryBuilder::PARAM_INT))
+						->set('updated_by', $u->createNamedParameter($userId))
+						->set('updated_at', $u->createNamedParameter($now))
+						->where($u->expr()->eq('id', $u->createNamedParameter($c['id'], IQueryBuilder::PARAM_INT)))
+						// Still uncategorized? A writer outside the lock
+						// contract must not be overwritten by a stale match.
+						->andWhere($u->expr()->in('category_id', $u->createNamedParameter($uncatIds, IQueryBuilder::PARAM_INT_ARRAY)));
+					$affected = $u->executeStatement();
+					$updated += $affected;
+					if ($affected > 0) {
+						$hits[$c['ruleId']] = ($hits[$c['ruleId']] ?? 0) + 1;
+					}
+				}
+				if ($hits !== []) {
+					$this->recordHits($hits);
+				}
+				$this->db->commit();
+			} catch (\Throwable $e) {
+				if ($this->db->inTransaction()) {
+					$this->db->rollBack();
+				}
+				throw $e;
+			}
 		}
 		$this->audit->record($userId, $dryRun ? 'categorization_rules_backfill_preview' : 'categorization_rules_backfill_applied', 'workspace', (string)$workspaceId, [
 			'scanned' => $scanned, 'matched' => $matched, 'updated' => $updated,
@@ -473,6 +523,27 @@ class CategorizationRuleService
 	// ------------------------------------------------------------------
 	//  Internals
 	// ------------------------------------------------------------------
+
+	/**
+	 * Closed (snapshotted) year-months for a workspace — the set of months
+	 * whose ledger rows are sealed evidence.
+	 *
+	 * @return array<string,true> 'YYYY-MM' => true
+	 */
+	private function closedYearMonths(int $workspaceId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('year_month')
+			->from('bc_monthly_snapshots')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$set = [];
+		while ($row = $result->fetch()) {
+			$set[(string)$row['year_month']] = true;
+		}
+		$result->closeCursor();
+		return $set;
+	}
 
 	/**
 	 * Exact-match lookup for idempotent create: same workspace, category,

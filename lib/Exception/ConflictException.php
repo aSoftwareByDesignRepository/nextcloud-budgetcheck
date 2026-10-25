@@ -11,6 +11,8 @@ final class ConflictException extends BudgetCheckException
 {
 	public const CODE_VERSION_CONFLICT = 'version_conflict';
 	public const CODE_IDEMPOTENCY_IN_PROGRESS = 'idempotency_in_progress';
+	public const CODE_PAYEE_NAME_CONFLICT = 'payee_name_conflict';
+	public const CODE_PAYEE_GONE = 'payee_gone';
 	public const CODE_WORKSPACE_HAS_GROUP_MEMBERS = 'workspace_has_group_members';
 	public const CODE_PRIVATE_WORKSPACE_GROUPS_FORBIDDEN = 'private_workspace_groups_forbidden';
 	/** @deprecated Retained for older clients; sole-manager private is allowed — this code is no longer thrown. */

@@ -579,6 +579,12 @@ class TransactionService
 			if ($this->monthIsClosed($workspaceId, $ym)) {
 				throw new \InvalidArgumentException($closedMessage);
 			}
+			// The payee was resolved before the lock — a racing merge may have
+			// deleted it since; re-verify so the insert never references a row
+			// that no longer exists (catalog_ref_delete_toctou).
+			if ($payeeId !== null && $this->payeeService()->loadForWorkspace($payeeId, $workspaceId) === null) {
+				throw new ConflictException(ConflictException::CODE_PAYEE_GONE, 'The selected payee was merged or removed. Reload and retry.');
+			}
 			if ($recurringRuleId !== null && $this->hasLiveOccurrenceForRecurringDate($workspaceId, $recurringRuleId, $bookingDate->format('Y-m-d'))) {
 				throw new \InvalidArgumentException('An entry already exists for this rule and date.');
 			}
@@ -834,6 +840,12 @@ class TransactionService
 			WorkspaceRowLock::acquire($this->db, (int)$workspace['id']);
 			if ($this->monthIsClosed((int)$workspace['id'], $currentYm)) {
 				throw new \InvalidArgumentException($closedEditMessage);
+			}
+			// Same payee re-verify as create() — the reference was resolved
+			// before the lock and a racing merge may have deleted it since.
+			if (($updates['payee_id'] ?? null) !== null
+				&& $this->payeeService()->loadForWorkspace((int)$updates['payee_id'], (int)$workspace['id']) === null) {
+				throw new ConflictException(ConflictException::CODE_PAYEE_GONE, 'The selected payee was merged or removed. Reload and retry.');
 			}
 			if ($targetYm !== $currentYm && $this->monthIsClosed((int)$workspace['id'], $targetYm)) {
 				throw new \InvalidArgumentException('The new booking date falls into a closed month. Reopen that month first.');

@@ -253,7 +253,7 @@ class PayeeService
 			$norm = self::normalizeName($name);
 			$clash = $this->findByNorm($workspaceId, $norm);
 			if ($clash !== null && (int)$clash['id'] !== $payeeId) {
-				throw new ConflictException('A payee with this name already exists. Merge instead of renaming.', 'payee_name_conflict');
+				throw new ConflictException(ConflictException::CODE_PAYEE_NAME_CONFLICT, 'A payee with this name already exists. Merge instead of renaming.');
 			}
 			try {
 				$qb = $this->db->getQueryBuilder();
@@ -268,7 +268,7 @@ class PayeeService
 				// Concurrent rename won the unique index between the clash check
 				// and this write — surface it as a conflict, not a 500.
 				if ($this->isUniqueConstraintViolation($e)) {
-					throw new ConflictException('A payee with this name already exists. Merge instead of renaming.', 'payee_name_conflict');
+					throw new ConflictException(ConflictException::CODE_PAYEE_NAME_CONFLICT, 'A payee with this name already exists. Merge instead of renaming.');
 				}
 				throw $e;
 			}
@@ -296,6 +296,20 @@ class PayeeService
 		}
 		$this->db->beginTransaction();
 		try {
+			// The workspace row lock serializes the payee delete against
+			// transaction writes that validated this payee_id moments ago —
+			// without it a concurrent insert can commit a reference to a row
+			// this merge already deleted (catalog_ref_delete_toctou).
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			// Re-validate inside the lock: a racing merge may have removed
+			// either row between the pre-check and lock acquisition.
+			if ($this->loadRow($sourceId) === null) {
+				throw new AccessDeniedException();
+			}
+			$lockedTarget = $this->loadRow($targetId);
+			if ($lockedTarget === null || (int)$lockedTarget['workspace_id'] !== $workspaceId) {
+				throw new AccessDeniedException();
+			}
 			$qb = $this->db->getQueryBuilder();
 			$qb->update('bc_transactions')
 				->set('payee_id', $qb->createNamedParameter($targetId, IQueryBuilder::PARAM_INT))
