@@ -299,7 +299,7 @@ OC.L10N.register(
 	"Change" : "Änderung",
 	"Change in workspace settings" : "In Arbeitsbereichseinstellungen ändern",
 	"Changes saved locally. Save the transaction to upload." : "Änderungen lokal gespeichert. Speichern Sie die Buchung zum Hochladen.",
-	"Check Partner" : "Check Partner",
+	"Check Partner" : "Partner-Check",
 	"Check your connection and try again. The most recent attempt did not complete." : "Prüfen Sie die Verbindung und versuchen Sie es erneut. Der letzte Versuch wurde nicht abgeschlossen.",
 	"Choose a CSV file" : "CSV-Datei wählen",
 	"Choose a category." : "Wählen Sie eine Kategorie.",
