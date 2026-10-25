@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
+use OCA\BudgetCheck\Support\StrictBool;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -273,24 +274,34 @@ class CategorizationRuleService
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$this->assertRuleCap($workspaceId);
 		$fields = $this->validatePayload($workspaceId, $payload, null);
+		// Idempotent create: an identical active rule is returned instead of
+		// minting a duplicate row (double-submit / retry safety — there is no
+		// unique index covering the match tuple).
+		$existing = $this->findIdentical($workspaceId, $fields);
+		if ($existing !== null) {
+			return $this->hydrate($existing);
+		}
 		$now = $this->now();
-		$this->db->insertIfNotExist('bc_category_rules', [
-			'workspace_id' => $workspaceId,
-			'category_id' => $fields['category_id'],
-			'match_field' => $fields['match_field'],
-			'match_type' => $fields['match_type'],
-			'pattern' => $fields['pattern'],
-			'direction' => $fields['direction'],
-			'priority' => $fields['priority'],
-			'use_regex' => $fields['use_regex'],
-			'is_active' => true,
-			'hit_count' => 0,
-			'version' => 1,
-			'created_by' => $userId,
-			'updated_by' => $userId,
-			'created_at' => $now,
-			'updated_at' => $now,
-		]);
+		$qb = $this->db->getQueryBuilder();
+		$qb->insert('bc_category_rules')
+			->values([
+				'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
+				'category_id' => $qb->createNamedParameter($fields['category_id'], IQueryBuilder::PARAM_INT),
+				'match_field' => $qb->createNamedParameter($fields['match_field']),
+				'match_type' => $qb->createNamedParameter($fields['match_type']),
+				'pattern' => $qb->createNamedParameter($fields['pattern']),
+				'direction' => $qb->createNamedParameter($fields['direction']),
+				'priority' => $qb->createNamedParameter($fields['priority'], IQueryBuilder::PARAM_INT),
+				'use_regex' => $qb->createNamedParameter($fields['use_regex'], \PDO::PARAM_BOOL),
+				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+				'hit_count' => $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT),
+				'version' => $qb->createNamedParameter(1, IQueryBuilder::PARAM_INT),
+				'created_by' => $qb->createNamedParameter($userId),
+				'updated_by' => $qb->createNamedParameter($userId),
+				'created_at' => $qb->createNamedParameter($now),
+				'updated_at' => $qb->createNamedParameter($now),
+			]);
+		$qb->executeStatement();
 		$id = (int)$this->db->lastInsertId('bc_category_rules');
 		$this->audit->record($userId, 'categorization_rule_created', 'categorization_rule', (string)$id, [
 			'pattern' => $fields['pattern'],
@@ -312,6 +323,12 @@ class CategorizationRuleService
 			throw new ConflictException('The rule was changed by someone else. Reload and try again.', 'version_conflict');
 		}
 		$fields = $this->validatePayload($workspaceId, array_merge($row, $payload), $row);
+		// Correction path: isActive lets a PUT reactivate a deactivated rule —
+		// deactivate would otherwise be irreversible through the API.
+		$isActive = (bool)$row['is_active'];
+		if (array_key_exists('isActive', $payload) || array_key_exists('is_active', $payload)) {
+			$isActive = StrictBool::field($payload, 'isActive') || StrictBool::field($payload, 'is_active');
+		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('bc_category_rules')
 			->set('category_id', $qb->createNamedParameter($fields['category_id'], IQueryBuilder::PARAM_INT))
@@ -321,6 +338,7 @@ class CategorizationRuleService
 			->set('direction', $qb->createNamedParameter($fields['direction']))
 			->set('priority', $qb->createNamedParameter($fields['priority'], IQueryBuilder::PARAM_INT))
 			->set('use_regex', $qb->createNamedParameter($fields['use_regex'], \PDO::PARAM_BOOL))
+			->set('is_active', $qb->createNamedParameter($isActive, \PDO::PARAM_BOOL))
 			->set('version', $qb->createNamedParameter((int)$row['version'] + 1, IQueryBuilder::PARAM_INT))
 			->set('updated_by', $qb->createNamedParameter($userId))
 			->set('updated_at', $qb->createNamedParameter($this->now()))
@@ -443,6 +461,28 @@ class CategorizationRuleService
 	//  Internals
 	// ------------------------------------------------------------------
 
+	/**
+	 * Exact-match lookup for idempotent create: same workspace, category,
+	 * match tuple, direction, regex flag and activity state.
+	 */
+	private function findIdentical(int $workspaceId, array $fields): ?array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('bc_category_rules')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($fields['category_id'], IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('match_field', $qb->createNamedParameter($fields['match_field'])))
+			->andWhere($qb->expr()->eq('match_type', $qb->createNamedParameter($fields['match_type'])))
+			->andWhere($qb->expr()->eq('pattern', $qb->createNamedParameter($fields['pattern'])))
+			->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter($fields['direction'])))
+			->andWhere($qb->expr()->eq('use_regex', $qb->createNamedParameter($fields['use_regex'], \PDO::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('is_active', $qb->createNamedParameter(true, \PDO::PARAM_BOOL)))
+			->setMaxResults(1);
+		$row = $qb->executeQuery()->fetch();
+		return $row === false ? null : $row;
+	}
+
 	private function assertRuleCap(int $workspaceId): void
 	{
 		$qb = $this->db->getQueryBuilder();
@@ -476,7 +516,7 @@ class CategorizationRuleService
 		if (!in_array($direction, self::DIRECTIONS, true)) {
 			throw new \InvalidArgumentException('direction must be one of: any, income, expense.');
 		}
-		$useRegex = !empty($payload['useRegex']) || !empty($payload['use_regex']);
+		$useRegex = StrictBool::field($payload, 'useRegex') || StrictBool::field($payload, 'use_regex');
 		if ($useRegex && (mb_strlen($pattern) > self::REGEX_MAX_PATTERN || @preg_match('`' . str_replace('`', '\\`', $pattern) . '`iu', '') === false)) {
 			throw new \InvalidArgumentException('Regex pattern is invalid or longer than 128 characters.');
 		}

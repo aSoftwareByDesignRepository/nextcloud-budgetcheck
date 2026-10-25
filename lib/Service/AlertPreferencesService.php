@@ -36,6 +36,7 @@ class AlertPreferencesService
 	public function __construct(
 		private IConfig $config,
 		private AccessControlService $access,
+		private CategoryService $categories,
 	) {
 	}
 
@@ -56,12 +57,12 @@ class AlertPreferencesService
 	{
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_VIEWER);
 		if (array_key_exists('alertsEnabled', $payload)) {
-			$this->setBool($userId, self::KEY_MASTER, (bool)$payload['alertsEnabled']);
+			$this->setBool($userId, self::KEY_MASTER, StrictBool::field($payload, 'alertsEnabled'));
 		}
 		foreach (self::TYPES as $type) {
 			$key = 'type' . ucfirst($type);
 			if (array_key_exists($key, $payload)) {
-				$this->setBool($userId, self::KEY_TYPE_PREFIX . $type, (bool)$payload[$key]);
+				$this->setBool($userId, self::KEY_TYPE_PREFIX . $type, StrictBool::field($payload, $key));
 			}
 		}
 		if (array_key_exists('thresholdPercent', $payload)) {
@@ -72,7 +73,7 @@ class AlertPreferencesService
 			$this->config->setUserValue($userId, Application::APP_ID, self::KEY_THRESHOLD, (string)$pct);
 		}
 		if (array_key_exists('emailEnabled', $payload)) {
-			$this->setBool($userId, self::KEY_EMAIL, (bool)$payload['emailEnabled']);
+			$this->setBool($userId, self::KEY_EMAIL, StrictBool::field($payload, 'emailEnabled'));
 		}
 		if (array_key_exists('quietStart', $payload) || array_key_exists('quietEnd', $payload)) {
 			$start = $this->validHourMinute($payload['quietStart'] ?? null);
@@ -84,10 +85,15 @@ class AlertPreferencesService
 			$this->saveCategoryThresholds($workspaceId, $userId, $payload['categoryThresholds']);
 		}
 		if (array_key_exists('dashboardWidgetEnabled', $payload)) {
-			$this->setBool($userId, self::KEY_WIDGET, (bool)$payload['dashboardWidgetEnabled']);
+			$this->setBool($userId, self::KEY_WIDGET, StrictBool::field($payload, 'dashboardWidgetEnabled'));
 		}
 		if (array_key_exists('dashboardWidgetWorkspaceId', $payload)) {
 			$wid = (int)$payload['dashboardWidgetWorkspaceId'];
+			if ($wid > 0) {
+				// Widget workspace must be one the user can actually open —
+				// storing a foreign id would pin the widget to a dead space.
+				$this->access->ensureMinimumRole($wid, $userId, AccessControlService::ROLE_VIEWER);
+			}
 			$this->config->setUserValue($userId, Application::APP_ID, self::KEY_WIDGET_WS, $wid > 0 ? (string)$wid : '');
 		}
 		return $this->snapshot($userId);
@@ -172,7 +178,11 @@ class AlertPreferencesService
 			$cid = (int)$cid;
 			$pct = (int)$pct;
 			if ($cid > 0 && $pct >= 50 && $pct <= 100) {
-				$clean[$cid] = $pct;
+				// References without FKs are validated for existence AND
+				// ownership: a foreign/deleted category id never reaches prefs.
+				if ($this->categories->loadForWorkspace($cid, $workspaceId) !== null) {
+					$clean[$cid] = $pct;
+				}
 			}
 		}
 		$this->config->setUserValue(
@@ -192,6 +202,18 @@ class AlertPreferencesService
 		}
 		$decoded = json_decode($raw, true);
 		return is_array($decoded) ? $decoded : [];
+	}
+
+	/**
+	 * Forget this user's workspace-scoped alert state (workspace deletion):
+	 * category thresholds and a widget pin pointing at the deleted space.
+	 */
+	public function clearForUserWorkspace(string $userId, int $workspaceId): void
+	{
+		$this->config->deleteUserValue($userId, Application::APP_ID, self::KEY_CAT_THRESHOLDS . '_' . $workspaceId);
+		if ($this->dashboardWidgetWorkspaceId($userId) === $workspaceId) {
+			$this->config->deleteUserValue($userId, Application::APP_ID, self::KEY_WIDGET_WS);
+		}
 	}
 
 	private function snapshot(string $userId): array

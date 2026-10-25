@@ -255,6 +255,7 @@ class Application extends App implements IBootstrap
 				$c->query(AuditLogService::class),
 				$c->query(ImportPreferencesService::class),
 				$c->query(SummaryViewPreferencesService::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertPreferencesService::class),
 			);
 		});
 
@@ -321,6 +322,7 @@ class Application extends App implements IBootstrap
 				$c->query(CategoryService::class),
 				$c->query(WorkspaceService::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
+				$c->query(\OCP\Lock\ILockingProvider::class),
 			);
 		});
 
@@ -363,6 +365,7 @@ class Application extends App implements IBootstrap
 			return new \OCA\BudgetCheck\Service\AlertPreferencesService(
 				$c->query(\OCP\IConfig::class),
 				$c->query(AccessControlService::class),
+				$c->query(CategoryService::class),
 			);
 		});
 		$context->registerService(\OCA\BudgetCheck\Service\AlertDispatchService::class, function ($c): \OCA\BudgetCheck\Service\AlertDispatchService {
@@ -396,6 +399,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCA\BudgetCheck\Service\AlertEvaluationService::class),
 				$c->query(\OCA\BudgetCheck\Service\AlertDispatchService::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
+				$c->query(\OCP\Lock\ILockingProvider::class),
 			);
 		});
 		$context->registerNotifierService(\OCA\BudgetCheck\Notification\Notifier::class);

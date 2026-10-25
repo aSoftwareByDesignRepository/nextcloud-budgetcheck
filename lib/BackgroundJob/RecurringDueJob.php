@@ -7,9 +7,12 @@ namespace OCA\BudgetCheck\BackgroundJob;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\TransactionService;
+use OCA\BudgetCheck\Service\UpgradeBackupService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
+use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -28,12 +31,35 @@ final class RecurringDueJob extends TimedJob
 		private CategoryService $categories,
 		private WorkspaceService $workspaces,
 		private LoggerInterface $logger,
+		private ILockingProvider $locking,
 	) {
 		parent::__construct($time);
 		$this->setInterval(60 * 60);
 	}
 
 	protected function run($argument): void
+	{
+		// Shared lock on the backup key: a forced restore holds it exclusively —
+		// the sweep skips rather than posting transactions into tables
+		// mid-restore (writes between truncate and insert are lost).
+		try {
+			$this->locking->acquireLock(
+				UpgradeBackupService::LOCK_KEY,
+				ILockingProvider::LOCK_SHARED,
+				'BudgetCheck recurring due sweep',
+			);
+		} catch (LockedException) {
+			$this->logger->info('BudgetCheck: skipping recurring due sweep — upgrade backup/restore in progress.');
+			return;
+		}
+		try {
+			$this->runSweep();
+		} finally {
+			$this->locking->releaseLock(UpgradeBackupService::LOCK_KEY, ILockingProvider::LOCK_SHARED);
+		}
+	}
+
+	private function runSweep(): void
 	{
 		try {
 			$summary = $this->recurring->processDueBookRules(

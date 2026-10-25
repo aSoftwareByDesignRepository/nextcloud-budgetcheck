@@ -49,11 +49,11 @@
 
 		<fieldset class="bc-fieldset">
 			<div class="bc-field bc-field--inline">
-				<label class="bc-field__label" for="bc-alerts-threshold"><?php p($l->t('Budget alert threshold (%)')); ?></label>
+				<label class="bc-field__label" for="bc-alerts-threshold"><?php p($l->t('Budget alert threshold (%%)')); ?></label>
 				<input class="bc-input" type="number" id="bc-alerts-threshold" name="thresholdPercent" min="50" max="100" step="1" value="80" data-bc-alert-threshold>
 				<p class="bc-field-error" data-bc-field-error="thresholdPercent" hidden></p>
 			</div>
-			<p class="bc-section__control-hint"><?php p($l->t('Alert when a category budget reaches this percent — and again at 100%.')); ?></p>
+			<p class="bc-section__control-hint"><?php p($l->t('Alert when a category budget reaches this percent — and again at 100%%.')); ?></p>
 			<div class="bc-field bc-field--inline">
 				<label class="bc-field__label" for="bc-alerts-quiet-start"><?php p($l->t('Quiet hours')); ?></label>
 				<input class="bc-input" type="time" id="bc-alerts-quiet-start" name="quietStart">

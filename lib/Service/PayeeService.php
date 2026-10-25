@@ -6,6 +6,7 @@ namespace OCA\BudgetCheck\Service;
 
 use OCA\BudgetCheck\Exception\AccessDeniedException;
 use OCA\BudgetCheck\Exception\ConflictException;
+use OCA\BudgetCheck\Support\StrictBool;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -143,24 +144,34 @@ class PayeeService
 			return $this->hydrate($existing);
 		}
 		$now = $this->now();
+		$qb = $this->db->getQueryBuilder();
+		$qb->insert('bc_payees')
+			->values([
+				'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
+				'name' => $qb->createNamedParameter($name),
+				'name_norm' => $qb->createNamedParameter($norm),
+				'is_active' => $qb->createNamedParameter(true, \PDO::PARAM_BOOL),
+				'created_by' => $qb->createNamedParameter($userId),
+				'updated_by' => $qb->createNamedParameter($userId),
+				'created_at' => $qb->createNamedParameter($now),
+				'updated_at' => $qb->createNamedParameter($now),
+			]);
 		try {
-			$this->db->insertIfNotExist('bc_payees', [
-				'workspace_id' => $workspaceId,
-				'name' => $name,
-				'name_norm' => $norm,
-				'is_active' => true,
-				'created_by' => $userId,
-				'updated_by' => $userId,
-				'created_at' => $now,
-				'updated_at' => $now,
-			], ['workspace_id', 'name_norm']);
-		} catch (\Throwable) {
+			$qb->executeStatement();
+		} catch (\Throwable $e) {
+			if (!$this->isUniqueConstraintViolation($e)) {
+				throw $e;
+			}
 			// Unique-index race: another request created the same norm — return it.
 			$existing = $this->findByNorm($workspaceId, $norm);
 			if ($existing !== null) {
+				if (empty($existing['is_active'])) {
+					$this->setActiveFlag((int)$existing['id'], $userId, true);
+					$existing['is_active'] = true;
+				}
 				return $this->hydrate($existing);
 			}
-			throw new AccessDeniedException();
+			throw $e;
 		}
 		$row = $this->findByNorm($workspaceId, $norm);
 		if ($row === null) {
@@ -176,12 +187,18 @@ class PayeeService
 	 */
 	public function resolveForWrite(int $workspaceId, string $userId, mixed $payeeId, mixed $payeeName): ?array
 	{
-		if ($payeeId !== null && $payeeId !== '' && (int)$payeeId > 0) {
-			$payee = $this->loadForWorkspace((int)$payeeId, $workspaceId);
-			if ($payee === null) {
-				throw new AccessDeniedException();
+		if ($payeeId !== null && $payeeId !== '') {
+			// Strict id: '2.9', '2e3', ' 5' must not silently bind another payee.
+			if (!is_int($payeeId) && !ctype_digit((string)$payeeId)) {
+				throw new \InvalidArgumentException('payeeId must be a positive integer.');
 			}
-			return $payee;
+			if ((int)$payeeId > 0) {
+				$payee = $this->loadForWorkspace((int)$payeeId, $workspaceId);
+				if ($payee === null) {
+					throw new AccessDeniedException();
+				}
+				return $payee;
+			}
 		}
 		$name = trim((string)($payeeName ?? ''));
 		if ($name === '') {
@@ -203,11 +220,16 @@ class PayeeService
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 
 		if (isset($payload['action']) && $payload['action'] === 'mergeInto') {
-			return $this->merge($row, $userId, (int)($payload['targetId'] ?? 0));
+			$targetId = $payload['targetId'] ?? 0;
+			if (!is_int($targetId) && !ctype_digit((string)$targetId)) {
+				throw new \InvalidArgumentException('targetId must be a positive integer.');
+			}
+			return $this->merge($row, $userId, (int)$targetId);
 		}
 		if (array_key_exists('isActive', $payload)) {
-			$this->setActiveFlag($payeeId, $userId, (bool)$payload['isActive']);
-			$row['is_active'] = (bool)$payload['isActive'];
+			$active = StrictBool::field($payload, 'isActive');
+			$this->setActiveFlag($payeeId, $userId, $active);
+			$row['is_active'] = $active;
 		}
 		if (isset($payload['name'])) {
 			$name = trim((string)$payload['name']);
@@ -219,14 +241,23 @@ class PayeeService
 			if ($clash !== null && (int)$clash['id'] !== $payeeId) {
 				throw new ConflictException('A payee with this name already exists. Merge instead of renaming.', 'payee_name_conflict');
 			}
-			$this->db->update('bc_payees', [
-				'name' => $name,
-				'name_norm' => $norm,
-				'updated_by' => $userId,
-				'updated_at' => $this->now(),
-			], [
-				'id' => $this->db->getQueryBuilder()->createNamedParameter($payeeId, IQueryBuilder::PARAM_INT),
-			]);
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->update('bc_payees')
+					->set('name', $qb->createNamedParameter($name))
+					->set('name_norm', $qb->createNamedParameter($norm))
+					->set('updated_by', $qb->createNamedParameter($userId))
+					->set('updated_at', $qb->createNamedParameter($this->now()))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter($payeeId, IQueryBuilder::PARAM_INT)));
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				// Concurrent rename won the unique index between the clash check
+				// and this write — surface it as a conflict, not a 500.
+				if ($this->isUniqueConstraintViolation($e)) {
+					throw new ConflictException('A payee with this name already exists. Merge instead of renaming.', 'payee_name_conflict');
+				}
+				throw $e;
+			}
 			$row['name'] = $name;
 			$row['name_norm'] = $norm;
 			$this->audit->record($userId, 'payee_renamed', 'payee', (string)$payeeId, ['name' => $name], $workspaceId);
@@ -251,15 +282,16 @@ class PayeeService
 		}
 		$this->db->beginTransaction();
 		try {
-			$this->db->update('bc_transactions', [
-				'payee_id' => $targetId,
-			], [
-				'payee_id' => $this->db->getQueryBuilder()->createNamedParameter($sourceId, IQueryBuilder::PARAM_INT),
-				'workspace_id' => $this->db->getQueryBuilder()->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
-			]);
-			$this->db->delete('bc_payees', [
-				'id' => $this->db->getQueryBuilder()->createNamedParameter($sourceId, IQueryBuilder::PARAM_INT),
-			]);
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('bc_transactions')
+				->set('payee_id', $qb->createNamedParameter($targetId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('payee_id', $qb->createNamedParameter($sourceId, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
+			$qb->executeStatement();
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('bc_payees')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($sourceId, IQueryBuilder::PARAM_INT)));
+			$qb->executeStatement();
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
@@ -323,13 +355,13 @@ class PayeeService
 
 	private function setActiveFlag(int $payeeId, string $userId, bool $active): void
 	{
-		$this->db->update('bc_payees', [
-			'is_active' => $active,
-			'updated_by' => $userId,
-			'updated_at' => $this->now(),
-		], [
-			'id' => $this->db->getQueryBuilder()->createNamedParameter($payeeId, IQueryBuilder::PARAM_INT),
-		]);
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('bc_payees')
+			->set('is_active', $qb->createNamedParameter($active, \PDO::PARAM_BOOL))
+			->set('updated_by', $qb->createNamedParameter($userId))
+			->set('updated_at', $qb->createNamedParameter($this->now()))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($payeeId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
 	}
 
 	private function findByNorm(int $workspaceId, string $norm): ?array
@@ -341,6 +373,16 @@ class PayeeService
 			->andWhere($qb->expr()->eq('name_norm', $qb->createNamedParameter($norm)));
 		$row = $qb->executeQuery()->fetch();
 		return $row === false ? null : $row;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function loadRow(int $payeeId): ?array

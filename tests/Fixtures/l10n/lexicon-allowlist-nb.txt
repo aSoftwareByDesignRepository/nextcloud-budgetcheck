@@ -18,3 +18,4 @@ widgeten # loanword — widget + definite -en
 årsbildet # shared — årsbilde definite (year picture)
 årslisten # shared — årsliste definite
 årstotaler # shared — år+totaler compound (annual totals)
+budgetchecks # proper — BudgetCheck brand possessive ('i BudgetChecks innstillinger' = in BudgetCheck's settings)

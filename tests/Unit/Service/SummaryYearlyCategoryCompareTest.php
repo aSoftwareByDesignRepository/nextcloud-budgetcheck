@@ -81,6 +81,22 @@ final class SummaryYearlyCategoryCompareTest extends TestCase
 		$this->assertSame(900_00, $out[7]['months'][6]['actual']);
 	}
 
+	/**
+	 * Regression (live 500 @8afe7e7): a month holding only specials (or only
+	 * actuals) must still emit BOTH keys — the compare months-loop reads
+	 * $am['actual']/$am['specials'] unconditionally and MoneyService::envelope()
+	 * is int-typed, so a missing key crashed the endpoint with TypeError.
+	 */
+	public function testOneSidedMonthRowsCarryBothKeys(): void
+	{
+		$out = $this->invokeAggregate($this->household(), [
+			$this->row(5, 50_00, '2026-03-05', true),   // specials-only month
+			$this->row(5, 100_00, '2026-04-10'),        // actuals-only month
+		]);
+		$this->assertSame(['actual' => 0, 'specials' => 50_00], $out[5]['months'][3]);
+		$this->assertSame(['actual' => 100_00, 'specials' => 0], $out[5]['months'][4]);
+	}
+
 	public function testPlannedRowsExcluded(): void
 	{
 		$out = $this->invokeAggregate($this->household(), [

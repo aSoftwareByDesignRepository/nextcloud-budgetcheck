@@ -60,36 +60,42 @@ class AlertDispatchService
 
 	/**
 	 * Atomic dedupe claim. The UNIQUE index does the work: a concurrent
-	 * evaluation that loses the insert race simply returns false.
+	 * evaluation that loses the insert race gets a unique-violation back and
+	 * returns false — no check-then-act window, no same-second double-send.
 	 */
 	private function claim(string $userId, int $workspaceId, string $type, string $dedupeKey, string $subject): bool
 	{
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		try {
-			$this->db->insertIfNotExist('bc_alert_log', [
-				'workspace_id' => $workspaceId,
-				'user_id' => $userId,
-				'alert_type' => $type,
-				'dedupe_key' => $dedupeKey,
-				'subject' => mb_substr($subject, 0, 255),
-				'fired_at' => $now,
-				'created_at' => $now,
-			], ['user_id', 'workspace_id', 'alert_type', 'dedupe_key']);
-		} catch (\Throwable) {
-			return false;
-		}
-		// insertIfNotExist does not report "row existed" — verify ownership by
-		// checking whether a row with this exact key exists and was created now.
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('id')
-			->from('bc_alert_log')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('alert_type', $qb->createNamedParameter($type)))
-			->andWhere($qb->expr()->eq('dedupe_key', $qb->createNamedParameter($dedupeKey)))
-			->andWhere($qb->expr()->eq('created_at', $qb->createNamedParameter($now)));
-		$row = $qb->executeQuery()->fetch();
-		return $row !== false;
+		$qb->insert('bc_alert_log')
+			->values([
+				'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
+				'user_id' => $qb->createNamedParameter($userId),
+				'alert_type' => $qb->createNamedParameter($type),
+				'dedupe_key' => $qb->createNamedParameter($dedupeKey),
+				'subject' => $qb->createNamedParameter(mb_substr($subject, 0, 255)),
+				'fired_at' => $qb->createNamedParameter($now),
+				'created_at' => $qb->createNamedParameter($now),
+			]);
+		try {
+			$qb->executeStatement();
+		} catch (\Throwable $e) {
+			if ($this->isUniqueConstraintViolation($e)) {
+				return false; // already fired — dedupe wins
+			}
+			throw $e; // a real DB failure must not masquerade as a dedupe hit
+		}
+		return true;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function send(string $userId, int $workspaceId, string $type, array $payload): void

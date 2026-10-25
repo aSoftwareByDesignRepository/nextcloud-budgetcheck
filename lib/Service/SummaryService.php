@@ -646,6 +646,7 @@ class SummaryService
 			$mo = (int)substr((string)$row['booking_date'], 5, 2);
 			$bucket = &$out[$cid];
 			$bucket ??= ['actual' => 0, 'specials' => 0, 'count' => 0, 'months' => []];
+			$bucket['months'][$mo] ??= ['actual' => 0, 'specials' => 0];
 			$special = (bool)$row['is_special'];
 			if ($special) {
 				$bucket['specials'] += $amount;

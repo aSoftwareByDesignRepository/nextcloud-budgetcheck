@@ -6,9 +6,12 @@ namespace OCA\BudgetCheck\BackgroundJob;
 
 use OCA\BudgetCheck\Service\AlertDispatchService;
 use OCA\BudgetCheck\Service\AlertEvaluationService;
+use OCA\BudgetCheck\Service\UpgradeBackupService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
 use OCP\IDBConnection;
+use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -27,6 +30,7 @@ final class AlertEvaluationJob extends TimedJob
 		private AlertEvaluationService $evaluator,
 		private AlertDispatchService $dispatch,
 		private LoggerInterface $logger,
+		private ILockingProvider $locking,
 	) {
 		parent::__construct($time);
 		$this->setInterval(24 * 60 * 60);
@@ -34,6 +38,28 @@ final class AlertEvaluationJob extends TimedJob
 	}
 
 	protected function run($argument): void
+	{
+		// Shared lock on the backup key: a forced restore holds it exclusively —
+		// the sweep skips rather than evaluating/writing alert rows into
+		// tables mid-restore (writes between truncate and insert are lost).
+		try {
+			$this->locking->acquireLock(
+				UpgradeBackupService::LOCK_KEY,
+				ILockingProvider::LOCK_SHARED,
+				'BudgetCheck alert sweep',
+			);
+		} catch (LockedException) {
+			$this->logger->info('BudgetCheck: skipping alert sweep — upgrade backup/restore in progress.');
+			return;
+		}
+		try {
+			$this->runSweep();
+		} finally {
+			$this->locking->releaseLock(UpgradeBackupService::LOCK_KEY, ILockingProvider::LOCK_SHARED);
+		}
+	}
+
+	private function runSweep(): void
 	{
 		$now = new \DateTimeImmutable('now');
 		try {

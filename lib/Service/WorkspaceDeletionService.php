@@ -34,6 +34,9 @@ class WorkspaceDeletionService
 		'bc_monthly_snapshots',
 		'bc_categories',
 		'bc_booking_statuses',
+		'bc_payees',
+		'bc_category_rules',
+		'bc_alert_log',
 		'bc_idempotency',
 		'bc_workspace_members',
 		'bc_workspace_groups',
@@ -47,6 +50,7 @@ class WorkspaceDeletionService
 		private AuditLogService $audit,
 		private ImportPreferencesService $importPreferences,
 		private SummaryViewPreferencesService $summaryViewPrefs,
+		private AlertPreferencesService $alertPreferences,
 	) {
 	}
 
@@ -311,6 +315,7 @@ class WorkspaceDeletionService
 			$this->access->removeFavoriteWorkspaceId($uid, $workspaceId);
 			$this->importPreferences->clearForUserWorkspace($uid, $workspaceId);
 			$this->summaryViewPrefs->clearForUserWorkspace($uid, $workspaceId);
+			$this->alertPreferences->clearForUserWorkspace($uid, $workspaceId);
 		}
 	}
 }

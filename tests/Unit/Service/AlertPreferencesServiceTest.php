@@ -31,9 +31,14 @@ final class AlertPreferencesServiceTest extends TestCase
 				$this->store["$uid|$key"] = $value;
 			}
 		);
+		$categories = $this->createMock(\OCA\BudgetCheck\Service\CategoryService::class);
+		$categories->method('loadForWorkspace')->willReturnCallback(
+			fn (int $cid, int $ws) => $cid > 0 ? ['id' => $cid, 'workspaceId' => $ws] : null
+		);
 		return new AlertPreferencesService(
 			$config,
 			$this->createMock(\OCA\BudgetCheck\Service\AccessControlService::class),
+			$categories,
 		);
 	}
 

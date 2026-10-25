@@ -107,6 +107,7 @@ class TransactionExportService
 			$cols[] = ['header' => 'bookingStatus', 'type' => 'string', 'get' => fn (array $r) => $r['bookingStatusId'] === null ? null : ($statusNames[(int)$r['bookingStatusId']] ?? null)];
 			$cols[] = ['header' => 'bookingStatusId', 'type' => 'number', 'get' => fn (array $r) => $r['bookingStatusId']];
 		}
+		$cols[] = ['header' => 'payee', 'type' => 'string', 'get' => fn (array $r) => $r['payeeName'] ?? null];
 		$cols[] = ['header' => 'notes', 'type' => 'string', 'get' => fn (array $r) => $r['notes']];
 		$cols[] = ['header' => 'isSpecial', 'type' => 'bool', 'get' => fn (array $r) => $r['isSpecial']];
 		$cols[] = ['header' => 'isPlanned', 'type' => 'bool', 'get' => fn (array $r) => $r['isPlanned']];

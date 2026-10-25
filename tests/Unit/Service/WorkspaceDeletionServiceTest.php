@@ -117,6 +117,7 @@ final class WorkspaceDeletionServiceTest extends TestCase
 			$this->createMock(AuditLogService::class),
 			$this->createMock(ImportPreferencesService::class),
 			$this->createMock(SummaryViewPreferencesService::class),
+			$this->createMock(\OCA\BudgetCheck\Service\AlertPreferencesService::class),
 		);
 	}
 }
