@@ -2445,9 +2445,14 @@
 				const mergeTargetId = form.querySelector('[name="mergeTargetId"]')?.value || '';
 				if (isEdit && mergeTargetId) {
 					const target = allPayees.find((p) => String(p.id) === mergeTargetId);
-					if (!window.confirm(t('budgetcheck', 'Merge {source} into {target}? All bookings move and {source} is removed.')
-						.replace('{source}', payee.name)
-						.replace('{target}', target ? target.name : ''))) {
+					const ok = await C.confirmDialog({
+						body: t('budgetcheck', 'Merge {source} into {target}? All bookings move and {source} is removed.')
+							.replace('{source}', payee.name)
+							.replace('{target}', target ? target.name : ''),
+						confirmLabel: t('budgetcheck', 'Merge'),
+						danger: true,
+					});
+					if (!ok) {
 						return false;
 					}
 					await Api.put('/apps/budgetcheck/api/payees/' + payee.id, { action: 'mergeInto', targetId: Number(mergeTargetId) });
@@ -2650,8 +2655,14 @@
 					.replace('{matched}', String(r.matched || 0))
 					.replace('{scanned}', String(r.scanned || 0));
 				if (hint) hint.textContent = msg;
-				if ((r.matched || 0) > 0 && window.confirm(msg)) {
-					await runBackfill(false);
+				if ((r.matched || 0) > 0) {
+					const ok = await C.confirmDialog({
+						body: msg,
+						confirmLabel: t('budgetcheck', 'Apply'),
+					});
+					if (ok) {
+						await runBackfill(false);
+					}
 				}
 			} else {
 				Msg.announce(t('budgetcheck', 'Applied rules to {count} bookings.').replace('{count}', String(r.updated || 0)), 'success');
