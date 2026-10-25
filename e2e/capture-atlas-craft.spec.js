@@ -176,10 +176,14 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 			['/settings/planning-view', 'settings-planning-view'],
 			['/settings/tax', 'settings-tax'],
 			['/settings/categories', 'settings-categories'],
+			['/settings/payees', 'settings-payees'],
+			['/settings/categorization-rules', 'settings-categorization-rules'],
 			['/settings/budget-defaults', 'settings-budget-defaults'],
 			['/settings/booking-statuses', 'settings-booking-statuses'],
 			['/settings/members', 'settings-members'],
 			['/settings/recurring', 'settings-recurring'],
+			['/settings/notifications', 'settings-notifications'],
+			['/settings/alerts', 'settings-alerts'],
 			['/settings/help', 'settings-help'],
 			['/app-settings/access', 'app-settings-access'],
 			['/app-settings/admins', 'app-settings-admins'],
@@ -239,6 +243,26 @@ test.describe('Atlas craft capture — budgetcheck', () => {
 			await catBtn.click();
 			await expect(page.locator('.bc-modal__dialog')).toBeVisible({ timeout: 10_000 });
 			await shot(page, 'bc-dialog-category-create-light.png');
+			await page.keyboard.press('Escape');
+		}
+
+		// --- settings/payees: open add-payee dialog (1.5.0) ---
+		await gotoView(page, `/settings/payees?workspaceId=${WS}`);
+		const payeeBtn = page.locator('[data-bc-action="open-create-payee"]').first();
+		if (await payeeBtn.count()) {
+			await payeeBtn.click();
+			await expect(page.locator('.bc-modal__dialog')).toBeVisible({ timeout: 10_000 });
+			await shot(page, 'bc-dialog-payee-create-light.png');
+			await page.keyboard.press('Escape');
+		}
+
+		// --- settings/categorization-rules: open add-rule dialog (1.5.0) ---
+		await gotoView(page, `/settings/categorization-rules?workspaceId=${WS}`);
+		const ruleBtn = page.locator('[data-bc-action="open-create-rule"]').first();
+		if (await ruleBtn.count()) {
+			await ruleBtn.click();
+			await expect(page.locator('.bc-modal__dialog')).toBeVisible({ timeout: 10_000 });
+			await shot(page, 'bc-dialog-rule-create-light.png');
 			await page.keyboard.press('Escape');
 		}
 

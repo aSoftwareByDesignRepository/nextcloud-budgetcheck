@@ -62,8 +62,9 @@ const MANAGER_ROUTES = [
 	{ id: 'get-the-app', path: `/apps/budgetcheck/get-the-app${W}` },
 ]
 const SETTINGS_SECTIONS = [
-	'workspace', 'planning-view', 'tax', 'categories', 'budget-defaults',
-	'booking-statuses', 'members', 'recurring', 'help',
+	'workspace', 'planning-view', 'tax', 'categories', 'payees',
+	'categorization-rules', 'budget-defaults', 'booking-statuses', 'members',
+	'recurring', 'notifications', 'alerts', 'help',
 ]
 const APP_SETTINGS_SECTIONS = ['access', 'admins', 'defaults', 'support']
 const ALL_MANAGER_ROUTES = MANAGER_ROUTES
@@ -497,6 +498,24 @@ async function phaseDialogs(browser) {
 			return true
 		})
 	}
+
+	// 4b) settings/payees → create-payee modal (1.5.0: payee directory)
+	await goto(`/apps/budgetcheck/settings/payees${W}`)
+	await probeDialogLifecycle(page, 'payee-create-modal', async () => {
+		const btn = page.locator('[data-bc-action="open-create-payee"]').first()
+		if (!(await btn.count())) return null
+		await btn.click()
+		return true
+	})
+
+	// 4c) settings/categorization-rules → create-rule modal (1.5.0: rules engine)
+	await goto(`/apps/budgetcheck/settings/categorization-rules${W}`)
+	await probeDialogLifecycle(page, 'rule-create-modal', async () => {
+		const btn = page.locator('[data-bc-action="open-create-rule"]').first()
+		if (!(await btn.count())) return null
+		await btn.click()
+		return true
+	})
 
 	// 5) settings/recurring → create-recurring modal
 	await goto(`/apps/budgetcheck/settings/recurring${W}`)
