@@ -347,6 +347,237 @@
 				}
 			}
 		}
+		// Insights are additive: the section only unhides once at least one
+		// endpoint answered; failures degrade the section silently.
+		if (isHousehold && seq === dashLoadSeq) {
+			loadInsights(yearMonth || Dates.currentYearMonth());
+		}
+	}
+
+	// ------------------------------------------------------------------
+	//  Insights (spec: analytics-insights): forecast + top payees + trend.
+	// ------------------------------------------------------------------
+
+	let insightsSeq = 0;
+	const insightsState = { loaded: false, categories: null };
+
+	async function loadInsights() {
+		const seq = ++insightsSeq;
+		const section = document.querySelector('[data-bc-insights]');
+		if (!section || !isHousehold) return;
+		let any = false;
+		// Forecast + top payees run in parallel; a failed card degrades to a
+		// hidden article, never an error toast on a shared page.
+		await Promise.all([
+			Api.get('/apps/budgetcheck/api/month-forecast', { workspaceId: ws.id })
+				.then((res) => { if (seq === insightsSeq) any = renderForecast(res && res.forecast) || any; })
+				.catch(() => {}),
+			Api.get('/apps/budgetcheck/api/top-payees', { workspaceId: ws.id, period: 'month', direction: 'expense', limit: 5 })
+				.then((res) => { if (seq === insightsSeq) any = renderTopPayees(res && res.result) || any; })
+				.catch(() => {}),
+		]);
+		if (seq !== insightsSeq) return;
+		if (!insightsState.categories) {
+			try {
+				const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: ws.id });
+				insightsState.categories = data.categories || [];
+			} catch (_) {
+				insightsState.categories = [];
+			}
+		}
+		if (seq !== insightsSeq) return;
+		any = renderTrendSelect(insightsState.categories) || any;
+		insightsState.loaded = true;
+		section.hidden = !any;
+	}
+
+	function insightBody(name) {
+		return document.querySelector('[data-bc-insight-' + name + ']');
+	}
+
+	function renderForecast(fc) {
+		const body = insightBody('forecast');
+		const article = document.querySelector('[data-bc-insight="forecast"]');
+		if (!body || !article) return false;
+		if (!fc) {
+			article.hidden = true;
+			return false;
+		}
+		if (!fc.dataSufficient) {
+			body.replaceChildren(C.createElement('p', {
+				class: 'bc-field__hint',
+				text: t('budgetcheck', 'Not enough entries yet this month to project an outcome.'),
+			}));
+			article.hidden = false;
+			return true;
+		}
+		const fmt = (env) => (env && env.formatted) || '—';
+		const rows = [
+			[t('budgetcheck', 'So far'), fmt(fc.mtd && fc.mtd.expense)],
+			[t('budgetcheck', 'Projected month end'), fmt(fc.projected && fc.projected.expense)],
+			[t('budgetcheck', 'Budget used (projected)'), fc.budget && fc.budget.projectedConsumptionRatio !== null && fc.budget.projectedConsumptionRatio !== undefined
+				? Math.round(fc.budget.projectedConsumptionRatio * 100) + '%'
+				: t('budgetcheck', 'No budget planned')],
+		];
+		body.replaceChildren(...rows.map(([k, v]) => C.createElement('p', { class: 'bc-insight__row' }, [
+			C.createElement('span', { class: 'bc-insight__k', text: k }),
+			C.createElement('strong', { class: 'bc-insight__v', text: v }),
+		])));
+		body.appendChild(C.createElement('p', {
+			class: 'bc-field__hint',
+			text: t('budgetcheck', 'A projection, not a promise: month-to-date pace plus scheduled recurring bookings.'),
+		}));
+		article.hidden = false;
+		return true;
+	}
+
+	function renderTopPayees(res) {
+		const body = insightBody('payees');
+		const article = document.querySelector('[data-bc-insight="payees"]');
+		if (!body || !article) return false;
+		const payees = (res && res.payees) || [];
+		if (payees.length === 0) {
+			body.replaceChildren(C.createElement('p', {
+				class: 'bc-field__hint',
+				text: t('budgetcheck', 'No payees recorded this month yet.'),
+			}));
+			article.hidden = false;
+			return true;
+		}
+		const list = C.createElement('ol', { class: 'bc-insight__list' });
+		payees.forEach((p) => {
+			list.appendChild(C.createElement('li', { class: 'bc-insight__row' }, [
+				C.createElement('span', { class: 'bc-insight__k', text: p.name }),
+				C.createElement('strong', {
+					class: 'bc-insight__v',
+					text: (p.total && p.total.formatted) || '—'
+						+ (p.shareRatio !== undefined ? ' · ' + Math.round(p.shareRatio * 100) + '%' : ''),
+				}),
+			]));
+		});
+		body.replaceChildren(list);
+		article.hidden = false;
+		return true;
+	}
+
+	function renderTrendSelect(categories) {
+		const body = insightBody('trend');
+		const article = document.querySelector('[data-bc-insight="trend"]');
+		const select = body && body.querySelector('[data-bc-insight-cat-select]');
+		if (!body || !article || !select) return false;
+		const expenses = (categories || []).filter((c) => c.isActive && c.type === 'expense');
+		if (expenses.length === 0) {
+			article.hidden = true;
+			return false;
+		}
+		if (select.options.length === 0) {
+			expenses.forEach((c) => select.appendChild(C.createElement('option', { value: String(c.id), text: c.name })));
+			// NH-04: optional A-vs-B overlay — a second "compare with" select
+			// keeps the chart readable (one extra colour, not N).
+			const cmp = C.createElement('select', {
+				class: 'bc-input bc-insight-compare',
+				attrs: { 'data-bc-insight-compare-select': '', 'aria-label': t('budgetcheck', 'Compare with') },
+			});
+			cmp.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'No comparison') }));
+			expenses.forEach((c) => cmp.appendChild(C.createElement('option', { value: String(c.id), text: c.name })));
+			select.insertAdjacentElement('afterend', cmp);
+			const reload = () => loadTrend(Number(select.value), Number(cmp.value) || null);
+			select.addEventListener('change', reload);
+			cmp.addEventListener('change', reload);
+		}
+		const cmpSel = body.querySelector('[data-bc-insight-compare-select]');
+		loadTrend(Number(select.value) || expenses[0].id, Number(cmpSel && cmpSel.value) || null);
+		article.hidden = false;
+		return true;
+	}
+
+	let trendSeq = 0;
+	async function loadTrend(categoryId, compareId) {
+		const chartHost = document.querySelector('[data-bc-insight-trend-chart]');
+		if (!chartHost || !categoryId) return;
+		const seq = ++trendSeq;
+		chartHost.setAttribute('aria-busy', 'true');
+		const fetchOne = (cid) => Api.get('/apps/budgetcheck/api/category-trend', {
+			workspaceId: ws.id,
+			categoryId: cid,
+			months: 12,
+			direction: 'expense',
+		}).then((res) => ((res && res.trend && res.trend.series) || []));
+		try {
+			const [seriesA, seriesB] = await Promise.all([
+				fetchOne(categoryId),
+				compareId ? fetchOne(compareId) : Promise.resolve(null),
+			]);
+			if (seq !== trendSeq) return;
+			renderTrendChart(chartHost, seriesA, seriesB);
+		} catch (err) {
+			if (seq !== trendSeq) return;
+			chartHost.replaceChildren(C.createElement('p', {
+				class: 'bc-field__hint',
+				text: t('budgetcheck', 'Could not load the trend.'),
+			}));
+		} finally {
+			if (seq === trendSeq) chartHost.setAttribute('aria-busy', 'false');
+		}
+	}
+
+	/**
+	 * CSS/DOM bars only (NN-03 of the analytics spec — no chart library). The
+	 * numbers are the semantic content; bars are aria-hidden decoration.
+	 */
+	function renderTrendChart(host, series, compareSeries) {
+		host.replaceChildren();
+		if (!series.length && !(compareSeries && compareSeries.length)) {
+			host.appendChild(C.createElement('p', { class: 'bc-field__hint', text: t('budgetcheck', 'No bookings in this category yet.') }));
+			return;
+		}
+		const sumOf = (s) => ((s && s.actual && s.actual.minor) || 0) + ((s && s.specials && s.specials.minor) || 0);
+		const max = Math.max(
+			1,
+			...series.map(sumOf),
+			...(compareSeries || []).map(sumOf),
+		);
+		const byMonth = {};
+		(compareSeries || []).forEach((s) => { byMonth[s.yearMonth] = s; });
+		// div + role="list"/"listitem": same AT semantics as ul/li but stays
+		// marker-free by design — a bare <ul> trips the rendered-surface
+		// contract's list-marker rule.
+		const ul = C.createElement('div', { class: 'bc-trend-bars', attrs: { role: 'list' } });
+		series.forEach((s) => {
+			const total = sumOf(s);
+			const pct = Math.round((total / max) * 100);
+			const li = C.createElement('div', { class: 'bc-trend-bars__item', attrs: { role: 'listitem' } });
+			const bar = C.createElement('span', {
+				class: 'bc-trend-bars__bar' + (total === 0 ? ' bc-trend-bars__bar--empty' : ''),
+				attrs: { 'aria-hidden': 'true' },
+			});
+			bar.style.height = Math.max(total === 0 ? 2 : 6, pct) + '%';
+			li.appendChild(bar);
+			const other = compareSeries ? byMonth[s.yearMonth] : null;
+			if (compareSeries) {
+				const otherTotal = other ? sumOf(other) : 0;
+				const barB = C.createElement('span', {
+					class: 'bc-trend-bars__bar bc-trend-bars__bar--compare' + (otherTotal === 0 ? ' bc-trend-bars__bar--empty' : ''),
+					attrs: { 'aria-hidden': 'true' },
+				});
+				barB.style.height = Math.max(otherTotal === 0 ? 2 : 6, Math.round((otherTotal / max) * 100)) + '%';
+				li.appendChild(barB);
+			}
+			const val = C.createElement('span', {
+				class: 'bc-trend-bars__val',
+				text: compareSeries
+					? ((s.actual && s.actual.formatted) || '—') + ' / ' + ((other && other.actual && other.actual.formatted) || '—')
+					: ((s.actual && s.actual.formatted) || '—'),
+			});
+			const label = C.createElement('span', {
+				class: 'bc-trend-bars__label',
+				text: String(s.yearMonth).slice(5),
+			});
+			li.appendChild(val);
+			li.appendChild(label);
+			ul.appendChild(li);
+		});
+		host.appendChild(ul);
 	}
 
 	/*

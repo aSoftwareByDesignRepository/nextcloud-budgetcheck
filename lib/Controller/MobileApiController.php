@@ -23,7 +23,6 @@ use OCA\BudgetCheck\Service\MobileErrorCodes;
 use OCA\BudgetCheck\Service\MobileHomeKpi;
 use OCA\BudgetCheck\Service\MobileIdempotencyService;
 use OCA\BudgetCheck\Service\MobileMutationChannel;
-use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
@@ -32,7 +31,6 @@ use OCA\BudgetCheck\Service\TransactionExportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 use OCA\BudgetCheck\Service\WorkspaceDeletionService;
-use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -79,13 +77,13 @@ class MobileApiController extends Controller
 		private readonly SummaryService $summaries,
 		private readonly RecurringRuleService $recurring,
 		private readonly MobileIdempotencyService $idempotency,
-		private readonly MobilePushService $push,
 		private readonly RateLimitService $rateLimit,
 		private readonly TransactionAttachmentService $attachments,
 		private readonly TransactionExportService $transactionExport,
-		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,
+		private readonly ?\OCA\BudgetCheck\Service\PayeeService $payees = null,
+		private readonly ?\OCA\BudgetCheck\Service\AnalyticsService $analytics = null,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -97,7 +95,6 @@ class MobileApiController extends Controller
 		return $this->safe(function (string $userId): array {
 			$user = $this->userSession->getUser();
 			$displayName = $user?->getDisplayName() ?? $userId;
-			$pushAvailable = $this->appManager->isEnabledForUser('notifications');
 			return [
 				'serverTime' => (new \DateTimeImmutable('now'))->format(\DateTimeInterface::ATOM),
 				'companion' => [
@@ -110,11 +107,15 @@ class MobileApiController extends Controller
 				],
 				'capabilities' => [
 					'offlineCreate' => true,
-					'push' => $pushAvailable,
 					'tax' => true,
 					'recurringSuggestions' => true,
 					'attachments' => true,
 					'transactionsExport' => true,
+					'yearlyCategoryCompare' => true,
+					'payees' => true,
+					'categorizationRules' => true,
+					'monthForecast' => true,
+					'topPayees' => true,
 					'canCreateWorkspace' => $this->access->canCreateAnyWorkspace($userId),
 					'canCreateStandardWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_STANDARD),
 					'canCreatePrivateWorkspace' => $this->access->canCreateWorkspace($userId, AccessControlService::PRIVACY_PRIVATE),
@@ -455,6 +456,117 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	public function yearlyCategoryCompare(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			// Strict 4-digit years — same contract as the web endpoint (spec:
+			// '2e3', ' 2025', 'abc' are 400s, never silently coerced; equal
+			// years are a 400 raised inside the service).
+			$year = $this->strictYearParam('year', (int)date('Y'));
+			$compareYear = $this->strictYearParam('compareYear', $year - 1);
+			$compare = $this->summaries->yearlyCategoryCompare($workspaceId, $userId, $year, $compareYear);
+			$categories = [];
+			foreach ((array)($compare['categories'] ?? []) as $row) {
+				$months = [];
+				foreach ((array)($row['months'] ?? []) as $m) {
+					$months[] = [
+						'month' => (int)($m['month'] ?? 0),
+						'yearActualMinor' => $this->envelopeMinor(($m['year'] ?? [])['actual'] ?? null),
+						'yearSpecialsMinor' => $this->envelopeMinor(($m['year'] ?? [])['specials'] ?? null),
+						'compareActualMinor' => $this->envelopeMinor(($m['compareYear'] ?? [])['actual'] ?? null),
+						'compareSpecialsMinor' => $this->envelopeMinor(($m['compareYear'] ?? [])['specials'] ?? null),
+					];
+				}
+				$categories[] = [
+					'categoryId' => (int)$row['categoryId'],
+					'name' => (string)$row['name'],
+					'direction' => (string)$row['direction'],
+					'isActive' => (bool)$row['isActive'],
+					'isSavingsTransfer' => (bool)$row['isSavingsTransfer'],
+					'yearActualMinor' => $this->envelopeMinor($row['year']['actual'] ?? null),
+					'yearSpecialsMinor' => $this->envelopeMinor($row['year']['specials'] ?? null),
+					'yearPlannedMinor' => $this->envelopeMinor($row['year']['planned'] ?? null),
+					'yearEntryCount' => (int)($row['year']['entryCount'] ?? 0),
+					'compareActualMinor' => $this->envelopeMinor($row['compareYear']['actual'] ?? null),
+					'compareSpecialsMinor' => $this->envelopeMinor($row['compareYear']['specials'] ?? null),
+					'comparePlannedMinor' => $this->envelopeMinor($row['compareYear']['planned'] ?? null),
+					'compareEntryCount' => (int)($row['compareYear']['entryCount'] ?? 0),
+					'deltaMinor' => $this->envelopeMinor($row['delta']['absolute'] ?? null),
+					'deltaPercent' => $row['delta']['percent'] ?? null,
+					'deltaKind' => (string)$row['delta']['kind'],
+					'months' => $months,
+				];
+			}
+			return [
+				'year' => $year,
+				'compareYear' => $compareYear,
+				'currencyCode' => (string)($compare['workspace']['currencyCode'] ?? 'EUR'),
+				'currencyDecimals' => (int)($compare['workspace']['currencyDecimals'] ?? 2),
+				'categories' => $categories,
+			];
+		});
+	}
+
+	/** Same strict year rule as ApiController::strictYearParam — kept local so the mobile contract cannot drift silently. */
+	private function strictYearParam(string $name, int $default): int
+	{
+		$raw = $this->request->getParam($name);
+		if ($raw === null || $raw === '') {
+			return $default;
+		}
+		$raw = (string)$raw;
+		if (!preg_match('/^\d{4}$/', $raw)) {
+			throw new \InvalidArgumentException($name . ' must be a 4-digit year.');
+		}
+		return (int)$raw;
+	}
+
+	/**
+	 * Active payees for the transaction form's picker — additive mirror of the
+	 * web /api/payees search (spec: payee-and-categorization-rules §8).
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listPayees(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$search = (string)$this->request->getParam('search', '');
+			$payees = $this->payees === null ? []
+				: $this->payees->searchForWorkspace($workspaceId, $userId, $search, 50);
+			return ['payees' => $payees];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function monthForecast(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			return ['forecast' => $this->analytics->monthForecast($workspaceId, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function topPayees(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$period = (string)$this->request->getParam('period', 'month');
+			$direction = (string)$this->request->getParam('direction', 'expense');
+			$limit = (int)$this->request->getParam('limit', 10);
+			return ['result' => $this->analytics->topPayees($workspaceId, $userId, $period, $direction, $limit)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function periodSummary(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -743,33 +855,6 @@ class MobileApiController extends Controller
 			}
 			$created = $this->recurring->generate($ruleId, $userId, $workspace, $this->transactions, $category);
 			return ['transaction' => $created];
-		});
-	}
-
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function registerPushToken(): JSONResponse
-	{
-		return $this->safe(function (string $userId): array {
-			$this->assertSafeMutationChannel();
-			$payload = $this->payload();
-			$token = (string)($payload['pushToken'] ?? $payload['token'] ?? '');
-			$platform = (string)($payload['platform'] ?? 'android');
-			$this->push->register($userId, $token, $platform);
-			return ['registered' => true];
-		});
-	}
-
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function unregisterPushToken(): JSONResponse
-	{
-		return $this->safe(function (string $userId): array {
-			$this->assertSafeMutationChannel();
-			$payload = $this->payload();
-			$token = (string)($payload['pushToken'] ?? $payload['token'] ?? '');
-			$this->push->unregister($userId, $token);
-			return ['unregistered' => true];
 		});
 	}
 
@@ -1117,6 +1202,8 @@ class MobileApiController extends Controller
 			'notes',
 			'isSpecial',
 			'bookingStatusId',
+			'payeeId',
+			'payeeName',
 			'entryAmountBasis',
 			'vatRateBp',
 		];

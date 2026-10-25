@@ -212,7 +212,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-04.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-04.png</screenshot>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-05.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-05.png</screenshot>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-06.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/budgetcheck-screenshot-06.png</screenshot>
-	<version>1.4.9</version>
+	<version>1.5.0</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>BudgetCheck</namespace>
@@ -236,6 +236,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	     app to excluded users when access is restricted. -->
 	<background-jobs>
 		<job>OCA\BudgetCheck\BackgroundJob\RecurringDueJob</job>
+		<job>OCA\BudgetCheck\BackgroundJob\AlertEvaluationJob</job>
 	</background-jobs>
 	<commands>
 		<command>OCA\BudgetCheck\Command\UpgradeBackupCommand</command>

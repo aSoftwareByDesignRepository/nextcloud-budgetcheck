@@ -13,14 +13,16 @@ final class UninstallDropTablesTest extends TestCase
 	public function testCatalogMatchesExplicitUninstallDropList(): void
 	{
 		self::assertSame([
+			'bc_alert_log',
 			'bc_audit_log',
 			'bc_booking_statuses',
 			'bc_budget_defaults',
 			'bc_budgets',
 			'bc_categories',
+			'bc_category_rules',
 			'bc_idempotency',
-			'bc_mobile_push',
 			'bc_monthly_snapshots',
+			'bc_payees',
 			'bc_recurring_rules',
 			'bc_savings_targets',
 			'bc_transactions',

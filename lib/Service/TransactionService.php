@@ -63,12 +63,14 @@ class TransactionService
 		$limit = max(1, min(500, (int)($filters['limit'] ?? 100)));
 		$offset = max(0, (int)($filters['offset'] ?? 0));
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
-			->from('bc_transactions')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$qb->select('t.*')
+			->selectAlias('p.name', 'payee_name')
+			->from('bc_transactions', 't')
+			->leftJoin('t', 'bc_payees', 'p', $qb->expr()->eq('t.payee_id', 'p.id'))
+			->where($qb->expr()->eq('t.workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$window = $this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
-		$qb->orderBy('booking_date', 'DESC')
-			->addOrderBy('id', 'DESC')
+		$qb->orderBy('t.booking_date', 'DESC')
+			->addOrderBy('t.id', 'DESC')
 			->setMaxResults($limit)
 			->setFirstResult($offset);
 		$result = $qb->executeQuery();
@@ -109,12 +111,14 @@ class TransactionService
 		unset($filters['includeDeleted'], $filters['limit'], $filters['offset']);
 		$total = $this->countForWorkspace($workspaceId, $filters, $workspace);
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
-			->from('bc_transactions')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		$qb->select('t.*')
+			->selectAlias('p.name', 'payee_name')
+			->from('bc_transactions', 't')
+			->leftJoin('t', 'bc_payees', 'p', $qb->expr()->eq('t.payee_id', 'p.id'))
+			->where($qb->expr()->eq('t.workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
-		$qb->orderBy('booking_date', 'ASC')
-			->addOrderBy('id', 'ASC')
+		$qb->orderBy('t.booking_date', 'ASC')
+			->addOrderBy('t.id', 'ASC')
 			// Fetch one row beyond the cap so the caller detects "would have
 			// truncated" atomically instead of trusting the earlier count.
 			->setMaxResults(max(1, $maxRows) + 1);
@@ -131,8 +135,9 @@ class TransactionService
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*', 'count'))
-			->from('bc_transactions')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+			->from('bc_transactions', 't')
+			->leftJoin('t', 'bc_payees', 'p', $qb->expr()->eq('t.payee_id', 'p.id'))
+			->where($qb->expr()->eq('t.workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
@@ -143,9 +148,13 @@ class TransactionService
 	private function analyticsForWorkspace(int $workspaceId, array $filters, array $workspace): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('booking_date', 'direction', 'amount_minor', 'category_id', 'is_planned', 'is_special')
-			->from('bc_transactions')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
+		// Same alias + payee join as the list/count/export queries — the shared
+		// filter pipeline may reference p.name (q-search) and t.id (empty-set
+		// clauses); a join-less query would 500 on "Unknown column 'p.name'".
+		$qb->select('t.booking_date', 't.direction', 't.amount_minor', 't.category_id', 't.is_planned', 't.is_special')
+			->from('bc_transactions', 't')
+			->leftJoin('t', 'bc_payees', 'p', $qb->expr()->eq('t.payee_id', 'p.id'))
+			->where($qb->expr()->eq('t.workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)));
 		$window = $this->applyFiltersToTransactionQuery($qb, $workspaceId, $filters, $workspace);
 		$result = $qb->executeQuery();
 		$rows = [];
@@ -294,7 +303,7 @@ class TransactionService
 		if ($uncategorizedOnly) {
 			$uncatId = $this->categories->internalUncategorizedCategoryId($workspaceId);
 			if ($uncatId === null) {
-				$qb->andWhere($qb->expr()->eq('id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
+				$qb->andWhere($qb->expr()->eq('t.id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
 			} else {
 				$qb->andWhere($qb->expr()->eq('category_id', $qb->createNamedParameter($uncatId, \PDO::PARAM_INT)));
 				$qb->andWhere($qb->expr()->eq('direction', $qb->createNamedParameter(self::DIRECTION_EXPENSE)));
@@ -306,7 +315,7 @@ class TransactionService
 		if ($groupKey !== '') {
 			$groupCategoryIds = $this->categoryIdsForGroupFilter($workspaceId, $groupKey);
 			if ($groupCategoryIds === []) {
-				$qb->andWhere($qb->expr()->eq('id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
+				$qb->andWhere($qb->expr()->eq('t.id', $qb->createNamedParameter(0, \PDO::PARAM_INT)));
 			} else {
 				$qb->andWhere($qb->expr()->in('category_id', $qb->createNamedParameter($groupCategoryIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
 			}
@@ -317,14 +326,55 @@ class TransactionService
 		if (isset($filters['isSpecial']) && $filters['isSpecial'] !== null) {
 			$qb->andWhere($qb->expr()->eq('is_special', $qb->createNamedParameter((bool)$filters['isSpecial'], \PDO::PARAM_BOOL)));
 		}
+		if (!empty($filters['payeeId'])) {
+			$qb->andWhere($qb->expr()->eq('payee_id', $qb->createNamedParameter((int)$filters['payeeId'], \PDO::PARAM_INT)));
+		}
 		if (!empty($filters['q'])) {
 			$needle = '%' . $this->db->escapeLikeParameter(trim((string)$filters['q'])) . '%';
+			// Payee name matches through the payee join (AC-SEARCH-1 of the
+			// payee spec): title OR notes OR the linked payee's name.
 			$qb->andWhere($qb->expr()->orX(
 				$qb->expr()->iLike('title', $qb->createNamedParameter($needle)),
-				$qb->expr()->iLike('notes', $qb->createNamedParameter($needle))
+				$qb->expr()->iLike('notes', $qb->createNamedParameter($needle)),
+				$qb->expr()->iLike('p.name', $qb->createNamedParameter($needle))
 			));
 		}
 		return ['from' => $from, 'to' => $to];
+	}
+
+	/**
+	 * Resolve optional payee input into a payee_id for the write path.
+	 * Foreign-workspace ids collapse to access_denied (IDOR-safe); a raw name
+	 * lazily creates the payee (idempotent via name_norm).
+	 */
+	private function resolvePayeeIdForWrite(int $workspaceId, string $userId, array $payload): ?int
+	{
+		$payeeId = $payload['payeeId'] ?? $payload['payee_id'] ?? null;
+		$payeeName = $payload['payeeName'] ?? $payload['payee'] ?? null;
+		if (($payeeId === null || $payeeId === '' || (int)$payeeId === 0)
+			&& ($payeeName === null || trim((string)$payeeName) === '')) {
+			return null;
+		}
+		$payee = $this->payeeService()->resolveForWrite($workspaceId, $userId, $payeeId, $payeeName);
+		return $payee !== null ? (int)$payee['id'] : null;
+	}
+
+	/**
+	 * Lazy accessor so TransactionService does not take a hard constructor
+	 * dependency on the newer PayeeService (service wiring stays additive).
+	 */
+	private ?PayeeService $payeeServiceInstance = null;
+	private function payeeService(): PayeeService
+	{
+		if ($this->payeeServiceInstance === null) {
+			$this->payeeServiceInstance = new PayeeService(
+				$this->db,
+				$this->access,
+				$this->timeFactory,
+				$this->audit,
+			);
+		}
+		return $this->payeeServiceInstance;
 	}
 
 	/**
@@ -476,6 +526,9 @@ class TransactionService
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
 		$isSpecial = StrictBool::field($payload, 'isSpecial') || ($category['isSpecial'] ?? false);
 		$externalRef = $this->normaliseExternalRef($payload['externalRef'] ?? null);
+		// Optional counterparty — null keeps the column empty (InvoiceCheck and
+		// old clients never send it; AC-COMPAT-1 of the payee spec).
+		$payeeId = $this->resolvePayeeIdForWrite($workspaceId, $userId, $payload);
 		$bookingStatusId = $this->resolveBookingStatusId($workspace, $bookingStatus);
 		$isPlanned = StrictBool::field($payload, 'isPlanned');
 		$recurringRuleId = isset($payload['recurringRuleId']) ? (int)$payload['recurringRuleId'] : null;
@@ -550,6 +603,7 @@ class TransactionService
 					'title' => $qb->createNamedParameter($title),
 					'notes' => $qb->createNamedParameter($notes),
 					'is_special' => $qb->createNamedParameter($isSpecial, \PDO::PARAM_BOOL),
+					'payee_id' => $qb->createNamedParameter($payeeId, $payeeId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'external_ref' => $qb->createNamedParameter($externalRef),
 					'booking_status_id' => $qb->createNamedParameter($bookingStatusId, $bookingStatusId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'recurring_rule_id' => $qb->createNamedParameter($recurringRuleId, $recurringRuleId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
@@ -712,6 +766,15 @@ class TransactionService
 			if ($externalRef !== ($existing['external_ref'] ?? null)) {
 				$updates['external_ref'] = $externalRef;
 				$logChanges['externalRef'] = $externalRef;
+			}
+		}
+		// Payee edits are explicit user input only — unrelated transaction
+		// updates never re-evaluate rules (NN-04 of the payee spec).
+		if (array_key_exists('payeeId', $payload) || array_key_exists('payeeName', $payload) || array_key_exists('payee', $payload)) {
+			$payeeId = $this->resolvePayeeIdForWrite((int)$workspace['id'], $userId, $payload);
+			if ($payeeId !== ($existing['payee_id'] !== null ? (int)$existing['payee_id'] : null)) {
+				$updates['payee_id'] = $payeeId;
+				$logChanges['payeeId'] = $payeeId;
 			}
 		}
 		if (array_key_exists('bookingStatusId', $payload)) {
@@ -1103,6 +1166,8 @@ class TransactionService
 			'title' => (string)$row['title'],
 			'notes' => $row['notes'] !== null ? (string)$row['notes'] : null,
 			'isSpecial' => (bool)$row['is_special'],
+			'payeeId' => isset($row['payee_id']) && $row['payee_id'] !== null ? (int)$row['payee_id'] : null,
+			'payeeName' => isset($row['payee_name']) && $row['payee_name'] !== null ? (string)$row['payee_name'] : null,
 			'externalRef' => $row['external_ref'] !== null ? (string)$row['external_ref'] : null,
 			'bookingStatusId' => $row['booking_status_id'] === null ? null : (int)$row['booking_status_id'],
 			'recurringRuleId' => isset($row['recurring_rule_id']) && $row['recurring_rule_id'] !== null

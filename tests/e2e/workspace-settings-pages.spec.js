@@ -15,10 +15,14 @@ const ALL_SECTIONS = [
   'workspace',
   'tax',
   'categories',
+  'payees',
+  'categorization-rules',
   'budget-defaults',
   'booking-statuses',
   'members',
   'recurring',
+  'notifications',
+  'alerts',
   'help',
 ];
 
@@ -37,7 +41,7 @@ function visibleSections(type, canManage) {
     if (section === 'planning-view') return type === 'household';
     if (section === 'budget-defaults') return type === 'household' && canManage;
     if (section === 'booking-statuses') return type === 'project';
-    if (section === 'members' || section === 'recurring') return canManage;
+    if (section === 'members' || section === 'recurring' || section === 'categorization-rules') return canManage;
     return true;
   });
 }

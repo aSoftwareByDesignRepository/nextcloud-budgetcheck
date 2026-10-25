@@ -31,10 +31,14 @@ $currencyChangeAllowed = array_key_exists('currencyChangeAllowed', $_)
 		'workspace' => 'workspace.php',
 		'tax' => 'tax.php',
 		'categories' => 'categories.php',
+		'payees' => 'payees.php',
+		'categorization-rules' => 'categorization-rules.php',
 		'budget-defaults' => 'budget-defaults.php',
 		'booking-statuses' => 'booking-statuses.php',
 		'members' => 'members.php',
 		'recurring' => 'recurring.php',
+		'notifications' => 'notifications.php',
+		'alerts' => 'alerts.php',
 		'help' => 'help.php',
 	];
 	$bcRequestedSection = (string) ($_['settingsSection'] ?? '');

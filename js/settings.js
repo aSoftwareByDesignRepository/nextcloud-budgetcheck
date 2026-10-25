@@ -87,6 +87,35 @@
 			return;
 		}
 
+		if (section === 'payees') {
+			if (Ws.workspace) {
+				loadPayees();
+			}
+			return;
+		}
+
+		if (section === 'categorization-rules') {
+			if (Ws.workspace && Ws.canManage) {
+				loadCatRules();
+			}
+			return;
+		}
+
+		if (section === 'notifications') {
+			if (Ws.workspace) {
+				loadAlertPrefs();
+				wireAlertPrefsForm();
+			}
+			return;
+		}
+
+		if (section === 'alerts') {
+			if (Ws.workspace) {
+				loadAlertLog();
+			}
+			return;
+		}
+
 		if (section === 'budget-defaults') {
 			if (Ws.canManage) {
 				loadBudgetDefaults();
@@ -2330,6 +2359,400 @@
 		}
 		const wrapper = C.createElement('label', { class: 'bc-field' }, children);
 		form.appendChild(wrapper);
+	}
+
+	// ------------------------------------------------------------------
+	//  Payees (US-100): list + create + rename + merge + deactivate.
+	// ------------------------------------------------------------------
+
+	async function loadPayees() {
+		const tbody = document.querySelector('[data-bc-payee-rows]');
+		if (!tbody) return;
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/payees', {
+				workspaceId: Ws.workspace.id,
+				includeInactive: '1',
+			});
+			tbody.replaceChildren();
+			const list = data.payees || [];
+			list.forEach((p) => tbody.appendChild(renderPayeeRow(p)));
+			if (list.length === 0) {
+				tbody.appendChild(C.createElement('tr', null, [
+					C.createElement('td', { attrs: { colspan: '4' }, class: 'bc-loading', text: t('budgetcheck', 'No payees yet — they appear when bookings name a payee.') }),
+				]));
+			}
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+		document.querySelectorAll('[data-bc-action="open-create-payee"]').forEach((btn) => {
+			btn.addEventListener('click', () => { void openPayeeModal(null); });
+		});
+	}
+
+	function renderPayeeRow(p) {
+		const tr = C.createElement('tr');
+		tr.appendChild(C.createElement('td', { text: p.name }));
+		tr.appendChild(C.createElement('td', { text: p.bookingCount === null || p.bookingCount === undefined ? '—' : String(p.bookingCount) }));
+		tr.appendChild(C.createElement('td', { text: p.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
+		if (Ws.canManage) {
+			const actions = C.createElement('td', { class: 'bc-table-actions-cell' });
+			const group = C.createElement('div', {
+				class: 'bc-table-actions',
+				attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for {title}').replace('{title}', p.name) },
+			});
+			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
+			edit.addEventListener('click', () => { void openPayeeModal(p); });
+			group.appendChild(edit);
+			if (p.isActive) {
+				const off = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
+				off.addEventListener('click', () => { void deactivatePayee(p); });
+				group.appendChild(off);
+			}
+			actions.appendChild(group);
+			tr.appendChild(actions);
+		}
+		return tr;
+	}
+
+	async function openPayeeModal(payee) {
+		const isEdit = !!payee;
+		let allPayees = [];
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/payees', { workspaceId: Ws.workspace.id });
+			allPayees = data.payees || [];
+		} catch (err) {
+			Msg.handleApiError(err);
+			return;
+		}
+		C.openModal({
+			title: isEdit ? t('budgetcheck', 'Edit payee') : t('budgetcheck', 'New payee'),
+			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add payee'),
+			render: () => {
+				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
+				const name = C.createElement('input', { type: 'text', name: 'name', class: 'bc-input', maxlength: 180, required: true, value: payee ? payee.name : '' });
+				wrap(form, t('budgetcheck', 'Name'), name, t('budgetcheck', 'The counterparty name as it appears on bookings.'));
+				if (isEdit) {
+					const mergeSelect = C.createElement('select', { name: 'mergeTargetId', class: 'bc-input' });
+					mergeSelect.appendChild(C.createElement('option', { value: '', text: t('budgetcheck', 'Keep as separate payee') }));
+					allPayees.filter((p) => String(p.id) !== String(payee.id)).forEach((p) => {
+						mergeSelect.appendChild(C.createElement('option', { value: String(p.id), text: t('budgetcheck', 'Merge into: {name}').replace('{name}', p.name) }));
+					});
+					wrap(form, t('budgetcheck', 'Merge'), mergeSelect, t('budgetcheck', 'Merge this payee into another one — all bookings move and this payee is removed. Cannot be undone.'));
+				}
+				return form;
+			},
+			onSubmit: async ({ body: form }) => {
+				const mergeTargetId = form.querySelector('[name="mergeTargetId"]')?.value || '';
+				if (isEdit && mergeTargetId) {
+					const target = allPayees.find((p) => String(p.id) === mergeTargetId);
+					if (!window.confirm(t('budgetcheck', 'Merge {source} into {target}? All bookings move and {source} is removed.')
+						.replace('{source}', payee.name)
+						.replace('{target}', target ? target.name : ''))) {
+						return false;
+					}
+					await Api.put('/apps/budgetcheck/api/payees/' + payee.id, { action: 'mergeInto', targetId: Number(mergeTargetId) });
+				} else if (isEdit) {
+					await Api.put('/apps/budgetcheck/api/payees/' + payee.id, { name: form.querySelector('[name="name"]').value.trim() });
+				} else {
+					await Api.post('/apps/budgetcheck/api/payees', {
+						workspaceId: Ws.workspace.id,
+						name: form.querySelector('[name="name"]').value.trim(),
+					});
+				}
+				loadPayees();
+				return true;
+			},
+		});
+	}
+
+	async function deactivatePayee(p) {
+		try {
+			await Api.put('/apps/budgetcheck/api/payees/' + p.id, { isActive: false });
+			Msg.announce(t('budgetcheck', 'Payee deactivated.'), 'success');
+			loadPayees();
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	// ------------------------------------------------------------------
+	//  Categorization rules (US-103): CRUD + CAS + backfill preview/apply.
+	// ------------------------------------------------------------------
+
+	async function loadCatRules() {
+		const tbody = document.querySelector('[data-bc-catrule-rows]');
+		if (!tbody) return;
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/categorization-rules', { workspaceId: Ws.workspace.id });
+			tbody.replaceChildren();
+			const rules = data.rules || [];
+			rules.forEach((r) => tbody.appendChild(renderCatRuleRow(r)));
+			if (rules.length === 0) {
+				tbody.appendChild(C.createElement('tr', null, [
+					C.createElement('td', { attrs: { colspan: '9' }, class: 'bc-loading', text: t('budgetcheck', 'No rules yet. Rules fill in the category on import and offer suggestions in the editor.') }),
+				]));
+			}
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+		document.querySelectorAll('[data-bc-action="open-create-rule"]').forEach((btn) => {
+			btn.addEventListener('click', () => { void openCatRuleModal(null); });
+		});
+		document.querySelectorAll('[data-bc-action="backfill-rules-preview"]').forEach((btn) => {
+			btn.addEventListener('click', () => { void runBackfill(true); });
+		});
+		const exportLink = document.querySelector('[data-bc-rules-export]');
+		if (exportLink && Ws.workspace) {
+			exportLink.href = '/apps/budgetcheck/api/categorization-rules/export?workspaceId=' + encodeURIComponent(Ws.workspace.id);
+		}
+	}
+
+	function catRuleFieldLabel(field) {
+		return { title: t('budgetcheck', 'Title'), payee: t('budgetcheck', 'Payee'), notes: t('budgetcheck', 'Notes') }[field] || field;
+	}
+	function catRuleMatchLabel(m) {
+		return { contains: t('budgetcheck', 'contains'), equals: t('budgetcheck', 'equals'), starts_with: t('budgetcheck', 'starts with') }[m] || m;
+	}
+	function catRuleDirectionLabel(d) {
+		return { any: t('budgetcheck', 'Any'), income: t('budgetcheck', 'Income'), expense: t('budgetcheck', 'Expense') }[d] || d;
+	}
+
+	function renderCatRuleRow(r) {
+		const tr = C.createElement('tr');
+		tr.appendChild(C.createElement('td', { text: String(r.priority) }));
+		tr.appendChild(C.createElement('td', { text: catRuleFieldLabel(r.matchField) }));
+		tr.appendChild(C.createElement('td', { text: catRuleMatchLabel(r.matchType) + (r.useRegex ? ' (regex)' : '') }));
+		tr.appendChild(C.createElement('td', { text: r.pattern }));
+		tr.appendChild(C.createElement('td', { text: catRuleDirectionLabel(r.direction) }));
+		tr.appendChild(C.createElement('td', { text: r.categoryName || ('#' + r.categoryId) }));
+		tr.appendChild(C.createElement('td', { text: String(r.hitCount) }));
+		tr.appendChild(C.createElement('td', { text: r.isActive ? t('budgetcheck', 'Active') : t('budgetcheck', 'Inactive') }));
+		if (Ws.canManage) {
+			const actions = C.createElement('td', { class: 'bc-table-actions-cell' });
+			const group = C.createElement('div', {
+				class: 'bc-table-actions',
+				attrs: { role: 'group', 'aria-label': t('budgetcheck', 'Actions for rule {title}').replace('{title}', r.pattern) },
+			});
+			const edit = C.createElement('button', { type: 'button', class: 'button', text: t('budgetcheck', 'Edit') });
+			edit.addEventListener('click', () => { void openCatRuleModal(r); });
+			group.appendChild(edit);
+			if (r.isActive) {
+				const off = C.createElement('button', { type: 'button', class: 'button danger', text: t('budgetcheck', 'Deactivate') });
+				off.addEventListener('click', () => { void deactivateCatRule(r); });
+				group.appendChild(off);
+			}
+			actions.appendChild(group);
+			tr.appendChild(actions);
+		}
+		return tr;
+	}
+
+	async function openCatRuleModal(rule) {
+		const isEdit = !!rule;
+		let categories = [];
+		try {
+			const data = await Api.get('/apps/budgetcheck/api/categories', { workspaceId: Ws.workspace.id });
+			categories = (data.categories || []).filter((c) => c.isActive);
+		} catch (err) {
+			Msg.handleApiError(err);
+			return;
+		}
+		C.openModal({
+			title: isEdit ? t('budgetcheck', 'Edit rule') : t('budgetcheck', 'New rule'),
+			primaryLabel: isEdit ? t('budgetcheck', 'Save changes') : t('budgetcheck', 'Add rule'),
+			render: () => {
+				const form = C.createElement('form', { class: 'bc-form-grid bc-modal__form' });
+				const fieldSelect = C.createElement('select', { name: 'matchField', class: 'bc-input' }, [
+					C.createElement('option', { value: 'title', text: t('budgetcheck', 'Title') }),
+					C.createElement('option', { value: 'payee', text: t('budgetcheck', 'Payee') }),
+					C.createElement('option', { value: 'notes', text: t('budgetcheck', 'Notes') }),
+				]);
+				if (rule) fieldSelect.value = rule.matchField;
+				wrap(form, t('budgetcheck', 'Match field'), fieldSelect, t('budgetcheck', 'Which booking field the pattern is checked against.'));
+				const typeSelect = C.createElement('select', { name: 'matchType', class: 'bc-input' }, [
+					C.createElement('option', { value: 'contains', text: t('budgetcheck', 'contains') }),
+					C.createElement('option', { value: 'equals', text: t('budgetcheck', 'equals') }),
+					C.createElement('option', { value: 'starts_with', text: t('budgetcheck', 'starts with') }),
+				]);
+				if (rule) typeSelect.value = rule.matchType;
+				wrap(form, t('budgetcheck', 'Match type'), typeSelect, t('budgetcheck', 'Literal text matching — case and spacing are normalized automatically.'));
+				const pattern = C.createElement('input', { type: 'text', name: 'pattern', class: 'bc-input', maxlength: 255, required: true, value: rule ? rule.pattern : '' });
+				wrap(form, t('budgetcheck', 'Pattern'), pattern, t('budgetcheck', 'Text the field must match — for example ‘REWE’ or ‘salary’.'));
+				const directionSelect = C.createElement('select', { name: 'direction', class: 'bc-input' }, [
+					C.createElement('option', { value: 'any', text: t('budgetcheck', 'Any direction') }),
+					C.createElement('option', { value: 'income', text: t('budgetcheck', 'Income only') }),
+					C.createElement('option', { value: 'expense', text: t('budgetcheck', 'Expense only') }),
+				]);
+				if (rule) directionSelect.value = rule.direction;
+				wrap(form, t('budgetcheck', 'Direction'), directionSelect, t('budgetcheck', 'Limit the rule to income or expense bookings.'));
+				const catSelect = C.createElement('select', { name: 'categoryId', class: 'bc-input', required: true });
+				categories.forEach((c) => {
+					catSelect.appendChild(C.createElement('option', { value: String(c.id), text: c.name + ' (' + c.type + ')' }));
+				});
+				if (rule) catSelect.value = String(rule.categoryId);
+				wrap(form, t('budgetcheck', 'Category'), catSelect, t('budgetcheck', 'The category applied when the rule matches.'));
+				const prio = C.createElement('input', { type: 'number', name: 'priority', class: 'bc-input', step: '1', value: rule ? rule.priority : 100 });
+				wrap(form, t('budgetcheck', 'Priority'), prio, t('budgetcheck', 'Lower numbers win when several rules could match.'));
+				const regexRow = C.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
+				regexRow.appendChild(C.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Advanced') }));
+				const regexBool = C.createElement('span', { class: 'bc-boolean-control' });
+				const regexInput = C.createElement('input', { type: 'checkbox', name: 'useRegex', value: '1' });
+				regexInput.checked = !!(rule && rule.useRegex);
+				regexBool.appendChild(regexInput);
+				regexBool.appendChild(C.createElement('span', { class: 'bc-boolean-control__text', text: t('budgetcheck', 'Treat pattern as regular expression (advanced)') }));
+				regexRow.appendChild(regexBool);
+				form.appendChild(regexRow);
+				return form;
+			},
+			onSubmit: async ({ body: form }) => {
+				const payload = {
+					workspaceId: Ws.workspace.id,
+					matchField: form.querySelector('[name="matchField"]').value,
+					matchType: form.querySelector('[name="matchType"]').value,
+					pattern: form.querySelector('[name="pattern"]').value.trim(),
+					direction: form.querySelector('[name="direction"]').value,
+					categoryId: Number(form.querySelector('[name="categoryId"]').value),
+					priority: Number(form.querySelector('[name="priority"]').value) || 100,
+					useRegex: form.querySelector('[name="useRegex"]').checked,
+				};
+				if (isEdit) {
+					payload.version = rule.version;
+					await Api.put('/apps/budgetcheck/api/categorization-rules/' + rule.id, payload);
+				} else {
+					await Api.post('/apps/budgetcheck/api/categorization-rules', payload);
+				}
+				loadCatRules();
+				return true;
+			},
+		});
+	}
+
+	async function deactivateCatRule(r) {
+		try {
+			await Api.post('/apps/budgetcheck/api/categorization-rules/' + r.id + '/deactivate', {});
+			Msg.announce(t('budgetcheck', 'Rule deactivated.'), 'success');
+			loadCatRules();
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	async function runBackfill(dryRun) {
+		const hint = document.querySelector('[data-bc-backfill-result]');
+		try {
+			const res = await Api.post('/apps/budgetcheck/api/categorization-rules/backfill', {
+				workspaceId: Ws.workspace.id,
+				dryRun: dryRun,
+			});
+			const r = res.result || {};
+			if (dryRun) {
+				const msg = t('budgetcheck', 'Preview: {matched} of {scanned} uncategorized bookings would be filled. Apply now?')
+					.replace('{matched}', String(r.matched || 0))
+					.replace('{scanned}', String(r.scanned || 0));
+				if (hint) hint.textContent = msg;
+				if ((r.matched || 0) > 0 && window.confirm(msg)) {
+					await runBackfill(false);
+				}
+			} else {
+				Msg.announce(t('budgetcheck', 'Applied rules to {count} bookings.').replace('{count}', String(r.updated || 0)), 'success');
+			}
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	// ------------------------------------------------------------------
+	//  Notifications (US-400): per-user alert preferences.
+	// ------------------------------------------------------------------
+
+	async function loadAlertPrefs() {
+		const form = document.querySelector('[data-bc-alert-prefs-form]');
+		if (!form || !Ws.workspace) return;
+		try {
+			const res = await Api.get('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/alert-preferences');
+			const p = res.preferences || {};
+			const master = form.querySelector('[data-bc-alert-master]');
+			if (master) master.checked = !!p.alertsEnabled;
+			const types = p.types || {};
+			const map = { typeBudget: 'budget', typeRecurring: 'recurring', typeDigest: 'digest', typeSavings: 'savings' };
+			Object.keys(map).forEach((key) => {
+				const input = form.querySelector('[name="' + key + '"][type="checkbox"]');
+				if (input) input.checked = types[map[key]] !== false;
+			});
+			const threshold = form.querySelector('[data-bc-alert-threshold]');
+			if (threshold && p.thresholdPercent) threshold.value = String(p.thresholdPercent);
+			const qs = form.querySelector('[name="quietStart"]');
+			const qe = form.querySelector('[name="quietEnd"]');
+			if (qs && p.quietStart) qs.value = p.quietStart;
+			if (qe && p.quietEnd) qe.value = p.quietEnd;
+			const email = form.querySelector('[name="emailEnabled"][type="checkbox"]');
+			if (email) email.checked = p.emailEnabled === true;
+			const widget = form.querySelector('[name="dashboardWidgetEnabled"][type="checkbox"]');
+			if (widget) widget.checked = p.dashboardWidgetEnabled !== false;
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
+	}
+
+	function wireAlertPrefsForm() {
+		const form = document.querySelector('[data-bc-alert-prefs-form]');
+		if (!form) return;
+		form.addEventListener('submit', async (ev) => {
+			ev.preventDefault();
+			const checked = (name) => !!form.querySelector('[name="' + name + '"][type="checkbox"]')?.checked;
+			const payload = {
+				alertsEnabled: checked('alertsEnabled'),
+				typeBudget: checked('typeBudget'),
+				typeRecurring: checked('typeRecurring'),
+				typeDigest: checked('typeDigest'),
+				typeSavings: checked('typeSavings'),
+				thresholdPercent: Number(form.querySelector('[data-bc-alert-threshold]')?.value) || 80,
+				quietStart: form.querySelector('[name="quietStart"]')?.value || '',
+				quietEnd: form.querySelector('[name="quietEnd"]')?.value || '',
+				emailEnabled: checked('emailEnabled'),
+				dashboardWidgetEnabled: checked('dashboardWidgetEnabled'),
+			};
+			try {
+				await Api.put('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/alert-preferences', payload);
+				Msg.announce(t('budgetcheck', 'Notification settings saved.'), 'success');
+			} catch (err) {
+				Msg.handleApiError(err);
+			}
+		});
+	}
+
+	// ------------------------------------------------------------------
+	//  Alert log (NH-04): the member's own fired alerts.
+	// ------------------------------------------------------------------
+
+	async function loadAlertLog() {
+		const tbody = document.querySelector('[data-bc-alertlog-rows]');
+		if (!tbody || !Ws.workspace) return;
+		try {
+			const res = await Api.get('/apps/budgetcheck/api/workspaces/' + Ws.workspace.id + '/alerts', { limit: 100 });
+			tbody.replaceChildren();
+			const alerts = res.alerts || [];
+			const typeLabels = {
+				budget: t('budgetcheck', 'Budget threshold'),
+				recurring: t('budgetcheck', 'Recurring'),
+				digest: t('budgetcheck', 'Digest'),
+				savings: t('budgetcheck', 'Savings'),
+			};
+			alerts.forEach((a) => {
+				const tr = C.createElement('tr');
+				tr.appendChild(C.createElement('td', { text: Dates && Dates.formatDisplayDateTime ? Dates.formatDisplayDateTime(a.firedAt) : String(a.firedAt) }));
+				tr.appendChild(C.createElement('td', { text: typeLabels[a.type] || a.type }));
+				tr.appendChild(C.createElement('td', { text: a.subject }));
+				tbody.appendChild(tr);
+			});
+			if (alerts.length === 0) {
+				tbody.appendChild(C.createElement('tr', null, [
+					C.createElement('td', { attrs: { colspan: '3' }, class: 'bc-loading', text: t('budgetcheck', 'No alerts yet.') }),
+				]));
+			}
+		} catch (err) {
+			Msg.handleApiError(err);
+		}
 	}
 
 	function boot(deps) {

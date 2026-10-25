@@ -29,6 +29,7 @@ class ExportController extends Controller
 		private HouseholdYearlyExportService $exportService,
 		private TransactionExportService $transactionExportService,
 		private RateLimitService $rateLimit,
+		private ?\OCA\BudgetCheck\Service\CategorizationRuleService $rules = null,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -40,12 +41,32 @@ class ExportController extends Controller
 		try {
 			$userId = $this->access->currentUserId();
 			$workspaceId = (int)$this->request->getParam('workspaceId', 0);
-			$year = (int)$this->request->getParam('year', (int)date('Y'));
+			// Same strict year contract as the JSON endpoints (NN-06): '2e3',
+			// ' 2025' and equal years are 400s — never silently coerced.
+			$yearParam = $this->request->getParam('year');
+			$year = (int)date('Y');
+			if ($yearParam !== null && $yearParam !== '') {
+				if (!preg_match('/^\d{4}$/', (string)$yearParam)) {
+					return $this->error('year must be a 4-digit year.', Http::STATUS_BAD_REQUEST);
+				}
+				$year = (int)$yearParam;
+			}
+			$compareParam = $this->request->getParam('compareYear');
+			$compareYear = null;
+			if ($compareParam !== null && $compareParam !== '') {
+				if (!preg_match('/^\d{4}$/', (string)$compareParam)) {
+					return $this->error('compareYear must be a 4-digit year.', Http::STATUS_BAD_REQUEST);
+				}
+				$compareYear = (int)$compareParam;
+			}
+			if ($compareYear !== null && $compareYear === $year) {
+				return $this->error('year and compareYear must differ.', Http::STATUS_BAD_REQUEST);
+			}
 			if ($workspaceId < 1) {
 				return $this->error('workspaceId is required.', Http::STATUS_BAD_REQUEST);
 			}
 			$this->rateLimit->assertAllowed($userId, 'household_yearly_export', 20, 300);
-			$file = $this->exportService->buildXlsx($workspaceId, $userId, $year);
+			$file = $this->exportService->buildXlsx($workspaceId, $userId, $year, $compareYear);
 			$response = new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
 			$response->addHeader('X-Content-Type-Options', 'nosniff');
 			return $response;
@@ -53,6 +74,34 @@ class ExportController extends Controller
 			return $this->error($e->getMessage(), Http::STATUS_BAD_REQUEST);
 		} catch (WorkspaceTypeMismatchException $e) {
 			return $this->error('This operation does not apply to this workspace type.', 422);
+		} catch (RateLimitExceededException) {
+			return $this->error('Too many export requests. Please wait a moment and try again.', 429);
+		} catch (NotAuthenticatedException) {
+			return $this->error('Authentication required.', Http::STATUS_UNAUTHORIZED);
+		} catch (AccessDeniedException) {
+			return $this->error('Access denied.', Http::STATUS_FORBIDDEN);
+		} catch (\Throwable) {
+			return $this->error('Request could not be completed.', Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function categorizationRules(): DataDownloadResponse|DataDisplayResponse
+	{
+		try {
+			$userId = $this->access->currentUserId();
+			$workspaceId = (int)$this->request->getParam('workspaceId', 0);
+			if ($workspaceId < 1) {
+				return $this->error('workspaceId is required.', Http::STATUS_BAD_REQUEST);
+			}
+			$this->rateLimit->assertAllowed($userId, 'rules_export', 20, 300);
+			$file = $this->rules->exportCsv($workspaceId, $userId);
+			$response = new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
+			$response->addHeader('X-Content-Type-Options', 'nosniff');
+			return $response;
+		} catch (\InvalidArgumentException $e) {
+			return $this->error($e->getMessage(), Http::STATUS_BAD_REQUEST);
 		} catch (RateLimitExceededException) {
 			return $this->error('Too many export requests. Please wait a moment and try again.', 429);
 		} catch (NotAuthenticatedException) {

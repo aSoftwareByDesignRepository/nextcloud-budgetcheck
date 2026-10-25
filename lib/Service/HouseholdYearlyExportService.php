@@ -27,10 +27,16 @@ class HouseholdYearlyExportService
 	/**
 	 * @return array{filename:string,mimeType:string,content:string}
 	 */
-	public function buildXlsx(int $workspaceId, string $userId, int $year): array
+	public function buildXlsx(int $workspaceId, string $userId, int $year, ?int $compareYear = null): array
 	{
 		if ($year < 1900 || $year > 9999) {
 			throw new \InvalidArgumentException('year is out of range.');
+		}
+		if ($compareYear !== null && ($compareYear < 1900 || $compareYear > 9999)) {
+			throw new \InvalidArgumentException('compareYear is out of range.');
+		}
+		if ($compareYear === $year) {
+			$compareYear = null; // self-compare is meaningless; degrade to plain export
 		}
 		$workspace = $this->workspaces->getForUser($workspaceId, $userId);
 		if (($workspace['type'] ?? null) !== WorkspaceService::TYPE_HOUSEHOLD) {
@@ -47,6 +53,13 @@ class HouseholdYearlyExportService
 			'name' => 'Overview',
 			'rows' => $this->overviewRows($workspace, $summary),
 		];
+		if ($compareYear !== null) {
+			$compare = $this->summaries->yearlyCategoryCompare($workspaceId, $userId, $year, $compareYear);
+			$sheets[] = [
+				'name' => sprintf('Categories %d vs %d', $year, $compareYear),
+				'rows' => $this->compareRows($compare, $currencyDecimals),
+			];
+		}
 		for ($month = 1; $month <= 12; $month++) {
 			$ym = sprintf('%04d-%02d', $year, $month);
 			$sheets[] = [
@@ -382,6 +395,39 @@ class HouseholdYearlyExportService
 			$rows[] = $row;
 		}
 		$result->closeCursor();
+		return $rows;
+	}
+
+	/**
+	 * Year-over-year comparison sheet rows — same numbers the on-screen compare
+	 * table shows (single source: SummaryService::yearlyCategoryCompare).
+	 *
+	 * @return list<list<string|float|null>>
+	 */
+	private function compareRows(array $compare, int $currencyDecimals): array
+	{
+		$year = (int)($compare['year'] ?? 0);
+		$compareYear = (int)($compare['compareYear'] ?? 0);
+		$rows = [[
+			'Category', 'Direction', (string)$year, (string)$compareYear,
+			'Change', 'Change %', 'Entries ' . $year, 'Entries ' . $compareYear,
+		]];
+		foreach ((array)($compare['categories'] ?? []) as $cat) {
+			if (!is_array($cat)) {
+				continue;
+			}
+			$pct = $cat['delta']['percent'] ?? null;
+			$rows[] = [
+				(string)($cat['name'] ?? ''),
+				(string)($cat['direction'] ?? ''),
+				$this->envToMajor($cat['year']['actual'] ?? null),
+				$this->envToMajor($cat['compareYear']['actual'] ?? null),
+				$this->envToMajor($cat['delta']['absolute'] ?? null),
+				$pct === null ? null : (float)$pct,
+				(int)($cat['year']['entryCount'] ?? 0),
+				(int)($cat['compareYear']['entryCount'] ?? 0),
+			];
+		}
 		return $rows;
 	}
 

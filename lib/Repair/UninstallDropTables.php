@@ -18,7 +18,7 @@ declare(strict_types=1);
  *
  * Uses `DROP TABLE IF EXISTS` (not SchemaWrapper) so IDBConnection injection works on
  * all Nextcloud versions. MySQL temporarily disables FK checks so legacy FK chains
- * (e.g. project_files → projects) cannot block uninstall.
+ * cannot block uninstall.
  */
 namespace OCA\BudgetCheck\Repair;
 
@@ -45,14 +45,17 @@ final class UninstallDropTables implements IRepairStep
 	 * Kept in sync by the DB-standards linter.
 	 */
 	public const TABLES = [
+		'bc_alert_log',
 		'bc_audit_log',
 		'bc_booking_statuses',
 		'bc_budget_defaults',
 		'bc_budgets',
 		'bc_categories',
+		'bc_category_rules',
 		'bc_idempotency',
 		'bc_mobile_push',
 		'bc_monthly_snapshots',
+		'bc_payees',
 		'bc_recurring_rules',
 		'bc_savings_targets',
 		'bc_transactions',
@@ -61,6 +64,13 @@ final class UninstallDropTables implements IRepairStep
 		'bc_workspace_members',
 		'bc_workspaces',
 	];
+
+	// The set of tables that must exist after current migrations —
+	// TABLES minus intentionally dropped legacy tables — lives on the
+	// dedicated {@see SchemaTableCatalog} class: upgrade-path code must never
+	// reference a member added to a pre-existing class mid-release (the old
+	// version may already be loaded → `Undefined constant` stalls `occ
+	// upgrade`; see UpgradePathConstantsSafety).
 
 	public function __construct(
 		private readonly IDBConnection $connection,

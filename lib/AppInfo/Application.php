@@ -10,7 +10,6 @@ use OCP\App\IAppManager;
 use OCA\BudgetCheck\BackgroundJob\RecurringDueJob;
 use OCA\BudgetCheck\Capabilities;
 use OCA\BudgetCheck\Service\MobileIdempotencyService;
-use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\UpgradeBackupService;
 use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCA\BudgetCheck\Listener\GroupDeletedListener;
@@ -186,13 +185,6 @@ class Application extends App implements IBootstrap
 			);
 		});
 
-		$context->registerService(MobilePushService::class, function ($c): MobilePushService {
-			return new MobilePushService(
-				$c->query(\OCP\IDBConnection::class),
-				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
-			);
-		});
-
 		$context->registerService(\OCA\BudgetCheck\Service\TransactionBillingService::class, function ($c): \OCA\BudgetCheck\Service\TransactionBillingService {
 			return new \OCA\BudgetCheck\Service\TransactionBillingService(
 				$c->query(\OCP\IDBConnection::class),
@@ -331,6 +323,97 @@ class Application extends App implements IBootstrap
 				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
+
+		// --- Payee + categorization rules (spec: payee-and-categorization-rules)
+		$context->registerService(\OCA\BudgetCheck\Service\PayeeService::class, function ($c): \OCA\BudgetCheck\Service\PayeeService {
+			return new \OCA\BudgetCheck\Service\PayeeService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+			);
+		});
+
+		$context->registerService(\OCA\BudgetCheck\Service\CategorizationRuleService::class, function ($c): \OCA\BudgetCheck\Service\CategorizationRuleService {
+			return new \OCA\BudgetCheck\Service\CategorizationRuleService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(AuditLogService::class),
+				$c->query(CategoryService::class),
+				$c->query(\OCA\BudgetCheck\Service\PayeeService::class),
+			);
+		});
+
+		// --- Analytics insights (spec: analytics-insights)
+		$context->registerService(\OCA\BudgetCheck\Service\AnalyticsService::class, function ($c): \OCA\BudgetCheck\Service\AnalyticsService {
+			return new \OCA\BudgetCheck\Service\AnalyticsService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(AccessControlService::class),
+				$c->query(MoneyService::class),
+				$c->query(SummaryService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(CategoryService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+			);
+		});
+
+		// --- Alert notifications (spec: alert-notifications)
+		$context->registerService(\OCA\BudgetCheck\Service\AlertPreferencesService::class, function ($c): \OCA\BudgetCheck\Service\AlertPreferencesService {
+			return new \OCA\BudgetCheck\Service\AlertPreferencesService(
+				$c->query(\OCP\IConfig::class),
+				$c->query(AccessControlService::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Service\AlertDispatchService::class, function ($c): \OCA\BudgetCheck\Service\AlertDispatchService {
+			return new \OCA\BudgetCheck\Service\AlertDispatchService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\Notification\IManager::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertPreferencesService::class),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+				$c->query(\OCP\Mail\IMailer::class),
+				$c->query(\OCP\IUserManager::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Service\AlertEvaluationService::class, function ($c): \OCA\BudgetCheck\Service\AlertEvaluationService {
+			return new \OCA\BudgetCheck\Service\AlertEvaluationService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(SummaryService::class),
+				$c->query(WorkspaceService::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertPreferencesService::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertDispatchService::class),
+				$c->query(MoneyService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\OCP\L10N\IFactory::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\BackgroundJob\AlertEvaluationJob::class, function ($c): \OCA\BudgetCheck\BackgroundJob\AlertEvaluationJob {
+			return new \OCA\BudgetCheck\BackgroundJob\AlertEvaluationJob(
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertEvaluationService::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertDispatchService::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerNotifierService(\OCA\BudgetCheck\Notification\Notifier::class);
+
+		// --- NC dashboard widget (spec: dashboard-widget)
+		$context->registerService(\OCA\BudgetCheck\Dashboard\BudgetStatusWidget::class, function ($c): \OCA\BudgetCheck\Dashboard\BudgetStatusWidget {
+			return new \OCA\BudgetCheck\Dashboard\BudgetStatusWidget(
+				$c->query(\OCP\L10N\IFactory::class)->get(self::APP_ID),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(WorkspaceService::class),
+				$c->query(SummaryService::class),
+				$c->query(AccessControlService::class),
+				$c->query(\OCA\BudgetCheck\Service\AlertPreferencesService::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerDashboardWidget(\OCA\BudgetCheck\Dashboard\BudgetStatusWidget::class);
+		$context->registerDashboardWidget(\OCA\BudgetCheck\Dashboard\UpcomingRecurringWidget::class);
 
 		$context->registerService(SummaryService::class, function ($c): SummaryService {
 			return new SummaryService(

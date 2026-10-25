@@ -57,6 +57,13 @@ final class ApiControllerCsrfAttributeTest extends TestCase
 		'updateGroupMember',
 		'removeGroupMember',
 		'saveAppPolicy',
+		'createPayee',
+		'updatePayee',
+		'createCategorizationRule',
+		'updateCategorizationRule',
+		'deactivateCategorizationRule',
+		'backfillCategorizationRules',
+		'saveAlertPreferences',
 	];
 
 	public function testMutationMethodsRequireCsrf(): void

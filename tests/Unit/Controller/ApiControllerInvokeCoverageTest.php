@@ -252,6 +252,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->summaries = $this->createMock(SummaryService::class);
 		$this->summaries->method('household')->willReturn(['warnings' => []]);
 		$this->summaries->method('yearly')->willReturn(['year' => 2026]);
+		$this->summaries->method('yearlyCategoryCompare')->willReturn(['year' => 2026, 'compareYear' => 2025, 'categories' => []]);
 		$this->summaries->method('projectPeriod')->willReturn(['warnings' => []]);
 
 		$this->snapshots = $this->createMock(SnapshotService::class);
@@ -330,6 +331,34 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$payees = $this->createMock(\OCA\BudgetCheck\Service\PayeeService::class);
+		$payees->method('listForWorkspace')->willReturn([]);
+		$payees->method('mergeSuggestions')->willReturn([]);
+		$payees->method('create')->willReturn(['id' => 1, 'name' => 'P']);
+		$payees->method('update')->willReturn(['id' => 1, 'name' => 'P']);
+		$payees->method('loadForWorkspace')->willReturn(['id' => 1, 'name' => 'P']);
+		$payees->method('bookingCount')->willReturn(0);
+
+		$catRules = $this->createMock(\OCA\BudgetCheck\Service\CategorizationRuleService::class);
+		$catRules->method('listForWorkspace')->willReturn([]);
+		$catRules->method('create')->willReturn(['id' => 1]);
+		$catRules->method('update')->willReturn(['id' => 1]);
+		$catRules->method('deactivate')->willReturn(['id' => 1]);
+		$catRules->method('backfill')->willReturn(['scanned' => 0, 'matched' => 0, 'updated' => 0]);
+		$catRules->method('suggest')->willReturn(null);
+
+		$analytics = $this->createMock(\OCA\BudgetCheck\Service\AnalyticsService::class);
+		$analytics->method('categoryTrend')->willReturn(['series' => []]);
+		$analytics->method('topPayees')->willReturn(['payees' => []]);
+		$analytics->method('monthForecast')->willReturn(['dataSufficient' => false]);
+
+		$alertPrefs = $this->createMock(\OCA\BudgetCheck\Service\AlertPreferencesService::class);
+		$alertPrefs->method('get')->willReturn(['alertsEnabled' => true]);
+		$alertPrefs->method('save')->willReturn(['alertsEnabled' => true]);
+
+		$alertDispatch = $this->createMock(\OCA\BudgetCheck\Service\AlertDispatchService::class);
+		$alertDispatch->method('listForUser')->willReturn([]);
+
 		$this->idempotency = $this->createMock(MobileIdempotencyService::class);
 
 		$this->controller = new ApiController(
@@ -361,6 +390,11 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$this->groupManager,
 			$this->createMock(LoggerInterface::class),
 			$l10n,
+			$payees,
+			$catRules,
+			$analytics,
+			$alertPrefs,
+			$alertDispatch,
 		);
 	}
 
@@ -635,6 +669,10 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->assertOk($this->controller->yearlySummary(), 'yearlySummary');
 		$invoked[] = 'yearlySummary';
 
+		$this->params = ['workspaceId' => 7, 'year' => 2026, 'compareYear' => 2025];
+		$this->assertOk($this->controller->yearlyCategoryCompare(), 'yearlyCategoryCompare');
+		$invoked[] = 'yearlyCategoryCompare';
+
 		$this->params = ['workspaceId' => 7];
 		$this->assertOk($this->controller->projectPeriodSummary(), 'projectPeriodSummary');
 		$invoked[] = 'projectPeriodSummary';
@@ -654,6 +692,43 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->params = ['q' => 'op'];
 		$this->assertOk($this->controller->searchGroups(), 'searchGroups');
 		$invoked[] = 'searchGroups';
+
+		// --- payees + categorization rules + analytics + alerts (new features) ---
+		$this->params = ['workspaceId' => '7', 'categoryId' => '3'];
+		$this->assertOk($this->controller->listPayees(), 'listPayees');
+		$invoked[] = 'listPayees';
+		$this->assertOk($this->controller->payeeMergeSuggestions(), 'payeeMergeSuggestions');
+		$invoked[] = 'payeeMergeSuggestions';
+		$this->assertOk($this->controller->listCategorizationRules(), 'listCategorizationRules');
+		$invoked[] = 'listCategorizationRules';
+		$this->assertOk($this->controller->suggestCategory(), 'suggestCategory');
+		$invoked[] = 'suggestCategory';
+		$this->assertOk($this->controller->categoryTrend(), 'categoryTrend');
+		$invoked[] = 'categoryTrend';
+		$this->assertOk($this->controller->topPayees(), 'topPayees');
+		$invoked[] = 'topPayees';
+		$this->assertOk($this->controller->monthForecast(), 'monthForecast');
+		$invoked[] = 'monthForecast';
+		$this->assertOk($this->controller->listAlerts(7), 'listAlerts');
+		$invoked[] = 'listAlerts';
+		$this->assertOk($this->controller->getAlertPreferences(7), 'getAlertPreferences');
+		$invoked[] = 'getAlertPreferences';
+
+		$this->params = ['workspaceId' => '7', 'name' => 'Aldi'];
+		$this->assertOk($this->controller->createPayee(), 'createPayee');
+		$invoked[] = 'createPayee';
+		$this->assertOk($this->controller->updatePayee(1), 'updatePayee');
+		$invoked[] = 'updatePayee';
+		$this->assertOk($this->controller->createCategorizationRule(), 'createCategorizationRule');
+		$invoked[] = 'createCategorizationRule';
+		$this->assertOk($this->controller->updateCategorizationRule(1), 'updateCategorizationRule');
+		$invoked[] = 'updateCategorizationRule';
+		$this->assertOk($this->controller->deactivateCategorizationRule(1), 'deactivateCategorizationRule');
+		$invoked[] = 'deactivateCategorizationRule';
+		$this->assertOk($this->controller->backfillCategorizationRules(), 'backfillCategorizationRules');
+		$invoked[] = 'backfillCategorizationRules';
+		$this->assertOk($this->controller->saveAlertPreferences(7), 'saveAlertPreferences');
+		$invoked[] = 'saveAlertPreferences';
 
 		sort($invoked);
 		self::assertSame(
@@ -750,6 +825,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$summaries = $this->createMock(SummaryService::class);
 		$summaries->method('household')->willReturnCallback($deny);
 		$summaries->method('yearly')->willReturnCallback($deny);
+		$summaries->method('yearlyCategoryCompare')->willReturnCallback($deny);
 		$summaries->method('projectPeriod')->willReturnCallback($deny);
 
 		$snapshots = $this->createMock(SnapshotService::class);
@@ -763,6 +839,25 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
 		$audit = $this->createMock(AuditLogService::class);
+
+		$payees = $this->createMock(\OCA\BudgetCheck\Service\PayeeService::class);
+		foreach (['listForWorkspace', 'mergeSuggestions', 'create', 'update', 'loadForWorkspace', 'resolveForWrite', 'searchForWorkspace'] as $m) {
+			$payees->method($m)->willReturnCallback($deny);
+		}
+		$catRules = $this->createMock(\OCA\BudgetCheck\Service\CategorizationRuleService::class);
+		foreach (['listForWorkspace', 'create', 'update', 'deactivate', 'backfill', 'suggest', 'loadForWorkspace', 'activeRulesForWorkspace'] as $m) {
+			$catRules->method($m)->willReturnCallback($deny);
+		}
+		$analytics = $this->createMock(\OCA\BudgetCheck\Service\AnalyticsService::class);
+		foreach (['categoryTrend', 'topPayees', 'monthForecast'] as $m) {
+			$analytics->method($m)->willReturnCallback($deny);
+		}
+		$alertPrefs = $this->createMock(\OCA\BudgetCheck\Service\AlertPreferencesService::class);
+		foreach (['get', 'save'] as $m) {
+			$alertPrefs->method($m)->willReturnCallback($deny);
+		}
+		$alertDispatch = $this->createMock(\OCA\BudgetCheck\Service\AlertDispatchService::class);
+		$alertDispatch->method('listForUser')->willReturnCallback($deny);
 
 		return new ApiController(
 			'budgetcheck',
@@ -802,6 +897,11 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 			$this->groupManager,
 			$this->createMock(LoggerInterface::class),
 			$l10n,
+			$payees,
+			$catRules,
+			$analytics,
+			$alertPrefs,
+			$alertDispatch,
 		);
 	}
 
@@ -958,6 +1058,8 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->assertForbidden($c->monthlySummary(), 'monthlySummary');
 		$this->params = ['workspaceId' => 7, 'year' => 2026];
 		$this->assertForbidden($c->yearlySummary(), 'yearlySummary');
+		$this->params = ['workspaceId' => 7, 'year' => 2026, 'compareYear' => 2025];
+		$this->assertForbidden($c->yearlyCategoryCompare(), 'yearlyCategoryCompare');
 		$this->params = ['workspaceId' => 7];
 		$this->assertForbidden($c->projectPeriodSummary(), 'projectPeriodSummary');
 		$this->params = ['workspaceId' => 7];

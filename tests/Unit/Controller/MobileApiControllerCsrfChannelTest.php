@@ -10,14 +10,12 @@ use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\MobileIdempotencyService;
-use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
-use OCP\App\IAppManager;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUser;
@@ -51,11 +49,9 @@ final class MobileApiControllerCsrfChannelTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->createMock(IAppManager::class),
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);

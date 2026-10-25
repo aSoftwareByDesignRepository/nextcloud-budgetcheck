@@ -166,6 +166,43 @@ $urls = $_['urls'] ?? [];
 	</section>
 
 	<?php if ($workspace['type'] === 'household'): ?>
+	<section class="bc-card bc-section" aria-labelledby="bc-insights-title" data-bc-insights hidden>
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-insights-title"><?php p($l->t('Insights')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('Where the money goes, and how the month is shaping up.')); ?></p>
+			</div>
+		</header>
+		<div class="bc-insights-grid" data-bc-insights-grid aria-busy="true">
+			<article class="bc-insight" data-bc-insight="forecast">
+				<h3 class="bc-insight__title"><?php p($l->t('Month-end forecast')); ?></h3>
+				<div class="bc-insight__body" data-bc-insight-forecast>
+					<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>
+				</div>
+			</article>
+			<article class="bc-insight" data-bc-insight="payees">
+				<h3 class="bc-insight__title"><?php p($l->t('Top payees this month')); ?></h3>
+				<div class="bc-insight__body" data-bc-insight-payees>
+					<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>
+				</div>
+			</article>
+			<article class="bc-insight" data-bc-insight="trend">
+				<h3 class="bc-insight__title"><?php p($l->t('Category trend')); ?></h3>
+				<div class="bc-insight__body" data-bc-insight-trend>
+					<label class="bc-field bc-field--inline" for="bc-insight-cat">
+						<span class="bc-field__label"><?php p($l->t('Category')); ?></span>
+						<select id="bc-insight-cat" class="bc-input" data-bc-insight-cat-select></select>
+					</label>
+					<div data-bc-insight-trend-chart>
+						<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>
+					</div>
+				</div>
+			</article>
+		</div>
+	</section>
+	<?php endif; ?>
+
+	<?php if ($workspace['type'] === 'household'): ?>
 	<section class="bc-card bc-section" aria-labelledby="bc-dash-ledger-title" data-bc-dash-month-ledger>
 		<header class="bc-section__header">
 			<div>

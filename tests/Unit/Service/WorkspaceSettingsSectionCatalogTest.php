@@ -48,7 +48,7 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 	{
 		$sections = WorkspaceSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)), 'Section slugs must be unique');
-		self::assertCount(9, $sections);
+		self::assertCount(13, $sections);
 		foreach ($sections as $section) {
 			self::assertMatchesRegularExpression(
 				'/^[a-z]+(-[a-z]+)*$/',
@@ -121,10 +121,14 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 			'workspace' => ['household' => [true, true], 'project' => [true, true]],
 			'tax' => ['household' => [true, true], 'project' => [true, true]],
 			'categories' => ['household' => [true, true], 'project' => [true, true]],
+			'payees' => ['household' => [true, true], 'project' => [true, true]],
+			'categorization-rules' => ['household' => [true, false], 'project' => [true, false]],
 			'budget-defaults' => ['household' => [true, false], 'project' => [false, false]],
 			'booking-statuses' => ['household' => [false, false], 'project' => [true, true]],
 			'members' => ['household' => [true, false], 'project' => [true, false]],
 			'recurring' => ['household' => [true, false], 'project' => [true, false]],
+			'notifications' => ['household' => [true, true], 'project' => [true, true]],
+			'alerts' => ['household' => [true, true], 'project' => [true, true]],
 			'help' => ['household' => [true, true], 'project' => [true, true]],
 		];
 		foreach ($expected as $section => $byType) {
@@ -182,10 +186,14 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 			'workspace' => 'T:Workspace details',
 			'tax' => 'T:Tax mode',
 			'categories' => 'T:Categories',
+			'payees' => 'T:Payees',
+			'categorization-rules' => 'T:Categorization rules',
 			'budget-defaults' => 'T:Default category budgets',
 			'booking-statuses' => 'T:Booking statuses',
 			'members' => 'T:Members',
 			'recurring' => 'T:Recurring rules',
+			'notifications' => 'T:Notifications',
+			'alerts' => 'T:Alert log',
 			'help' => 'T:Help and glossary',
 		];
 		self::assertSame(array_keys($expected), WorkspaceSettingsSectionCatalog::SECTIONS);
@@ -202,10 +210,14 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 			'workspace' => 'T:Workspace',
 			'tax' => 'T:Tax',
 			'categories' => 'T:Categories',
+			'payees' => 'T:Payees',
+			'categorization-rules' => 'T:Rules',
 			'budget-defaults' => 'T:Budget defaults',
 			'booking-statuses' => 'T:Booking statuses',
 			'members' => 'T:Members',
 			'recurring' => 'T:Recurring',
+			'notifications' => 'T:Notifications',
+			'alerts' => 'T:Alerts',
 			'help' => 'T:Help',
 		];
 		self::assertSame(array_keys($expected), WorkspaceSettingsSectionCatalog::SECTIONS);

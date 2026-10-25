@@ -78,7 +78,9 @@ final class EntrypointInvokeCoverageTest extends TestCase
 	public function testExportHouseholdYearlyAuthzDenied(): void
 	{
 		$request = $this->createMock(IRequest::class);
-		$request->method('getParam')->willReturn(7);
+		$request->method('getParam')->willReturnCallback(
+			static fn (string $k, $d = null) => $k === 'workspaceId' ? 7 : $d
+		);
 		$access = $this->createMock(AccessControlService::class);
 		$access->method('currentUserId')->willReturn('alice');
 		$rate = $this->createMock(RateLimitService::class);

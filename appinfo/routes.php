@@ -20,12 +20,13 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'planning-view|workspace|tax|categories|budget-defaults|booking-statuses|members|recurring|help']],
+			'requirements' => ['section' => 'planning-view|workspace|tax|categories|payees|categorization-rules|budget-defaults|booking-statuses|members|recurring|notifications|alerts|help']],
 		['name' => 'page#appSettings',  'url' => '/app-settings', 'verb' => 'GET'],
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
 			'requirements' => ['section' => 'access|admins|defaults|support']],
+		['name' => 'export#categorizationRules', 'url' => '/api/categorization-rules/export', 'verb' => 'GET'],
 		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
 		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
 ['name' => 'export#transactions', 'url' => '/export/transactions', 'verb' => 'GET'],
@@ -94,11 +95,36 @@ return [
 		['name' => 'api#getSavingsTarget',   'url' => '/api/savings-target',                'verb' => 'GET'],
 		['name' => 'api#saveSavingsTarget',  'url' => '/api/savings-target',                'verb' => 'POST'],
 
+		// Payees (normalized counterparty dimension)
+		['name' => 'api#listPayees',         'url' => '/api/payees',                        'verb' => 'GET'],
+		['name' => 'api#createPayee',        'url' => '/api/payees',                        'verb' => 'POST'],
+		['name' => 'api#updatePayee',        'url' => '/api/payees/{id}',                   'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#payeeMergeSuggestions', 'url' => '/api/payees/merge-suggestions',   'verb' => 'GET'],
+
+		// Categorization rules (manager-gated writes, viewer reads)
+		['name' => 'api#listCategorizationRules',    'url' => '/api/categorization-rules',  'verb' => 'GET'],
+		['name' => 'api#createCategorizationRule',   'url' => '/api/categorization-rules',  'verb' => 'POST'],
+		['name' => 'api#updateCategorizationRule',   'url' => '/api/categorization-rules/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#deactivateCategorizationRule', 'url' => '/api/categorization-rules/{id}/deactivate', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#backfillCategorizationRules', 'url' => '/api/categorization-rules/backfill', 'verb' => 'POST'],
+		['name' => 'api#suggestCategory',    'url' => '/api/categories/suggest',            'verb' => 'GET'],
+
+		// Analytics insights (read-only)
+		['name' => 'api#categoryTrend',      'url' => '/api/category-trend',                'verb' => 'GET'],
+		['name' => 'api#topPayees',          'url' => '/api/top-payees',                    'verb' => 'GET'],
+		['name' => 'api#monthForecast',      'url' => '/api/month-forecast',                'verb' => 'GET'],
+
+		// Alert preferences + alert center (per-user)
+		['name' => 'api#getAlertPreferences', 'url' => '/api/workspaces/{workspaceId}/alert-preferences', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'api#saveAlertPreferences', 'url' => '/api/workspaces/{workspaceId}/alert-preferences', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'api#listAlerts',         'url' => '/api/workspaces/{workspaceId}/alerts', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+
 		// Summaries
 		['name' => 'api#monthlySummary',     'url' => '/api/monthly-summary',               'verb' => 'GET'],
 		['name' => 'api#monthlyClose',       'url' => '/api/monthly-close',                 'verb' => 'POST'],
 		['name' => 'api#monthlyReopen',      'url' => '/api/monthly-reopen',                'verb' => 'POST'],
 		['name' => 'api#yearlySummary',      'url' => '/api/yearly-summary',                'verb' => 'GET'],
+		['name' => 'api#yearlyCategoryCompare', 'url' => '/api/yearly-category-compare',    'verb' => 'GET'],
 		['name' => 'api#projectPeriodSummary', 'url' => '/api/project-period-summary',      'verb' => 'GET'],
 
 		// Admin directory lookup for member assignment (manager+ scoped)
@@ -118,6 +144,10 @@ return [
 		['name' => 'mobile_api#home', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/home', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#monthlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/monthly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#yearlySummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/yearly-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#yearlyCategoryCompare', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/yearly-category-compare', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#listPayees', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/payees', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#monthForecast', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/month-forecast', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+		['name' => 'mobile_api#topPayees', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/top-payees', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#periodSummary', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/period-summary', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listCategories', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/categories', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#listBookingStatuses', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/booking-statuses', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
@@ -129,8 +159,6 @@ return [
 		['name' => 'mobile_api#deleteTransaction', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#listRecurringSuggestions', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
 		['name' => 'mobile_api#applyRecurringSuggestion', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions/{ruleId}/apply', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'ruleId' => '\\d+']],
-		['name' => 'mobile_api#registerPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'POST'],
-		['name' => 'mobile_api#unregisterPushToken', 'url' => '/api/mobile/v1/device/push-token', 'verb' => 'DELETE'],
 		['name' => 'mobile_api#listTransactionAttachments', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#uploadTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\\d+', 'txId' => '\\d+']],
 		['name' => 'mobile_api#deleteTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],

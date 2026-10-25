@@ -100,6 +100,11 @@ class ApiController extends Controller
 		private IGroupManager $groupManager,
 		private LoggerInterface $logger,
 		private IL10N $l10n,
+		private ?\OCA\BudgetCheck\Service\PayeeService $payees = null,
+		private ?\OCA\BudgetCheck\Service\CategorizationRuleService $categorizationRules = null,
+		private ?\OCA\BudgetCheck\Service\AnalyticsService $analytics = null,
+		private ?\OCA\BudgetCheck\Service\AlertPreferencesService $alertPrefs = null,
+		private ?\OCA\BudgetCheck\Service\AlertDispatchService $alertDispatch = null,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -968,6 +973,230 @@ class ApiController extends Controller
 	}
 
 	// ------------------------------------------------------------------
+	//  Payees
+	// ------------------------------------------------------------------
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listPayees(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$search = (string)$this->request->getParam('search', '');
+			$includeInactive = $this->boolParam('includeInactive');
+			return ['payees' => $this->payees->listForWorkspace($workspaceId, $userId, $search, $includeInactive)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function createPayee(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'payee_write', 60, 300);
+			return ['payee' => $this->payees->create($workspaceId, $userId, (string)($payload['name'] ?? ''))];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function updatePayee(int $id): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($id): array {
+			$id = $this->validateId($id);
+			$this->rateLimit->assertAllowed($userId, 'payee_write', 60, 300);
+			$payload = $this->payload();
+			if (($payload['action'] ?? '') === 'mergeInto') {
+				$payload['bookingCount'] = $this->payees->bookingCount($id);
+			}
+			return ['payee' => $this->payees->update($id, $userId, $payload)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function payeeMergeSuggestions(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			return ['suggestions' => $this->payees->mergeSuggestions($workspaceId, $userId)];
+		});
+	}
+
+	// ------------------------------------------------------------------
+	//  Categorization rules
+	// ------------------------------------------------------------------
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listCategorizationRules(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			return ['rules' => $this->categorizationRules->listForWorkspace($workspaceId, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function createCategorizationRule(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'categorization_rule_write', 60, 300);
+			return ['rule' => $this->categorizationRules->create($workspaceId, $userId, $payload)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function updateCategorizationRule(int $id): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($id): array {
+			$id = $this->validateId($id);
+			$this->rateLimit->assertAllowed($userId, 'categorization_rule_write', 60, 300);
+			return ['rule' => $this->categorizationRules->update($id, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function deactivateCategorizationRule(int $id): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($id): array {
+			$id = $this->validateId($id);
+			$this->rateLimit->assertAllowed($userId, 'categorization_rule_write', 60, 300);
+			return ['rule' => $this->categorizationRules->deactivate($id, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function backfillCategorizationRules(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$payload = $this->payload();
+			$workspaceId = (int)($payload['workspaceId'] ?? 0);
+			if ($workspaceId < 1) {
+				throw new \InvalidArgumentException('workspaceId is required.');
+			}
+			$this->rateLimit->assertAllowed($userId, 'categorization_rule_backfill', 10, 600);
+			$dryRun = \OCA\BudgetCheck\Support\StrictBool::field($payload, 'dryRun');
+			return ['result' => $this->categorizationRules->backfill($workspaceId, $userId, $dryRun)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function suggestCategory(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$payeeName = '';
+			$payeeId = $this->intParamOrNull('payeeId');
+			if ($payeeId !== null && $payeeId > 0) {
+				$payee = $this->payees->loadForWorkspace($payeeId, $workspaceId);
+				$payeeName = $payee !== null ? (string)$payee['name'] : '';
+			} else {
+				$payeeName = (string)$this->request->getParam('payeeName', '');
+			}
+			return ['match' => $this->categorizationRules->suggest($workspaceId, $userId, [
+				'title' => (string)$this->request->getParam('title', ''),
+				'payeeName' => $payeeName,
+				'notes' => (string)$this->request->getParam('notes', ''),
+				'direction' => (string)$this->request->getParam('direction', ''),
+			])];
+		});
+	}
+
+	// ------------------------------------------------------------------
+	//  Analytics insights (read-only)
+	// ------------------------------------------------------------------
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function categoryTrend(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$this->rateLimit->assertAllowed($userId, 'analytics_read', 120, 300);
+			$categoryId = $this->intParamOrNull('categoryId') ?? 0;
+			if ($categoryId < 1) {
+				throw new \InvalidArgumentException('categoryId is required.');
+			}
+			$months = (int)$this->request->getParam('months', 12);
+			$direction = (string)$this->request->getParam('direction', 'expense');
+			return ['trend' => $this->analytics->categoryTrend($workspaceId, $userId, $categoryId, $months, $direction)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function topPayees(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$this->rateLimit->assertAllowed($userId, 'analytics_read', 120, 300);
+			$period = (string)$this->request->getParam('period', 'month');
+			$direction = (string)$this->request->getParam('direction', 'expense');
+			$limit = (int)$this->request->getParam('limit', 10);
+			return ['result' => $this->analytics->topPayees($workspaceId, $userId, $period, $direction, $limit)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function monthForecast(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$this->rateLimit->assertAllowed($userId, 'analytics_read', 120, 300);
+			return ['forecast' => $this->analytics->monthForecast($workspaceId, $userId)];
+		});
+	}
+
+	// ------------------------------------------------------------------
+	//  Alert preferences + alert center (per-user)
+	// ------------------------------------------------------------------
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getAlertPreferences(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			return ['preferences' => $this->alertPrefs->get($workspaceId, $userId)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function saveAlertPreferences(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$this->rateLimit->assertAllowed($userId, 'alert_prefs_write', 60, 300);
+			return ['preferences' => $this->alertPrefs->save($workspaceId, $userId, $this->payload())];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listAlerts(int $workspaceId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($workspaceId): array {
+			$workspaceId = $this->validateId($workspaceId);
+			$this->workspaces->getForUser($workspaceId, $userId);
+			$limit = (int)$this->request->getParam('limit', 50);
+			return ['alerts' => $this->alertDispatch->listForUser($workspaceId, $userId, $limit)];
+		});
+	}
+
+	// ------------------------------------------------------------------
 	//  Summaries and snapshots
 	// ------------------------------------------------------------------
 
@@ -1024,6 +1253,33 @@ class ApiController extends Controller
 			$summary = $this->summaries->yearly($workspaceId, $userId, $year);
 			return ['summary' => $summary];
 		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function yearlyCategoryCompare(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$workspaceId = $this->resolveWorkspaceId();
+			$year = $this->strictYearParam('year', (int)date('Y'));
+			$compareYear = $this->strictYearParam('compareYear', $year - 1);
+			$this->rateLimit->assertAllowed($userId, 'yearly_compare_read', 60, 300);
+			return ['compare' => $this->summaries->yearlyCategoryCompare($workspaceId, $userId, $year, $compareYear)];
+		});
+	}
+
+	/** Strict year parsing: '2025e0', ' 2025', 'abc' all rejected — no silent coercion. */
+	private function strictYearParam(string $name, int $default): int
+	{
+		$raw = $this->request->getParam($name);
+		if ($raw === null || $raw === '') {
+			return $default;
+		}
+		$raw = (string)$raw;
+		if (!preg_match('/^\d{4}$/', $raw)) {
+			throw new \InvalidArgumentException($name . ' must be a 4-digit year.');
+		}
+		return (int)$raw;
 	}
 
 	#[NoAdminRequired]

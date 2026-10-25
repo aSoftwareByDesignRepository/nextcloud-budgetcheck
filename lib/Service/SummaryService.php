@@ -481,6 +481,215 @@ class SummaryService
 	}
 
 	/**
+	 * Household year-over-year category comparison (spec: yearly-category-compare).
+	 *
+	 * Two indexed range scans total (one per year) — never a per-month loop.
+	 * Amount semantics are identical to {@see categoryConsumption()}: planned and
+	 * soft-deleted rows excluded, tax-basis resolution applied, internal
+	 * uncategorized buckets excluded, specials reported in a separate field so
+	 * the client's includeSpecials view toggle works without a refetch.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function yearlyCategoryCompare(int $workspaceId, string $userId, int $year, int $compareYear): array
+	{
+		$workspace = $this->workspaces->getForUser($workspaceId, $userId);
+		if ($workspace['type'] !== WorkspaceService::TYPE_HOUSEHOLD) {
+			throw new WorkspaceTypeMismatchException('household', $workspace['type'], 'yearly_category_compare');
+		}
+		foreach ([$year, $compareYear] as $y) {
+			if ($y < 1900 || $y > 9999) {
+				throw new \InvalidArgumentException('year is out of range.');
+			}
+		}
+		if ($year === $compareYear) {
+			throw new \InvalidArgumentException('year and compareYear must differ.');
+		}
+
+		$uncatIds = $this->categories->internalUncategorizedCategoryIds($workspaceId);
+		$meta = $this->workspaceCategoryMeta($workspaceId);
+		$savingsIds = $this->savingsTransferCategoryIds($meta);
+		$currency = $workspace['currencyCode'];
+
+		$perYear = [];
+		foreach ([$year, $compareYear] as $y) {
+			$rows = $this->loadTransactionsForRange(
+				$workspaceId,
+				new \DateTimeImmutable(sprintf('%04d-01-01', $y)),
+				new \DateTimeImmutable(sprintf('%04d-12-31', $y)),
+			);
+			$perYear[$y] = $this->aggregateYearByCategory($workspace, $rows, $uncatIds);
+		}
+		$planned = $this->plannedByCategoryForYears($workspaceId, [$year, $compareYear]);
+
+		// Union: active categories ∪ activity in either year ∪ planned budget in either year.
+		$catIds = [];
+		foreach ($meta as $cid => $m) {
+			if (!in_array($cid, $uncatIds, true) && ($m['isActive'] ?? false)) {
+				$catIds[$cid] = true;
+			}
+		}
+		foreach ([$perYear[$year], $perYear[$compareYear], $planned[$year] ?? [], $planned[$compareYear] ?? []] as $set) {
+			foreach ($set as $cid => $_) {
+				if (!in_array($cid, $uncatIds, true)) {
+					$catIds[$cid] = true;
+				}
+			}
+		}
+
+		$categories = [];
+		foreach (array_keys($catIds) as $cid) {
+			$cid = (int)$cid;
+			$m = $meta[$cid] ?? null;
+			$a = $perYear[$year][$cid] ?? ['actual' => 0, 'specials' => 0, 'count' => 0, 'months' => []];
+			$b = $perYear[$compareYear][$cid] ?? ['actual' => 0, 'specials' => 0, 'count' => 0, 'months' => []];
+			$deltaMinor = $a['actual'] - $b['actual'];
+			$percent = $b['actual'] === 0 ? null : round($deltaMinor / abs($b['actual']) * 100, 1);
+			$kind = $b['actual'] === 0
+				? ($a['actual'] !== 0 ? 'new' : 'flat')
+				: ($a['actual'] === 0 ? 'removed' : ($deltaMinor > 0 ? 'up' : ($deltaMinor < 0 ? 'down' : 'flat')));
+			$months = [];
+			for ($mo = 1; $mo <= 12; $mo++) {
+				$am = $a['months'][$mo] ?? ['actual' => 0, 'specials' => 0];
+				$bm = $b['months'][$mo] ?? ['actual' => 0, 'specials' => 0];
+				$months[] = [
+					'month' => $mo,
+					'year' => ['actual' => $this->money->envelope($am['actual'], $currency), 'specials' => $this->money->envelope($am['specials'], $currency)],
+					'compareYear' => ['actual' => $this->money->envelope($bm['actual'], $currency), 'specials' => $this->money->envelope($bm['specials'], $currency)],
+					'delta' => $this->money->envelope($am['actual'] - $bm['actual'], $currency),
+				];
+			}
+			$categories[] = [
+				'categoryId' => $cid,
+				'name' => $m !== null ? (string)$m['name'] : ('#' . $cid),
+				'direction' => $m !== null ? (string)$m['type'] : '',
+				'isActive' => $m !== null ? (bool)$m['isActive'] : false,
+				'isSavingsTransfer' => in_array($cid, $savingsIds, true),
+				'year' => [
+					'actual' => $this->money->envelope($a['actual'], $currency),
+					'specials' => $this->money->envelope($a['specials'], $currency),
+					'planned' => $this->money->envelope((int)($planned[$year][$cid] ?? 0), $currency),
+					'entryCount' => $a['count'],
+				],
+				'compareYear' => [
+					'actual' => $this->money->envelope($b['actual'], $currency),
+					'specials' => $this->money->envelope($b['specials'], $currency),
+					'planned' => $this->money->envelope((int)($planned[$compareYear][$cid] ?? 0), $currency),
+					'entryCount' => $b['count'],
+				],
+				'delta' => [
+					'absolute' => $this->money->envelope($deltaMinor, $currency),
+					'percent' => $percent,
+					'kind' => $kind,
+				],
+				'months' => $months,
+			];
+		}
+		usort($categories, static function (array $x, array $y): int {
+			$d = strcmp((string)$x['direction'], (string)$y['direction']);
+			return $d !== 0 ? $d : strcmp((string)$x['name'], (string)$y['name']);
+		});
+
+		// Direction-level rollups for the section header rows.
+		$totals = [];
+		foreach ($categories as $row) {
+			$dir = $row['direction'] !== '' ? $row['direction'] : 'expense';
+			foreach (['year', 'compareYear'] as $k) {
+				$totals[$dir][$k]['actual'] = ($totals[$dir][$k]['actual'] ?? 0) + $row[$k]['actual']['minor'];
+				$totals[$dir][$k]['specials'] = ($totals[$dir][$k]['specials'] ?? 0) + $row[$k]['specials']['minor'];
+			}
+		}
+		foreach ($totals as $dir => &$t) {
+			foreach (['year', 'compareYear'] as $k) {
+				$t[$k]['actual'] = $this->money->envelope($t[$k]['actual'], $currency);
+				$t[$k]['specials'] = $this->money->envelope($t[$k]['specials'], $currency);
+			}
+		}
+		unset($t);
+
+		return [
+			'workspace' => $workspace,
+			'year' => $year,
+			'compareYear' => $compareYear,
+			'categories' => $categories,
+			'totals' => $totals,
+		];
+	}
+
+	/**
+	 * Per-category, per-month actual+special sums for one year. One caller range
+	 * scan; identical exclusion/basis rules to {@see categoryConsumption()}.
+	 *
+	 * @return array<int, array{actual:int, specials:int, count:int, months:array<int, array{actual:int, specials:int}>}>
+	 */
+	private function aggregateYearByCategory(array $workspace, array $rows, array $uncatIds): array
+	{
+		$out = [];
+		$basis = $workspace['taxBudgetBasis'] ?? 'gross';
+		$taxModeEnabled = (bool)($workspace['taxModeEnabled'] ?? false);
+		foreach ($rows as $row) {
+			if (!empty($row['is_planned'])) {
+				continue;
+			}
+			$cid = (int)$row['category_id'];
+			if (in_array($cid, $uncatIds, true)) {
+				continue;
+			}
+			$amount = (int)$row['amount_minor'];
+			if ($taxModeEnabled && (string)$row['entry_amount_basis'] !== TransactionService::BASIS_SIMPLE) {
+				if ($basis === 'net' && $row['net_amount_minor'] !== null) {
+					$amount = (int)$row['net_amount_minor'];
+				} elseif ($basis === 'gross' && $row['gross_amount_minor'] !== null) {
+					$amount = (int)$row['gross_amount_minor'];
+				}
+			}
+			$mo = (int)substr((string)$row['booking_date'], 5, 2);
+			$bucket = &$out[$cid];
+			$bucket ??= ['actual' => 0, 'specials' => 0, 'count' => 0, 'months' => []];
+			$special = (bool)$row['is_special'];
+			if ($special) {
+				$bucket['specials'] += $amount;
+				$bucket['months'][$mo]['specials'] = ($bucket['months'][$mo]['specials'] ?? 0) + $amount;
+			} else {
+				$bucket['actual'] += $amount;
+				$bucket['months'][$mo]['actual'] = ($bucket['months'][$mo]['actual'] ?? 0) + $amount;
+			}
+			$bucket['count']++;
+		}
+		return $out;
+	}
+
+	/**
+	 * Planned budget per category per year — one grouped query for all years,
+	 * not 12 plannedMapForMonth calls (NN-04 of the spec).
+	 *
+	 * @param list<int> $years
+	 * @return array<int, array<int, int>> year => categoryId => plannedMinor
+	 */
+	private function plannedByCategoryForYears(int $workspaceId, array $years): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('category_id', 'year_month')
+			->selectAlias($qb->createFunction('SUM(planned_minor)'), 'planned_sum')
+			->from('bc_budgets')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNotNull('category_id'))
+			->groupBy('category_id', 'year_month');
+		$result = $qb->executeQuery();
+		$out = array_fill_keys($years, []);
+		while ($row = $result->fetch()) {
+			$y = (int)substr((string)$row['year_month'], 0, 4);
+			if (!isset($out[$y])) {
+				continue;
+			}
+			$cid = (int)$row['category_id'];
+			$out[$y][$cid] = ($out[$y][$cid] ?? 0) + (int)$row['planned_sum'];
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	/**
 	 * Household Start-dashboard span (calendar year or all-time).
 	 * Returns the same envelope shape `budgetChipsFromSummary` expects from monthly home.
 	 *
@@ -922,7 +1131,7 @@ class SummaryService
 	/**
 	 * @return array<int,array{name:string,type:string,isActive:bool}>
 	 */
-	private function workspaceCategoryMeta(int $workspaceId): array
+	public function workspaceCategoryMeta(int $workspaceId): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id', 'name', 'type', 'is_active', 'is_savings_transfer')
@@ -946,7 +1155,7 @@ class SummaryService
 	 * @param array<int,array{name:string,type:string,isActive:bool,isSavingsTransfer?:bool}> $workspaceCategories
 	 * @return list<int>
 	 */
-	private function savingsTransferCategoryIds(array $workspaceCategories): array
+	public function savingsTransferCategoryIds(array $workspaceCategories): array
 	{
 		$ids = [];
 		foreach ($workspaceCategories as $cid => $meta) {
@@ -1046,7 +1255,7 @@ class SummaryService
 	/**
 	 * @return list<array<string,mixed>>
 	 */
-	private function loadTransactionsForRange(int $workspaceId, \DateTimeImmutable $start, \DateTimeImmutable $end): array
+	public function loadTransactionsForRange(int $workspaceId, \DateTimeImmutable $start, \DateTimeImmutable $end): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
@@ -1090,14 +1299,14 @@ class SummaryService
 	/**
 	 * @return array{0:\DateTimeImmutable, 1:\DateTimeImmutable}
 	 */
-	private function monthBounds(string $yearMonth): array
+	public function monthBounds(string $yearMonth): array
 	{
 		$start = new \DateTimeImmutable($yearMonth . '-01');
 		$end = $start->modify('last day of this month');
 		return [$start, $end];
 	}
 
-	private function validateYearMonth(string $value): string
+	public function validateYearMonth(string $value): string
 	{
 		$value = trim($value);
 		if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $value)) {
@@ -1106,7 +1315,7 @@ class SummaryService
 		return $value;
 	}
 
-	private function excludeSpecialsFromPlanningTotals(array $workspace): bool
+	public function excludeSpecialsFromPlanningTotals(array $workspace): bool
 	{
 		// Household workspaces can opt-in to including one-off "special" transactions
 		// in planning totals (and therefore in the monthly category consumption table).

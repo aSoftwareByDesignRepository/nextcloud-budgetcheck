@@ -22,8 +22,6 @@ final class MobileApiControllerContractTest extends TestCase
 		'updateTransaction',
 		'deleteTransaction',
 		'applyRecurringSuggestion',
-		'registerPushToken',
-		'unregisterPushToken',
 		'uploadTransactionAttachment',
 		'deleteTransactionAttachment',
 		'createWorkspace',

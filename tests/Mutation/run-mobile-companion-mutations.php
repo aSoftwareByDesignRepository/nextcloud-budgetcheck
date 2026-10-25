@@ -48,8 +48,6 @@ foreach ([
 	'updateTransaction',
 	'deleteTransaction',
 	'applyRecurringSuggestion',
-	'registerPushToken',
-	'unregisterPushToken',
 	'uploadTransactionAttachment',
 	'deleteTransactionAttachment',
 	'createWorkspace',
@@ -156,10 +154,13 @@ $assert(str_contains($app, 'registerCapability'), 'capability_registered');
 $assert(str_contains($app, 'MobileIdempotencyService'), 'idempotency_di');
 $assert(str_contains($idemp, 'IdempotencyMismatchException'), 'idempotency_mismatch');
 $assert(str_contains($mig, 'bc_idempotency'), 'migration_idempotency');
-$assert(str_contains($mig, 'bc_mobile_push'), 'migration_push');
+$assert(str_contains($mig, 'bc_mobile_push'), 'migration_push_history');
+$dropMig = (string)file_get_contents($root . '/lib/Migration/Version1024Date20261025160000.php');
+$assert(str_contains($dropMig, "dropTable('bc_mobile_push')"), 'migration_push_dropped');
+$assert(!str_contains($catalog, 'bc_mobile_push'), 'catalog_push_removed');
 $assert(str_contains($catalog, 'bc_idempotency'), 'catalog_idempotency');
 $assert(str_contains($uninstall, 'bc_idempotency'), 'uninstall_idempotency');
-$assert(str_contains($uninstall, 'bc_mobile_push'), 'uninstall_push');
+$assert(str_contains($uninstall, 'bc_mobile_push'), 'uninstall_push_stale_cleanup');
 $assert(!str_contains($uninstall, 'purgeTransactionAttachmentFiles'), 'uninstall_keeps_tx_attachments');
 $assert(!str_contains($uninstall, 'tx-attachments'), 'uninstall_no_tx_attachments_path');
 $assert(str_contains($uninstall, 'purgeUpgradeBackupSnapshots'), 'uninstall_purges_upgrade_backups');

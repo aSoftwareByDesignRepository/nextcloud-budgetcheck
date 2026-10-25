@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Payees: normalized counterparty directory (`bc_payees`), payee field on bookings (web editor datalist + mobile picker), payee search/merge/rename/deactivate in workspace settings, payee-aware ledger search
+- Categorization rules (`bc_category_rules`): deterministic first-match engine (contains/equals/starts_with, optional regex opt-in) applied on CSV import with commit-time hit counting, suggestion chip in the transaction editor, manager CRUD + backfill dry-run/apply in settings
+- Insights on the dashboard (household): month-end forecast (linear MTD + scheduled recurring remainder), top payees, category trend — DOM/CSS visualizations only
+- Nextcloud dashboard widget "Budget status" with per-user opt-out, favorite-workspace resolution and fail-silent degradation
+- Alert notifications: four per-user toggleable types (budget threshold, recurring posted, monthly digest, savings status), master switch, quiet hours, per-category thresholds, dedupe-safe `bc_alert_log` (insert-then-send), daily `AlertEvaluationJob`, alert log section in settings, in-app Notifier
+- Companion app: YearlyCompare screen (capability-gated), payee write fields + payee picker in the transaction form, payee row in booking detail, mobile endpoints for payees / month-forecast / top-payees / yearly-category-compare
+- Second dashboard widget "Upcoming recurring" (due within 14 days, same kill-switch/fail-safe contract)
+- Alert email channel: opt-in per user, plain-text, validated recipient, auto-submitted — shares the alert_log dedupe claim
+- Categorization-rules CSV export (manager-gated, BOM + formula guard, same safety contract as transaction export)
+- Trend chart A-vs-B overlay ("compare with" select) + payee shown on ledger rows
+- API: payees, categorization-rules (+ suggest, backfill), category-trend, top-payees, month-forecast, alert-preferences, alerts endpoints
+
+### Changed
+
+- Year parameters are strict `^\d{4}$` on every surface (web API, mobile API, yearly export); `year == compareYear` is a 400 instead of silent degradation
+- App version bumped to 1.5.0 (migrations 1025–1026)
+
+### Removed
+
+- Mobile push stack removed (never shipped a sender): `bc_mobile_push` table dropped via migration 1024, `registerPushToken`/`unregisterPushToken` endpoints + `push` capability gone, `MobilePushService` deleted; companion drops `expo-notifications`, push listener, settings toggle and FCM manifest entries
+
 ## 1.4.9 - 2026-10-25
 
 ### Fixed

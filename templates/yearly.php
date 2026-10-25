@@ -52,6 +52,25 @@ $workspace = $_['workspace'] ?? null;
 		</div>
 	</section>
 
+	<section class="bc-card bc-section" aria-labelledby="bc-compare-title" data-bc-compare>
+		<header class="bc-section__header">
+			<div>
+				<h2 id="bc-compare-title"><?php p($l->t('Categories — year over year')); ?></h2>
+				<p class="bc-section__sub"><?php p($l->t('What changed per category versus the comparison year.')); ?></p>
+			</div>
+			<div class="bc-section__controls bc-section__controls--stack">
+				<label class="bc-field bc-field--inline" for="bc-compare-year">
+					<span class="bc-field__label"><?php p($l->t('Compare with')); ?></span>
+					<select id="bc-compare-year" class="bc-input" data-bc-compare-picker aria-describedby="bc-compare-year-hint"></select>
+				</label>
+				<p id="bc-compare-year-hint" class="bc-section__control-hint"><?php p($l->t('Defaults to the previous year. Pick any year to compare against.')); ?></p>
+			</div>
+		</header>
+		<div data-bc-compare-body aria-busy="true">
+			<p class="bc-loading"><?php p($l->t('Loading…')); ?></p>
+		</div>
+	</section>
+
 	<section class="bc-card bc-section" aria-labelledby="bc-year-months-title">
 		<header class="bc-section__header">
 			<div>

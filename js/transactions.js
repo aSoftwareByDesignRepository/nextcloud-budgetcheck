@@ -1033,6 +1033,12 @@
 		} else {
 			titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-title', text: tx.title || '' }));
 		}
+		if (tx.payeeName) {
+			titleTd.appendChild(C.createElement('span', {
+				class: 'bc-tx-row-payee',
+				text: String(tx.payeeName).slice(0, 190),
+			}));
+		}
 		if (tx.notes) {
 			titleTd.appendChild(C.createElement('span', { class: 'bc-tx-row-notes', text: String(tx.notes).slice(0, 280) }));
 		}

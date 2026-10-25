@@ -9,7 +9,6 @@ use OCA\BudgetCheck\Service\AccessControlService;
 use OCA\BudgetCheck\Service\BookingStatusService;
 use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\MobileIdempotencyService;
-use OCA\BudgetCheck\Service\MobilePushService;
 use OCA\BudgetCheck\Service\RateLimitService;
 use OCA\BudgetCheck\Service\RecurringRuleService;
 use OCA\BudgetCheck\Service\SummaryService;
@@ -17,7 +16,6 @@ use OCA\BudgetCheck\Service\TransactionAttachmentService;
 use OCA\BudgetCheck\Service\TransactionExportService;
 use OCA\BudgetCheck\Service\TransactionService;
 use OCA\BudgetCheck\Service\WorkspaceService;
-use OCP\App\IAppManager;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IL10N;
@@ -39,8 +37,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 	private IRequest $request;
 	/** @var AccessControlService&MockObject */
 	private AccessControlService $access;
-	/** @var IAppManager&MockObject */
-	private IAppManager $appManager;
 	/** @var IUserSession&MockObject */
 	private IUserSession $userSession;
 	/** @var IUserManager&MockObject */
@@ -57,7 +53,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		parent::setUp();
 		$this->request = $this->createMock(IRequest::class);
 		$this->access = $this->createMock(AccessControlService::class);
-		$this->appManager = $this->createMock(IAppManager::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->transactions = $this->createMock(TransactionService::class);
@@ -93,11 +88,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->transactionExport,
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -109,7 +102,6 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		$user = $this->createMock(IUser::class);
 		$user->method('getDisplayName')->willReturn('Alice');
 		$this->userSession->method('getUser')->willReturn($user);
-		$this->appManager->method('isEnabledForUser')->with('notifications')->willReturn(false);
 
 		$response = $this->controller->bootstrap();
 		self::assertInstanceOf(JSONResponse::class, $response);
@@ -124,6 +116,7 @@ final class MobileApiControllerBehaviorTest extends TestCase
 		self::assertArrayNotHasKey('bdc2', $data);
 		self::assertSame('alice', $data['user']['uid']);
 		self::assertTrue($data['capabilities']['offlineCreate']);
+		self::assertArrayNotHasKey('push', $data['capabilities']);
 		self::assertArrayHasKey('canCreateWorkspace', $data['capabilities']);
 	}
 
@@ -160,11 +153,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -231,11 +222,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -303,11 +292,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -367,11 +354,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -417,11 +402,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -488,11 +471,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -540,11 +521,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -632,11 +611,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -725,11 +702,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$idem,
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -839,11 +814,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$idem,
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -893,11 +866,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$idem,
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -994,11 +965,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$rate,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1066,11 +1035,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1111,11 +1078,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1159,11 +1124,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1241,11 +1204,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1326,11 +1287,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1389,11 +1348,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$summaries,
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$this->createMock(RateLimitService::class),
 			$this->createMock(TransactionAttachmentService::class),
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionExportService::class),
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);
@@ -1506,11 +1463,9 @@ final class MobileApiControllerBehaviorTest extends TestCase
 			$this->createMock(SummaryService::class),
 			$this->createMock(RecurringRuleService::class),
 			$this->createMock(MobileIdempotencyService::class),
-			$this->createMock(MobilePushService::class),
 			$rateLimit,
 			$this->createMock(TransactionAttachmentService::class),
 			$this->transactionExport,
-			$this->appManager,
 			$l10n,
 			$this->createMock(LoggerInterface::class),
 		);

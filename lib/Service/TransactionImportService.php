@@ -20,7 +20,40 @@ class TransactionImportService
 		private AccessControlService $access,
 		private \OCP\IDBConnection $db,
 		private SnapshotService $snapshots,
+		private ?\OCP\AppFramework\Utility\ITimeFactory $timeFactory = null,
 	) {
+	}
+
+	/** Rule + payee services resolved lazily so the import DI stays additive. */
+	private ?CategorizationRuleService $ruleServiceInstance = null;
+	private ?PayeeService $payeeServiceInstance = null;
+
+	private function ruleService(): CategorizationRuleService
+	{
+		if ($this->ruleServiceInstance === null) {
+			$this->ruleServiceInstance = new CategorizationRuleService(
+				$this->db,
+				$this->access,
+				$this->timeFactory ?? new \OC\AppFramework\Utility\TimeFactory(),
+				$this->audit,
+				$this->categories,
+				$this->payeeService(),
+			);
+		}
+		return $this->ruleServiceInstance;
+	}
+
+	private function payeeService(): PayeeService
+	{
+		if ($this->payeeServiceInstance === null) {
+			$this->payeeServiceInstance = new PayeeService(
+				$this->db,
+				$this->access,
+				$this->timeFactory ?? new \OC\AppFramework\Utility\TimeFactory(),
+				$this->audit,
+			);
+		}
+		return $this->payeeServiceInstance;
 	}
 
 	/**
@@ -126,6 +159,7 @@ class TransactionImportService
 			}
 
 			$skippedCount = count($skipIndexes);
+			$ruleHits = [];
 			foreach ($normalizedRows as $i => $row) {
 				if (isset($skipIndexes[$i])) {
 					continue;
@@ -135,10 +169,19 @@ class TransactionImportService
 					continue;
 				}
 				[$category, $status] = $resolvedRow;
+				// Commit-time hit accounting: a row whose category came from a
+				// rule counts exactly once (US-104 AC-3 — never at preview).
+				if (isset($category['__ruleId'])) {
+					$ruleHits[(int)$category['__ruleId']] = ($ruleHits[(int)$category['__ruleId']] ?? 0) + 1;
+				}
+				unset($category['__ruleId']);
 				$payload = $row;
 				$payload['categoryId'] = (int)$category['id'];
 				$this->transactions->create($workspaceId, $userId, $payload, $workspace, $category, $status);
 				$createdCount++;
+			}
+			if ($ruleHits !== []) {
+				$this->ruleService()->recordHits($ruleHits);
 			}
 			$this->db->commit();
 		} catch (\InvalidArgumentException|AccessDeniedException $e) {
@@ -201,6 +244,8 @@ class TransactionImportService
 				'title' => (string)($row['title'] ?? ''),
 				'direction' => strtolower(trim((string)($row['direction'] ?? ''))),
 				'amount' => $row['amount'] ?? null,
+				'payee' => trim((string)($row['payee'] ?? '')),
+				'payeeId' => (int)($row['payeeId'] ?? 0),
 				'category' => trim((string)($row['category'] ?? '')),
 				'categoryId' => (int)($row['categoryId'] ?? 0),
 				'bookingStatusId' => array_key_exists('bookingStatusId', $row) && $row['bookingStatusId'] !== null && $row['bookingStatusId'] !== ''
@@ -498,6 +543,16 @@ class TransactionImportService
 			throw new \InvalidArgumentException('Row ' . $rowNumber . ': category "' . $name . '" is ambiguous.');
 		}
 
+		// Deterministic rule match fills rows the CSV left uncategorized —
+		// explicit categoryId / category name always win (AC-IMP-1).
+		$rule = $this->ruleMatchForRow($workspaceId, $row, $direction);
+		if ($rule !== null) {
+			$category = $this->categories->loadForWorkspace((int)$rule['category_id'], $workspaceId);
+			if ($category !== null && !empty($category['isActive'])) {
+				return $category + ['__ruleId' => (int)$rule['id']];
+			}
+		}
+
 		$defaultId = $direction === CategoryService::TYPE_INCOME
 			? $ctx['defaults']['incomeCategoryId']
 			: $ctx['defaults']['expenseCategoryId'];
@@ -517,5 +572,37 @@ class TransactionImportService
 		throw new \InvalidArgumentException(
 			'Row ' . $rowNumber . ': category is required. Pick a default category for import or add a category column with category names.',
 		);
+	}
+
+	/**
+	 * First active categorization rule matching the row's title/payee/notes.
+	 * Payee names resolve through the same normalized lookup the editor uses.
+	 */
+	private function ruleMatchForRow(int $workspaceId, array $row, string $direction): ?array
+	{
+		static $rulesCache = [];
+		try {
+			if (!isset($rulesCache[$workspaceId])) {
+				$rulesCache[$workspaceId] = $this->ruleService()->activeRulesForWorkspace($workspaceId);
+			}
+			if ($rulesCache[$workspaceId] === []) {
+				return null;
+			}
+			$payeeName = trim((string)($row['payee'] ?? ''));
+			if ($payeeName === '' && (int)($row['payeeId'] ?? 0) > 0) {
+				$payee = $this->payeeService()->loadForWorkspace((int)$row['payeeId'], $workspaceId);
+				$payeeName = $payee !== null ? (string)$payee['name'] : '';
+			}
+			return $this->ruleService()->evaluate($rulesCache[$workspaceId], [
+				'title' => (string)($row['title'] ?? ''),
+				'payeeName' => $payeeName,
+				'notes' => (string)($row['notes'] ?? ''),
+				'direction' => $direction,
+			]);
+		} catch (\Throwable) {
+			// Rule infrastructure absent mid-upgrade or mocked out in tests —
+			// never let matching break the import (NN-05 of the payee spec).
+			return null;
+		}
 	}
 }

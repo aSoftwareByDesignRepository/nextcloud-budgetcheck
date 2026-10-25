@@ -89,6 +89,14 @@
 			catalog.workspaceId = wsId;
 			catalog.categories = catData.categories || [];
 			catalog.statuses = [];
+			catalog.payees = [];
+			try {
+				const payeeData = await BC.Api.get('/apps/budgetcheck/api/payees', { workspaceId: wsId });
+				catalog.payees = payeeData.payees || [];
+			} catch (_) {
+				// Payee suggestions are progressive enhancement — a missing
+				// endpoint (older server) never blocks the editor.
+			}
 			if (ctx.workspace.type === 'project') {
 				const statusData = await BC.Api.get('/apps/budgetcheck/api/booking-statuses', { workspaceId: wsId });
 				catalog.statuses = statusData.statuses || [];
@@ -373,6 +381,122 @@
 					);
 				}
 
+				// Payee combobox: native <datalist> keeps it keyboard- and
+				// screen-reader-accessible with zero custom JS. Free text is
+				// allowed — an unmatched name lazily creates the payee.
+				const payeeList = BC.Components.createElement('datalist', { id: uid('bc-payee-list') });
+				(catalog.payees || []).forEach((p) => {
+					const opt = BC.Components.createElement('option', { value: p.name });
+					opt.dataset.payeeId = String(p.id);
+					payeeList.appendChild(opt);
+				});
+				const payeeInput = BC.Components.createElement('input', {
+					type: 'text',
+					name: 'payeeName',
+					class: 'bc-input',
+					maxlength: 180,
+					attrs: { list: payeeList.id, autocomplete: 'off' },
+				});
+				payeeInput.value = tx && tx.payeeName ? tx.payeeName : '';
+				wrapField(
+					form,
+					t('budgetcheck', 'Payee'),
+					payeeInput,
+					t('budgetcheck', 'Optional — who the money went to or came from. Pick an existing payee or type a new name.'),
+					'bc-field--full-width',
+				);
+				// The datalist lives inside the payee <label> (wrapField appends
+				// the label as form's last child) so mobile keyboards can offer it.
+				const payeeLabel = form.lastElementChild;
+				if (payeeLabel) {
+					payeeLabel.appendChild(payeeList);
+				}
+
+				function selectedPayee() {
+					const name = payeeInput.value.trim();
+					if (!name) return null;
+					const opts = payeeList.querySelectorAll('option');
+					for (let i = 0; i < opts.length; i++) {
+						if (String(opts[i].value).toLowerCase() === name.toLowerCase()) {
+							return { id: Number(opts[i].dataset.payeeId), name: name };
+						}
+					}
+					return { id: null, name: name };
+				}
+
+				// Rule suggestion chip (US-102): an offer, never an auto-apply.
+				const suggestChipWrap = BC.Components.createElement('div', {
+					class: 'bc-field bc-field--full-width bc-suggest-wrap',
+					hidden: true,
+				});
+				const suggestChip = BC.Components.createElement('button', {
+					type: 'button',
+					class: 'bc-suggest-chip',
+					hidden: true,
+				});
+				suggestChipWrap.appendChild(suggestChip);
+				const catFieldWrap = catSelect.closest('.bc-field');
+				if (catFieldWrap && catFieldWrap.parentNode) {
+					catFieldWrap.parentNode.insertBefore(suggestChipWrap, catFieldWrap.nextSibling);
+				} else {
+					form.insertBefore(suggestChipWrap, payeeLabel ? payeeLabel.nextSibling : null);
+				}
+				let suggestSeq = 0;
+				let suggestedCategoryId = null;
+				function hideSuggestion() {
+					suggestChipWrap.hidden = true;
+					suggestChip.hidden = true;
+					suggestedCategoryId = null;
+				}
+				async function refreshSuggestion() {
+					const seq = ++suggestSeq;
+					const sel = selectedPayee();
+					const params = {
+						workspaceId: ctx.workspace.id,
+						title: titleInput.value.trim(),
+						notes: notesArea.value.trim(),
+						direction: directionSelect.value,
+					};
+					if (sel && sel.id) {
+						params.payeeId = sel.id;
+					} else if (sel) {
+						params.payeeName = sel.name;
+					}
+					if (!params.title && !params.payeeName && !params.payeeId && !params.notes) {
+						hideSuggestion();
+						return;
+					}
+					let match = null;
+					try {
+						const res = await BC.Api.get('/apps/budgetcheck/api/categories/suggest', params);
+						match = res && res.match;
+					} catch (_) {
+						match = null;
+					}
+					if (seq !== suggestSeq) return; // stale async — newer input wins
+					if (!match || String(match.categoryId) === String(catSelect.value)) {
+						hideSuggestion();
+						return;
+					}
+					suggestedCategoryId = match.categoryId;
+					suggestChip.textContent = t('budgetcheck', 'Suggested category: {name} — click to apply')
+						.replace('{name}', match.categoryName || ('#' + match.categoryId));
+					suggestChipWrap.hidden = false;
+					suggestChip.hidden = false;
+				}
+				let suggestTimer = 0;
+				function queueSuggestion() {
+					window.clearTimeout(suggestTimer);
+					suggestTimer = window.setTimeout(refreshSuggestion, 300);
+				}
+				suggestChip.addEventListener('click', () => {
+					if (!suggestedCategoryId) return;
+					catSelect.value = String(suggestedCategoryId);
+					catSelect.dispatchEvent(new Event('change', { bubbles: true }));
+					hideSuggestion();
+					catSelect.focus();
+				});
+
 				const notesArea = BC.Components.createElement('textarea', { name: 'notes', class: 'bc-input', maxlength: 4000, rows: 3 });
 				notesArea.value = tx && tx.notes ? tx.notes : '';
 				wrapField(
@@ -382,6 +506,11 @@
 					t('budgetcheck', 'Optional detail for people who can view this booking—references, links, or context.'),
 					'bc-field--full-width',
 				);
+
+				// Wired after notesArea exists — a TDZ ReferenceError here would
+				// abort buildForm and the dialog never opens (e2e: dialog spec).
+				[titleInput, notesArea, payeeInput].forEach((el) => el.addEventListener('input', queueSuggestion));
+				directionSelect.addEventListener('change', queueSuggestion);
 
 				const specialOuter = BC.Components.createElement('label', { class: 'bc-field bc-field--full-width bc-field--boolean' });
 				specialOuter.appendChild(BC.Components.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Special') }));
@@ -473,12 +602,16 @@
 					syncTaxControls();
 				}
 
-				form._collect = () => ({
+				form._collect = () => {
+					const selPayee = selectedPayee();
+					return {
 					workspaceId: ctx.workspace.id,
 					title: titleInput.value.trim(),
 					direction: directionSelect.value,
 					bookingDate: dateInput.value.trim(),
 					amount: amountInput.value,
+					payeeId: selPayee && selPayee.id ? selPayee.id : undefined,
+					payeeName: selPayee && !selPayee.id ? selPayee.name : undefined,
 					categoryId: catSelect.value ? Number.parseInt(catSelect.value, 10) : 0,
 					bookingStatusId: bookingStatusSelect && bookingStatusSelect.value ? Number.parseInt(bookingStatusSelect.value, 10) : null,
 					isSpecial: specialInput.checked,
@@ -487,7 +620,8 @@
 					vatPreset: vatPresetSelect ? vatPresetSelect.value : undefined,
 					vatRateBpCustom: vatCustomInput ? vatCustomInput.value : undefined,
 					version: activeTx && activeTx.id ? activeTx.version : undefined,
-				});
+					};
+				};
 				form._focusFirstInvalid = () => {
 					if (catSelect.disabled || !catSelect.value) {
 						(catSelect.disabled ? directionSelect : catSelect).focus();
