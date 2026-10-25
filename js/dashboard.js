@@ -450,7 +450,7 @@
 				C.createElement('span', { class: 'bc-insight__k', text: p.name }),
 				C.createElement('strong', {
 					class: 'bc-insight__v',
-					text: (p.total && p.total.formatted) || '—'
+					text: ((p.total && p.total.formatted) || '—')
 						+ (p.shareRatio !== undefined ? ' · ' + Math.round(p.shareRatio * 100) + '%' : ''),
 				}),
 			]));

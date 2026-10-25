@@ -4995,7 +4995,7 @@ textarea {
 	background: var(--color-primary-element);
 }
 .bc-trend-bars__bar--empty { background: var(--color-border); }
-.bc-trend-bars__bar--compare { background: var(--bc-accent-alt, var(--color-warning-icon)); }
+.bc-trend-bars__bar--compare { background: var(--color-warning); }
 .bc-insight-compare { margin-inline-start: var(--bc-space-sm, 8px); max-width: 14em; }
 .bc-trend-bars__val {
 	font-size: 0.72rem;
@@ -5022,12 +5022,13 @@ textarea {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--bc-space-2, 8px);
-	padding: 6px 12px;
+	padding: var(--bc-space-1, 4px) var(--bc-space-3, 12px);
+	min-height: 44px;
 	border: 1px solid var(--color-primary-element);
 	border-radius: 999px;
 	background: var(--color-primary-element-light, var(--color-background-hover));
 	color: var(--color-primary-element-text, var(--color-main-text));
-	font-size: 0.85rem;
+	font-size: var(--bc-fs-sm, 0.875rem);
 	cursor: pointer;
 }
 .bc-suggest-chip:hover,
