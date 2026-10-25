@@ -134,16 +134,22 @@ class PayeeService
 			throw new \InvalidArgumentException('Payee name must be 1–180 characters.');
 		}
 		$norm = self::normalizeName($name);
-		$existing = $this->findByNorm($workspaceId, $norm);
-		if ($existing !== null) {
-			// Revive a soft-deleted payee rather than minting a duplicate row.
-			if (empty($existing['is_active'])) {
-				$this->setActiveFlag((int)$existing['id'], $userId, true);
-				$existing['is_active'] = true;
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete and same-norm
+			// creates: the dedupe check must run under the workspace row lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			$existing = $this->findByNorm($workspaceId, $norm);
+			if ($existing !== null) {
+				// Revive a soft-deleted payee rather than minting a duplicate.
+				if (empty($existing['is_active'])) {
+					$this->setActiveFlag((int)$existing['id'], $userId, true);
+					$existing['is_active'] = true;
+				}
+				$this->db->commit();
+				return $this->hydrate($existing);
 			}
-			return $this->hydrate($existing);
-		}
-		$now = $this->now();
+			$now = $this->now();
 		$qb = $this->db->getQueryBuilder();
 		$qb->insert('bc_payees')
 			->values([
@@ -156,26 +162,34 @@ class PayeeService
 				'created_at' => $qb->createNamedParameter($now),
 				'updated_at' => $qb->createNamedParameter($now),
 			]);
-		try {
-			$qb->executeStatement();
-		} catch (\Throwable $e) {
-			if (!$this->isUniqueConstraintViolation($e)) {
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				// Unique-index race: another request created the same norm.
+				$existing = $this->findByNorm($workspaceId, $norm);
+				if ($existing !== null) {
+					if (empty($existing['is_active'])) {
+						$this->setActiveFlag((int)$existing['id'], $userId, true);
+						$existing['is_active'] = true;
+					}
+					$this->db->commit();
+					return $this->hydrate($existing);
+				}
 				throw $e;
 			}
-			// Unique-index race: another request created the same norm — return it.
-			$existing = $this->findByNorm($workspaceId, $norm);
-			if ($existing !== null) {
-				if (empty($existing['is_active'])) {
-					$this->setActiveFlag((int)$existing['id'], $userId, true);
-					$existing['is_active'] = true;
-				}
-				return $this->hydrate($existing);
+			$row = $this->findByNorm($workspaceId, $norm);
+			if ($row === null) {
+				throw new AccessDeniedException();
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
 			}
 			throw $e;
-		}
-		$row = $this->findByNorm($workspaceId, $norm);
-		if ($row === null) {
-			throw new AccessDeniedException();
 		}
 		$this->audit->record($userId, 'payee_created', 'payee', (string)$row['id'], ['name' => $name], $workspaceId);
 		return $this->hydrate($row);

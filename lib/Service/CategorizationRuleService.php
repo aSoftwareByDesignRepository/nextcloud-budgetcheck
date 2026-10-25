@@ -274,15 +274,21 @@ class CategorizationRuleService
 		$this->access->ensureMinimumRole($workspaceId, $userId, AccessControlService::ROLE_MANAGER);
 		$this->assertRuleCap($workspaceId);
 		$fields = $this->validatePayload($workspaceId, $payload, null);
-		// Idempotent create: an identical active rule is returned instead of
-		// minting a duplicate row (double-submit / retry safety — there is no
-		// unique index covering the match tuple).
-		$existing = $this->findIdentical($workspaceId, $fields);
-		if ($existing !== null) {
-			return $this->hydrate($existing);
-		}
-		$now = $this->now();
-		$qb = $this->db->getQueryBuilder();
+		$this->db->beginTransaction();
+		try {
+			// Serialize against concurrent workspace delete and identical
+			// creates: the dedupe check must run under the workspace row lock.
+			WorkspaceRowLock::acquire($this->db, $workspaceId);
+			// Idempotent create: an identical active rule is returned instead
+			// of minting a duplicate row (double-submit / retry safety — there
+			// is no unique index covering the match tuple).
+			$existing = $this->findIdentical($workspaceId, $fields);
+			if ($existing !== null) {
+				$this->db->commit();
+				return $this->hydrate($existing);
+			}
+			$now = $this->now();
+			$qb = $this->db->getQueryBuilder();
 		$qb->insert('bc_category_rules')
 			->values([
 				'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
@@ -301,8 +307,15 @@ class CategorizationRuleService
 				'created_at' => $qb->createNamedParameter($now),
 				'updated_at' => $qb->createNamedParameter($now),
 			]);
-		$qb->executeStatement();
-		$id = (int)$this->db->lastInsertId('bc_category_rules');
+			$qb->executeStatement();
+			$id = (int)$this->db->lastInsertId('bc_category_rules');
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			throw $e;
+		}
 		$this->audit->record($userId, 'categorization_rule_created', 'categorization_rule', (string)$id, [
 			'pattern' => $fields['pattern'],
 			'categoryId' => $fields['category_id'],
