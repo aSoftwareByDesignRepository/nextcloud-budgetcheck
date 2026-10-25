@@ -46,6 +46,37 @@ final class AccessControlPrivacyRoleMatrixTest extends TestCase
 		self::assertSame(AccessControlService::ROLE_MANAGER, $svc->role(7, 'admin'));
 	}
 
+	public function testGhostWorkspaceDeniesEvenAppAdmin(): void
+	{
+		// r11 fixer regression: privacyModeOrNull null means no workspace row —
+		// role() must deny instead of granting the app-admin bypass, otherwise
+		// endpoints gated only by ensureMinimumRole leak existence via 200-vs-403.
+		$svc = new class (
+			$this->createMock(IDBConnection::class),
+			$this->createMock(IConfig::class),
+			$this->createMock(IGroupManager::class),
+			$this->createMock(IUserSession::class),
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(IUserManager::class),
+			$this->createMock(MoneyService::class),
+			$this->createMock(LoggerInterface::class),
+		) extends AccessControlService {
+			protected function privacyModeOrNull(int $workspaceId): ?string
+			{
+				return null;
+			}
+
+			public function isAppAdmin(string $userId): bool
+			{
+				return true;
+			}
+		};
+
+		self::assertNull($svc->role(999999, 'admin'));
+		$this->expectException(AccessDeniedException::class);
+		$svc->ensureMembership(999999, 'admin');
+	}
+
 	public function testStandardMergesIndividualAndGroupRoles(): void
 	{
 		$svc = $this->matrixService(
@@ -136,6 +167,11 @@ final class AccessControlPrivacyRoleMatrixTest extends TestCase
 			}
 
 			public function privacyMode(int $workspaceId): string
+			{
+				return $this->fixedPrivacy;
+			}
+
+			protected function privacyModeOrNull(int $workspaceId): ?string
 			{
 				return $this->fixedPrivacy;
 			}

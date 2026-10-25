@@ -89,7 +89,7 @@ class AccessControlService
 	/** @var array<string, list<string>> */
 	private array $userGroupIdsCache = [];
 
-	/** @var array<int, string> */
+	/** @var array<int, string|null> mode for an existing row; null when the id has no workspace */
 	private array $privacyModeCache = [];
 
 	public function __construct(
@@ -184,14 +184,21 @@ class AccessControlService
 	 *
 	 * Private workspaces: individual membership only — no app-admin bypass and
 	 * no group inheritance (groups are forbidden on private; defence in depth).
-	 * Returns null when the user has no role from an allowed source.
+	 * Returns null when the workspace does not exist or the user has no role
+	 * from an allowed source.
 	 */
 	public function role(int $workspaceId, string $userId): ?string
 	{
 		if ($workspaceId < 1 || $userId === '') {
 			return null;
 		}
-		$privacy = $this->privacyMode($workspaceId);
+		$privacy = $this->privacyModeOrNull($workspaceId);
+		if ($privacy === null) {
+			// Fail closed on ghost ids: an app admin must not become MANAGER on a
+			// nonexistent workspace — 200-vs-403 there is an existence oracle
+			// against private spaces the admin is not a member of.
+			return null;
+		}
 		if ($privacy === self::PRIVACY_PRIVATE) {
 			return $this->individualRole($workspaceId, $userId);
 		}
@@ -215,8 +222,19 @@ class AccessControlService
 	 */
 	public function privacyMode(int $workspaceId): string
 	{
+		return $this->privacyModeOrNull($workspaceId) ?? self::PRIVACY_STANDARD;
+	}
+
+	/**
+	 * Raw privacy-mode lookup: the persisted mode for an existing row, null
+	 * when no workspace with that id exists. Callers that must distinguish
+	 * "ghost id" from "standard mode" (access checks) use this; callers that
+	 * only need the effective mode use {@see privacyMode()}.
+	 */
+	protected function privacyModeOrNull(int $workspaceId): ?string
+	{
 		if ($workspaceId < 1) {
-			return self::PRIVACY_STANDARD;
+			return null;
 		}
 		if (array_key_exists($workspaceId, $this->privacyModeCache)) {
 			return $this->privacyModeCache[$workspaceId];
@@ -229,8 +247,8 @@ class AccessControlService
 		$row = $result->fetch();
 		$result->closeCursor();
 		if ($row === false) {
-			$this->privacyModeCache[$workspaceId] = self::PRIVACY_STANDARD;
-			return self::PRIVACY_STANDARD;
+			$this->privacyModeCache[$workspaceId] = null;
+			return null;
 		}
 		$mode = strtolower(trim((string)($row['privacy_mode'] ?? self::PRIVACY_STANDARD)));
 		if (!in_array($mode, self::PRIVACY_MODES, true)) {
