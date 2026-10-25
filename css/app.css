@@ -4995,7 +4995,7 @@ textarea {
 	background: var(--color-primary-element);
 }
 .bc-trend-bars__bar--empty { background: var(--color-border); }
-.bc-trend-bars__bar--compare { background: var(--color-warning); }
+.bc-trend-bars__bar--compare { background: var(--color-warning-text, #c98600); }
 .bc-insight-compare { margin-inline-start: var(--bc-space-sm, 8px); max-width: 14em; }
 .bc-trend-bars__val {
 	font-size: 0.72rem;
