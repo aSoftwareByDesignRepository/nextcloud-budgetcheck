@@ -393,7 +393,7 @@ OC.L10N.register(
 	"Deactivate this status?" : "Deaktivere denne statusen?",
 	"Default" : "Standard",
 	"Default VAT rate" : "Standard MVA-sats",
-	"Default VAT rate (basis points, e.g. 1900 = 19%%)" : "Standard MVA-sats (basispunkter, f.eks. 1900 = 19%%)",
+	"Default VAT rate (basis points, e.g. 1900 = 19%%)" : "Standard MVA-sats (basispunkter, f.eks. 1900 = 19 %%)",
 	"Default amount" : "Standardbeløp",
 	"Default budgets saved." : "Standardbudsjetter lagret.",
 	"Default categories (no category column in CSV)" : "Standardkategorier (ingen kategorikolonne i CSV)",
