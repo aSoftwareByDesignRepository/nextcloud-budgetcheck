@@ -332,6 +332,9 @@
 	line-height: var(--bc-line-tight);
 	color: var(--color-main-text);
 }
+.bc-section__header > :first-child {
+	overflow-wrap: break-word;
+}
 .bc-section__sub {
 	margin: var(--bc-space-1) 0 0;
 	color: var(--bc-muted);
@@ -3819,7 +3822,7 @@ body.bc-modal-open {
 		height: 28px;
 	}
 	.bc-section__header {
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: minmax(0, 1fr) fit-content(min(28rem, 45%));
 	}
 	.bc-section__header > .bc-section__controls.bc-section__controls--stack.bc-period-picker-wrap {
 		justify-self: end;
