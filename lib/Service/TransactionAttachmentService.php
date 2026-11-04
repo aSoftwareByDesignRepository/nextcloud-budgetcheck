@@ -14,6 +14,7 @@ use OCP\Files\NotFoundException;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\IURLGenerator;
+use Psr\Log\LoggerInterface;
 
 /**
  * Secure storage and delivery of receipt images linked to transactions.
@@ -80,6 +81,7 @@ class TransactionAttachmentService
 		private readonly WorkspaceService $workspaces,
 		private readonly AuditLogService $audit,
 		private readonly IURLGenerator $urlGenerator,
+		private readonly LoggerInterface $logger,
 	) {
 	}
 
@@ -293,8 +295,13 @@ class TransactionAttachmentService
 				if ($diskUpdated) {
 					try {
 						$this->writeStoredContent($transactionId, $storedName, $previousContent);
-					} catch (\Throwable) {
-						// Best-effort restore; original exception is rethrown below.
+					} catch (\Throwable $restoreError) {
+						// best-effort: the original exception is rethrown below —
+						// the restore failure only matters for postmortem diagnosis.
+						$this->logger->warning('BudgetCheck: attachment content restore failed after write error', [
+							'transactionId' => $transactionId,
+							'exception' => $restoreError,
+						]);
 					}
 				}
 				throw $writeError;
@@ -404,9 +411,13 @@ class TransactionAttachmentService
 			$folder = $this->getTransactionFolder($transactionId, false);
 			$folder->delete();
 		} catch (NotFoundException) {
-			// Already gone.
-		} catch (\Throwable) {
-			// Best-effort privacy cleanup — do not fail the ledger soft-delete.
+			return; // Folder already gone — nothing left to purge.
+		} catch (\Throwable $e) {
+			// best-effort: privacy cleanup must not fail the ledger soft-delete.
+			$this->logger->warning('BudgetCheck: could not delete attachment folder during transaction purge', [
+				'transactionId' => $transactionId,
+				'exception' => $e,
+			]);
 		}
 	}
 
@@ -885,9 +896,14 @@ class TransactionAttachmentService
 				$folder = $this->getTransactionFolder((int)$txId, false);
 				$folder->delete();
 			} catch (NotFoundException) {
-				// Already gone.
-			} catch (\Throwable) {
-				// Best-effort — workspace DB cascade already committed.
+				continue; // Folder already gone — nothing left to purge.
+			} catch (\Throwable $e) {
+				// best-effort: workspace DB cascade already committed — a stale
+				// attachment folder just lingers for the janitor pass.
+				$this->logger->warning('BudgetCheck: could not delete attachment folder after workspace purge', [
+					'transactionId' => (int)$txId,
+					'exception' => $e,
+				]);
 			}
 		}
 	}
@@ -984,7 +1000,7 @@ class TransactionAttachmentService
 				}
 			}
 		} catch (NotFoundException) {
-			// Folder already gone — nothing to delete.
+			return; // Folder already gone — nothing to delete.
 		}
 	}
 

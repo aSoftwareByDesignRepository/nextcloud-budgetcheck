@@ -1766,8 +1766,9 @@ class ApiController extends Controller
 				$this->request->getMethod() . ' ' . $this->request->getRequestUri(),
 				['reason' => $reason]
 			);
-		} catch (\Throwable) {
-			// Audit recording must never crash a denied request.
+		} catch (\Throwable $auditError) {
+			// best-effort: audit recording must never crash a denied request.
+			$this->logger->debug('budgetcheck access-denied audit record failed', ['exception' => $auditError]);
 		}
 	}
 }

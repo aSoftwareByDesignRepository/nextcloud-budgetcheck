@@ -11,6 +11,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IConfig;
 use OCP\Lock\ILockingProvider;
 use OCP\Lock\LockedException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Sliding-window rate limiter. Counters live in per-user preferences so we never
@@ -44,6 +45,7 @@ class RateLimitService
 		private IConfig $config,
 		private ITimeFactory $timeFactory,
 		private ILockingProvider $locking,
+		private LoggerInterface $logger,
 		private ?AuditLogService $audit = null,
 	) {
 	}
@@ -168,8 +170,13 @@ class RateLimitService
 		}
 		try {
 			$this->config->deleteAppValue(Application::APP_ID, $legacy);
-		} catch (\Throwable) {
-			// Cleanup must never fail the protected request.
+		} catch (\Throwable $e) {
+			// best-effort: cleanup must never fail the protected request — a
+			// stale legacy counter just lingers until the next sweep.
+			$this->logger->warning('BudgetCheck: could not delete legacy rate-limit counter', [
+				'key' => $legacy,
+				'exception' => $e,
+			]);
 		}
 	}
 }

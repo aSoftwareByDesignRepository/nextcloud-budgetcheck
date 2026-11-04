@@ -135,6 +135,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\IConfig::class),
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(ILockingProvider::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
 				$c->query(AuditLogService::class),
 			);
 		});
@@ -216,6 +217,7 @@ class Application extends App implements IBootstrap
 				$c->query(WorkspaceService::class),
 				$c->query(AuditLogService::class),
 				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
 			);
 		});
 

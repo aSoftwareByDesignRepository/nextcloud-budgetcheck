@@ -338,10 +338,23 @@ class BookingStatusService
 						'updated_at' => $ins->createNamedParameter($now),
 					]);
 				$ins->executeStatement();
-			} catch (\Throwable) {
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
 				// Another request may have inserted the same defaults concurrently.
 			}
 		}
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 }
 

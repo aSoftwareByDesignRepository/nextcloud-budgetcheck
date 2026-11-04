@@ -15,6 +15,7 @@ use OCP\Lock\ILockingProvider;
 use OCP\Lock\LockedException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 /**
  * Rate-limit counters must survive LDAP/AD UUID-style userIds (#17): preferences
@@ -70,7 +71,7 @@ final class RateLimitServiceTest extends TestCase
 
 	private function service(?AuditLogService $audit = null): RateLimitService
 	{
-		return new RateLimitService($this->config, $this->time, $this->locking, $audit);
+		return new RateLimitService($this->config, $this->time, $this->locking, new NullLogger(), $audit);
 	}
 
 	public function testUuidStyleUserIdFavoritesKeyFitsUnder64(): void
