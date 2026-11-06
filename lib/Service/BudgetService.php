@@ -253,10 +253,7 @@ class BudgetService
 			WorkspaceRowLock::acquire($this->db, $workspaceId);
 			foreach ($normalised as $categoryId => $plannedMinor) {
 				$existing = $this->loadExistingDefault($workspaceId, $categoryId);
-				if ($existing === null) {
-					if ($plannedMinor === 0) {
-						continue;
-					}
+				if ($existing === null && $plannedMinor !== 0) {
 					$qb = $this->db->getQueryBuilder();
 					$qb->insert('bc_budget_defaults')
 						->values([
@@ -266,26 +263,41 @@ class BudgetService
 							'updated_by' => $qb->createNamedParameter($userId),
 							'updated_at' => $qb->createNamedParameter($now),
 						]);
-					$qb->executeStatement();
-				} elseif ($plannedMinor === 0) {
-					$qb = $this->db->getQueryBuilder();
-					$qb->delete('bc_budget_defaults')
-						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-					$qb->executeStatement();
-				} elseif ((int)$existing['planned_minor'] !== $plannedMinor) {
-					$qb = $this->db->getQueryBuilder();
-					$qb->update('bc_budget_defaults')
-						->set('planned_minor', $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT))
-						->set('updated_by', $qb->createNamedParameter($userId))
-						->set('updated_at', $qb->createNamedParameter($now))
-						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-					$qb->executeStatement();
+					try {
+						$qb->executeStatement();
+					} catch (\Throwable $e) {
+						if (!$this->isUniqueConstraintViolation($e)) {
+							throw $e;
+						}
+						// A concurrent writer inserted the (workspace, category)
+						// row — fall through to the update path on that row.
+						$existing = $this->loadExistingDefault($workspaceId, $categoryId);
+					}
+				}
+				if ($existing !== null) {
+					if ($plannedMinor === 0) {
+						$qb = $this->db->getQueryBuilder();
+						$qb->delete('bc_budget_defaults')
+							->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+						$qb->executeStatement();
+					} elseif ((int)$existing['planned_minor'] !== $plannedMinor) {
+						$qb = $this->db->getQueryBuilder();
+						$qb->update('bc_budget_defaults')
+							->set('planned_minor', $qb->createNamedParameter($plannedMinor, \PDO::PARAM_INT))
+							->set('updated_by', $qb->createNamedParameter($userId))
+							->set('updated_at', $qb->createNamedParameter($now))
+							->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
+						$qb->executeStatement();
+					}
 				}
 			}
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('A budget default for this category already exists.');
 			}
 			throw $e;
 		}
@@ -502,6 +514,16 @@ class BudgetService
 			throw new \InvalidArgumentException('yearMonth must be in YYYY-MM format with a valid month.');
 		}
 		return $value;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function utcNow(): string

@@ -102,7 +102,10 @@ class MobileIdempotencyService
 		try {
 			$qb->executeStatement();
 			return null;
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			if (!$this->isUniqueConstraintViolation($e)) {
+				throw $e;
+			}
 			$row = $this->loadRow($userId, $workspaceId, $key);
 			if ($row === null) {
 				throw new IdempotencyMismatchException();
@@ -221,7 +224,10 @@ class MobileIdempotencyService
 			]);
 		try {
 			$qb->executeStatement();
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			if (!$this->isUniqueConstraintViolation($e)) {
+				throw $e;
+			}
 			$replay = $this->findReplay($userId, $workspaceId, $key, $requestHash);
 			if ($replay === null) {
 				throw new IdempotencyMismatchException();
@@ -310,6 +316,16 @@ class MobileIdempotencyService
 		$row = $result->fetch();
 		$result->closeCursor();
 		return is_array($row) ? $row : null;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function utcNow(): string

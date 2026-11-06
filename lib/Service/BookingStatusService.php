@@ -75,13 +75,23 @@ class BookingStatusService
 					'created_at' => $qb->createNamedParameter($now),
 					'updated_at' => $qb->createNamedParameter($now),
 				]);
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				throw new \InvalidArgumentException('A booking status with this name already exists.');
+			}
 			$id = (int)$this->db->lastInsertId('bc_booking_statuses');
 			$this->audit->record($userId, 'booking_status_created', 'booking_status', (string)$id, ['name' => $name], $workspaceId);
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('A booking status with this name already exists.');
 			}
 			throw $e;
 		}
@@ -148,12 +158,22 @@ class BookingStatusService
 				$qb->set($col, $qb->createNamedParameter($value, $type));
 			}
 			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($statusId, \PDO::PARAM_INT)));
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				throw new \InvalidArgumentException('A booking status with this name already exists.');
+			}
 			$this->audit->record($userId, 'booking_status_updated', 'booking_status', (string)$statusId, $changes, $workspaceId);
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('A booking status with this name already exists.');
 			}
 			throw $e;
 		}

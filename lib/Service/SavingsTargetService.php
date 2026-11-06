@@ -91,8 +91,18 @@ class SavingsTargetService
 						'updated_by' => $qb->createNamedParameter($userId),
 						'updated_at' => $qb->createNamedParameter($now),
 					]);
-				$qb->executeStatement();
-			} else {
+				try {
+					$qb->executeStatement();
+				} catch (\Throwable $e) {
+					if (!$this->isUniqueConstraintViolation($e)) {
+						throw $e;
+					}
+					// A concurrent writer inserted the (workspace, month) row —
+					// apply the update to that row instead of dying on the index.
+					$existing = $this->loadRow($workspaceId, $ym);
+				}
+			}
+			if ($existing !== null) {
 				$qb = $this->db->getQueryBuilder();
 				$qb->update('bc_savings_targets')
 					->set('target_mode', $qb->createNamedParameter($mode))
@@ -112,6 +122,9 @@ class SavingsTargetService
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('A savings target for this month already exists.');
 			}
 			throw $e;
 		}
@@ -260,6 +273,16 @@ class SavingsTargetService
 			throw new \InvalidArgumentException('yearMonth must be in YYYY-MM format with a valid month.');
 		}
 		return $value;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function utcNow(): string

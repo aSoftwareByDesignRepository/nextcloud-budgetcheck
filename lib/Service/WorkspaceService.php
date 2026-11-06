@@ -210,12 +210,24 @@ class WorkspaceService
 					'role' => $mqb->createNamedParameter(AccessControlService::ROLE_MANAGER),
 					'created_at' => $mqb->createNamedParameter($now),
 				]);
-			$mqb->executeStatement();
+			try {
+				$mqb->executeStatement();
+			} catch (\Throwable $e) {
+				// The (workspace_id, user_id) slot is free by construction on a
+				// fresh workspace; a violation means a replayed insert — the
+				// manager row already exists, so this is idempotent-benign.
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+			}
 
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('Could not create the workspace — a conflicting write already exists.');
 			}
 			throw $e;
 		}
@@ -705,12 +717,22 @@ class WorkspaceService
 					'role' => $qb->createNamedParameter($role),
 					'created_at' => $qb->createNamedParameter($this->utcNow()),
 				]);
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				throw new \InvalidArgumentException('User is already a member of this workspace.');
+			}
 			$this->audit->record($userId, 'workspace_member_added', 'workspace_member', $candidate, ['role' => $role], $workspaceId);
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('User is already a member of this workspace.');
 			}
 			throw $e;
 		}
@@ -863,12 +885,22 @@ class WorkspaceService
 					'role' => $qb->createNamedParameter($role),
 					'created_at' => $qb->createNamedParameter($this->utcNow()),
 				]);
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				throw new \InvalidArgumentException('This group is already assigned to the workspace.');
+			}
 			$this->audit->record($userId, 'workspace_group_added', 'workspace_group', $gid, ['role' => $role], $workspaceId);
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('This group is already assigned to the workspace.');
 			}
 			throw $e;
 		}
@@ -1405,6 +1437,16 @@ class WorkspaceService
 		return $this->timeFactory->getDateTime('now', new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');
 	}
 
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+	}
+
 	private function ensureDefaultBookingStatusesForWorkspace(int $workspaceId): void
 	{
 		$defaults = [
@@ -1427,7 +1469,15 @@ class WorkspaceService
 					'created_at' => $qb->createNamedParameter($now),
 					'updated_at' => $qb->createNamedParameter($now),
 				]);
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				// Concurrent seed (or a manager-created status with the same
+				// name) already owns the (workspace_id, name) slot — skip.
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+			}
 		}
 	}
 }

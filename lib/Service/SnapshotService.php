@@ -69,11 +69,21 @@ class SnapshotService
 					'generated_by' => $qb->createNamedParameter($userId),
 					'generated_at' => $qb->createNamedParameter($now),
 				]);
-			$qb->executeStatement();
+			try {
+				$qb->executeStatement();
+			} catch (\Throwable $e) {
+				if (!$this->isUniqueConstraintViolation($e)) {
+					throw $e;
+				}
+				throw new \InvalidArgumentException('Month is already closed.');
+			}
 			$this->db->commit();
 		} catch (\Throwable $e) {
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
+			}
+			if ($this->isUniqueConstraintViolation($e)) {
+				throw new \InvalidArgumentException('Month is already closed.');
 			}
 			throw $e;
 		}
@@ -184,6 +194,16 @@ class SnapshotService
 			throw new \InvalidArgumentException('yearMonth must be in YYYY-MM format with a valid month.');
 		}
 		return $value;
+	}
+
+	private function isUniqueConstraintViolation(\Throwable $e): bool
+	{
+		if ($e instanceof \OCP\DB\Exception) {
+			return $e->getReason() === \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION;
+		}
+		$previous = $e->getPrevious();
+		return $e instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException
+			|| $previous instanceof \Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 	}
 
 	private function utcNow(): string
