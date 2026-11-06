@@ -1372,6 +1372,11 @@ class ApiController extends Controller
 			);
 			$users = [];
 			foreach ($candidates as $user) {
+				// Fail closed: assignment pickers never offer deactivated
+				// accounts, regardless of client-side filter flags.
+				if (!$user->isEnabled()) {
+					continue;
+				}
 				$uid = $user->getUID();
 				if (isset($users[$uid])) {
 					continue;
