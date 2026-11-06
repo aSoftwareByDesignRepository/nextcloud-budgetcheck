@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- the assignment picker user search skips deactivated Nextcloud accounts — they cannot sign in, so they are never offered (fail-closed, server-side)
+
+## 1.5.1 - 2026-11-05
+
+### Fixed
+
+- the settings section header keeps its full title at desktop widths — the controls track is bounded so it no longer crushes the title column
+- write failures in cleanup paths are logged instead of disappearing silently
+- the app-feedback nav footer only renders icons that exist in the catalog — candidate names are guarded by `IconCatalog::has()`
+- l10n: label-in-name sweep — localized label words inside dependent strings repaired
+- l10n: Polish “w Ustawienia” → “w Ustawieniach” — locative case after “w”
+
+### Changed
+
+- shared app-feedback nav footer partial synced to the family canonical
+- App Store screenshots refreshed from clean marketing captures
+
 ## 1.5.0 - 2026-10-31
 
 ### Added
@@ -77,16 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 1.4.7 - 2026-10-10
 
+### Added
+
+- **CSV import: separate income and expense columns (issue #23):** bank exports that split the amount into two columns — one value per row, the other left blank — now import without editing the file. Recognised headers include “Expenses”/“Income”, “Ausgaben”/“Einnahmen”, and “Debit”/“Credit” or “Soll”/“Haben” pairs when they contain amounts; a minus sign on the expense column is accepted, and a bare dash counts as empty. Ambiguous header names are decided by their data, so a single “Debit” column holding debit/credit keywords still works as a direction column. Extra columns such as a running balance are ignored.
+
 ### Changed
 
 - shared app-feedback render (focus-ring + toast-dedup SSOT)
 - Atlas farm v3.5.15: strict-id route reqs + contrast suite + l10n generator fix + test-harness cascade
-
-## Unreleased
-
-### Added
-
-- **CSV import: separate income and expense columns (issue #23):** bank exports that split the amount into two columns — one value per row, the other left blank — now import without editing the file. Recognised headers include “Expenses”/“Income”, “Ausgaben”/“Einnahmen”, and “Debit”/“Credit” or “Soll”/“Haben” pairs when they contain amounts; a minus sign on the expense column is accepted, and a bare dash counts as empty. Ambiguous header names are decided by their data, so a single “Debit” column holding debit/credit keywords still works as a direction column. Extra columns such as a running balance are ignored.
 
 ## 1.4.6 - 2026-10-08
 
@@ -263,21 +282,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Uninstall:** app removal still drops tables, config, and upgrade-backup snapshots; receipt attachment binaries in appdata are no longer deleted by the uninstall repair step.
 - **l10n:** Locale catalog refresh across supported languages.
-
-## [1.5.1] — 2026-11-05
-
-### Fixed
-
-- guard
-- paths
-- — title column crush
-- 'w' — 'w Ustawieniach'
-- — localized label words in dependent strings
-
-### Changed
-
-- canonical
-- Refresh App Store screenshots from clean marketing captures
 
 ## [1.1.5] - 2026-07-31
 
