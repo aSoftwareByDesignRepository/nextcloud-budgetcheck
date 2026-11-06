@@ -264,6 +264,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Uninstall:** app removal still drops tables, config, and upgrade-backup snapshots; receipt attachment binaries in appdata are no longer deleted by the uninstall repair step.
 - **l10n:** Locale catalog refresh across supported languages.
 
+## [1.5.1] — 2026-11-05
+
+### Fixed
+
+- guard
+- paths
+- — title column crush
+- 'w' — 'w Ustawieniach'
+- — localized label words in dependent strings
+
+### Changed
+
+- canonical
+- Refresh App Store screenshots from clean marketing captures
+
 ## [1.1.5] - 2026-07-31
 
 ### Added
