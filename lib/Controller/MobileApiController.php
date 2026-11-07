@@ -1531,4 +1531,31 @@ class MobileApiController extends Controller
 		}
 		return $out;
 	}
+	/**
+	 * Compact widget snapshot (SPEC NH-P2): ONE document per sync — the same
+	 * data the app currently assembles, wrapped with serverNow so countdown
+	 * widgets can correct device-clock skew (MH-P18). Cached 60 s per user
+	 * (NFR: widget endpoint must be a single query-family, cached >=60 s).
+	 */
+	#[NoAdminRequired]
+	public function widgetSnapshot(int $workspaceId): JSONResponse
+	{
+		$uid = \OCP\Server::get(\OCP\IUserSession::class)->getUser()?->getUID();
+		if ($uid === null) {
+			return new JSONResponse(['error' => 'unauthenticated'], 401);
+		}
+		$cache = \OCP\Server::get(\OCP\ICacheFactory::class)->createDistributed('budgetcheck_wsnap');
+		$key = $uid . ':home';
+		if (($hit = $cache->get($key)) !== null) {
+			return new JSONResponse($hit);
+		}
+		$status = $this->home($workspaceId)->getData();
+		$payload = [
+			'status' => $status,
+			'serverNow' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM),
+		];
+		$cache->set($key, $payload, 60);
+		return new JSONResponse($payload);
+	}
+
 }

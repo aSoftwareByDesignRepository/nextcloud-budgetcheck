@@ -164,4 +164,5 @@ return [
 		['name' => 'mobile_api#deleteTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
 		['name' => 'mobile_api#downloadTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}/download', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
 	],
+		['name' => 'mobileApiController#widgetSnapshot', 'url' => '/api/widget-snapshot/{workspaceId}', 'verb' => 'GET'],
 ];
