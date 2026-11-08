@@ -19,6 +19,11 @@ use OCA\BudgetCheck\Service\CategoryService;
 use OCA\BudgetCheck\Service\SummaryService;
 use OCA\BudgetCheck\Service\WorkspaceService;
 
+if (PHP_SAPI !== 'cli') {
+	http_response_code(404);
+	exit('Not found');
+}
+
 $candidates = [
 	getenv('NEXTCLOUD_ROOT') ? rtrim((string)getenv('NEXTCLOUD_ROOT'), '/\\') . '/lib/base.php' : null,
 	__DIR__ . '/../../../lib/base.php',

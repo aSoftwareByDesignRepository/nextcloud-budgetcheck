@@ -84,6 +84,8 @@ class MobileApiController extends Controller
 		private readonly LoggerInterface $logger,
 		private readonly ?\OCA\BudgetCheck\Service\PayeeService $payees = null,
 		private readonly ?\OCA\BudgetCheck\Service\AnalyticsService $analytics = null,
+		private readonly ?\OCP\ICacheFactory $cacheFactory = null,
+		private readonly ?\OCP\IAppConfig $appConfig = null,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -327,6 +329,7 @@ class MobileApiController extends Controller
 					'budgetChips' => $this->budgetChipsFromSummary($summary),
 					'warnings' => $summary['warnings'],
 					'summary' => $summary,
+					'redactionLocked' => $this->redactionLocked(),
 				];
 			}
 
@@ -374,6 +377,7 @@ class MobileApiController extends Controller
 				'budgetChips' => $this->budgetChipsFromSummary($summary),
 				'warnings' => $summary['warnings'],
 				'summary' => $summary,
+				'redactionLocked' => $this->redactionLocked(),
 			];
 		});
 	}
@@ -1086,6 +1090,9 @@ class MobileApiController extends Controller
 		try {
 			$userId = $this->access->currentUserId();
 			$result = $operation($userId);
+			if ($result instanceof JSONResponse) {
+				return $result;
+			}
 			return $this->ok(is_array($result) ? $result : []);
 		} catch (ValidationException $e) {
 			return new JSONResponse([
@@ -1538,24 +1545,49 @@ class MobileApiController extends Controller
 	 * (NFR: widget endpoint must be a single query-family, cached >=60 s).
 	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function widgetSnapshot(int $workspaceId): JSONResponse
 	{
-		$uid = \OCP\Server::get(\OCP\IUserSession::class)->getUser()?->getUID();
-		if ($uid === null) {
-			return new JSONResponse(['error' => 'unauthenticated'], 401);
-		}
-		$cache = \OCP\Server::get(\OCP\ICacheFactory::class)->createDistributed('budgetcheck_wsnap');
-		$key = $uid . ':home';
-		if (($hit = $cache->get($key)) !== null) {
-			return new JSONResponse($hit);
-		}
-		$status = $this->home($workspaceId)->getData();
-		$payload = [
-			'status' => $status,
-			'serverNow' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM),
-		];
-		$cache->set($key, $payload, 60);
-		return new JSONResponse($payload);
+		return $this->safe(function (string $userId) use ($workspaceId) {
+			// Hand-constructed controllers (tests) may lack the optional tail
+			// deps; autowiring always injects them in production.
+			$cacheFactory = $this->cacheFactory ?? \OCP\Server::get(\OCP\ICacheFactory::class);
+			$cache = $cacheFactory->createDistributed('budgetcheck_wsnap');
+			// Workspace scopes the cache — a per-user key without the workspaceId
+			// served one workspace's payload to a multi-workspace user for 60 s.
+			$key = $userId . ':' . $workspaceId . ':home';
+			if (($hit = $cache->get($key)) !== null) {
+				return new JSONResponse($hit);
+			}
+			$home = $this->home($workspaceId);
+			$status = $home->getData();
+			// Error envelopes pass through uncached at their real status — a
+			// transient failure must not stick to the user for the TTL window.
+			if (!is_array($status) || ($status['ok'] ?? false) !== true) {
+				return $home;
+			}
+			// D-02: locked deployments force default-redacted widgets.
+			$status['redactionLocked'] = $this->redactionLocked();
+			$payload = [
+				'ok' => true,
+				'status' => $status,
+				'serverNow' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM),
+			];
+			$cache->set($key, $payload, 60);
+			return new JSONResponse($payload);
+		});
+	}
+
+	/**
+	 * D-02 deployment lock: admin-pinned `widget_redaction_locked` forces the
+	 * companion widget redacted regardless of the user's show-values opt-in.
+	 * Emitted on home() (v1 companion push seam) and widgetSnapshot (NH-P2)
+	 * at the same top-level position so both consumers read one key.
+	 */
+	private function redactionLocked(): bool
+	{
+		$appConfig = $this->appConfig ?? \OCP\Server::get(\OCP\IAppConfig::class);
+		return $appConfig->getValueBool(Application::APP_ID, 'widget_redaction_locked', false);
 	}
 
 }
