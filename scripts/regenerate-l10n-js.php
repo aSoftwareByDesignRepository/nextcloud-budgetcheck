@@ -6,6 +6,14 @@ declare(strict_types=1);
 /**
  * Regenerate l10n/*.js from l10n/*.json (Nextcloud OC.L10N.register format).
  *
+ * Important (CSP / Nextcloud ≥26): register() from @nextcloud/l10n only takes
+ * (appId, translations). Do NOT emit the gettext pluralForm string as a third
+ * argument — legacy shims compiled it with new Function(), which violates
+ * strict script-src (nonce) policies without 'unsafe-eval'. Plural rules for
+ * t()/n() come from getPlural() inside @nextcloud/l10n instead. The .json
+ * catalogs keep their pluralForm for the PHP l10n side; it is intentionally
+ * not mirrored.
+ *
  * Usage: php scripts/regenerate-l10n-js.php
  */
 
@@ -25,7 +33,6 @@ foreach ($locales as $lang) {
 	}
 	$cat = json_decode((string)file_get_contents($jsonPath), true, 512, JSON_THROW_ON_ERROR);
 	$translations = $cat['translations'] ?? [];
-	$pluralForm = $cat['pluralForm'] ?? null;
 
 	$lines = ["OC.L10N.register(\n", "\t\"budgetcheck\",\n", "\t{\n"];
 	$first = true;
@@ -42,14 +49,8 @@ foreach ($locales as $lang) {
 	$last = array_pop($lines);
 	$last = rtrim($last, ",\n") . "\n";
 	$lines[] = $last;
-	if ($pluralForm !== null && $pluralForm !== '') {
-		$lines[] = "\t},\n";
-		$lines[] = "\t" . json_encode($pluralForm) . "\n";
-		$lines[] = ");\n";
-	} else {
-		$lines[] = "\t}\n";
-		$lines[] = ");\n";
-	}
+	$lines[] = "\t}\n";
+	$lines[] = ");\n";
 	file_put_contents($jsPath, implode('', $lines));
 	echo "Wrote $jsPath (" . count($translations) . " keys)\n";
 }

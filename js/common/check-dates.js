@@ -586,7 +586,7 @@
 
 		function dateInputPlaceholder(localeOverride) {
 			const tag = String(localeOverride || enrichTemporalHtmlLang(currentLanguage()) || 'en').toLowerCase().replace('_', '-');
-			if (['de', 'nl', 'da', 'nb', 'sv', 'pl', 'it', 'es', 'fr', 'pt', 'fi', 'cs'].some((p) => tag.indexOf(p) === 0)) {
+			if (['de', 'nl', 'da', 'nb', 'sv', 'pl', 'it', 'es', 'fr', 'pt', 'fi', 'cs', 'tr'].some((p) => tag.indexOf(p) === 0)) {
 				return 'TT.MM.JJJJ';
 			}
 			if (/^en-(gb|au|nz|ie)/.test(tag)) return 'dd/mm/yyyy';
