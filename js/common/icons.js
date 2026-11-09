@@ -91,6 +91,10 @@
 				if (key === 'tag') {
 					return;
 				}
+				if (key.slice(0, 2) === 'on' && typeof value === 'function') {
+					el.addEventListener(key.slice(2).toLowerCase(), value);
+					return;
+				}
 				el.setAttribute(key, String(value));
 			});
 			svg.appendChild(el);

@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "{invoiced} movimentos faturáveis faturados e {paid} pagos estão ligados hoje.",
 	"Δ and %" : "Δ e %",
 	"“From” date must be before “To” date." : "A data «De» tem de ser anterior à data «Até»."
-	},
-	"nplurals=2; plural=(n > 1);"
+	}
 );

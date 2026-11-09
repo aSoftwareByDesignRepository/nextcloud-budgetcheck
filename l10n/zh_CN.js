@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "目前已关联 {invoiced} 笔已开票和 {paid} 笔已付款的可计费记账。",
 	"Δ and %" : "Δ 与 %",
 	"“From” date must be before “To” date." : "「从」日期必须早于「至」日期。"
-	},
-	"nplurals=1; plural=0;"
+	}
 );

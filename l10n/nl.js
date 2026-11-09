@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "Vandaag zijn {invoiced} gefactureerde en {paid} betaalde factureerbare boekingen gekoppeld.",
 	"Δ and %" : "Δ en %",
 	"“From” date must be before “To” date." : "De 'Vanaf'-datum moet vóór de 'Tot'-datum liggen."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

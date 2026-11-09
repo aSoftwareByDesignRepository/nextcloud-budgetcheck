@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "I dag er {invoiced} fakturerte og {paid} betalte fakturerbare posteringer koblet.",
 	"Δ and %" : "Δ og %",
 	"“From” date must be before “To” date." : "Datoen «Fra» må ligge før datoen «Til»."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

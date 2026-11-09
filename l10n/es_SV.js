@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "Hoy hay {invoiced} anotaciones facturadas y {paid} anotaciones pagadas facturables vinculadas.",
 	"Δ and %" : "Δ y %",
 	"“From” date must be before “To” date." : "La fecha \"Desde\" debe ser anterior a la fecha \"Hasta\"."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

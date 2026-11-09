@@ -1510,6 +1510,5 @@ OC.L10N.register(
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "Idag är {invoiced} fakturerade och {paid} betalda fakturerbara bokföringar länkade.",
 	"Δ and %" : "Δ och %",
 	"“From” date must be before “To” date." : "Datumet ”Från” måste vara före datumet ”Till”."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );
