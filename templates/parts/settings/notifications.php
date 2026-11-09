@@ -13,7 +13,7 @@
 			<p class="bc-section__sub"><?php p($l->t('Choose which BudgetCheck alerts reach your Nextcloud notifications. These settings are yours only — other members pick their own.')); ?></p>
 		</div>
 	</header>
-	<form data-bc-alert-prefs-form novalidate>
+	<form class="bc-form-grid" data-bc-alert-prefs-form novalidate>
 		<fieldset class="bc-fieldset">
 			<div class="bc-field bc-field--checkbox">
 				<input type="hidden" name="alertsEnabled" value="0">
