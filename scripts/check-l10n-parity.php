@@ -76,5 +76,5 @@ if (!$ok) {
 	exit(1);
 }
 
-echo 'l10n parity OK (' . count($enKeys) . " keys, en/de/fr/es/da/nl/it/pl/sv/nb/pt_BR/zh_CN).\n";
+echo 'l10n parity OK (' . count($enKeys) . ' keys, ' . implode('/', $localeFiles) . ").\n";
 exit(0);

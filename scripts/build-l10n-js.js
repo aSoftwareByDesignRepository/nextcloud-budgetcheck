@@ -37,7 +37,8 @@ function buildJs(lang) {
 			lines.push(`\t${enc(key)} : ${enc(value)}${comma}`);
 		}
 	});
-	lines.push('});');
+	lines.push('\t}');
+	lines.push(');');
 	lines.push('');
 	fs.writeFileSync(path.join(l10nDir, `${lang}.js`), lines.join('\n'));
 }
