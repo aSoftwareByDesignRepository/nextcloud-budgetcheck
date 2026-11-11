@@ -34,6 +34,7 @@ final class AppSettingsSectionCatalog
 		'access',
 		'admins',
 		'defaults',
+		'transfer',
 		'support',
 	];
 
@@ -56,6 +57,7 @@ final class AppSettingsSectionCatalog
 		'bc-policy-admins-q' => 'admins',
 		'bc-policy-timezone-label' => 'defaults',
 		'bc-policy-currency-label' => 'defaults',
+		'bc-transfer-export-card' => 'transfer',
 		'bc-support-us' => 'support',
 		'bc-support-us-title' => 'support',
 	];
@@ -82,6 +84,7 @@ final class AppSettingsSectionCatalog
 			'access' => $l->t('Access control'),
 			'admins' => $l->t('App administrators'),
 			'defaults' => $l->t('Defaults for new workspaces'),
+			'transfer' => $l->t('Transfer configuration'),
 			'support' => $l->t('Support & us'),
 			default => $l->t('App settings'),
 		};
@@ -96,6 +99,7 @@ final class AppSettingsSectionCatalog
 			'access' => $l->t('Access'),
 			'admins' => $l->t('App admins'),
 			'defaults' => $l->t('Defaults'),
+			'transfer' => $l->t('Transfer'),
 			'support' => $l->t('Support us'),
 			default => $l->t('App settings'),
 		};
@@ -112,6 +116,7 @@ final class AppSettingsSectionCatalog
 			'access' => $l->t('This list controls the door, not the data.'),
 			'admins' => $l->t('Only real Nextcloud user accounts can be selected. Unknown logins are rejected when you save.'),
 			'defaults' => $l->t('These values pre-fill the form when an app administrator creates a workspace. They do not change existing workspaces.'),
+			'transfer' => $l->t('Copy all settings, catalogues and data between a test and a production instance — one encrypted file, dry-run before anything is written.'),
 			default => '',
 		};
 	}

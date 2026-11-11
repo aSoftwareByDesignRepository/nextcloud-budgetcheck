@@ -188,6 +188,9 @@ final class AppSettingsPagesContractTest extends TestCase
 	public function testEveryLegacyAnchorTargetStillExistsInItsOwningPartial(): void
 	{
 		$sharedPartialsBySection = [
+			// The transfer section is a thin dispatcher wrapper around the
+			// synced config-transfer partial — anchors live in that file.
+			'transfer' => 'templates/parts/settings/transfer.php',
 			'support' => 'templates/parts/support-us-section.php',
 		];
 		foreach (AppSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {

@@ -241,6 +241,9 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	</background-jobs>
 	<commands>
 		<command>OCA\BudgetCheck\Command\UpgradeBackupCommand</command>
+		<command>OCA\BudgetCheck\Command\ConfigExportCommand</command>
+		<command>OCA\BudgetCheck\Command\ConfigImportCommand</command>
+		<command>OCA\BudgetCheck\Command\ConfigReconcileCommand</command>
 	</commands>
 
 	<repair-steps>

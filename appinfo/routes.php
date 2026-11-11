@@ -25,7 +25,7 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'access|admins|defaults|support']],
+			'requirements' => ['section' => 'access|admins|defaults|transfer|support']],
 		['name' => 'export#categorizationRules', 'url' => '/api/categorization-rules/export', 'verb' => 'GET'],
 		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
 		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
@@ -134,6 +134,13 @@ return [
 		// App-wide policy (admins): app admin uids, default tz/currency
 		['name' => 'api#getAppPolicy',       'url' => '/api/admin/policy',                  'verb' => 'GET'],
 		['name' => 'api#saveAppPolicy',      'url' => '/api/admin/policy',                  'verb' => 'POST'],
+
+		// ── Config & data transfer (test → production) ──────────────────
+		['name' => 'transfer_api#status',    'url' => '/api/admin/transfer/status',         'verb' => 'GET'],
+		['name' => 'transfer_api#export',    'url' => '/api/admin/transfer/export',         'verb' => 'POST'],
+		['name' => 'transfer_api#preview',   'url' => '/api/admin/transfer/preview',        'verb' => 'POST'],
+		['name' => 'transfer_api#apply',     'url' => '/api/admin/transfer/apply',          'verb' => 'POST'],
+		['name' => 'transfer_api#reconcile', 'url' => '/api/admin/transfer/reconcile',      'verb' => 'POST'],
 
 		// Free BudgetCheck Mobile companion API (COMPANION-APP.md v2.0 — no license gates)
 		['name' => 'mobile_api#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],

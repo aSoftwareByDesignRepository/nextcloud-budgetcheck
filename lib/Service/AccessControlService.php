@@ -730,17 +730,12 @@ class AccessControlService
 		}
 
 		if ($settingsSection === 'all' || $settingsSection === 'defaults') {
-			$timezone = trim((string)($payload['defaultTimezone'] ?? $merged['defaultTimezone'] ?? $this->getDefaultTimezone()));
-			if (!in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
-				throw new \InvalidArgumentException('Invalid default timezone.');
-			}
-			$currency = strtoupper(trim((string)($payload['defaultCurrency'] ?? $merged['defaultCurrency'] ?? $this->getDefaultCurrency())));
-			if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-				throw new \InvalidArgumentException('Invalid default currency code.');
-			}
-			if (!$this->money->isSupportedCurrency($currency)) {
-				throw new \InvalidArgumentException('Unsupported default currency for new workspaces.');
-			}
+			$timezone = $this->normalizeTimezoneString(
+				(string)($payload['defaultTimezone'] ?? $merged['defaultTimezone'] ?? $this->getDefaultTimezone()),
+			);
+			$currency = $this->normalizeCurrencyString(
+				(string)($payload['defaultCurrency'] ?? $merged['defaultCurrency'] ?? $this->getDefaultCurrency()),
+			);
 			$merged['defaultTimezone'] = $timezone;
 			$merged['defaultCurrency'] = $currency;
 		}
@@ -811,6 +806,83 @@ class AccessControlService
 			return 'EUR';
 		}
 		return $value;
+	}
+
+	/**
+	 * Per-key normaliser for appconfig values — the SAME rules
+	 * {@see saveAppPolicy()} applies, exposed so non-form writers
+	 * (the config-transfer engine, occ repair paths) validate
+	 * byte-identical to the settings API (NN-08, no import bypass).
+	 *
+	 * Existence checks for uid/gid lists deliberately stay out of this
+	 * normaliser: ref resolution is the caller's job (the transfer engine
+	 * reports/skips ghosts; saveAppPolicy re-checks at write).
+	 *
+	 * @throws \InvalidArgumentException|\JsonException on invalid input
+	 */
+	public function normalizeForWrite(string $key, string $value): string
+	{
+		return match ($key) {
+			self::KEY_DEFAULT_TIMEZONE => $this->normalizeTimezoneString($value),
+			self::KEY_DEFAULT_CURRENCY => $this->normalizeCurrencyString($value),
+			self::KEY_ACCESS_RESTRICTION => in_array($value, ['0', '1'], true)
+				? $value
+				: throw new \InvalidArgumentException('INVALID_ACCESS_RESTRICTION'),
+			self::KEY_APP_ADMINS,
+			self::KEY_ACCESS_ALLOWED_USER_IDS,
+			self::KEY_ACCESS_ALLOWED_GROUP_IDS => $this->normalizeIdListValue($value),
+			default => strlen($value) <= 65536
+				? $value
+				: throw new \InvalidArgumentException('TOO_LONG'),
+		};
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 */
+	private function normalizeTimezoneString(string $raw): string
+	{
+		$timezone = trim($raw);
+		if (!in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
+			throw new \InvalidArgumentException('Invalid default timezone.');
+		}
+		return $timezone;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 */
+	private function normalizeCurrencyString(string $raw): string
+	{
+		$currency = strtoupper(trim($raw));
+		if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+			throw new \InvalidArgumentException('Invalid default currency code.');
+		}
+		if (!$this->money->isSupportedCurrency($currency)) {
+			throw new \InvalidArgumentException('Unsupported default currency for new workspaces.');
+		}
+		return $currency;
+	}
+
+	/**
+	 * Canonical JSON id-list: array of non-empty strings, deduped,
+	 * re-encoded. Throws on non-list JSON.
+	 *
+	 * @throws \InvalidArgumentException|\JsonException
+	 */
+	private function normalizeIdListValue(string $value): string
+	{
+		$list = json_decode($value, true, 64, JSON_THROW_ON_ERROR);
+		if (!is_array($list) || !array_is_list($list)) {
+			throw new \InvalidArgumentException('INVALID_ID_LIST');
+		}
+		$clean = [];
+		foreach ($list as $id) {
+			if (is_string($id) && $id !== '') {
+				$clean[] = $id;
+			}
+		}
+		return json_encode(array_values(array_unique($clean)), JSON_THROW_ON_ERROR);
 	}
 
 	/**

@@ -28,6 +28,7 @@
 		'bc-policy-admins-q': 'admins',
 		'bc-policy-timezone-label': 'defaults',
 		'bc-policy-currency-label': 'defaults',
+		'bc-transfer-export-card': 'transfer',
 		'bc-support-us': 'support',
 		'bc-support-us-title': 'support',
 	});

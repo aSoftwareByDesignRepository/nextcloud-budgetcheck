@@ -48,6 +48,7 @@ class PageController extends Controller
 		private AppSettingsSectionCatalog $appSettingsSections,
 		private WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
 		private MobileAppLinks $mobileAppLinks,
+		private \OCA\BudgetCheck\ConfigTransfer\TransferReceiptStore $transferReceipts,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -523,6 +524,8 @@ class PageController extends Controller
 				'home'         => $this->urlGenerator->linkToDefaultPageUrl(),
 			],
 			'currentUserId' => $userId,
+			'isSystemAdmin' => $this->access->isSystemAdmin($userId),
+			'transferLastReceipt' => $this->transferReceipts->lastReceipt(),
 			'invoicingCheckCreateUrl' => null,
 			'invoicingCheckReceivablesUrl' => null,
 		];
@@ -547,7 +550,7 @@ class PageController extends Controller
 			$params['currencyChangeAllowed'] = (bool)$ctx['currencyChangeAllowed'];
 		}
 		$response = new TemplateResponse($this->appName, $template, $params);
-		$this->registerFrontEndAssets($script);
+		$this->registerFrontEndAssets($script, (string)($ctx['settingsSection'] ?? ''));
 		return $response;
 	}
 
@@ -561,7 +564,7 @@ class PageController extends Controller
 	 * Registering from the page controller (not from
 	 * {@see Application::boot()}) avoids brittle request-path detection and fixes load order.
 	 */
-	private function registerFrontEndAssets(string $pageScript): void {
+	private function registerFrontEndAssets(string $pageScript, string $settingsSection = ''): void {
 		Util::addStyle(Application::APP_ID, 'common/tokens');
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addStyle(Application::APP_ID, 'common/mobile-nav');
@@ -620,6 +623,14 @@ class PageController extends Controller
 		// Legacy /settings#anchor → split sub-page forwarding (must load before settings.js).
 		if ($pageScript === 'settings') {
 			Util::addScript(Application::APP_ID, 'workspace-settings-legacy-redirect');
+		}
+		// Config & data transfer UI — the bridge exposes the
+		// window.BudgetCheckApi/BudgetCheckMessaging contract the synced
+		// transfer.js expects, so it must load first.
+		if ($pageScript === 'app-settings' && $settingsSection === 'transfer') {
+			Util::addStyle(Application::APP_ID, 'common/transfer');
+			Util::addScript(Application::APP_ID, 'transfer-bridge');
+			Util::addScript(Application::APP_ID, 'transfer');
 		}
 		Util::addScript(Application::APP_ID, $pageScript);
 	}

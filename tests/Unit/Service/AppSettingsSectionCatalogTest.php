@@ -42,7 +42,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 	{
 		$sections = AppSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)), 'Section slugs must be unique');
-		self::assertCount(4, $sections);
+		self::assertCount(5, $sections);
 		foreach ($sections as $section) {
 			self::assertMatchesRegularExpression(
 				'/^[a-z]+(-[a-z]+)*$/',
@@ -127,6 +127,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 			'access' => 'T:Access control',
 			'admins' => 'T:App administrators',
 			'defaults' => 'T:Defaults for new workspaces',
+			'transfer' => 'T:Transfer configuration',
 			'support' => 'T:Support & us',
 		];
 		self::assertSame(array_keys($expected), AppSettingsSectionCatalog::SECTIONS, 'Label pinning must cover the catalog in order');
@@ -142,6 +143,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 			'access' => 'T:Access',
 			'admins' => 'T:App admins',
 			'defaults' => 'T:Defaults',
+			'transfer' => 'T:Transfer',
 			'support' => 'T:Support us',
 		];
 		self::assertSame(array_keys($expected), AppSettingsSectionCatalog::SECTIONS, 'Nav-label pinning must cover the catalog in order');

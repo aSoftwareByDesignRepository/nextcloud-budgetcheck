@@ -27,6 +27,7 @@ $canAdminApp = !empty($_['canAdminApp']);
 		'access' => 'access.php',
 		'admins' => 'admins.php',
 		'defaults' => 'defaults.php',
+		'transfer' => 'transfer.php',
 		'support' => 'support.php',
 	];
 	$bcRequestedSection = (string) ($_['settingsSection'] ?? '');

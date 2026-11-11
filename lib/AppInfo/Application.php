@@ -517,6 +517,61 @@ class Application extends App implements IBootstrap
 			);
 		});
 
+		// ── Config & data transfer (test → production) ──────────────────
+		$context->registerService(\OCA\BudgetCheck\ConfigTransfer\TransferManifest::class, fn () => new \OCA\BudgetCheck\ConfigTransfer\TransferManifest());
+		$context->registerService(\OCA\BudgetCheck\ConfigTransfer\TransferHooks::class, function ($c): \OCA\BudgetCheck\ConfigTransfer\TransferHooks {
+			return new \OCA\BudgetCheck\ConfigTransfer\TransferHooks(
+				$c->query(AccessControlService::class),
+				$c->query(UpgradeBackupService::class),
+				$c->query(AuditLogService::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\ConfigTransfer\TransferPendingStore::class, fn ($c) => new \OCA\BudgetCheck\ConfigTransfer\TransferPendingStore($c->query(IRootFolder::class), $c->query(\OCP\IConfig::class), self::APP_ID));
+		$context->registerService(\OCA\BudgetCheck\ConfigTransfer\TransferReceiptStore::class, fn ($c) => new \OCA\BudgetCheck\ConfigTransfer\TransferReceiptStore($c->query(\OCP\IConfig::class), self::APP_ID));
+		$context->registerService(\OCA\BudgetCheck\ConfigTransfer\TransferService::class, function ($c): \OCA\BudgetCheck\ConfigTransfer\TransferService {
+			return new \OCA\BudgetCheck\ConfigTransfer\TransferService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(IRootFolder::class),
+				$c->query(IAppManager::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferManifest::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferHooks::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferPendingStore::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferReceiptStore::class),
+				self::APP_ID,
+				$c->query(\OCP\IAppConfig::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\BackgroundJob\TransferApplyJob::class, function ($c): \OCA\BudgetCheck\BackgroundJob\TransferApplyJob {
+			return new \OCA\BudgetCheck\BackgroundJob\TransferApplyJob(
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferService::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\OCP\BackgroundJob\IJobList::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Controller\TransferApiController::class, function ($c): \OCA\BudgetCheck\Controller\TransferApiController {
+			return new \OCA\BudgetCheck\Controller\TransferApiController(
+				self::APP_ID,
+				$c->query(\OCP\IRequest::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferHooks::class),
+				$c->query(\OCA\BudgetCheck\ConfigTransfer\TransferService::class),
+				$c->query(\OCP\BackgroundJob\IJobList::class),
+				$c->query(\OCP\Security\Bruteforce\IThrottler::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(\OCP\IUserSession::class),
+			);
+		});
+
 
 		// React to permanent user deletions: remove memberships, scrub configured
 		// app-admin entries. Snapshots and historical ledger rows stay intact for audit.
