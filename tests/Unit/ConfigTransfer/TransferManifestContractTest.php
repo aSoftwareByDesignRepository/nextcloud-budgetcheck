@@ -19,7 +19,7 @@ namespace OCA\BudgetCheck\Tests\Unit\ConfigTransfer;
 
 use OCA\BudgetCheck\ConfigTransfer\AbstractTransferManifest;
 use OCA\BudgetCheck\ConfigTransfer\TransferManifest;
-use Test\TestCase;
+use PHPUnit\Framework\TestCase;
 
 final class TransferManifestContractTest extends TestCase
 {
