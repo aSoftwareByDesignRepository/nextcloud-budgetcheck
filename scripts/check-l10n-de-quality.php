@@ -39,6 +39,10 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 	'Optional:' => true,
 	'Required:' => true,
 	'Selected:' => true,
+	// 'Phase' is a German loanword (die Phase) — the progress label is
+	// byte-identical to English by correct translation, not an untranslated
+	// string.
+	'Phase: %s' => true,
 ];
 
 $bannedSubstrings = [
