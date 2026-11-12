@@ -84,6 +84,85 @@ async function authedGet(page, url) {
 	return page.context().request.get(url, { headers: { 'OCS-APIRequest': 'true' } })
 }
 
+/** overlay_toast_button_armor_gap: the toast dismiss is a bare
+ * <button class="bc-toast__close"> mounted on document.body inside
+ * #bc-toasts — NC core's button repaint (width:130px + pale fill + border
+ * at 0-1-1, margin-inline-start:0 at 0-2-1) must not reach it. Assert the
+ * painted geometry is the declared transparent ~44px icon-close docked at
+ * the toast's inline-end on one row — not the collapsed ~128px pale
+ * core-skin block wrapped to a second row. */
+async function assertToastCloseArmored(page) {
+	const close = page.locator('.bc-toast.bc-toast--error .bc-toast__close').first()
+	await expect(close).toBeVisible()
+	const m = await close.evaluate((el) => {
+		const r = el.getBoundingClientRect()
+		const cs = getComputedStyle(el)
+		const host = el.closest('.bc-toast').getBoundingClientRect()
+		return {
+			x: r.x, y: r.y, w: r.width, h: r.height,
+			hostX: host.x, hostY: host.y, hostW: host.width, hostH: host.height,
+			vpH: window.innerHeight,
+			bg: cs.backgroundColor, bw: cs.borderWidth,
+		}
+	})
+	expect(m.bg, 'dismiss keeps transparent background (no pale core skin)')
+		.toBe('rgba(0, 0, 0, 0)')
+	expect(m.bw, 'dismiss keeps border:0').toBe('0px')
+	expect(m.w, 'dismiss ≈44px — core width:130px repaint would blow it out')
+		.toBeLessThanOrEqual(56)
+	expect(m.w).toBeGreaterThanOrEqual(40)
+	expect(m.h).toBeGreaterThanOrEqual(40)
+	expect(m.h).toBeLessThanOrEqual(64)
+	// inline-end dock + single row: glyph sits in the toast's trailing half
+	// and inside its height (the collapsed block wrapped to a second row)
+	expect(m.x + m.w / 2).toBeGreaterThan(m.hostX + m.hostW / 2)
+	expect(m.y + m.h).toBeLessThanOrEqual(m.hostY + m.hostH + 1)
+	// the stack clears the bottom viewport edge (safe-area floor)
+	expect(m.hostY + m.hostH).toBeLessThanOrEqual(m.vpH + 1)
+}
+
+/** Same class on the modal dismiss: <button class="bc-modal__close">
+ * renders inside the body-mounted .bc-modal backdrop (outside .bc-app), so
+ * the bare class rule needs the same overlay-scoped !important armor.
+ * Opens a real modal through the app's own Components registry on the
+ * current page and asserts the painted geometry is the transparent ~44px
+ * icon-close inside the dialog's header — not the ~130px pale core block. */
+async function assertModalCloseArmored(page) {
+	await page.evaluate(() => {
+		const C = window.BudgetCheck.get('Components')
+		C.openModal({
+			title: 'Armor probe',
+			render: () => document.createElement('div'),
+		})
+	})
+	const close = page.locator('.bc-modal .bc-modal__close').first()
+	await expect(close).toBeVisible()
+	const m = await close.evaluate((el) => {
+		const r = el.getBoundingClientRect()
+		const cs = getComputedStyle(el)
+		const dlg = el.closest('.bc-modal__dialog').getBoundingClientRect()
+		return {
+			x: r.x, y: r.y, w: r.width, h: r.height,
+			dlgX: dlg.x, dlgY: dlg.y, dlgW: dlg.width, dlgH: dlg.height,
+			bg: cs.backgroundColor, bw: cs.borderWidth,
+		}
+	})
+	expect(m.bg, 'modal dismiss keeps transparent background').toBe('rgba(0, 0, 0, 0)')
+	expect(m.bw, 'modal dismiss keeps border:0').toBe('0px')
+	expect(m.w, 'modal dismiss ≈44px — core width:130px repaint would blow it out')
+		.toBeLessThanOrEqual(56)
+	expect(m.w).toBeGreaterThanOrEqual(40)
+	expect(m.h).toBeGreaterThanOrEqual(40)
+	expect(m.h).toBeLessThanOrEqual(64)
+	// inside the dialog box, docked at its trailing half (header space-between)
+	expect(m.x + m.w / 2).toBeGreaterThan(m.dlgX + m.dlgW / 2)
+	expect(m.x + m.w).toBeLessThanOrEqual(m.dlgX + m.dlgW + 1)
+	expect(m.y).toBeGreaterThanOrEqual(m.dlgY - 1)
+	expect(m.y + m.h).toBeLessThanOrEqual(m.dlgY + m.dlgH + 1)
+	await page.keyboard.press('Escape')
+	await expect(page.locator('.bc-modal')).toBeHidden()
+}
+
 test.describe('craft transfer', () => {
 	let fixture
 	test.beforeAll(() => {
@@ -118,6 +197,8 @@ test.describe('craft transfer', () => {
 		// toast, not only the visually-hidden live region (OC.Notification is
 		// gone from NC≥31 bundles — the old bridge silently no-ops there).
 		await expect(page.locator('.bc-toast--error').first()).toBeVisible({ timeout: 30000 })
+		await assertToastCloseArmored(page)
+		await assertModalCloseArmored(page)
 		await expect(page.locator('#bc-transfer-result-live')).not.toBeEmpty()
 		await shot(page, 'bc-admin-transfer-fileerror-light-1280')
 
@@ -173,6 +254,23 @@ test.describe('craft transfer', () => {
 		await page.waitForTimeout(600)
 		await shot(page, 'bc-admin-transfer-light-375')
 
+		// File-input specificity (transfer-pack sync @38c8ff3): NC core pins
+		// input[type=file] to width:auto (0-1-1) and the intrinsic ~320px
+		// min-size overflows narrow sheets — the pack rule must land the
+		// declared 100% column width (width:auto would leave the intrinsic
+		// ~238–320px selector-button width, visibly short of the row).
+		const fileGeo = await page.locator('#bc-transfer-file').evaluate((el) => {
+			const r = el.getBoundingClientRect()
+			const row = el.closest('.bc-form-row') || el.parentElement
+			const rr = row.getBoundingClientRect()
+			return { w: r.width, rowW: rr.width, docScrollW: document.documentElement.scrollWidth, vpW: window.innerWidth }
+		})
+		expect(fileGeo.w, `file input ${Math.round(fileGeo.w)}px not pinned to form-row width ${Math.round(fileGeo.rowW)}px — width:auto pin leaked`)
+			.toBeGreaterThanOrEqual(fileGeo.rowW - 1)
+		expect(fileGeo.docScrollW - fileGeo.vpW,
+			`page horizontal overflow at 375 (scrollW ${fileGeo.docScrollW} > vpW ${fileGeo.vpW})`)
+			.toBeLessThanOrEqual(1)
+
 		// 320px clipped-narrow-text donor fix (03a1dddb34): mode radio labels
 		// and the file input wrap instead of clipping mid-word.
 		await page.setViewportSize({ width: 320, height: 700 })
@@ -203,6 +301,7 @@ test.describe('craft transfer', () => {
 		})
 		await page.locator('#bc-transfer-import-passphrase').fill('wrong-passphrase-000')
 		await expect(page.locator('.bc-toast--error').first()).toBeVisible({ timeout: 30000 })
+		await assertToastCloseArmored(page)
 		await expect(page.locator('#bc-transfer-result-live')).not.toBeEmpty()
 		await shot(page, 'bc-admin-transfer-fileerror-light-375')
 	})
