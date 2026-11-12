@@ -1413,13 +1413,34 @@
 	text-align: center;
 	white-space: normal;
 }
+/* ── Overlay close-control armor ───────────────────────────────────
+ * Same mechanism as the variant armor below: <button
+ * class="bc-modal__close"> renders inside the body-mounted .bc-modal
+ * backdrop and <button class="bc-toast__close"> inside the body-mounted
+ * .bc-toasts stack (both appended to document.body, outside
+ * #app-content.bc-app), so the scope list cannot reach them and the
+ * bare (0,1,0) class rules lose to core's button repaint (width:130px /
+ * pale fill / border / padding / margin-inline-start:0). The
+ * overlay-scoped selectors pin every repainted property !important
+ * (overlay_toast_button_armor_gap; donor shape: dutycheck
+ * .dc-modal button.dc-modal__close). */
 .bc-modal button.bc-modal__close {
+	width: auto !important;
+	margin: 0 !important;
+	padding: var(--bc-space-2) !important;
+	background: transparent !important;
+	border: 0 !important;
 	min-width: 44px;
 	min-height: 44px;
 }
-
-/* Toasts mount on document.body as well */
-.bc-toasts button.bc-toast__close {
+.bc-toasts button.bc-toast__close,
+#bc-toasts button.bc-toast__close {
+	width: auto !important;
+	margin: 0 !important;
+	margin-inline-start: auto !important;
+	padding: var(--bc-space-2) !important;
+	background: transparent !important;
+	border: 0 !important;
 	min-width: 44px;
 	min-height: 44px;
 }
