@@ -82,11 +82,19 @@ function check(file) {
 }
 
 function checkRawFetchUsage() {
-	// js/common/api.js is allowed to use fetch directly; everything else must
-	// go through window.BudgetCheckApi.
+	// Api producers may use fetch directly; consumers must go through
+	// window.BudgetCheckApi. js/common/api.js is the canonical client;
+	// js/transfer-bridge.js implements the same Api contract for the synced
+	// transfer page, and js/transfer.js is synced donor pack code
+	// (apps/_shared/config-transfer — do not edit app-side) whose export
+	// download streams a blob outside the JSON envelope.
+	const RAW_FETCH_ALLOWED = new Set(['transfer-bridge.js', 'transfer.js']);
 	const files = listJsFiles(JS_DIR);
 	for (const file of files) {
 		if (path.basename(file) === 'api.js' && file.includes(path.sep + 'common' + path.sep)) {
+			continue;
+		}
+		if (RAW_FETCH_ALLOWED.has(path.basename(file))) {
 			continue;
 		}
 		const text = fs.readFileSync(file, 'utf8');

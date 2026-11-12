@@ -56,14 +56,36 @@
 			}));
 		},
 	};
-	window.BudgetCheckMessaging = {
-		alert(text) {
-			if (window.OC && OC.Notification && OC.Notification.showTemporary) {
-				OC.Notification.showTemporary(text);
-			}
-			const el = document.getElementById('bc-transfer-result-live');
-			if (el) el.textContent = text;
-		},
-		polite(text) { this.alert(text); },
-	};
+	// Messaging: the synced transfer.js asks for .alert/.polite — map both
+	// onto the app's canonical announcer (Messaging.announce → visible
+	// .bc-toast + assertive/polite live regions) and always mirror into the
+	// bc-transfer-result-live status region the synced part renders.
+	// OC.Notification is gone from NC≥31 bundles — it may only ever be a
+	// fallback behind the app-owned channel, never the only write.
+	const msg = window.BudgetCheckMessaging || {};
+	function live(text) {
+		const el = document.getElementById('bc-transfer-result-live');
+		if (el) el.textContent = text;
+	}
+	function announce(text, kind) {
+		let mod = null;
+		try {
+			mod = (window.BudgetCheck && typeof BudgetCheck.get === 'function')
+				? BudgetCheck.get('Messaging') : null;
+		} catch (e) { mod = null; }
+		if (mod && typeof mod.announce === 'function') {
+			mod.announce(text, kind);
+			return;
+		}
+		if (window.OC && OC.Notification && OC.Notification.showTemporary) {
+			OC.Notification.showTemporary(text);
+		}
+	}
+	if (typeof msg.alert !== 'function') {
+		msg.alert = function (text) { announce(text, 'error'); live(text); };
+	}
+	if (typeof msg.polite !== 'function') {
+		msg.polite = function (text) { announce(text, 'success'); live(text); };
+	}
+	window.BudgetCheckMessaging = msg;
 })();

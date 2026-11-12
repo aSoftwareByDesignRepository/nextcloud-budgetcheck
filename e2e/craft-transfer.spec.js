@@ -114,7 +114,11 @@ test.describe('craft transfer', () => {
 			name: 't.nctransfer', mimeType: 'application/json', buffer: bytes,
 		})
 		await page.locator('#bc-transfer-import-passphrase').fill('wrong-passphrase-000')
-		await expect(page.locator('#bc-transfer-result-live')).not.toBeEmpty({ timeout: 30000 })
+		// dead_platform_toast_api: the failure must reach a VISIBLE app-owned
+		// toast, not only the visually-hidden live region (OC.Notification is
+		// gone from NC≥31 bundles — the old bridge silently no-ops there).
+		await expect(page.locator('.bc-toast--error').first()).toBeVisible({ timeout: 30000 })
+		await expect(page.locator('#bc-transfer-result-live')).not.toBeEmpty()
 		await shot(page, 'bc-admin-transfer-fileerror-light-1280')
 
 		// correct passphrase → preview → report dialog (interpolated counters)
@@ -187,6 +191,20 @@ test.describe('craft transfer', () => {
 				.toBeLessThanOrEqual(1)
 		}
 		await shot(page, 'bc-admin-transfer-light-320')
+
+		// dead_platform_toast_api at narrow width: a failed preview must paint
+		// a visible .bc-toast--error (not only the hidden live region).
+		await page.setViewportSize({ width: 375, height: 812 })
+		const exp = await authedPost(page, `${APP}/api/admin/transfer/export`, { passphrase: PASS })
+		expect(exp.status()).toBe(200)
+		const bytes = await exp.body()
+		await page.locator('#bc-transfer-file').setInputFiles({
+			name: 't.nctransfer', mimeType: 'application/json', buffer: bytes,
+		})
+		await page.locator('#bc-transfer-import-passphrase').fill('wrong-passphrase-000')
+		await expect(page.locator('.bc-toast--error').first()).toBeVisible({ timeout: 30000 })
+		await expect(page.locator('#bc-transfer-result-live')).not.toBeEmpty()
+		await shot(page, 'bc-admin-transfer-fileerror-light-375')
 	})
 
 	test('admin transfer replace-confirm token row wide + footer painted (320/375/1280)', async ({ page }) => {
