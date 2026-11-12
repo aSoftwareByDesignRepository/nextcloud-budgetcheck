@@ -10,7 +10,34 @@ declare(strict_types=1);
  */
 
 $base = __DIR__ . '/../l10n';
-$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt', 'pt_BR', 'zh_CN', 'tr'];
+$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt', 'pt_BR', 'zh_CN', 'zh_TW', 'tr'];
+
+// Guard the roster's input domain both ways: a shipped base catalog
+// l10n/<locale>.json that is not rostered must FAIL (silent-skip
+// blindness — zh_TW shipped unrostered), and a rostered locale whose
+// catalog is missing FAILS in the load loop below. Generated regional
+// variants (sync-l10n-variants.php) are derived copies verified by that
+// script's own --check, so they are exempted here — a newly shipped
+// catalog still FATALs until it is classified base-or-variant.
+$generatedVariants = [
+	'en_GB', 'de_DE',
+	'es_419', 'es_AR', 'es_CL', 'es_CO', 'es_CR', 'es_DO', 'es_EC', 'es_GT',
+	'es_HN', 'es_MX', 'es_NI', 'es_PA', 'es_PE', 'es_PR', 'es_PY', 'es_SV',
+	'es_UY',
+];
+$shipped = [];
+foreach (glob($base . '/*.json') ?: [] as $jsonFile) {
+	$loc = basename($jsonFile, '.json');
+	if (!in_array($loc, $generatedVariants, true)) {
+		$shipped[] = $loc;
+	}
+}
+$unrostered = array_values(array_diff($shipped, $localeFiles));
+if ($unrostered !== []) {
+	sort($unrostered);
+	fwrite(STDERR, 'Shipped catalogs missing from placeholder-check roster: ' . implode(', ', $unrostered) . "\n");
+	exit(1);
+}
 
 /**
  * Scan printf-style percent tokens in a msgid/msgstr.
