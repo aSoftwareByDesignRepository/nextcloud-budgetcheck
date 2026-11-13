@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.5.2 - 2026-11-13
+
+### Fixed
+
+- restore top-layer dialog centering lost to NC core reset
+- zh_TW in catalog rosters + bidirectional catalog guard
+- overlay close-control armor for body-mounted dismiss buttons
+- sync config-transfer pack — schema cache, file-input specificity, sheet clip
+- route bridge alerts through the app toast announcer
+- canonical btn-variant armor for .bc-btn--{primary,secondary,ghost}
+- re-render transfer pack vs donor — schemaCache + 320px clip + localized receipt
+- sync config-transfer pack — positional t() interpolation
+- byte-canonical JS builder closing + honest parity report
+- complete tr propagation in generators, checkers, and contract tests
+- tr placeholder order + header glosses; notifications form rhythm
+- register widget-snapshot route + harden endpoint contract
+- unique-index writes get reason-checked conflict paths
+- assignment user search skips deactivated accounts
+
+### Added
+
+- config & data transfer — encrypted test→prod pack
+- widget-snapshot endpoint
+
+### Changed
+
+- top-layer geometry asserts — centered ≥481px, full-bleed ≤480px
+- craft proofs — overlay close armor + file-input width pin
+- l10n: catalogue 86 transfer runtime strings across all catalogs
+- pack re-sync — replace-confirm token width (cramped_form_controls)
+- l10n: zh-Hant/zh_TW catalog + locale wiring
+- l10n: complete translations across the app language set
+- translation updates + js sync
+- rewrite malformed 1.5.1 release notes
+
 ## Unreleased
 
 ### Added
