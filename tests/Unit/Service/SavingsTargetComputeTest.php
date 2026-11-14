@@ -97,7 +97,6 @@ final class SavingsTargetComputeTest extends TestCase
 	public function testValidateModeRejectsUnknown(): void
 	{
 		$method = new ReflectionMethod(SavingsTargetService::class, 'validateMode');
-		$method->setAccessible(true);
 		$this->expectException(\InvalidArgumentException::class);
 		$method->invoke($this->svc, 'weekly');
 	}
@@ -105,7 +104,6 @@ final class SavingsTargetComputeTest extends TestCase
 	public function testValidateYearMonthRejectsGarbage(): void
 	{
 		$method = new ReflectionMethod(SavingsTargetService::class, 'validateYearMonth');
-		$method->setAccessible(true);
 		$this->expectException(\InvalidArgumentException::class);
 		$method->invoke($this->svc, '2026-13');
 	}

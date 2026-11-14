@@ -32,7 +32,6 @@ final class SummaryYearlyCategoryCompareTest extends TestCase
 			$this->createMock(\OCA\BudgetCheck\Service\TransactionService::class),
 		);
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateYearByCategory');
-		$method->setAccessible(true);
 		/** @var array<int,array<string,mixed>> */
 		return $method->invoke($service, $workspace, $rows, $uncatIds);
 	}

@@ -190,7 +190,6 @@ final class RecurringScheduleTest extends TestCase
 			$this->createMock(\OCA\BudgetCheck\Service\AuditLogService::class),
 		);
 		$method = new ReflectionMethod(RecurringRuleService::class, 'parseIsoDate');
-		$method->setAccessible(true);
 
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('startDate is not a valid date.');
@@ -207,7 +206,6 @@ final class RecurringScheduleTest extends TestCase
 			$this->createMock(\OCA\BudgetCheck\Service\AuditLogService::class),
 		);
 		$method = new ReflectionMethod(RecurringRuleService::class, 'parseIsoDate');
-		$method->setAccessible(true);
 		$parsed = $method->invoke($service, '2026-02-28', 'startDate');
 		$this->assertSame('2026-02-28', $parsed->format('Y-m-d'));
 	}
@@ -225,7 +223,6 @@ final class RecurringScheduleTest extends TestCase
 			$this->createMock(\OCA\BudgetCheck\Service\AuditLogService::class),
 		);
 		$method = new ReflectionMethod(RecurringRuleService::class, 'normaliseSchedulePayload');
-		$method->setAccessible(true);
 		return $method->invoke($service, $payload, 2);
 	}
 }

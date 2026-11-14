@@ -59,7 +59,6 @@ final class SummaryTaxBasisAggregationTest extends TestCase
 	private static function invokeAggregateMonth(object $instance, array $workspace, array $rows, array $uncatIds): array
 	{
 		$ref = new \ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$ref->setAccessible(true);
 		/** @var array<string,mixed> $out */
 		$out = $ref->invoke($instance, $workspace, $rows, $uncatIds);
 		return $out;

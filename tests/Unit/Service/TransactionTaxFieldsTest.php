@@ -117,7 +117,6 @@ final class TransactionTaxFieldsTest extends TestCase
 	private static function invokeResolveTaxFields(object $instance, array $payload, array $workspace, int $amount): array
 	{
 		$ref = new \ReflectionMethod(TransactionService::class, 'resolveTaxFields');
-		$ref->setAccessible(true);
 		/** @var array{basis:string,net:?int,vat:?int,gross:?int,vatRateBp:?int} $out */
 		$out = $ref->invoke($instance, $payload, $workspace, $amount, TransactionService::DIRECTION_EXPENSE);
 		return $out;
@@ -129,7 +128,6 @@ final class TransactionTaxFieldsTest extends TestCase
 		/** @var TransactionService $svc */
 		$svc = $ref->newInstanceWithoutConstructor();
 		$moneyProp = new \ReflectionProperty(TransactionService::class, 'money');
-		$moneyProp->setAccessible(true);
 		$moneyProp->setValue($svc, new MoneyService());
 		return $svc;
 	}

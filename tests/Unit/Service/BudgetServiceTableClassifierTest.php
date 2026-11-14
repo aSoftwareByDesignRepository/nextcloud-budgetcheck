@@ -34,7 +34,6 @@ final class BudgetServiceTableClassifierTest extends TestCase
 	public function testClassifierDetectsMissingBudgetDefaultsTableError(): void
 	{
 		$method = new \ReflectionMethod(BudgetService::class, 'isMissingBudgetDefaultsTableError');
-		$method->setAccessible(true);
 		$ex = new \RuntimeException("SQLSTATE[42S02]: Base table or view not found: 1146 Table 'nextcloud.oc_bc_budget_defaults' doesn't exist");
 		$this->assertTrue($method->invoke($this->service, $ex));
 	}
@@ -42,7 +41,6 @@ final class BudgetServiceTableClassifierTest extends TestCase
 	public function testClassifierRejectsUnrelatedErrors(): void
 	{
 		$method = new \ReflectionMethod(BudgetService::class, 'isMissingBudgetDefaultsTableError');
-		$method->setAccessible(true);
 		$ex = new \RuntimeException('SQLSTATE[23000]: Integrity constraint violation');
 		$this->assertFalse($method->invoke($this->service, $ex));
 	}

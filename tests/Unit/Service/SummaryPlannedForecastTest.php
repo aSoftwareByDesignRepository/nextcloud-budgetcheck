@@ -17,7 +17,6 @@ final class SummaryPlannedForecastTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregatePlannedLedger');
-		$method->setAccessible(true);
 
 		$workspace = ['type' => WorkspaceService::TYPE_HOUSEHOLD];
 		$rows = [
@@ -39,7 +38,6 @@ final class SummaryPlannedForecastTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregatePlannedLedger');
-		$method->setAccessible(true);
 
 		$workspace = ['type' => WorkspaceService::TYPE_HOUSEHOLD];
 		$rows = [
@@ -59,7 +57,6 @@ final class SummaryPlannedForecastTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'sumPlannedMapByDirection');
-		$method->setAccessible(true);
 
 		$plannedMap = [1 => 40_000_00, 2 => 10_000_00];
 		$workspaceCategories = [

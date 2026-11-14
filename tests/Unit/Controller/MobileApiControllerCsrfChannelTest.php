@@ -56,7 +56,6 @@ final class MobileApiControllerCsrfChannelTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 		);
 		$method = new ReflectionMethod(MobileApiController::class, 'assertSafeMutationChannel');
-		$method->setAccessible(true);
 		$method->invoke($controller);
 	}
 

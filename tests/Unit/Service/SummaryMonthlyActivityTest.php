@@ -16,7 +16,6 @@ final class SummaryMonthlyActivityTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'monthlyActivity');
-		$method->setAccessible(true);
 
 		$rows = [
 			$this->row('income', '2026-07-01', false),

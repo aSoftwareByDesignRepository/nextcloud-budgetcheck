@@ -208,7 +208,6 @@ final class ClosedMonthWriteLockTest extends TestCase
 	private function inject(object $instance, string $class, string $property, mixed $value): void
 	{
 		$prop = new \ReflectionProperty($class, $property);
-		$prop->setAccessible(true);
 		$prop->setValue($instance, $value);
 	}
 }

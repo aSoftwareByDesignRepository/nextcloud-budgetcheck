@@ -51,7 +51,6 @@ final class HouseholdYearlyExportServiceTest extends TestCase
 	{
 		$ref = new \ReflectionClass($this->service);
 		$m = $ref->getMethod($method);
-		$m->setAccessible(true);
 		return $m->invoke($this->service, ...$args);
 	}
 }

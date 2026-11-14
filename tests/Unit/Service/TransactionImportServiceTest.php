@@ -276,12 +276,10 @@ final class TransactionImportServiceTest extends TestCase
 		$svc = $ref->newInstanceWithoutConstructor();
 
 		$moneyProp = new \ReflectionProperty(TransactionService::class, 'money');
-		$moneyProp->setAccessible(true);
 		$moneyProp->setValue($svc, new MoneyService());
 
 		$access = $this->createMock(AccessControlService::class);
 		$accessProp = new \ReflectionProperty(TransactionService::class, 'access');
-		$accessProp->setAccessible(true);
 		$accessProp->setValue($svc, $access);
 
 		return $svc;

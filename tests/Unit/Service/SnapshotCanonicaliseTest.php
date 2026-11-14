@@ -87,7 +87,6 @@ final class SnapshotCanonicaliseTest extends TestCase
 	private static function invokeCanonicalise(object $instance, array $summary): string
 	{
 		$ref = new \ReflectionMethod(SnapshotService::class, 'canonicaliseForHash');
-		$ref->setAccessible(true);
 		return (string)$ref->invoke($instance, $summary);
 	}
 }

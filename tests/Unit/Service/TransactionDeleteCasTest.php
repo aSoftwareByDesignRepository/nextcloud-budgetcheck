@@ -169,7 +169,6 @@ final class TransactionDeleteCasTest extends TestCase
 	private function inject(object $instance, string $property, mixed $value): void
 	{
 		$prop = new \ReflectionProperty(TransactionService::class, $property);
-		$prop->setAccessible(true);
 		$prop->setValue($instance, $value);
 	}
 }

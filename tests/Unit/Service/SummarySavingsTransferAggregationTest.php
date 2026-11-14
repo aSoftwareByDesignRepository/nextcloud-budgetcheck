@@ -26,7 +26,6 @@ final class SummarySavingsTransferAggregationTest extends TestCase
 		);
 
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$method->setAccessible(true);
 
 		$workspace = ['taxModeEnabled' => false, 'taxBudgetBasis' => 'gross'];
 		$rows = [

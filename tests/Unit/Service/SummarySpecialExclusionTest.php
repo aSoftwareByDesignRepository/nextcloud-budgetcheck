@@ -15,7 +15,6 @@ final class SummarySpecialExclusionTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'type' => WorkspaceService::TYPE_HOUSEHOLD,
@@ -47,7 +46,6 @@ final class SummarySpecialExclusionTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'type' => WorkspaceService::TYPE_HOUSEHOLD,
@@ -79,7 +77,6 @@ final class SummarySpecialExclusionTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'type' => WorkspaceService::TYPE_PROJECT,

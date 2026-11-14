@@ -75,7 +75,6 @@ final class SavingsTargetServiceTest extends TestCase
 	{
 		$svc = self::newService();
 		$ref = new \ReflectionMethod(SavingsTargetService::class, 'validateMode');
-		$ref->setAccessible(true);
 		$this->expectException(\InvalidArgumentException::class);
 		$ref->invoke($svc, 'bogus');
 	}
@@ -84,7 +83,6 @@ final class SavingsTargetServiceTest extends TestCase
 	{
 		$svc = self::newService();
 		$access = new \ReflectionProperty(SavingsTargetService::class, 'access');
-		$access->setAccessible(true);
 		$accessMock = $this->createMock(\OCA\BudgetCheck\Service\AccessControlService::class);
 		$accessMock->expects($this->once())->method('ensureMinimumRole');
 		$access->setValue($svc, $accessMock);
@@ -103,7 +101,6 @@ final class SavingsTargetServiceTest extends TestCase
 		/** @var SavingsTargetService $svc */
 		$svc = $ref->newInstanceWithoutConstructor();
 		$money = new \ReflectionProperty(SavingsTargetService::class, 'money');
-		$money->setAccessible(true);
 		$money->setValue($svc, new MoneyService());
 		return $svc;
 	}

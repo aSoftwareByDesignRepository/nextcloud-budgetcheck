@@ -16,7 +16,6 @@ final class SummaryPlannedExclusionTest extends TestCase
 	{
 		$service = $this->summaryService();
 		$method = new ReflectionMethod(SummaryService::class, 'aggregateMonth');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'type' => WorkspaceService::TYPE_HOUSEHOLD,

@@ -34,7 +34,6 @@ final class TransactionTitleTest extends TestCase
 	private static function invokeResolveTitle(object $instance, string $title, array $category): string
 	{
 		$ref = new \ReflectionMethod(TransactionService::class, 'resolveTitle');
-		$ref->setAccessible(true);
 		/** @var string $out */
 		$out = $ref->invoke($instance, $title, $category);
 		return $out;
@@ -46,7 +45,6 @@ final class TransactionTitleTest extends TestCase
 		/** @var TransactionService $svc */
 		$svc = $ref->newInstanceWithoutConstructor();
 		$moneyProp = new \ReflectionProperty(TransactionService::class, 'money');
-		$moneyProp->setAccessible(true);
 		$moneyProp->setValue($svc, new MoneyService());
 		return $svc;
 	}

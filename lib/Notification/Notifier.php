@@ -60,7 +60,7 @@ class Notifier implements INotifier
 			? $link
 			: $this->urlGenerator->linkToRouteAbsolute('budgetcheck.page.dashboard'));
 		$notification->setIcon($this->urlGenerator->getAbsoluteURL(
-			$this->urlGenerator->imagePath(Application::APP_ID, 'app.svg')
+			$this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg')
 		));
 		return $notification;
 	}

@@ -71,16 +71,24 @@ $lastReceipt = is_array($_['transferLastReceipt'] ?? null) ? $_['transferLastRec
 	</p>
 	<?php endif; ?>
 	<form id="bc-transfer-import-form" class="bc-form" novalidate>
-		<fieldset class="bc-form-row bc-fieldset">
+		<fieldset class="bc-form-row bc-fieldset" aria-describedby="bc-transfer-replace-hint">
 			<legend><?php p($l->t('Mode')); ?></legend>
-			<label class="bc-radio">
-				<input type="radio" name="mode" value="merge" checked>
-				<span><strong><?php p($l->t('Merge')); ?></strong> — <?php p($l->t('add and update; nothing is deleted')); ?></span>
-			</label>
-			<label class="bc-radio bc-radio--danger">
-				<input type="radio" name="mode" value="replace" <?php if (!$isSystemAdmin): ?>disabled<?php endif; ?>>
-				<span><strong><?php p($l->t('Replace')); ?></strong> — <?php p($l->t('make identical to the file; prod-only rows are deleted')); ?></span>
-			</label>
+			<div class="bc-choice-cards">
+				<label class="bc-choice-card">
+					<input type="radio" name="mode" value="merge" checked>
+					<span class="bc-choice-card__copy">
+						<span class="bc-choice-card__title"><?php p($l->t('Merge')); ?></span>
+						<span class="bc-choice-card__hint"><?php p($l->t('add and update; nothing is deleted')); ?></span>
+					</span>
+				</label>
+				<label class="bc-choice-card bc-choice-card--danger">
+					<input type="radio" name="mode" value="replace" <?php if (!$isSystemAdmin): ?>disabled<?php endif; ?>>
+					<span class="bc-choice-card__copy">
+						<span class="bc-choice-card__title"><?php p($l->t('Replace')); ?></span>
+						<span class="bc-choice-card__hint"><?php p($l->t('make identical to the file; prod-only rows are deleted')); ?></span>
+					</span>
+				</label>
+			</div>
 			<p class="bc-form-row__hint" id="bc-transfer-replace-hint">
 				<?php if ($isSystemAdmin): ?>
 					<?php p($l->t('Replace needs maintenance mode ON (occ maintenance:mode --on) — you will type REPLACE in the preview to confirm.')); ?>

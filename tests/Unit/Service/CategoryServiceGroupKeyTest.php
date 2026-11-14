@@ -28,7 +28,6 @@ final class CategoryServiceGroupKeyTest extends TestCase
 	public function testNormaliseGroupKeyAcceptsSpaces(): void
 	{
 		$method = new \ReflectionMethod(CategoryService::class, 'normaliseGroupKey');
-		$method->setAccessible(true);
 		$result = $method->invoke($this->service, 'Home Travel');
 		$this->assertSame('Home Travel', $result);
 	}
@@ -36,7 +35,6 @@ final class CategoryServiceGroupKeyTest extends TestCase
 	public function testNormaliseGroupKeyRejectsSlash(): void
 	{
 		$method = new \ReflectionMethod(CategoryService::class, 'normaliseGroupKey');
-		$method->setAccessible(true);
 		$this->expectException(\InvalidArgumentException::class);
 		$method->invoke($this->service, 'Home/Travel');
 	}

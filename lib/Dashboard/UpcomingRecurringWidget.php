@@ -67,7 +67,7 @@ class UpcomingRecurringWidget implements IAPIWidgetV2, IButtonWidget, IIconWidge
 	public function getIconUrl(): string
 	{
 		return $this->urlGenerator->getAbsoluteURL(
-			$this->urlGenerator->imagePath(Application::APP_ID, 'app.svg')
+			$this->urlGenerator->imagePath(Application::APP_ID, 'app-dark.svg')
 		);
 	}
 

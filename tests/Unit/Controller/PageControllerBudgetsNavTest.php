@@ -22,7 +22,6 @@ final class PageControllerBudgetsNavTest extends TestCase
 			fn (string $route, array $params = []): string => '/apps/budgetcheck/' . str_replace('budgetcheck.page.', '', $route),
 		);
 		$method = new ReflectionMethod(PageController::class, 'buildNavigation');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'id' => 3,
@@ -44,7 +43,6 @@ final class PageControllerBudgetsNavTest extends TestCase
 			fn (string $route, array $params = []): string => '/r/' . $route,
 		);
 		$method = new ReflectionMethod(PageController::class, 'buildNavigation');
-		$method->setAccessible(true);
 
 		$workspace = [
 			'id' => 8,
@@ -66,7 +64,6 @@ final class PageControllerBudgetsNavTest extends TestCase
 			fn (string $route, array $params = []): string => '/r',
 		);
 		$method = new ReflectionMethod(PageController::class, 'buildNavigation');
-		$method->setAccessible(true);
 		$nav = $method->invoke($controller, 'dashboard', null, true, false);
 		$ids = array_column($nav, 'id');
 		self::assertNotContains('budgets', $ids);
@@ -83,7 +80,6 @@ final class PageControllerBudgetsNavTest extends TestCase
 			fn (string $route, array $params = []): string => '/apps/budgetcheck/' . str_replace('budgetcheck.page.', '', $route),
 		);
 		$method = new ReflectionMethod(PageController::class, 'buildNavigation');
-		$method->setAccessible(true);
 		$workspace = ['id' => 1, 'type' => 'household', 'role' => 'manager'];
 		$nav = $method->invoke($controller, 'get-the-app', $workspace, true, true);
 		$ids = array_column($nav, 'id');
@@ -110,7 +106,6 @@ final class PageControllerBudgetsNavTest extends TestCase
 		$ref = new \ReflectionClass($controller);
 		foreach (['l10n' => $l10n, 'urlGenerator' => $url] as $prop => $value) {
 			$p = $ref->getProperty($prop);
-			$p->setAccessible(true);
 			$p->setValue($controller, $value);
 		}
 		return $controller;

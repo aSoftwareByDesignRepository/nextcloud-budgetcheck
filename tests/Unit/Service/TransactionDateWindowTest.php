@@ -15,7 +15,6 @@ final class TransactionDateWindowTest extends TestCase
 	{
 		$service = $this->service();
 		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
-		$method->setAccessible(true);
 
 		/** @var array{0:?string,1:?string} $window */
 		$window = $method->invoke($service, [
@@ -31,7 +30,6 @@ final class TransactionDateWindowTest extends TestCase
 	{
 		$service = $this->service();
 		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
-		$method->setAccessible(true);
 
 		/** @var array{0:?string,1:?string} $window */
 		$window = $method->invoke($service, [
@@ -49,7 +47,6 @@ final class TransactionDateWindowTest extends TestCase
 	{
 		$service = $this->service();
 		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
-		$method->setAccessible(true);
 
 		/** @var array{0:?string,1:?string} $window */
 		$window = $method->invoke($service, [
@@ -65,7 +62,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testNoBillingBoundsKeepsProjectWindow(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'bookingDateInsideProjectWindow');
-		$method->setAccessible(true);
 		$ws = [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -82,7 +78,6 @@ final class TransactionDateWindowTest extends TestCase
 	{
 		// Rows hydrated by older code or test fixtures may not carry the keys at all.
 		$method = new ReflectionMethod(TransactionService::class, 'bookingDateInsideProjectWindow');
-		$method->setAccessible(true);
 		$ws = [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -95,7 +90,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testBillingEndRelaxesOnlyTheEndSide(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'bookingDateInsideProjectWindow');
-		$method->setAccessible(true);
 		$ws = [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -113,7 +107,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testBillingStartRelaxesOnlyTheStartSide(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'bookingDateInsideProjectWindow');
-		$method->setAccessible(true);
 		$ws = [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -130,7 +123,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testBillingWindowExceptionUsesBillingWording(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'projectWindowException');
-		$method->setAccessible(true);
 
 		/** @var \OCA\BudgetCheck\Exception\ValidationException $e */
 		$e = $method->invoke($this->service(), [
@@ -151,7 +143,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testListWindowClampsToEffectiveWindowNotJustProject(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
-		$method->setAccessible(true);
 		$ws = [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -179,7 +170,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testListWindowWithoutBillingBoundsClampsToProject(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'resolveDateWindow');
-		$method->setAccessible(true);
 		$window = $method->invoke($this->service(), [
 			'type' => WorkspaceService::TYPE_PROJECT,
 			'projectStartDate' => '2026-01-01',
@@ -194,7 +184,6 @@ final class TransactionDateWindowTest extends TestCase
 	public function testParseIsoDateRejectsImpossibleCalendarDates(): void
 	{
 		$method = new ReflectionMethod(TransactionService::class, 'parseIsoDate');
-		$method->setAccessible(true);
 		$service = $this->service();
 
 		foreach (['2026-02-30', '2026-02-29', '2026-04-31', '2026-00-10'] as $bad) {

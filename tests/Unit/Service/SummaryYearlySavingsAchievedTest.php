@@ -26,7 +26,6 @@ final class SummaryYearlySavingsAchievedTest extends TestCase
 		);
 
 		$method = new ReflectionMethod(SummaryService::class, 'yearlySavingsMonthContributions');
-		$method->setAccessible(true);
 
 		/** @var array{achievedMinor:int,towardTargetMinor:int} $january */
 		$january = $method->invoke($service, 4_000_00, 29_000_00, 0, 0, true);
@@ -55,7 +54,6 @@ final class SummaryYearlySavingsAchievedTest extends TestCase
 		);
 
 		$method = new ReflectionMethod(SummaryService::class, 'yearlySavingsMonthContributions');
-		$method->setAccessible(true);
 
 		/** @var array{achievedMinor:int,towardTargetMinor:int} $out */
 		$out = $method->invoke($service, 4_000_00, 0, 30_000_00, 20_000_00, false);
