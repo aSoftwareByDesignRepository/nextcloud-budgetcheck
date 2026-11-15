@@ -40,16 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - translation updates + js sync
 - rewrite malformed 1.5.1 release notes
 
-## Unreleased
-
-### Added
-
-- compact companion-widget snapshot endpoint (`GET /api/widget-snapshot/{workspaceId}`) — one cached document per widget sync (60 s, workspace-scoped), `serverNow` for device-clock correction, and a `redactionLocked` flag (also on the mobile home payload) so locked deployments can force widget redaction
-
-### Fixed
-
-- the assignment picker user search skips deactivated Nextcloud accounts — they cannot sign in, so they are never offered (fail-closed, server-side)
-
 ## 1.5.1 - 2026-11-05
 
 ### Fixed
