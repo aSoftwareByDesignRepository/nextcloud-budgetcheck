@@ -96,7 +96,7 @@ OC.L10N.register(
 	"Access control" : "Contrôle d’accès",
 	"Access denied" : "Accès refusé",
 	"Action" : "Opération",
-	"Actions" : "Actions",
+	"Actions" : "Actes",
 	"Actions for rule {title}" : "Actions pour la règle {title}",
 	"Actions for {title}" : "Actions pour {title}",
 	"Active" : "Actif",
