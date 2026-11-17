@@ -354,7 +354,7 @@
 					vatCustomWrap = BC.Components.createElement('label', { class: 'bc-field bc-field--full-width', attrs: { 'data-bc-vat-custom-wrap': '1' } }, [
 						BC.Components.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom VAT (basis points)') }),
 						vatCustomInput,
-						BC.Components.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%') }),
+						BC.Components.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%').replace(/%%/g, '%') }),
 					]);
 					form.appendChild(vatCustomWrap);
 
