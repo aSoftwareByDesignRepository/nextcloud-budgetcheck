@@ -7,8 +7,6 @@
         "%1$s: Income %2$s · Expense %3$s · Net %4$s": "%1$s: Gelir %2$s · Gider %3$s · Net %4$s",
         "%1$s: savings target not met (%2$s of %3$s)": "%1$s: birikim hedefi tutmadı (%3$s üzerinden %2$s)",
         "%1$s: savings target reached (%2$s of %3$s)": "%1$s: birikim hedefine ulaşıldı (%3$s üzerinden %2$s)",
-        "%d row(s) need a value on this instance": "%d satırın bu örnekte bir değere ihtiyacı var",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d satır atlandı ve %d başvuru çözümlenemedi — aşağıdaki gruplara bakın.",
         "%n attachment": "%n ek",
         "%n booking (including planned and deleted drafts)": "%n kayıt (planlanmış ve silinmiş taslaklar dahil)",
         "%n booking falls into this date range. Pick a calendar month to focus one month.": "%n kayıt bu tarih aralığına denk geliyor. Tek bir aya odaklanmak için bir takvim ayı seçin.",
@@ -31,10 +29,6 @@
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:": "%s, Nextcloud'unuzda ücretsiz (AGPL) kalır. Hatalar ve fikirler için GitHub sorunları memnuniyetle karşılanır. Fatura ile satın alınabilen yardım — kurulum, saat paketleri, özel geliştirme — veya resmi mobil uygulama için:",
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, or commissioned work:": "%s, Nextcloud'unuzda ücretsiz (AGPL) kalır. Hatalar ve fikirler için GitHub sorunları memnuniyetle karşılanır. Fatura ile satın alınabilen yardım — kurulum, saat paketleri veya özel geliştirme için:",
         "%s%% used": "%s%% kullanıldı",
-        "(%d env-bound value(s) emptied)": "(%d örneğe bağlı değer boşaltıldı)",
-        "(%d filtered)": "(%d filtrelendi)",
-        "(%d secret(s) redacted)": "(%d sır gizlendi)",
-        "(%d unresolved ref)": "(%d çözümlenemeyen başvuru)",
         "(opens in a new tab)": "(yeni sekmede açılır)",
         "(unknown — skipped)": "(bilinmiyor — atlandı)",
         "0 % (none)": "0 %% (yok)",
@@ -1454,7 +1448,6 @@
         "Viewers can see budgets and transactions, but cannot add recurring entries. Ask a manager to promote you if you need this.": "İzleyiciler bütçeleri ve işlemleri görebilir ancak tekrarlayan kayıt ekleyemez. Buna ihtiyacınız varsa bir yöneticiden sizi yükseltmesini isteyin.",
         "Waiting for the job…": "İş bekleniyor…",
         "Warning": "Uyarı",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Uyarı: %d satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek.",
         "What changed per category versus the comparison year.": "Karşılaştırma yılına göre kategori başına ne değişti.",
         "What happens when you close this month": "Bu ayı kapattığınızda ne olur",
         "What you can do": "Neler yapabilirsiniz",
@@ -1559,6 +1552,34 @@
             "%n çalışma alanı görünür",
             "%n çalışma alanı görünür"
         ],
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 örneğe bağlı değer boşaltıldı)",
+            "(%n örneğe bağlı değer boşaltıldı)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 filtrelendi)",
+            "(%n filtrelendi)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 sır gizlendi)",
+            "(%n sır gizlendi)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 çözümlenemeyen başvuru)",
+            "(%n çözümlenemeyen başvuru)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 başvuru çözümlenemedi — aşağıdaki gruplara bakın.",
+            "%n başvuru çözümlenemedi — aşağıdaki gruplara bakın."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 satırın bu örnekte bir değere ihtiyacı var",
+            "%n satırın bu örnekte bir değere ihtiyacı var"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 satır atlandı.",
+            "%n satır atlandı."
+        ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
             "{rules} kuralda %n kayıt eklendi.",
             "{rules} kuralda {count} kayıt eklendi."
@@ -1582,6 +1603,10 @@
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
             "Doğrulama başarılı. %n satır hazır; {skipped} yinelenen atlanacak.",
             "Doğrulama başarılı. {count} satır hazır; {skipped} yinelenen atlanacak."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Uyarı: 1 satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek.",
+            "Uyarı: %n satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek."
         ],
         "add and update; nothing is deleted": "ekle ve güncelle; hiçbir şey silinmez",
         "also recognised — for example “Expenses” and “Income”, “Ausgaben” and “Einnahmen”, or “Debit” and “Credit”, with a value in only one of them per row. A minus sign on the expense column is fine.": "ayrıca tanınır — örneğin “Expenses” ve “Income”, “Ausgaben” ve “Einnahmen” veya “Debit” ve “Credit”, satır başına yalnızca birinde değer olmak üzere. Gider sütunundaki eksi işareti sorun değildir.",

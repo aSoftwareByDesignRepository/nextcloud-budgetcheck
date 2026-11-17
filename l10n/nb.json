@@ -7,8 +7,6 @@
         "%1$s: Income %2$s · Expense %3$s · Net %4$s": "%1$s: inntekter %2$s · utgifter %3$s · netto %4$s",
         "%1$s: savings target not met (%2$s of %3$s)": "%1$s: sparemål ikke nådd (%2$s av %3$s)",
         "%1$s: savings target reached (%2$s of %3$s)": "%1$s: sparemål nådd (%2$s av %3$s)",
-        "%d row(s) need a value on this instance": "%d rad(er) trenger en verdi på denne instansen",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d rad(er) hoppet over og %d referanse(r) uløst — se gruppene nedenfor.",
         "%n attachment": "%n vedlegg",
         "%n booking (including planned and deleted drafts)": "%n postering (inkludert planlagte og slettede utkast)",
         "%n booking falls into this date range. Pick a calendar month to focus one month.": "%n postering faller innenfor dette datointervallet. Velg en kalendermåned for å fokusere på én måned.",
@@ -31,10 +29,6 @@
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:": "%s forblir gratis (AGPL) på Nextcloud-en deres. GitHub-saker for feil og ideer er fortsatt velkomne. For bookbar hjelp på faktura — oppsett, timepakker, oppdragsutvikling — eller den offisielle mobilappen:",
         "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, or commissioned work:": "%s forblir gratis (AGPL) på Nextcloud-en deres. GitHub-saker for feil og ideer er fortsatt velkomne. For bookbar hjelp på faktura — oppsett, timepakker eller oppdragsutvikling:",
         "%s%% used": "%s %% brukt",
-        "(%d env-bound value(s) emptied)": "(%d instansbundne verdier tømt)",
-        "(%d filtered)": "(%d filtrert)",
-        "(%d secret(s) redacted)": "(%d hemmeligheter sladdet)",
-        "(%d unresolved ref)": "(%d uløste referanser)",
         "(opens in a new tab)": "(åpnes i en ny fane)",
         "(unknown — skipped)": "(ukjent — hoppet over)",
         "0 % (none)": "0 %% (ingen)",
@@ -1454,7 +1448,6 @@
         "Viewers can see budgets and transactions, but cannot add recurring entries. Ask a manager to promote you if you need this.": "Lesere kan se budsjetter og transaksjoner, men ikke legge til gjentakende poster. Be en leder om å oppgradere deg hvis du trenger det.",
         "Waiting for the job…": "Venter på jobben…",
         "Warning": "Advarsel",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Advarsel: %d rad(er) slettes permanent, deretter lastes fildataene inn.",
         "What changed per category versus the comparison year.": "Hva som endret seg per kategori mot sammenligningsåret.",
         "What happens when you close this month": "Hva som skjer når lukker denne måneden",
         "What you can do": "Hva det er mulig å gjøre",
@@ -1559,6 +1552,34 @@
             "%n arbeidsområde synlig",
             "%n arbeidsområder synlige"
         ],
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 instansbunden verdi tømt)",
+            "(%n instansbundne verdier tømt)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 filtrert)",
+            "(%n filtrert)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 hemmelighet sladdet)",
+            "(%n hemmeligheter sladdet)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 uløst referanse)",
+            "(%n uløste referanser)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 referanse uløst — se gruppene nedenfor.",
+            "%n referanser uløst — se gruppene nedenfor."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 rad trenger en verdi på denne instansen",
+            "%n rader trenger en verdi på denne instansen"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 rad hoppet over.",
+            "%n rader hoppet over."
+        ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
             "%n post lagt til på tvers av {rules} regler.",
             "{count} poster lagt til på tvers av {rules} regler."
@@ -1582,6 +1603,10 @@
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
             "Validering bestått. %n rad klar; {skipped} duplikater hoppes over.",
             "Validering bestått. {count} rader klare; {skipped} duplikater hoppes over."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Advarsel: 1 rad slettes permanent, deretter lastes fildataene inn.",
+            "Advarsel: %n rader slettes permanent, deretter lastes fildataene inn."
         ],
         "add and update; nothing is deleted": "legg til og oppdater; ingenting slettes",
         "also recognised — for example “Expenses” and “Income”, “Ausgaben” and “Einnahmen”, or “Debit” and “Credit”, with a value in only one of them per row. A minus sign on the expense column is fine.": "gjenkjennes også — for eksempel «Expenses» og «Income», «Ausgaben» og «Einnahmen» eller «Debit» og «Credit», der bare én av dem har en verdi per rad. Et minustegn i utgiftskolonnen er i orden.",
