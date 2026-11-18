@@ -1667,7 +1667,21 @@
         "{decimals} decimal places": "{decimals} decimaler",
         "{invoiced} invoiced and {paid} paid billable bookings are linked today.": "Idag är {invoiced} fakturerade och {paid} betalda fakturerbara bokföringar länkade.",
         "Δ and %": "Δ och %",
-        "“From” date must be before “To” date.": "Datumet ”Från” måste vara före datumet ”Till”."
+        "“From” date must be before “To” date.": "Datumet ”Från” måste vara före datumet ”Till”.",
+        "1 setting": "1 inställning",
+        "%n settings": "%n inställningar",
+        "1 row": "1 rad",
+        "%n rows": "%n rader",
+        "_1 row_::_%n rows_": [
+            "1 rad",
+            "%n rader"
+        ],
+        "_1 setting_::_%n settings_": [
+            "1 inställning",
+            "%n inställningar"
+        ],
+        "This will update %1$s and %2$s — nothing is deleted.": "Detta uppdaterar %1$s och %2$s — inget raderas.",
+        "Import applied. %1$s and %2$s written.": "Importen har tillämpats. %1$s och %2$s skrivna."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

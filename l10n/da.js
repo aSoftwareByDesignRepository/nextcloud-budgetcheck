@@ -1596,6 +1596,14 @@ OC.L10N.register(
 	"{decimals} decimal places" : "{decimals} decimaler",
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "I dag er {invoiced} fakturerede og {paid} betalte fakturerbare posteringer knyttet.",
 	"Δ and %" : "Δ og %",
-	"“From” date must be before “To” date." : "\"Fra\"-dato skal være før \"Til\"-dato."
+	"“From” date must be before “To” date." : "\"Fra\"-dato skal være før \"Til\"-dato.",
+	"1 setting" : "1 indstilling",
+	"%n settings" : "%n indstillinger",
+	"1 row" : "1 række",
+	"%n rows" : "%n rækker",
+	"_1 row_::_%n rows_" : ["1 række","%n rækker"],
+	"_1 setting_::_%n settings_" : ["1 indstilling","%n indstillinger"],
+	"This will update %1$s and %2$s — nothing is deleted." : "Dette opdaterer %1$s og %2$s — intet slettes.",
+	"Import applied. %1$s and %2$s written." : "Import anvendt. %1$s og %2$s skrevet."
 	}
 );

@@ -1596,6 +1596,14 @@ OC.L10N.register(
 	"{decimals} decimal places" : "{decimals} decimali",
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "Oggi sono collegate {invoiced} registrazioni fatturate e {paid} registrazioni pagate fatturabili.",
 	"Δ and %" : "Δ e %",
-	"“From” date must be before “To” date." : "La data «Da» deve precedere la data «A»."
+	"“From” date must be before “To” date." : "La data «Da» deve precedere la data «A».",
+	"1 setting" : "1 impostazione",
+	"%n settings" : "%n impostazioni",
+	"1 row" : "1 riga",
+	"%n rows" : "%n righe",
+	"_1 row_::_%n rows_" : ["1 riga","%n righe"],
+	"_1 setting_::_%n settings_" : ["1 impostazione","%n impostazioni"],
+	"This will update %1$s and %2$s — nothing is deleted." : "Verranno aggiornate %1$s e %2$s — non verrà eliminato nulla.",
+	"Import applied. %1$s and %2$s written." : "Importazione applicata. %1$s e %2$s scritte."
 	}
 );

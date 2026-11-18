@@ -1596,6 +1596,14 @@ OC.L10N.register(
 	"{decimals} decimal places" : "{decimals} ondalık basamak",
 	"{invoiced} invoiced and {paid} paid billable bookings are linked today." : "Bugün {invoiced} faturalandırılmış ve {paid} ödenmiş faturalandırılabilir kayıt bağlı.",
 	"Δ and %" : "Δ ve %%",
-	"“From” date must be before “To” date." : "“Başlangıç” tarihi “Bitiş” tarihinden önce olmalıdır."
+	"“From” date must be before “To” date." : "“Başlangıç” tarihi “Bitiş” tarihinden önce olmalıdır.",
+	"1 setting" : "1 ayar",
+	"%n settings" : "%n ayar",
+	"1 row" : "1 satır",
+	"%n rows" : "%n satır",
+	"_1 row_::_%n rows_" : ["%n satır"],
+	"_1 setting_::_%n settings_" : ["%n ayar"],
+	"This will update %1$s and %2$s — nothing is deleted." : "Bu işlem %1$s ve %2$s güncelleyecek — hiçbir şey silinmeyecek.",
+	"Import applied. %1$s and %2$s written." : "İçe aktarma uygulandı. %1$s ve %2$s yazıldı."
 	}
 );
