@@ -1513,25 +1513,25 @@
         "Zoom out": "縮小",
         "Zoom out — scroll wheel down also works.": "縮小——也可以向下滾動滾輪。",
         "_%n attachment_::_{count} attachments_": [
-            "{count} 個附件"
+            "%n 個附件"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-            "{count} 筆記帳（含計劃和已刪除的草稿）"
+            "%n 筆記帳（含計劃和已刪除的草稿）"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-            "該日期範圍內有 {count} 筆記帳。選擇一個行事曆月份以聚焦某個月。"
+            "該日期範圍內有 %n 筆記帳。選擇一個行事曆月份以聚焦某個月。"
         ],
         "_%n closed month_::_{count} closed months_": [
-            "{count} 個已關帳月份"
+            "%n 個已關帳月份"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-            "已跳過 {count} 個週期項——該月已關帳。"
+            "已跳過 %n 個週期項——該月已關帳。"
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
             "%n 個私有工作區（對非成員的管理員隱藏名稱）"
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
-            "{count} 條規則需要處理。"
+            "%n 條規則需要處理。"
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
             "還有 %n 筆未分類支出尚未歸類。它會計入總額，但不計入任何預算。"
@@ -1543,53 +1543,45 @@
             "%n 個可見工作區"
         ],
         "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
-            "（已清空 1 個實例綁定值）",
             "（已清空 %n 個實例綁定值）"
         ],
         "_(1 filtered)_::_(%n filtered)_": [
-            "（已篩選 1 項）",
             "（已篩選 %n 項）"
         ],
         "_(1 secret redacted)_::_(%n secrets redacted)_": [
-            "（已遮蔽 1 個密鑰）",
             "（已遮蔽 %n 個密鑰）"
         ],
         "_(1 unresolved ref)_::_(%n unresolved refs)_": [
-            "（1 個參照未解析）",
             "（%n 個參照未解析）"
         ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
-            "1 個參照未能解析——請查看下方群組。",
             "%n 個參照未能解析——請查看下方群組。"
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
-            "1 列需要在此實例上填寫值",
             "%n 列需要在此實例上填寫值"
         ],
         "_1 row skipped._::_%n rows skipped._": [
-            "已略過 1 列。",
             "已略過 %n 列。"
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-            "{count} 個條目已新增到 {rules} 條規則中。"
+            "%n 個條目已新增到 {rules} 條規則中。"
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-            "已成功匯入 {count} 筆交易。"
+            "已成功匯入 %n 筆交易。"
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-            "已匯入 {created} 筆交易，跳過 {skipped} 條重複項。"
+            "已匯入 %n 筆交易，跳過 {skipped} 條重複項。"
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-            "校驗失敗：{count} 行無效。首個錯誤：{error}"
+            "校驗失敗：%n 行無效。首個錯誤：{error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-            "校驗透過。{count} 行可以匯入。"
+            "校驗透過。%n 行可以匯入。"
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-            "校驗透過。{count} 行就緒；{skipped} 條重複項將被跳過。"
+            "校驗透過。%n 行就緒；{skipped} 條重複項將被跳過。"
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
-            "警告：1 列將被永久刪除，然後載入檔案資料。",
             "警告：%n 列將被永久刪除，然後載入檔案資料。"
         ],
         "add and update; nothing is deleted": "新增並更新；不刪除任何內容",

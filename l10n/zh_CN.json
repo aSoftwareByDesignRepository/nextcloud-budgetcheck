@@ -1513,25 +1513,25 @@
         "Zoom out": "缩小",
         "Zoom out — scroll wheel down also works.": "缩小——也可以向下滚动滚轮。",
         "_%n attachment_::_{count} attachments_": [
-            "{count} 个附件"
+            "%n 个附件"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-            "{count} 笔记账（含计划和已删除的草稿）"
+            "%n 笔记账（含计划和已删除的草稿）"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-            "该日期范围内有 {count} 笔记账。选择一个日历月份以聚焦某个月。"
+            "该日期范围内有 %n 笔记账。选择一个日历月份以聚焦某个月。"
         ],
         "_%n closed month_::_{count} closed months_": [
-            "{count} 个已关账月份"
+            "%n 个已关账月份"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-            "已跳过 {count} 个周期项——该月已关账。"
+            "已跳过 %n 个周期项——该月已关账。"
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
             "%n 个私有工作区（对非成员的管理员隐藏名称）"
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
-            "{count} 条规则需要处理。"
+            "%n 条规则需要处理。"
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
             "还有 %n 笔未分类支出尚未归类。它会计入总额，但不计入任何预算。"
@@ -1543,53 +1543,45 @@
             "%n 个可见工作区"
         ],
         "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
-            "（已清空 1 个实例绑定值）",
             "（已清空 %n 个实例绑定值）"
         ],
         "_(1 filtered)_::_(%n filtered)_": [
-            "（已过滤 1 项）",
             "（已过滤 %n 项）"
         ],
         "_(1 secret redacted)_::_(%n secrets redacted)_": [
-            "（已遮蔽 1 个机密）",
             "（已遮蔽 %n 个机密）"
         ],
         "_(1 unresolved ref)_::_(%n unresolved refs)_": [
-            "（1 个引用未解析）",
             "（%n 个引用未解析）"
         ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
-            "1 个引用未能解析——请查看下方分组。",
             "%n 个引用未能解析——请查看下方分组。"
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
-            "1 行需要在此实例上填写值",
             "%n 行需要在此实例上填写值"
         ],
         "_1 row skipped._::_%n rows skipped._": [
-            "已跳过 1 行。",
             "已跳过 %n 行。"
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-            "{count} 个条目已添加到 {rules} 条规则中。"
+            "%n 个条目已添加到 {rules} 条规则中。"
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-            "已成功导入 {count} 笔交易。"
+            "已成功导入 %n 笔交易。"
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-            "已导入 {created} 笔交易，跳过 {skipped} 条重复项。"
+            "已导入 %n 笔交易，跳过 {skipped} 条重复项。"
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-            "校验失败：{count} 行无效。首个错误：{error}"
+            "校验失败：%n 行无效。首个错误：{error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-            "校验通过。{count} 行可以导入。"
+            "校验通过。%n 行可以导入。"
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-            "校验通过。{count} 行就绪；{skipped} 条重复项将被跳过。"
+            "校验通过。%n 行就绪；{skipped} 条重复项将被跳过。"
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
-            "警告：1 行将被永久删除，然后加载文件数据。",
             "警告：%n 行将被永久删除，然后加载文件数据。"
         ],
         "add and update; nothing is deleted": "添加并更新；不删除任何内容",

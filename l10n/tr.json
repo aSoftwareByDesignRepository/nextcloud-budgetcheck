@@ -1513,99 +1513,75 @@
         "Zoom out": "Uzaklaştır",
         "Zoom out — scroll wheel down also works.": "Uzaklaştır — kaydırma tekerleği aşağı da çalışır.",
         "_%n attachment_::_{count} attachments_": [
-            "%n ek",
-            "{count} ek"
+            "%n ek"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
-            "%n kayıt (planlanmış ve silinmiş taslaklar dahil)",
-            "{count} kayıt (planlanmış ve silinmiş taslaklar dahil)"
+            "%n kayıt (planlanmış ve silinmiş taslaklar dahil)"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
-            "%n kayıt bu tarih aralığına denk geliyor. Tek bir aya odaklanmak için bir takvim ayı seçin.",
-            "{count} kayıt bu tarih aralığına denk geliyor. Tek bir aya odaklanmak için bir takvim ayı seçin."
+            "%n kayıt bu tarih aralığına denk geliyor. Tek bir aya odaklanmak için bir takvim ayı seçin."
         ],
         "_%n closed month_::_{count} closed months_": [
-            "%n kapanmış ay",
-            "{count} kapanmış ay"
+            "%n kapanmış ay"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
-            "%n tekrar atlandı — ay kapalı.",
-            "{count} tekrar atlandı — ay kapalı."
+            "%n tekrar atlandı — ay kapalı."
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
-            "%n özel çalışma alanı (adları üye olmayan yöneticilerden gizlenir)",
             "%n özel çalışma alanı (adları üye olmayan yöneticilerden gizlenir)"
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
-            "%n kural dikkat gerektirdi.",
-            "{count} kural dikkat gerektirdi."
+            "%n kural dikkat gerektirdi."
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
-            "%n gider kategorisiz kalıyor. Toplama dahil edilir ancak hiçbir bütçeye sayılmaz.",
             "%n gider kategorisiz kalıyor. Toplama dahil edilir ancak hiçbir bütçeye sayılmaz."
         ],
         "_%n uncategorized expense remains without a category._::_%n uncategorized expenses remain without a category._": [
-            "%n gider kategorisiz kalıyor.",
             "%n gider kategorisiz kalıyor."
         ],
         "_%n workspace visible_::_%n workspaces visible_": [
-            "%n çalışma alanı görünür",
             "%n çalışma alanı görünür"
         ],
         "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
-            "(1 örneğe bağlı değer boşaltıldı)",
             "(%n örneğe bağlı değer boşaltıldı)"
         ],
         "_(1 filtered)_::_(%n filtered)_": [
-            "(1 filtrelendi)",
             "(%n filtrelendi)"
         ],
         "_(1 secret redacted)_::_(%n secrets redacted)_": [
-            "(1 sır gizlendi)",
             "(%n sır gizlendi)"
         ],
         "_(1 unresolved ref)_::_(%n unresolved refs)_": [
-            "(1 çözümlenemeyen başvuru)",
             "(%n çözümlenemeyen başvuru)"
         ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
-            "1 başvuru çözümlenemedi — aşağıdaki gruplara bakın.",
             "%n başvuru çözümlenemedi — aşağıdaki gruplara bakın."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
-            "1 satırın bu örnekte bir değere ihtiyacı var",
             "%n satırın bu örnekte bir değere ihtiyacı var"
         ],
         "_1 row skipped._::_%n rows skipped._": [
-            "1 satır atlandı.",
             "%n satır atlandı."
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
-            "{rules} kuralda %n kayıt eklendi.",
-            "{rules} kuralda {count} kayıt eklendi."
+            "{rules} kuralda %n kayıt eklendi."
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
-            "%n işlem başarıyla içe aktarıldı.",
-            "{count} işlem başarıyla içe aktarıldı."
+            "%n işlem başarıyla içe aktarıldı."
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
-            "%n işlem içe aktarıldı. {skipped} yinelenen atlandı.",
-            "{created} işlem içe aktarıldı. {skipped} yinelenen atlandı."
+            "%n işlem içe aktarıldı. {skipped} yinelenen atlandı."
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
-            "Doğrulama başarısız: %n geçersiz satır. İlk hata: {error}",
-            "Doğrulama başarısız: {count} geçersiz satır. İlk hata: {error}"
+            "Doğrulama başarısız: %n geçersiz satır. İlk hata: {error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
-            "Doğrulama başarılı. %n satır içe aktarmaya hazır.",
-            "Doğrulama başarılı. {count} satır içe aktarmaya hazır."
+            "Doğrulama başarılı. %n satır içe aktarmaya hazır."
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
-            "Doğrulama başarılı. %n satır hazır; {skipped} yinelenen atlanacak.",
-            "Doğrulama başarılı. {count} satır hazır; {skipped} yinelenen atlanacak."
+            "Doğrulama başarılı. %n satır hazır; {skipped} yinelenen atlanacak."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
-            "Uyarı: 1 satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek.",
             "Uyarı: %n satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek."
         ],
         "add and update; nothing is deleted": "ekle ve güncelle; hiçbir şey silinmez",

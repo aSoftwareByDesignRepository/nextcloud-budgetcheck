@@ -1514,23 +1514,23 @@
         "Zoom out — scroll wheel down also works.": "Zoom ud — musehjulet ned fungerer også.",
         "_%n attachment_::_{count} attachments_": [
             "%n vedhæftning",
-            "{count} vedhæftninger"
+            "%n vedhæftninger"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
             "%n postering (inkl. planlagte og slettede kladder)",
-            "{count} posteringer (inkl. planlagte og slettede kladder)"
+            "%n posteringer (inkl. planlagte og slettede kladder)"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
             "%n postering falder i denne periode. Vælg en kalendermåned for at fokusere én måned.",
-            "{count} posteringer falder i denne periode. Vælg en kalendermåned for at fokusere én måned."
+            "%n posteringer falder i denne periode. Vælg en kalendermåned for at fokusere én måned."
         ],
         "_%n closed month_::_{count} closed months_": [
             "%n lukket måned",
-            "{count} lukkede måneder"
+            "%n lukkede måneder"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
             "%n forekomst sprunget over — måneden er lukket.",
-            "{count} forekomster sprunget over — måneden er lukket."
+            "%n forekomster sprunget over — måneden er lukket."
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
             "%n privat arbejdsområde (navne skjult for administratorer, der ikke er medlemmer)",
@@ -1538,7 +1538,7 @@
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
             "%n regel krævede opmærksomhed.",
-            "{count} regler krævede opmærksomhed."
+            "%n regler krævede opmærksomhed."
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
             "%n ukategoriseret udgift mangler en kategori. Den tæller med i totalen, men ikke i noget budget.",
@@ -1582,27 +1582,27 @@
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
             "%n post tilføjet på tværs af {rules} regler.",
-            "{count} poster tilføjet på tværs af {rules} regler."
+            "%n poster tilføjet på tværs af {rules} regler."
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
             "%n transaktion importeret.",
-            "{count} transaktioner importeret."
+            "%n transaktioner importeret."
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
             "%n transaktion importeret. {skipped} dubletter sprunget over.",
-            "{created} transaktioner importeret. {skipped} dubletter sprunget over."
+            "%n transaktioner importeret. {skipped} dubletter sprunget over."
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
             "Validering mislykkedes: %n ugyldig række. Første fejl: {error}",
-            "Validering mislykkedes: {count} ugyldige rækker. Første fejl: {error}"
+            "Validering mislykkedes: %n ugyldige rækker. Første fejl: {error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
             "Validering bestået. %n række er klar til import.",
-            "Validering bestået. {count} rækker er klar til import."
+            "Validering bestået. %n rækker er klar til import."
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
             "Validering bestået. %n række klar; {skipped} dubletter springes over.",
-            "Validering bestået. {count} rækker klar; {skipped} dubletter springes over."
+            "Validering bestået. %n rækker klar; {skipped} dubletter springes over."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Advarsel: 1 række slettes permanent, derefter indlæses fildataene.",

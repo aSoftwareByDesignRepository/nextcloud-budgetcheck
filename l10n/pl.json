@@ -1514,28 +1514,28 @@
         "Zoom out — scroll wheel down also works.": "Pomniejsz — kółko myszy w dół też działa.",
         "_%n attachment_::_{count} attachments_": [
             "%n załącznik",
-            "{count} załączniki",
-            "{count} załączników"
+            "%n załączniki",
+            "%n załączników"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
             "%n księgowanie (w tym zaplanowane i usunięte szkice)",
-            "{count} księgowania (w tym zaplanowane i usunięte szkice)",
-            "{count} księgowań (w tym zaplanowane i usunięte szkice)"
+            "%n księgowania (w tym zaplanowane i usunięte szkice)",
+            "%n księgowań (w tym zaplanowane i usunięte szkice)"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
             "%n księgowanie mieści się w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu.",
-            "{count} księgowania mieszczą się w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu.",
-            "{count} księgowań mieści się w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu."
+            "%n księgowania mieszczą się w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu.",
+            "%n księgowań mieści się w tym zakresie dat. Wybierz miesiąc kalendarzowy, aby skupić się na jednym miesiącu."
         ],
         "_%n closed month_::_{count} closed months_": [
             "%n zamknięty miesiąc",
-            "{count} zamknięte miesiące",
-            "{count} zamkniętych miesięcy"
+            "%n zamknięte miesiące",
+            "%n zamkniętych miesięcy"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
             "Pominięto %n wystąpienie — miesiąc jest zamknięty.",
-            "Pominięto {count} wystąpienia — miesiąc jest zamknięty.",
-            "Pominięto {count} wystąpień — miesiąc jest zamknięty."
+            "Pominięto %n wystąpienia — miesiąc jest zamknięty.",
+            "Pominięto %n wystąpień — miesiąc jest zamknięty."
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
             "%n prywatna przestrzeń robocza (nazwy ukryte przed administratorami niebędącymi członkami)",
@@ -1544,8 +1544,8 @@
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
             "%n reguła wymagała uwagi.",
-            "{count} reguły wymagały uwagi.",
-            "{count} reguł wymagało uwagi."
+            "%n reguły wymagały uwagi.",
+            "%n reguł wymagało uwagi."
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
             "%n nieskategoryzowany wydatek pozostaje bez kategorii. Wlicza się do sumy, ale nie do żadnego budżetu.",
@@ -1564,64 +1564,72 @@
         ],
         "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
             "(1 opróżniona wartość związana z instancją)",
+            "(%n opróżnione wartości związane z instancją)",
             "(%n opróżnionych wartości związanych z instancją)"
         ],
         "_(1 filtered)_::_(%n filtered)_": [
             "(1 odfiltrowane)",
+            "(%n odfiltrowane)",
             "(%n odfiltrowanych)"
         ],
         "_(1 secret redacted)_::_(%n secrets redacted)_": [
             "(1 ukryty sekret)",
+            "(%n ukryte sekrety)",
             "(%n ukrytych sekretów)"
         ],
         "_(1 unresolved ref)_::_(%n unresolved refs)_": [
             "(1 nierozwiązane odwołanie)",
+            "(%n nierozwiązane odwołania)",
             "(%n nierozwiązanych odwołań)"
         ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "Nierozwiązano 1 odwołanie — zobacz grupy poniżej.",
+            "Nierozwiązano %n odwołania — zobacz grupy poniżej.",
             "Nierozwiązano %n odwołań — zobacz grupy poniżej."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 wiersz wymaga wartości na tej instancji",
+            "%n wiersze wymagają wartości na tej instancji",
             "%n wierszy wymaga wartości na tej instancji"
         ],
         "_1 row skipped._::_%n rows skipped._": [
             "Pominięto 1 wiersz.",
+            "Pominięto %n wiersze.",
             "Pominięto %n wierszy."
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
             "Dodano %n wpis w ramach {rules} reguł.",
-            "Dodano {count} wpisy w ramach {rules} reguł.",
-            "Dodano {count} wpisów w ramach {rules} reguł."
+            "Dodano %n wpisy w ramach {rules} reguł.",
+            "Dodano %n wpisów w ramach {rules} reguł."
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
             "Pomyślnie zaimportowano %n transakcję.",
-            "Pomyślnie zaimportowano {count} transakcje.",
-            "Pomyślnie zaimportowano {count} transakcji."
+            "Pomyślnie zaimportowano %n transakcje.",
+            "Pomyślnie zaimportowano %n transakcji."
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
             "Zaimportowano %n transakcję. Pominięto {skipped} duplikatów.",
-            "Zaimportowano {created} transakcje. Pominięto {skipped} duplikatów.",
-            "Zaimportowano {created} transakcji. Pominięto {skipped} duplikatów."
+            "Zaimportowano %n transakcje. Pominięto {skipped} duplikatów.",
+            "Zaimportowano %n transakcji. Pominięto {skipped} duplikatów."
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
             "Walidacja nie powiodła się: %n nieprawidłowy wiersz. Pierwszy błąd: {error}",
-            "Walidacja nie powiodła się: {count} nieprawidłowe wiersze. Pierwszy błąd: {error}",
-            "Walidacja nie powiodła się: {count} nieprawidłowych wierszy. Pierwszy błąd: {error}"
+            "Walidacja nie powiodła się: %n nieprawidłowe wiersze. Pierwszy błąd: {error}",
+            "Walidacja nie powiodła się: %n nieprawidłowych wierszy. Pierwszy błąd: {error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
             "Walidacja powiodła się. %n wiersz jest gotowy do importu.",
-            "Walidacja powiodła się. {count} wiersze są gotowe do importu.",
-            "Walidacja powiodła się. {count} wierszy jest gotowych do importu."
+            "Walidacja powiodła się. %n wiersze są gotowe do importu.",
+            "Walidacja powiodła się. %n wierszy jest gotowych do importu."
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
             "Walidacja powiodła się. %n wiersz gotowy; {skipped} duplikatów zostanie pominiętych.",
-            "Walidacja powiodła się. {count} wiersze gotowe; {skipped} duplikatów zostanie pominiętych.",
-            "Walidacja powiodła się. {count} wierszy gotowych; {skipped} duplikatów zostanie pominiętych."
+            "Walidacja powiodła się. %n wiersze gotowe; {skipped} duplikatów zostanie pominiętych.",
+            "Walidacja powiodła się. %n wierszy gotowych; {skipped} duplikatów zostanie pominiętych."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Ostrzeżenie: 1 wiersz zostanie trwale usunięty, a następnie dane z pliku zostaną wczytane.",
+            "Ostrzeżenie: %n wiersze zostaną trwale usunięte, a następnie dane z pliku zostaną wczytane.",
             "Ostrzeżenie: %n wierszy zostanie trwale usuniętych, a następnie dane z pliku zostaną wczytane."
         ],
         "add and update; nothing is deleted": "dodaj i zaktualizuj; nic nie jest usuwane",

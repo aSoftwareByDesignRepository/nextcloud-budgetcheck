@@ -1514,23 +1514,23 @@
         "Zoom out — scroll wheel down also works.": "Verkleinern — Mausrad nach unten funktioniert ebenfalls.",
         "_%n attachment_::_{count} attachments_": [
             "%n Anhang",
-            "{count} Anhänge"
+            "%n Anhänge"
         ],
         "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
             "%n Buchung (inkl. geplanter und gelöschter Entwürfe)",
-            "{count} Buchungen (inkl. geplanter und gelöschter Entwürfe)"
+            "%n Buchungen (inkl. geplanter und gelöschter Entwürfe)"
         ],
         "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
             "%n Buchung liegt in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen Monat zu fokussieren.",
-            "{count} Buchungen liegen in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen Monat zu fokussieren."
+            "%n Buchungen liegen in diesem Zeitraum. Wählen Sie einen Kalendermonat, um einen Monat zu fokussieren."
         ],
         "_%n closed month_::_{count} closed months_": [
             "%n abgeschlossener Monat",
-            "{count} abgeschlossene Monate"
+            "%n abgeschlossene Monate"
         ],
         "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
             "%n Vorkommnis übersprungen — der Monat ist abgeschlossen.",
-            "{count} Vorkommnisse übersprungen — der Monat ist abgeschlossen."
+            "%n Vorkommnisse übersprungen — der Monat ist abgeschlossen."
         ],
         "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
             "%n privater Arbeitsbereich (Namen für Administratoren ohne Mitgliedschaft verborgen)",
@@ -1538,7 +1538,7 @@
         ],
         "_%n rule needed attention._::_{count} rules needed attention._": [
             "%n Regel benötigte Aufmerksamkeit.",
-            "{count} Regeln benötigten Aufmerksamkeit."
+            "%n Regeln benötigten Aufmerksamkeit."
         ],
         "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
             "%n nicht zugeordnete Ausgabe bleibt ohne Kategorie. Sie zählt zur Summe, aber zu keinem Budget.",
@@ -1582,27 +1582,27 @@
         ],
         "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
             "%n Eintrag über {rules} Regeln hinzugefügt.",
-            "{count} Einträge über {rules} Regeln hinzugefügt."
+            "%n Einträge über {rules} Regeln hinzugefügt."
         ],
         "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
             "%n Buchung erfolgreich importiert.",
-            "{count} Buchungen erfolgreich importiert."
+            "%n Buchungen erfolgreich importiert."
         ],
         "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
             "%n Buchung importiert. {skipped} Duplikate übersprungen.",
-            "{created} Buchungen importiert. {skipped} Duplikate übersprungen."
+            "%n Buchungen importiert. {skipped} Duplikate übersprungen."
         ],
         "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
             "Validierung fehlgeschlagen: %n ungültige Zeile. Erster Fehler: {error}",
-            "Validierung fehlgeschlagen: {count} ungültige Zeilen. Erster Fehler: {error}"
+            "Validierung fehlgeschlagen: %n ungültige Zeilen. Erster Fehler: {error}"
         ],
         "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
             "Validierung bestanden. %n Zeile ist zum Import bereit.",
-            "Validierung bestanden. {count} Zeilen sind zum Import bereit."
+            "Validierung bestanden. %n Zeilen sind zum Import bereit."
         ],
         "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
             "Validierung bestanden. %n Zeile bereit; {skipped} Duplikate werden übersprungen.",
-            "Validierung bestanden. {count} Zeilen bereit; {skipped} Duplikate werden übersprungen."
+            "Validierung bestanden. %n Zeilen bereit; {skipped} Duplikate werden übersprungen."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Warnung: 1 Zeile wird endgültig gelöscht, danach werden die Dateidaten geladen.",
