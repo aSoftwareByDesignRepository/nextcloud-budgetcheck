@@ -41,7 +41,7 @@ const NPLURALS = [
 	'en' => 2, 'de' => 2, 'fr' => 2, 'es' => 2, 'da' => 2, 'nl' => 2,
 	'it' => 2, 'sv' => 2, 'nb' => 2, 'pt' => 2, 'pt_BR' => 2,
 	'pl' => 3,
-	'tr' => 1, 'zh_CN' => 1, 'ru' => 3, 'zh_TW' => 1, 'ru' => 3,
+	'tr' => 1, 'zh_CN' => 1, 'ru' => 3, 'zh_TW' => 1,
 ];
 
 /** Polish paucal (index-1) elements for keys whose arrays shipped 2 forms. */
