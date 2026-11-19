@@ -711,7 +711,7 @@ OC.L10N.register(
 	"Mark as special by default" : "Merk som spesial som standard",
 	"Mark one expense category as Savings transfer to track money you set aside toward your target." : "Merk én utgiftskategori som spareoverføring for å følge pengene setter av mot målet.",
 	"Mark your savings category under Settings → Categories to track transfers against this target." : "Merk sparekategorien under Innstillinger → Kategorier for å følge overføringer mot dette målet.",
-	"Match" : "Match",
+	"Match" : "Treff",
 	"Match field" : "Matchfelt",
 	"Match type" : "Matchtype",
 	"Matches by bank reference when your file has a reference column. Enable the option below for files without references." : "Matcher på bankreferanse når filen har en referansekolonne. Slå på valget under for filer uten referanser.",
