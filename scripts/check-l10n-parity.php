@@ -17,7 +17,7 @@ declare(strict_types=1);
  */
 
 $base = __DIR__ . '/../l10n';
-$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt', 'pt_BR', 'zh_CN', 'zh_TW', 'tr'];
+$localeFiles = ['en', 'de', 'fr', 'es', 'da', 'nl', 'it', 'pl', 'sv', 'nb', 'pt', 'pt_BR', 'ru', 'zh_CN', 'zh_TW', 'tr'];
 
 // Guard the roster's input domain both ways: a shipped base catalog
 // l10n/<locale>.json that is not rostered must FAIL (silent-skip
