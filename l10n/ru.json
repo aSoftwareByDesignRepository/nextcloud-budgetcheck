@@ -634,7 +634,7 @@
     "Imported {created} transactions. Skipped {skipped} duplicates.": "Импортировано операций: {created}. Пропущено дублей: {skipped}.",
     "Importing from your bank?": "Импортируете из банка?",
     "In project workspaces you can tag a booking with a status (for example in progress or paid). Leave empty if you do not need a workflow step.": "В проектных рабочих областях проводку можно пометить статусом (например «в работе» или «оплачено»). Оставьте пустым, если шаг процесса не нужен.",
-    "In the category comparison below: the amount is this year minus the comparison year, the percent is that difference relative to the comparison year. “new” marks categories with bookings only this year, “gone” marks categories with bookings only in the comparison year.": "В сравнении категорий ниже: сумма — это год минус год сравнения, процент — разница относительно года сравнения. «new» помечает категории с проводками только в этом году, «gone» — только в году сравнения.",
+    "In the category comparison below: the amount is this year minus the comparison year, the percent is that difference relative to the comparison year. “new” marks categories with bookings only this year, “gone” marks categories with bookings only in the comparison year.": "В сравнении категорий ниже: сумма — это год минус год сравнения, процент — разница относительно года сравнения. «новая» помечает категории с проводками только в этом году, «пропала» — только в году сравнения.",
     "In {income} · Out {expense}": "Приход {income} · Расход {expense}",
     "In: {income} · Out: {expense}": "Приход: {income} · Расход: {expense}",
     "Inactive": "Неактивно",
@@ -1514,28 +1514,28 @@
     "Zoom out — scroll wheel down also works.": "Отдалить — колесо прокрутки вниз тоже работает.",
     "_%n attachment_::_{count} attachments_": [
       "%n вложение",
-      "{count} вложения",
-      "{count} вложений"
+      "%n вложения",
+      "%n вложений"
     ],
     "_%n booking (including planned and deleted drafts)_::_{count} bookings (including planned and deleted drafts)_": [
       "%n проводка (включая плановые и удалённые черновики)",
-      "{count} проводки (включая плановые и удалённые черновики)",
-      "{count} проводок (включая плановые и удалённые черновики)"
+      "%n проводки (включая плановые и удалённые черновики)",
+      "%n проводок (включая плановые и удалённые черновики)"
     ],
     "_%n booking falls into this date range. Pick a calendar month to focus one month._::_{count} bookings fall into this date range. Pick a calendar month to focus one month._": [
       "%n проводка попадает в этот диапазон дат. Выберите календарный месяц, чтобы сфокусироваться на одном месяце.",
-      "{count} проводки попадают в этот диапазон дат. Выберите календарный месяц, чтобы сфокусироваться на одном месяце.",
-      "{count} проводок попадают в этот диапазон дат. Выберите календарный месяц, чтобы сфокусироваться на одном месяце."
+      "%n проводки попадают в этот диапазон дат. Выберите календарный месяц, чтобы сфокусироваться на одном месяце.",
+      "%n проводок попадают в этот диапазон дат. Выберите календарный месяц, чтобы сфокусироваться на одном месяце."
     ],
     "_%n closed month_::_{count} closed months_": [
       "%n закрытый месяц",
-      "{count} закрытых месяца",
-      "{count} закрытых месяцев"
+      "%n закрытых месяца",
+      "%n закрытых месяцев"
     ],
     "_%n occurrence skipped — the month is closed._::_{count} occurrences skipped — the month is closed._": [
       "%n случай пропущен — месяц закрыт.",
-      "{count} случая пропущено — месяц закрыт.",
-      "{count} случаев пропущено — месяц закрыт."
+      "%n случая пропущено — месяц закрыт.",
+      "%n случаев пропущено — месяц закрыт."
     ],
     "_%n private workspace (names hidden from administrators who are not members)_::_%n private workspaces (names hidden from administrators who are not members)_": [
       "%n приватная рабочая область (имена скрыты от администраторов, не являющихся участниками)",
@@ -1544,8 +1544,8 @@
     ],
     "_%n rule needed attention._::_{count} rules needed attention._": [
       "%n правило потребовало внимания.",
-      "{count} правила потребовали внимания.",
-      "{count} правил потребовали внимания."
+      "%n правила потребовали внимания.",
+      "%n правил потребовали внимания."
     ],
     "_%n uncategorized expense remains without a category. It counts toward the total but not toward any budget._::_%n uncategorized expenses remain without a category. They count toward the total but not toward any budget._": [
       "%n некатегоризованный расход остаётся без категории. Он считается в итог, но не в какой-либо бюджет.",
@@ -1599,33 +1599,33 @@
     ],
     "_Added %n entry across {rules} rules._::_Added {count} entries across {rules} rules._": [
       "Добавлена %n запись по {rules} правилам.",
-      "Добавлено {count} записи по {rules} правилам.",
-      "Добавлено {count} записей по {rules} правилам."
+      "Добавлено %n записи по {rules} правилам.",
+      "Добавлено %n записей по {rules} правилам."
     ],
     "_Imported %n transaction successfully._::_Imported {count} transactions successfully._": [
       "Успешно импортирована %n операция.",
-      "Успешно импортировано {count} операции.",
-      "Успешно импортировано {count} операций."
+      "Успешно импортировано %n операции.",
+      "Успешно импортировано %n операций."
     ],
     "_Imported %n transaction. Skipped {skipped} duplicates._::_Imported {created} transactions. Skipped {skipped} duplicates._": [
       "Импортирована %n операция. Пропущено дублей: {skipped}.",
-      "Импортировано {created} операции. Пропущено дублей: {skipped}.",
-      "Импортировано {created} операций. Пропущено дублей: {skipped}."
+      "Импортировано %n операции. Пропущено дублей: {skipped}.",
+      "Импортировано %n операций. Пропущено дублей: {skipped}."
     ],
     "_Validation failed: %n invalid row. First error: {error}_::_Validation failed: {count} invalid rows. First error: {error}_": [
       "Проверка не пройдена: %n неверная строка. Первая ошибка: {error}",
-      "Проверка не пройдена: {count} неверные строки. Первая ошибка: {error}",
-      "Проверка не пройдена: {count} неверных строк. Первая ошибка: {error}"
+      "Проверка не пройдена: %n неверные строки. Первая ошибка: {error}",
+      "Проверка не пройдена: %n неверных строк. Первая ошибка: {error}"
     ],
     "_Validation passed. %n row is ready to import._::_Validation passed. {count} rows are ready to import._": [
       "Проверка пройдена. %n строка готова к импорту.",
-      "Проверка пройдена. {count} строки готовы к импорту.",
-      "Проверка пройдена. {count} строк готово к импорту."
+      "Проверка пройдена. %n строки готовы к импорту.",
+      "Проверка пройдена. %n строк готово к импорту."
     ],
     "_Validation passed. %n row ready; {skipped} duplicates will be skipped._::_Validation passed. {count} rows ready; {skipped} duplicates will be skipped._": [
       "Проверка пройдена. %n строка готова; дублей будет пропущено: {skipped}.",
-      "Проверка пройдена. {count} строки готовы; дублей будет пропущено: {skipped}.",
-      "Проверка пройдена. {count} строк готово; дублей будет пропущено: {skipped}."
+      "Проверка пройдена. %n строки готовы; дублей будет пропущено: {skipped}.",
+      "Проверка пройдена. %n строк готово; дублей будет пропущено: {skipped}."
     ],
     "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
       "Внимание: будет безвозвратно удалена 1 строка, затем данные файла будут загружены.",
@@ -1647,14 +1647,14 @@
     "expense": "расход",
     "expenses": "расходы",
     "failed": "ошибка",
-    "gone": "gone",
+    "gone": "пропала",
     "groupKey may only contain letters, digits, spaces, underscore and hyphen.": "groupKey может содержать только буквы, цифры, пробелы, подчёркивание и дефис.",
     "income": "доход",
     "kept as-is": "оставлено без изменений",
     "less": "меньше",
     "make identical to the file; prod-only rows are deleted": "сделать идентичным файлу; строки, существующие только в prod, удаляются",
     "more": "больше",
-    "new": "new",
+    "new": "новая",
     "or drag and drop here": "или перетащите сюда",
     "removed from the list": "удалено из списка",
     "savings transfer": "перевод в накопления",
