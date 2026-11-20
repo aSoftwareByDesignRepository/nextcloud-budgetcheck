@@ -347,7 +347,7 @@ OC.L10N.register(
 	"Closed" : "Закрыто",
 	"Closing locks the ledger for this month and stores an immutable snapshot." : "Закрытие блокирует учёт за этот месяц и сохраняет неизменяемый снимок.",
 	"Closing locks the ledger for {month} and stores an immutable snapshot. Reopening requires a manager." : "Закрытие блокирует учёт за {month} и сохраняет неизменяемый снимок. Переоткрытие требует руководителя.",
-	"Column names like “Date”, “Description”, and “Amount” are recognised automatically." : "Названия колонок вроде «Date», «Description» и «Amount» распознаются автоматически.",
+	"Column names like “Date”, “Description”, and “Amount” are recognised automatically." : "Названия колонок вроде «Date», «Description» и «Amount» (или «Дата», «Описание», «Сумма») распознаются автоматически.",
 	"Columns BudgetCheck does not need — like a running balance — are simply ignored." : "Колонки, которые BudgetCheck не нужны — вроде нарастающего баланса — просто игнорируются.",
 	"Commissioned feature" : "Заказная функция",
 	"Common choices" : "Частые варианты",
