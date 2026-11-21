@@ -1,11 +1,9 @@
+/* Auto-adapted from arbeitszeitcheck/css/common/tokens.css for the Check-family shell. Do not invent divergent layout rules here. */
 /*
- * BudgetCheck design tokens (--bc-*).
- * Canonical Check-apps scale (ArbeitszeitCheck wins); colors derive from
- * Nextcloud theme variables. No raw hex in feature CSS.
- *
- * Spacing/typography/breakpoints on :root.
- * Theme-bound surfaces on body + themed app surfaces (.bc-app / .bc-modal /
- * .bc-toasts) so body-mounted dialogs inherit the same mixes after theme switches.
+ * Budgetcheck design tokens (--bc-*).
+ * Colors derive from Nextcloud theme variables; no raw hex in feature CSS.
+ * Spacing/typography on :root; theme colors on body + themed app surfaces
+ * (NC sets --color-* on body [data-theme-*]).
  */
 :root {
 	--bc-space-1: 4px;
@@ -17,17 +15,38 @@
 	--bc-space-7: 48px;
 	--bc-space-8: 64px;
 
-	--bc-radius-sm: 6px;
-	--bc-radius-md: 12px;
-	--bc-radius-lg: 16px;
+	/* Legacy --space-* aliases used by ported AZC layout/dialog sheets */
+	--space-1: var(--bc-space-1);
+	--space-2: var(--bc-space-2);
+	--space-3: var(--bc-space-3);
+	--space-4: var(--bc-space-4);
+	--space-5: var(--bc-space-5);
+	--space-6: var(--bc-space-6);
+	--space-7: var(--bc-space-7);
+	--space-8: var(--bc-space-8);
+	--space-10: 80px;
+	--space-12: 96px;
 
-	--bc-fs-xs: 0.75rem;
+	/* Radii — design-system scale, bound to NC --border-radius-* when present */
+	--bc-radius-sm: var(--border-radius, 6px);
+	--bc-radius-md: var(--border-radius-element, var(--border-radius-large, 12px));
+	--bc-radius-lg: var(--border-radius-large, 16px);
+	--bc-radius-pill: var(--border-radius-pill, 999px);
+
+	/* Legacy --radius-* used by ported app-layout / dialogs sheets */
+	--radius-base: var(--bc-radius-sm);
+	--radius-lg: var(--bc-radius-md);
+	--radius-xl: var(--bc-radius-lg);
+	--radius-2xl: var(--bc-radius-lg);
+	--radius-full: var(--bc-radius-pill);
+
+	/* Floor 0.875rem (14px) — no type below 14px on mobile (responsive directive) */
+	--bc-fs-xs: 0.875rem;
 	--bc-fs-sm: 0.875rem;
 	--bc-fs-md: 1rem;
 	--bc-fs-lg: 1.125rem;
 	--bc-fs-xl: 1.5rem;
 	--bc-fs-2xl: 1.875rem;
-	--bc-fs-3xl: 2.25rem;
 
 	--bc-line-tight: 1.2;
 	--bc-line-base: 1.45;
@@ -36,6 +55,7 @@
 	--bc-breakpoint-md: 768px;
 	--bc-breakpoint-lg: 1024px;
 
+	/* Inline SVG catalogue (IconCatalog / AzcCatalog) */
 	--bc-icon-sm: 1rem;
 	--bc-icon-md: 1.125rem;
 	--bc-icon-lg: 1.375rem;
@@ -43,6 +63,15 @@
 	--bc-icon-stroke: 2;
 
 	--bc-tab-num: tabular-nums;
+	/* Touch targets (WCAG 2.5.5 / design-system) */
+	--bc-touch: 44px;
+	--bc-touch-lg: 48px;
+
+	/*
+	 * QR / barcode canvas must stay light for scannability in every theme.
+	 * This is the only intentional non-theme surface in Budgetcheck feature CSS.
+	 */
+	--bc-qr-canvas: #ffffff;
 }
 
 /*
@@ -51,55 +80,166 @@
  * :root can fall back to light surfaces while text inherits dark-theme ink.
  */
 body,
+#content.app-budgetcheck,
 #app-content.bc-app,
 .bc-app,
+.bc-dialog,
 .bc-modal,
-.bc-toasts {
+.bc-toast-region,
+.bc-toasts,
+.bc-license-modal {
+	/* Fixed overlays (panels, backdrops, mobile nav) sit below NC #header */
 	--bc-overlay-top: var(--header-height, 50px);
 	--bc-overlay-height: calc(100dvh - var(--header-height, 50px));
+
+	--bc-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
+	--bc-bg-card: var(--color-main-background);
+	--bc-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
+	--bc-bg-hover: var(--color-background-hover);
+	--bc-text: var(--color-main-text);
+	--bc-muted: var(--color-text-maxcontrast);
+	/* Muted ink on tinted surfaces (callouts/badges): main-text keeps it
+	   readable where pure maxcontrast washes out on the tint fill. */
+	--bc-muted-on-tint: color-mix(in srgb, var(--color-text-maxcontrast) 55%, var(--color-main-text));
+	/* Monospace for codes/refs (claim numbers, payment refs): NC ships no mono
+	   var, so pin a platform-native stack. */
+	--bc-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Liberation Mono', Menlo, Consolas, monospace;
+	--bc-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	/* Boundaries of cards/controls/callouts/dialogs need >=3:1 vs the adjacent
+	   surface (WCAG 1.4.11): NC's --color-border-maxcontrast is theme-tuned for
+	   exactly that (dark + high-contrast themes included). The faint 24% mix
+	   measured ~1.3:1 — below the floor in every theme. */
+	--bc-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 24%, transparent));
+	/* Interactive controls need >=3:1 (WCAG 1.4.11): maxcontrast is NC's own
+	   input border; --color-border / --bc-border stay surface-only. */
+	--bc-form-border: var(--color-border-maxcontrast, var(--bc-border-strong));
+	/* Filled controls (secondary/ghost/summary buttons): the border sits on a
+	   mid-gray fill, so it must read against BOTH fill and page — maxcontrast
+	   lands ~2.9:1 on the 18%-ink secondary fill. Ink-tuned maxcontrast text
+	   token clears 3:1 against both in every theme. */
+	--bc-control-border: var(--color-text-maxcontrast, var(--color-border-maxcontrast, var(--bc-border-strong)));
+
+	/* Primary / focus — track NC accent for custom branding */
+	--bc-primary: var(--color-primary-element);
+	--bc-primary-text: var(--color-primary-element-text);
+	/* Accent used as text/icon ink on surfaces: pure --color-primary-element
+	   drops below WCAG AA 4.5:1 on dark themes (~4.3:1); the dark override
+	   below blends it toward main-text. Fills keep --bc-primary. */
+	--bc-accent-ink: var(--color-primary-element);
+	--bc-focus: 3px solid var(--color-primary-element);
+	--bc-focus-offset: 2px;
+
+	/* Mix with main background — not transparent — so callouts stay visible on all NC themes */
+	--bc-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--bc-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--bc-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	/* Alias used by badges/callouts/toasts — mix into main-bg (never transparent) so dark themes stay visible */
+	--bc-tint-critical: var(--bc-tint-danger);
+	--bc-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+
+	/*
+	 * Solid danger CTA fill (design-system §3.3 / WCAG 1.4.3).
+	 * NC 30+ maps --color-error to a pale tint — never put on-fill text on that.
+	 */
+	--bc-danger-fill: var(--color-element-error, var(--color-error));
+	--bc-danger-on-fill: var(--color-primary-element-text, var(--color-primary-text));
+	--bc-danger-ink: var(--color-error-text, var(--color-error));
+
+	/*
+	 * Notification icon wells — pale tint + semantic stroke (see .bc-page-header__icon).
+	 * NC *-text tokens are tuned per theme for contrast on main-background.
+	 */
+	--bc-notif-fg-info: var(--color-primary-element);
+	--bc-notif-fg-warning: var(--color-warning-text, var(--color-warning));
+	--bc-notif-fg-success: var(--color-success-text, var(--color-success));
+	--bc-notif-fg-danger: var(--color-error-text, var(--color-error));
 
 	--bc-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 	--bc-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	--bc-shadow-lg: 0 1rem 3rem color-mix(in srgb, var(--color-main-text) 28%, transparent);
 
-	--bc-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
-	--bc-bg-card: var(--color-main-background);
-	--bc-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
-	--bc-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
-	--bc-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
-	/* Interactive controls need >=3:1 (WCAG 1.4.11): maxcontrast is NC's own
-	   input border; --color-border / --bc-border stay surface-only. */
-	--bc-form-border: var(--color-border-maxcontrast, var(--bc-border-strong));
-	--bc-muted: var(--color-text-maxcontrast);
-	--bc-text: var(--color-main-text);
-
-	/*
-	 * Mix INTO main-background (not transparent) so tints stay visible on every
-	 * Nextcloud theme, including high-contrast and custom accent branding.
-	 */
-	--bc-tint-success: color-mix(in srgb, var(--color-success-text, #46ba61) 18%, var(--color-main-background));
-	--bc-tint-warning: color-mix(in srgb, var(--color-warning-text, #c98600) 22%, var(--color-main-background));
-	--bc-tint-danger: color-mix(in srgb, var(--color-error-text, #cc4646) 18%, var(--color-main-background));
-	--bc-tint-critical: var(--bc-tint-danger);
-	--bc-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
-	--bc-tint-receipt: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
-
-	/* Workspace-type accents (aliases of semantic tints) */
-	--bc-tint-household: var(--bc-tint-success);
-	--bc-tint-project: var(--bc-tint-info);
-
-	/* Signed money surfaces — always mixed into main-background for AA contrast */
-	--bc-amount-income-surface: color-mix(in srgb, var(--color-success-text, #46ba61) 14%, var(--color-main-background));
-	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error-text, #cc4646) 14%, var(--color-main-background));
-	--bc-amount-income-line: var(--color-success-text, #46ba61);
-	--bc-amount-expense-line: var(--color-error-text, #cc4646);
-
-	/* Overlay scrims (gallery crop / modal backdrops) — theme ink, never #000 */
+	/* Overlay scrims — theme ink, never hardcoded #000 */
 	--bc-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
 	--bc-scrim-strong: color-mix(in srgb, var(--color-main-text) 55%, transparent);
-	--bc-scrim-heavy: color-mix(in srgb, var(--color-main-text) 60%, transparent);
 
-	color: var(--color-main-text);
+	/*
+	 * Legacy --budgetcheck-* aliases (shell dialogs / app-layout ported from AZC).
+	 * Feature CSS should prefer --bc-*; every alias maps to NC/--bc-* so
+	 * undefined custom properties never blank out surfaces in any theme.
+	 */
+	--budgetcheck-color-modal-background: var(--bc-bg-card);
+	--budgetcheck-color-modal-border: var(--bc-border);
+	--budgetcheck-color-modal-footer-background: var(--bc-bg-soft);
+	--budgetcheck-color-background: var(--color-main-background);
+	--budgetcheck-color-background-elevated: var(--bc-bg-card);
+	--budgetcheck-color-background-secondary: var(--bc-bg-soft);
+	--budgetcheck-color-background-tertiary: var(--bc-bg-soft);
+	--budgetcheck-color-text: var(--bc-text);
+	--budgetcheck-color-text-muted: var(--bc-muted);
+	--budgetcheck-color-text-maxcontrast: var(--bc-muted);
+	--budgetcheck-color-text-secondary: var(--bc-muted);
+	--budgetcheck-color-text-tertiary: var(--bc-muted);
+	--budgetcheck-color-primary: var(--color-primary-element);
+	--budgetcheck-color-primary-element: var(--color-primary-element);
+	--budgetcheck-color-primary-light: color-mix(in srgb, var(--color-primary-element) 28%, transparent);
+	--budgetcheck-color-border: var(--bc-border);
+	--budgetcheck-color-border-focus: var(--color-primary-element);
+	--budgetcheck-color-border-warning: var(--color-warning-text, var(--color-warning));
+	--budgetcheck-color-error: var(--bc-danger-ink);
+	--budgetcheck-color-error-light: color-mix(in srgb, var(--bc-danger-ink) 28%, transparent);
+	--budgetcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success)) 28%, transparent);
+	--budgetcheck-color-warning-light: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 28%, transparent);
+	--budgetcheck-color-form-required: var(--bc-danger-ink);
+	--budgetcheck-color-form-label: var(--bc-text);
+	--budgetcheck-color-form-background: var(--color-main-background);
+	--budgetcheck-color-form-border: var(--color-border-maxcontrast, var(--bc-border-strong));
+	--budgetcheck-color-form-border-focus: var(--color-primary-element);
+	--budgetcheck-color-form-border-error: var(--bc-danger-ink);
+	--budgetcheck-color-form-border-success: var(--color-success-text, var(--color-success));
+	--budgetcheck-color-table-border: var(--bc-border);
+	--budgetcheck-color-table-header-background: var(--color-background-dark, var(--bc-bg-stripe));
+	--budgetcheck-font-family-sans: var(--font-face, inherit);
+	--budgetcheck-font-size-sm: var(--bc-fs-sm);
+	--budgetcheck-font-size-base: var(--bc-fs-md);
+	--budgetcheck-font-size-lg: var(--bc-fs-lg);
+	--budgetcheck-font-size-xl: var(--bc-fs-xl);
+	--budgetcheck-font-size-3xl: var(--bc-fs-2xl);
+	--budgetcheck-font-weight-medium: 500;
+	--budgetcheck-font-weight-semibold: 600;
+	--budgetcheck-font-weight-bold: 700;
+	--budgetcheck-letter-spacing-tight: -0.02em;
+	--budgetcheck-line-height-tight: var(--bc-line-tight);
+	--budgetcheck-line-height-normal: var(--bc-line-base);
+	--budgetcheck-line-height-relaxed: 1.6;
+}
+
+/* Bright accent fills on dark themes fail AA with white ink — darken fill + use main-text. */
+body[data-theme-dark],
+body[data-theme-dark-highcontrast],
+body[data-theme-dark] #content.app-budgetcheck,
+body[data-theme-dark-highcontrast] #content.app-budgetcheck {
+	--bc-danger-fill: color-mix(
+		in srgb,
+		var(--color-element-error, var(--color-error)) 40%,
+		var(--color-main-background)
+	);
+	--bc-danger-on-fill: var(--color-main-text);
+	--bc-accent-ink: color-mix(in srgb, var(--color-primary-element) 70%, var(--color-main-text));
+}
+
+/* NC high-contrast themes: stronger borders / shadows for 3:1 UI chrome */
+body[data-theme-light-highcontrast],
+body[data-theme-dark-highcontrast],
+body[data-theme-light-highcontrast] #content.app-budgetcheck,
+body[data-theme-dark-highcontrast] #content.app-budgetcheck {
+	--bc-border: color-mix(in srgb, var(--color-main-text) 32%, transparent);
+	/* HC themes push --color-border-maxcontrast to near-ink — keep it first so
+	   boundary chrome stays >=3:1 against HC surfaces. */
+	--bc-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 48%, transparent));
+	--bc-shadow-sm: 0 0 0 1px var(--bc-border-strong);
+	--bc-shadow-md: 0 0 0 2px var(--bc-border-strong);
+	--budgetcheck-color-border: var(--bc-border);
+	--budgetcheck-color-modal-border: var(--bc-border);
 }
 
 @media (prefers-contrast: more) {
@@ -108,33 +248,22 @@ body,
 	}
 
 	body,
+	#content.app-budgetcheck,
 	#app-content.bc-app,
 	.bc-app,
+	.bc-dialog,
 	.bc-modal,
-	.bc-toasts {
+	.bc-toast-region,
+	.bc-toasts,
+	.bc-license-modal {
 		--bc-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
-		--bc-border-strong: color-mix(in srgb, var(--color-main-text) 40%, transparent);
+		--bc-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 40%, transparent));
 		--bc-shadow-sm: 0 0 0 1px var(--bc-border-strong);
 		--bc-shadow-md: 0 0 0 1px var(--bc-border-strong);
 	}
 }
 
-/* Aliases for dead-name refs (literal fallbacks masked them). */
+/* Alias for dead-name ref (literal fallback masked it). */
 body {
 	--bc-bg: var(--bc-bg-card);
-	--bc-danger-ink: var(--color-error-text, #cc4646);
-	--bc-primary: var(--color-primary-element);
-	--bc-radius-pill: var(--border-radius-pill, 999px);
-	--bc-touch: 44px;
-}
-
-/* Accent ink for text-on-surface: --color-primary-element as text drops below
-   WCAG AA (~4.3:1) on dark themes — blend toward main-text there. */
-body {
-	--bc-accent-ink: var(--color-primary-element);
-}
-
-body[data-theme-dark],
-body[data-theme-dark-highcontrast] {
-	--bc-accent-ink: color-mix(in srgb, var(--color-primary-element) 70%, var(--color-main-text));
 }
