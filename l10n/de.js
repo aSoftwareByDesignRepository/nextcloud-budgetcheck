@@ -1357,7 +1357,7 @@ OC.L10N.register(
 	"Totals always cover the full project window set in Settings (start and end dates). There is no separate month filter here—projects are bounded by those dates, not by calendar months." : "Die Summen decken immer das volle Projektzeitfenster aus den Einstellungen (Start- und Enddatum) ab. Es gibt hier keinen separaten Monatsfilter—Projekte werden durch diese Daten begrenzt, nicht durch Kalendermonate.",
 	"Totals for this month, grouped so cash flow, savings, and everyday budgets are easy to tell apart." : "Summen für diesen Monat, so gruppiert, dass Cashflow, Sparen und Alltagsbudgets klar getrennt sind.",
 	"Track total project spend versus the cap across the configured period." : "Verfolge die Projekt-Gesamtausgaben gegenüber der Obergrenze über den konfigurierten Zeitraum.",
-	"Transaction booked." : "Buchung erstellt.",
+	"Transaction booked." : "Buchung verbucht.",
 	"Transaction created." : "Buchung erstellt.",
 	"Transaction deleted." : "Buchung gelöscht.",
 	"Transaction filters" : "Buchungsfilter",

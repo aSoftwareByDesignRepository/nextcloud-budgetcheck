@@ -1160,7 +1160,7 @@ OC.L10N.register(
 	"Save changes" : "Enregistrer les modifications",
 	"Save edited image to the server." : "Enregistrer l'image modifiée sur le serveur.",
 	"Save notification settings" : "Enregistrer les notifications",
-	"Save savings target" : "Objectif d’épargne",
+	"Save savings target" : "Enregistrer l’objectif d’épargne",
 	"Save tax settings" : "Enregistrer les paramètres fiscaux",
 	"Save workspace" : "Enregistrer l'espace de travail",
 	"Saved this month" : "Épargné ce mois-ci",
