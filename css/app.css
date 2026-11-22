@@ -9,6 +9,20 @@
  */
 @import url('common/tokens.css');
 
+/*
+ * App-scoped semantic tokens — signed-money surfaces + lines live app-side
+ * (NOT in the synced check-shell pack css/common/tokens.css): BudgetCheck's
+ * 14% income/expense fills have no fleet twin (tint-* are stronger 18%/22%
+ * mixes). Nested --color-* vars resolve at the use site, so :root is safe
+ * across theme switches.
+ */
+:root {
+	--bc-amount-income-surface: color-mix(in srgb, var(--color-success-text, #46ba61) 14%, var(--color-main-background));
+	--bc-amount-expense-surface: color-mix(in srgb, var(--color-error-text, #cc4646) 14%, var(--color-main-background));
+	--bc-amount-income-line: var(--color-success-text, #46ba61);
+	--bc-amount-expense-line: var(--color-error-text, #cc4646);
+}
+
 /* Skip link */
 .bc-skip-link {
 	position: absolute;
@@ -247,18 +261,18 @@
 	background: currentColor;
 }
 .bc-badge--household {
-	background: var(--bc-tint-household);
+	background: var(--bc-tint-success);
 	border-color: color-mix(in srgb, var(--color-success-text, #46ba61) 40%, var(--bc-border));
 }
 .bc-badge--household::before { background: var(--color-success-text, #46ba61); }
 .bc-badge--project {
-	background: var(--bc-tint-project);
+	background: var(--bc-tint-info);
 	border-color: color-mix(in srgb, var(--color-primary-element) 40%, var(--bc-border));
 }
 .bc-badge--project::before { background: var(--color-primary-element); }
-.bc-badge--user { background: var(--bc-tint-project); }
+.bc-badge--user { background: var(--bc-tint-info); }
 .bc-badge--user::before { background: var(--color-primary-element); }
-.bc-badge--group { background: var(--bc-tint-household); }
+.bc-badge--group { background: var(--bc-tint-success); }
 .bc-badge--group::before { background: var(--color-success-text, #46ba61); }
 .bc-badge--warning {
 	background: var(--bc-tint-warning);
@@ -2291,7 +2305,7 @@ dialog .bc-btn--ghost:active,
 	padding: 0.125rem 0.5rem;
 	border-radius: var(--bc-radius-sm);
 	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--bc-border) 65%);
-	background: var(--bc-tint-receipt, var(--bc-tint-info));
+	background: var(--bc-tint-info);
 	color: var(--color-main-text);
 	font-size: var(--bc-fs-xs, 0.8125rem);
 	font-weight: 600;
@@ -3544,7 +3558,7 @@ body.bc-modal-open {
 	overflow: hidden;
 	padding: var(--bc-space-4);
 	box-sizing: border-box;
-	background: var(--bc-scrim-heavy);
+	background: var(--bc-scrim-strong);
 	/* Keep dialogs above Nextcloud app/navigation chrome. */
 	z-index: 10000;
 	color: var(--color-main-text);
@@ -4525,7 +4539,7 @@ input[type=number], input[type=month], input[type=date], .bc-input--date { font-
 	padding: var(--bc-space-5);
 	border: 1px solid var(--bc-border);
 	border-radius: var(--bc-radius-lg);
-	background: var(--bc-tint-receipt, var(--bc-tint-info));
+	background: var(--bc-tint-info);
 }
 
 .bc-get-app__icon-well {
@@ -5140,7 +5154,7 @@ textarea {
 .bc-compare-row__chevron { display: inline-block; width: 1em; color: var(--color-text-maxcontrast); }
 .bc-compare-row--archived .bc-compare-row__toggle { color: var(--color-text-maxcontrast); }
 .bc-compare-delta__value { display: block; font-weight: 600; }
-.bc-compare-delta__meta { display: block; font-size: var(--bc-fs-small, 0.85em); color: var(--color-text-maxcontrast); }
+.bc-compare-delta__meta { display: block; font-size: var(--bc-fs-sm); color: var(--color-text-maxcontrast); }
 .bc-compare-delta--up .bc-compare-delta__value { color: var(--color-error-text, var(--color-text-maxcontrast)); }
 .bc-compare-delta--down .bc-compare-delta__value { color: var(--color-success-text, inherit); }
 .bc-compare-barcell { width: 22%; }
@@ -5154,7 +5168,10 @@ textarea {
 .bc-compare-bar__fill {
 	display: block;
 	height: 100%;
-	width: var(--bc-bar-w, 0%);
+	/* Set inline by js/yearly.js per row; the declared default keeps the
+	   custom property defined even where no inline style lands. */
+	--bc-bar-w: 0%;
+	width: var(--bc-bar-w);
 	background: var(--color-primary-element);
 }
 .bc-compare-detail td { padding: 0 var(--bc-space-4) var(--bc-space-4); }
@@ -5176,7 +5193,7 @@ textarea {
 }
 .bc-insight {
 	border: 1px solid var(--color-border);
-	border-radius: var(--bc-radius, 8px);
+	border-radius: var(--bc-radius-sm, 8px);
 	padding: var(--bc-space-4, 16px);
 }
 .bc-insight__title {
@@ -5226,7 +5243,7 @@ textarea {
 }
 .bc-trend-bars__bar--empty { background: var(--color-border); }
 .bc-trend-bars__bar--compare { background: var(--color-warning-text, #c98600); }
-.bc-insight-compare { margin-inline-start: var(--bc-space-sm, 8px); max-width: 14em; }
+.bc-insight-compare { margin-inline-start: var(--bc-space-2, 8px); max-width: 14em; }
 .bc-trend-bars__val {
 	font-size: 0.72rem;
 	font-variant-numeric: tabular-nums;

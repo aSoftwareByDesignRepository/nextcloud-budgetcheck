@@ -369,7 +369,7 @@
 	border-color: transparent;
 }
 .bc-tx-tag-pill--receipt {
-	background: var(--bc-tint-receipt, var(--bc-tint-info));
+	background: var(--bc-tint-info);
 	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--bc-border) 65%);
 	color: var(--color-main-text);
 	font-weight: 600;
