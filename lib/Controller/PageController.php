@@ -587,6 +587,9 @@ class PageController extends Controller
 		Util::addScript(Application::APP_ID, 'common/field-errors');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/constants');
+		// Shared %% -collapsing translate helper — percent-carrying catalog
+		// values are PHP-side vsprintf escapes; JS must collapse them.
+		Util::addScript(Application::APP_ID, 'common/l10n');
 		Util::addScript(Application::APP_ID, 'common/check-dates');
 		Util::addScript(Application::APP_ID, 'common/dates');
 		Util::addScript(Application::APP_ID, 'common/components');

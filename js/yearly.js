@@ -615,7 +615,7 @@
 			},
 			{
 				label: t('budgetcheck', 'Change'),
-				value: t('budgetcheck', 'Δ and %'),
+				value: window.BudgetCheckL10n.t('Δ and %'),
 				desc: t('budgetcheck', 'In the category comparison below: the amount is this year minus the comparison year, the percent is that difference relative to the comparison year. “new” marks categories with bookings only this year, “gone” marks categories with bookings only in the comparison year.'),
 			},
 		];

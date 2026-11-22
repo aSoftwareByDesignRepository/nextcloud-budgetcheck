@@ -756,7 +756,7 @@
 		const metaParts = [meta.text];
 		if (tx.entryAmountBasis === 'gross') metaParts.push(t('budgetcheck', 'Gross'));
 		if (tx.entryAmountBasis === 'net') metaParts.push(t('budgetcheck', 'Net'));
-		if (Number.isInteger(tx.vatRateBp)) metaParts.push(t('budgetcheck', 'VAT {rate}%').replace('{rate}', (tx.vatRateBp / 100).toString()).replace(/%%/g, '%'));
+		if (Number.isInteger(tx.vatRateBp)) metaParts.push(window.BudgetCheckL10n.t('VAT {rate}%', { rate: (tx.vatRateBp / 100).toString() }));
 		const leftCol = C.createElement('div', null, [
 			C.createElement('div', { class: 'bc-tx-list__title', text: tx.title }),
 			C.createElement('div', { class: 'bc-tx-list__meta', attrs: metaAttrs, text: metaParts.join(' · ') }),

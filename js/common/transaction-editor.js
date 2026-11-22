@@ -326,16 +326,16 @@
 					);
 
 					vatPresetSelect = BC.Components.createElement('select', { name: 'vatPreset', class: 'bc-input' }, [
-						BC.Components.createElement('option', { value: '0', text: t('budgetcheck', '0 % (none)').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '500', text: t('budgetcheck', '5 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '700', text: t('budgetcheck', '7 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '1000', text: t('budgetcheck', '10 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '1300', text: t('budgetcheck', '13 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '1500', text: t('budgetcheck', '15 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '1900', text: t('budgetcheck', '19 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '2000', text: t('budgetcheck', '20 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '2100', text: t('budgetcheck', '21 %').replace(/%%/g, '%') }),
-						BC.Components.createElement('option', { value: '2500', text: t('budgetcheck', '25 %').replace(/%%/g, '%') }),
+						BC.Components.createElement('option', { value: '0', text: window.BudgetCheckL10n.t('0 % (none)') }),
+						BC.Components.createElement('option', { value: '500', text: window.BudgetCheckL10n.t('5 %') }),
+						BC.Components.createElement('option', { value: '700', text: window.BudgetCheckL10n.t('7 %') }),
+						BC.Components.createElement('option', { value: '1000', text: window.BudgetCheckL10n.t('10 %') }),
+						BC.Components.createElement('option', { value: '1300', text: window.BudgetCheckL10n.t('13 %') }),
+						BC.Components.createElement('option', { value: '1500', text: window.BudgetCheckL10n.t('15 %') }),
+						BC.Components.createElement('option', { value: '1900', text: window.BudgetCheckL10n.t('19 %') }),
+						BC.Components.createElement('option', { value: '2000', text: window.BudgetCheckL10n.t('20 %') }),
+						BC.Components.createElement('option', { value: '2100', text: window.BudgetCheckL10n.t('21 %') }),
+						BC.Components.createElement('option', { value: '2500', text: window.BudgetCheckL10n.t('25 %') }),
 						BC.Components.createElement('option', { value: 'custom', text: t('budgetcheck', 'Custom…') }),
 					]);
 					const initialRate = tx && Number.isFinite(tx.vatRateBp) ? String(tx.vatRateBp) : String(ctx.workspace.defaultVatRateBp ?? 0);
@@ -354,7 +354,7 @@
 					vatCustomWrap = BC.Components.createElement('label', { class: 'bc-field bc-field--full-width', attrs: { 'data-bc-vat-custom-wrap': '1' } }, [
 						BC.Components.createElement('span', { class: 'bc-field__label', text: t('budgetcheck', 'Custom VAT (basis points)') }),
 						vatCustomInput,
-						BC.Components.createElement('span', { class: 'bc-field__hint', text: t('budgetcheck', 'Example: 1900 = 19%%').replace(/%%/g, '%') }),
+						BC.Components.createElement('span', { class: 'bc-field__hint', text: window.BudgetCheckL10n.t('Example: 1900 = 19%%') }),
 					]);
 					form.appendChild(vatCustomWrap);
 

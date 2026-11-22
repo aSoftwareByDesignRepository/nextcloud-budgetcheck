@@ -39,6 +39,7 @@
 		Dates: 'BudgetCheckDates',
 		Workspace: 'BudgetCheckWorkspace',
 		Constants: 'BudgetCheckConstants',
+		L10n: 'BudgetCheckL10n',
 		Icons: 'BudgetCheckIcons',
 		SpecialsView: 'BudgetCheckSpecialsView',
 		HouseholdPeriod: 'BudgetCheckHouseholdPeriod',

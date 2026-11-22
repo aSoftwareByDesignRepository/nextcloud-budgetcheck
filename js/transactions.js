@@ -1138,7 +1138,7 @@
 		else if (tx.entryAmountBasis === 'net') out.push({ cls: 'bc-tx-tag-pill', text: t('budgetcheck', 'Net') });
 		else if (tx.entryAmountBasis && tx.entryAmountBasis !== 'simple') out.push({ cls: 'bc-tx-tag-pill', text: String(tx.entryAmountBasis) });
 		if (Number.isInteger(tx.vatRateBp) && tx.vatRateBp > 0) {
-			out.push({ cls: 'bc-tx-tag-pill', text: t('budgetcheck', 'VAT {rate}%').replace('{rate}', (tx.vatRateBp / 100).toString()).replace(/%%/g, '%') });
+			out.push({ cls: 'bc-tx-tag-pill', text: window.BudgetCheckL10n.t('VAT {rate}%', { rate: (tx.vatRateBp / 100).toString() }) });
 		}
 		return out;
 	}
