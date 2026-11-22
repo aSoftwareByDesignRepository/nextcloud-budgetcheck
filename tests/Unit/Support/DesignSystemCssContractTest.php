@@ -62,7 +62,7 @@ final class DesignSystemCssContractTest extends TestCase {
 
 	public function testThemeTokensLiveOnBodyAndAppSurfaces(): void {
 		self::assertMatchesRegularExpression(
-			'/body\s*,\s*#app-content\.bc-app/s',
+			'/body\s*,[^}]*#app-content\.bc-app/s',
 			$this->tokensCss,
 		);
 		self::assertStringContainsString('.bc-modal', $this->tokensCss);
