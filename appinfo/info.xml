@@ -17,17 +17,25 @@
 	<summary lang="sv">Hushålls- och projektekonomi med verifierbar månadsavslutning, budgetar och sparmål</summary>
 	<summary lang="nb">Husholdnings- og prosjektøkonomi med verifiserbar månedlig avslutning, budsjetter og sparemål</summary>
 	<description><![CDATA[
-# BudgetCheck
+# BudgetCheck — money with edges, on your own server
 
-Scoped finance for Nextcloud. Each **workspace** is either a **household** (recurring monthly rhythm with budgets, savings targets, and yearly overview) or a **bounded project** (project window, period overview, optional cap warning).
+Two kinds of money, kept strictly apart: **household** workspaces run a monthly rhythm with budgets, savings targets and a yearly overview; **project** workspaces track spend against a bounded window with an optional cap warning. Each workspace gets its own ledger, categories, members and tax settings — and every total is computed on the server, in integer minor units, never floating point.
 
-Every workspace has its own ledger, categories, members, and tax settings. The **server is the source of truth** for all calculations; amounts are stored in **minor units**, never as floating-point. **Monthly close** produces an immutable snapshot with a verifiable calculation hash; controlled reopen restores editing. Optional **tax-aware** mode supports net or gross entry with deterministic VAT conversion.
+Month-end is not a screenshot in a spreadsheet: **monthly close** freezes an immutable snapshot with a verifiable calculation hash. Reopen deliberately, with a reason.
 
-The UI is **workspace-scoped** (household and project totals never mix), targets **WCAG 2.1 AA**, full keyboard use, and responsive layouts from **320px** width.
+## Why people install it
 
-## Feedback welcome
+- **Two scopes that never mix** — household vs. bounded project, separate ledgers and members
+- **Real budgets** — per-category budgets, savings targets, yearly overview
+- **A close you can defend** — immutable monthly snapshot, calculation hash, controlled reopen
+- **Tax-aware when needed** — net or gross entry with deterministic VAT conversion
+- **Server-computed amounts** — integer minor units end to end; no float drift
+- **Accessible by design** — WCAG 2.1 AA target, full keyboard, responsive from 320 px
 
-We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+## Clear limits
+
+- BudgetCheck tracks and proves numbers; it is not a bank feed and not double-entry bookkeeping (no SKR/HGB).
+- Declared databases: MySQL and PostgreSQL.
 
 ## Requirements
 
@@ -36,17 +44,25 @@ We improve this app with real-world use. Bug reports, rough edges, and ideas hel
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
-# BudgetCheck
+# BudgetCheck — Geld mit Kanten, auf dem eigenen Server
 
-Finanzverwaltung in Nextcloud im **Workspace-Modell**: Jeder Workspace ist entweder ein **Haushalt** (monatlicher Rhythmus mit Budgets, Sparzielen und Jahresüberblick) oder ein **abgegrenztes Projekt** (Projektfenster, Periodenüberblick, optionale Obergrenzen-Hinweise).
+Zwei Geldarten, strikt getrennt: **Haushalts-Workspaces** laufen im Monatsrhythmus mit Budgets, Sparzielen und Jahresübersicht; **Projekt-Workspaces** verfolgen Ausgaben in einem begrenzten Zeitfenster mit optionaler Cap-Warnung. Jeder Workspace hat eigenes Ledger, eigene Kategorien, Mitglieder und Steuer-Einstellungen — und jede Summe wird serverseitig in ganzen Cent-Einheiten gerechnet, nie mit Float.
 
-Jeder Workspace besitzt eigenes Ledger, Kategorien, Mitglieder und Steuereinstellungen. Der **Server ist die alleinige Recheninstanz**; Beträge liegen in **kleinsten Währungseinheiten**, nie als Fließkomma. Der **Monatsabschluss** erzeugt einen unveränderlichen Snapshot mit prüfbarem Rechen-Hash; ein kontrolliertes **Wiederöffnen** ermöglicht erneute Bearbeitung. Optionaler **Steuer-Modus** für Netto- oder Bruttoerfassung mit deterministischer USt-Umrechnung.
+Monatsende ist kein Screenshot in einer Tabelle: Der **Monatsabschluss** friert einen unveränderlichen Snapshot mit prüfbarem Rechen-Hash ein. Wiedereröffnung bewusst, mit Begründung.
 
-Die Oberfläche ist **workspace-getrennt** (Haushalt und Projekt vermischen sich nicht), orientiert sich an **WCAG 2.1 AA**, vollständiger Tastaturbedienung und responsiven Layouts ab **320px** Breite.
+## Warum Menschen es installieren
 
-## Feedback willkommen
+- **Zwei Scopes, die sich nie mischen** — Haushalt vs. begrenztes Projekt, getrennte Ledgers und Mitglieder
+- **Echte Budgets** — Budgets je Kategorie, Sparziele, Jahresübersicht
+- **Ein Abschluss, hinter dem Sie stehen** — unveränderlicher Monats-Snapshot, Rechen-Hash, kontrollierte Wiedereröffnung
+- **Steuer-fähig bei Bedarf** — Netto- oder Bruttoeingabe mit deterministischer USt-Umrechnung
+- **Serverseitig gerechnete Beträge** — Integer-Minor-Units durchgehend; kein Float-Drift
+- **Barrierefrei by design** — WCAG 2.1 AA Ziel, volle Tastatur, responsive ab 320 px
 
-Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
+## Klare Grenzen
+
+- BudgetCheck trackt und beweist Zahlen; es ist kein Bank-Abruf und keine doppelte Buchführung (kein SKR/HGB).
+- Deklarierte Datenbanken: MySQL und PostgreSQL.
 
 ## Voraussetzungen
 
@@ -207,12 +223,6 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 - MySQL eller PostgreSQL
 	]]></description>
 
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/01.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/02.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/03.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/04.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/05.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/06.png</screenshot>
 	<version>1.5.2</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
@@ -223,6 +233,12 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues</bugs>
 	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck.git</repository>
 	<donation type="other" title="Software by Design">https://nextcloud.software-by-design.de/</donation>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/01.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/02.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/03.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/04.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/05.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/refs/heads/main/screenshots/appstore/06.png</screenshot>
 	<dependencies>
 		<nextcloud min-version="32" max-version="35"/>
 		<php min-version="8.2" max-version="8.5"/>
