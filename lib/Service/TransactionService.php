@@ -526,7 +526,7 @@ class TransactionService
 		$notes = $this->normaliseNotes($payload['notes'] ?? null);
 		$isSpecial = StrictBool::field($payload, 'isSpecial') || ($category['isSpecial'] ?? false);
 		$externalRef = $this->normaliseExternalRef($payload['externalRef'] ?? null);
-		// Optional counterparty — null keeps the column empty (InvoiceCheck and
+		// Optional counterparty — null keeps the column empty (the invoicing app and
 		// old clients never send it; AC-COMPAT-1 of the payee spec).
 		$payeeId = $this->resolvePayeeIdForWrite($workspaceId, $userId, $payload);
 		$bookingStatusId = $this->resolveBookingStatusId($workspace, $bookingStatus);

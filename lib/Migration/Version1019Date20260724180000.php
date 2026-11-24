@@ -11,7 +11,7 @@ use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
 
 /**
- * BC-F0: billable flag + invoice settlement status for trusted sibling apps (InvoiceCheck).
+ * BC-F0: billable flag + invoice settlement status for trusted sibling apps (the invoicing app).
  *
  * Orthogonal to booking_status_id (project UX workflow) and monthly close snapshots.
  */

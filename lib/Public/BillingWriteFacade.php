@@ -8,7 +8,7 @@ use OCA\BudgetCheck\Service\TransactionBillingService;
 use OCA\BudgetCheck\Util\BillingStatus;
 
 /**
- * Billing write API for trusted sibling apps (InvoiceCheck).
+ * Billing write API for trusted sibling apps (the invoicing app).
  *
  * `$trustedSiblingApp` skips BudgetCheck role checks for server-side callers
  * that already authorized the actor. Never expose that flag on HTTP surfaces.

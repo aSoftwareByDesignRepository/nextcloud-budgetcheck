@@ -8,9 +8,9 @@ use OCA\BudgetCheck\Service\TransactionBillingService;
 use OCP\App\IAppManager;
 
 /**
- * Read-only billing API for trusted sibling apps (InvoiceCheck).
+ * Read-only billing API for trusted sibling apps (the invoicing app).
  *
- * Server-side only. Never query bc_* from InvoiceCheck — use this facade.
+ * Server-side only. Never query bc_* from the invoicing app — use this facade.
  */
 class BillingReadFacade
 {
@@ -52,7 +52,7 @@ class BillingReadFacade
 	}
 
 	/**
-	 * Trusted sibling path — ACL already enforced by the caller (e.g. InvoiceCheck).
+	 * Trusted sibling path — ACL already enforced by the caller (e.g. The invoicing app).
 	 *
 	 * @param list<int> $itemIds
 	 * @return list<BillableItem>

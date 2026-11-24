@@ -19,7 +19,7 @@ use OCP\IDBConnection;
  *  - Exact confirmName match enforced server-side (UI alone is not trusted).
  *  - Exclusive {@see WorkspaceRowLock} + DB transaction for cascade atomicity.
  *  - Attachment files purged best-effort after commit (DB wins over FS).
- *  - InvoiceCheck documents are not deleted; settlement links on BC txs vanish
+ *  - the invoicing app documents are not deleted; settlement links on BC txs vanish
  *    with the ledger — callers must surface that in confirm copy.
  */
 class WorkspaceDeletionService

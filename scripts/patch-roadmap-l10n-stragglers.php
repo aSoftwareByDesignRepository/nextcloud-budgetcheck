@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /** Catch-all stragglers + zh_CN placeholder-order fix. Brand keys (BudgetCheck,
- * InvoiceCheck, percent presets) intentionally left identical. */
+ * the invoicing app, percent presets) intentionally left identical. */
 
 $base = __DIR__ . '/../l10n';
 

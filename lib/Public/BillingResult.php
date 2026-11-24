@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Public;
 
 /**
- * Result of a trusted-app billing write (InvoiceCheck handshake).
+ * Result of a trusted-app billing write (the invoicing app handshake).
  *
  * @psalm-immutable
  */

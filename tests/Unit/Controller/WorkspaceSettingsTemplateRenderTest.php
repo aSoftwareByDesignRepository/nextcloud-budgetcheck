@@ -160,7 +160,7 @@ final class WorkspaceSettingsTemplateRenderTest extends TestCase
 	public function testProjectWorkspaceDeleteZoneMentionsInvoiceCheck(): void
 	{
 		$html = $this->renderPartial('workspace', $this->projectWorkspace(true));
-		self::assertStringContainsString('InvoiceCheck', $html);
+		self::assertStringContainsString('The invoicing app', $html);
 		self::assertStringContainsString('data-bc-workspace-delete-zone', $html);
 	}
 

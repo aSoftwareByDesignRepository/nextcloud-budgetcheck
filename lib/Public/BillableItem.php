@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\BudgetCheck\Public;
 
 /**
- * Immutable DTO for a billable BudgetCheck transaction exposed to InvoiceCheck.
+ * Immutable DTO for a billable BudgetCheck transaction exposed to the invoicing app.
  *
  * @psalm-immutable
  */

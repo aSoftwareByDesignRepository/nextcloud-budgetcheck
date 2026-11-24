@@ -212,7 +212,7 @@ $bcHtmlLang = $bcHtmlLang ?? (string)(($_['clientHints']['htmlLang'] ?? null) ?:
 	<div class="bc-callout bc-callout--warning" role="note">
 		<p><?php p($l->t('All bookings, attachments, budgets, categories, members, and closed-month snapshots for this workspace will be deleted.')); ?></p>
 		<?php if (($workspace['type'] ?? '') === 'project'): ?>
-			<p><?php p($l->t('InvoiceCheck invoices that used expenses from this project stay in InvoiceCheck, but settlement links in BudgetCheck will break.')); ?></p>
+			<p><?php p($l->t('The invoicing app invoices that used expenses from this project stay in the invoicing app, but settlement links in BudgetCheck will break.')); ?></p>
 		<?php endif; ?>
 	</div>
 	<div class="bc-form-actions">

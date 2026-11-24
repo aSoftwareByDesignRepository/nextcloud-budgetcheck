@@ -529,7 +529,7 @@ class PageController extends Controller
 			'invoicingCheckCreateUrl' => null,
 			'invoicingCheckReceivablesUrl' => null,
 		];
-		// WP-ECO-BC: soft deep link for project workspaces when InvoiceCheck is enabled.
+		// WP-ECO-BC: soft deep link for project workspaces when the invoicing app is enabled.
 		if ($selected !== null && ($selected['type'] ?? '') === 'project') {
 			try {
 				$appManager = \OCP\Server::get(\OCP\App\IAppManager::class);

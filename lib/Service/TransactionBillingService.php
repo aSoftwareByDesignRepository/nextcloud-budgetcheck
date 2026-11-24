@@ -12,7 +12,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 
 /**
- * Billable settlement transitions for InvoiceCheck — never writes via HTTP.
+ * Billable settlement transitions for the invoicing app — never writes via HTTP.
  *
  * Only rows with is_billable=true participate. Planned / soft-deleted rows are excluded.
  */

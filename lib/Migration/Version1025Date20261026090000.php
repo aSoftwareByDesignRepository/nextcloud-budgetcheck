@@ -15,7 +15,7 @@ use OCP\Migration\SimpleMigrationStep;
  *  - `bc_payees`: normalized counterparty entity per workspace (`name_norm`
  *    unique per workspace so "ALDI SÜD" and " aldi süd " collapse into one row).
  *  - `bc_transactions.payee_id`: nullable reference — every path that creates
- *    transactions (web, import, mobile, InvoiceCheck facade) keeps working
+ *    transactions (web, import, mobile, the invoicing app facade) keeps working
  *    without it. No FK cascade: payee deletion is soft (`is_active=0`), merge
  *    is the only destructive operation and is explicit.
  *  - `bc_category_rules`: deterministic matching policy (contains / equals /

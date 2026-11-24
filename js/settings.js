@@ -718,7 +718,7 @@
 							attrs: { role: 'note' },
 						}, [
 							C.createElement('p', {
-								text: t('budgetcheck', 'InvoiceCheck invoices remain, but BudgetCheck settlement links will break.'),
+								text: t('budgetcheck', 'The invoicing app invoices remain, but BudgetCheck settlement links will break.'),
 							}),
 							(invoiced + paid) > 0
 								? C.createElement('p', {

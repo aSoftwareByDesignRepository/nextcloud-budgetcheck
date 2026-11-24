@@ -3247,7 +3247,7 @@ dialog .bc-btn--ghost:active,
 	grid-template-columns: minmax(0, 1fr);
 }
 
-/* WP-ECO-BC: project workspace → InvoiceCheck compose strip */
+/* WP-ECO-BC: project workspace → the invoicing app compose strip */
 .bc-ic-compose .bc-section__header {
 	margin-bottom: var(--bc-space-3);
 }

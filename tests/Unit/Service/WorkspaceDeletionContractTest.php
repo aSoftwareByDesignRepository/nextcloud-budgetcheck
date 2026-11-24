@@ -82,7 +82,7 @@ final class WorkspaceDeletionContractTest extends TestCase
 		$js = (string)file_get_contents(dirname(__DIR__, 3) . '/js/settings.js');
 		self::assertStringContainsString('data-bc-workspace-delete-zone', $tpl);
 		self::assertStringContainsString('data-bc-workspace-delete', $tpl);
-		self::assertStringContainsString('InvoiceCheck', $tpl);
+		self::assertStringContainsString('The invoicing app', $tpl);
 		self::assertStringContainsString('wireWorkspaceDelete', $js);
 		self::assertStringContainsString('confirmName', $js);
 		self::assertStringContainsString(

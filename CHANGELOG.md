@@ -204,7 +204,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Delete workspace (#19):** managers can permanently remove a workspace from Settings → Workspace (typed-name confirmation, impact preview, cascade of bookings/attachments/budgets/members/snapshots). Project workspaces warn that InvoiceCheck invoices remain but settlement links break.
+- **Delete workspace (#19):** managers can permanently remove a workspace from Settings → Workspace (typed-name confirmation, impact preview, cascade of bookings/attachments/budgets/members/snapshots). Project workspaces warn that the invoicing app invoices remain but settlement links break.
 - **Mobile companion API 7:** `DELETE /api/mobile/v1/workspaces/{id}` with the same confirmName gate and rate limit (5/hour).
 
 ### Security
@@ -305,7 +305,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **InvoiceCheck compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when InvoiceCheck is enabled (settlement stays in BudgetCheck).
+- **the invoicing app compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when the invoicing app is enabled (settlement stays in BudgetCheck).
 
 ### Changed
 
@@ -396,7 +396,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - In-app **Support & Us** admin surface with Partner CTAs.
-- Public **billing facades** for InvoiceCheck (`BillingReadFacade` / `BillingWriteFacade`, including paid-state handshake).
+- Public **billing facades** for the invoicing app (`BillingReadFacade` / `BillingWriteFacade`, including paid-state handshake).
 - Mobile companion API surface (`MobileApiController`, capabilities, idempotent mutations).
 - Playwright shell a11y smoke and epic-gate / closeout / billing mutation harnesses.
 
@@ -478,19 +478,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Billing paid state:** `BillingStatus::PAID` with `BillingWriteFacade::markItemsPaid` (invoiced→paid) and `reopenFromPaid` (paid→open) for InvoiceCheck full-payment / credit-note handshake
+- **Billing paid state:** `BillingStatus::PAID` with `BillingWriteFacade::markItemsPaid` (invoiced→paid) and `reopenFromPaid` (paid→open) for the invoicing app full-payment / credit-note handshake
 
 ## [1.0.39] - 2026-07-24
 
 ### Added
 
-- `BillingReadFacade::listAccessibleWorkspaceIds` for sibling apps (InvoiceCheck list/view scope)
+- `BillingReadFacade::listAccessibleWorkspaceIds` for sibling apps (the invoicing app list/view scope)
 
 ## [1.0.38] - 2026-07-24
 
 ### Added
 
-- **BC-F0 billing facades for InvoiceCheck:** `Public\BillingReadFacade` / `BillingWriteFacade` with `listBillableItems`, `markItemsInvoiced`, `reopenItems`, `setItemBillable`
+- **BC-F0 billing facades for the invoicing app:** `Public\BillingReadFacade` / `BillingWriteFacade` with `listBillableItems`, `markItemsInvoiced`, `reopenItems`, `setItemBillable`
 - Schema: `bc_transactions.is_billable` + `billing_status` (`open`/`invoiced`) — orthogonal to booking-status workflow and monthly close
 - Optimistic `updated_at` / `version` checks; fail-closed `requireFullSuccess`; `trustedSiblingApp` for server-side callers only
 - Mutation harness `tests/Mutation/run-billing-facade-mutations.php`
