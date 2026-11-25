@@ -25,7 +25,7 @@ test('settings wires typed-name delete with impact preview', () => {
 test('workspace template exposes manager-only danger zone', () => {
 	assert.match(template, /data-bc-workspace-delete-zone/);
 	assert.match(template, /data-bc-workspace-delete/);
-	assert.match(template, /the invoicing app invoices that used expenses/);
+	assert.match(template, /The invoicing app invoices that used expenses/);
 	assert.ok(template.indexOf('canManage') !== -1);
 });
 

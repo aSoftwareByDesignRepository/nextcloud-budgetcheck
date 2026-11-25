@@ -204,7 +204,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Delete workspace (#19):** managers can permanently remove a workspace from Settings → Workspace (typed-name confirmation, impact preview, cascade of bookings/attachments/budgets/members/snapshots). Project workspaces warn that the invoicing app invoices remain but settlement links break.
+- **Delete workspace (#19):** managers can permanently remove a workspace from Settings → Workspace (typed-name confirmation, impact preview, cascade of bookings/attachments/budgets/members/snapshots). Project workspaces warn that invoicing-app invoices remain but settlement links break.
 - **Mobile companion API 7:** `DELETE /api/mobile/v1/workspaces/{id}` with the same confirmName gate and rate limit (5/hour).
 
 ### Security
@@ -305,7 +305,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **the invoicing app compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when the invoicing app is enabled (settlement stays in BudgetCheck).
+- **Invoicing-app compose strip** on project workspaces: soft deep links to create an invoice and open receivables filtered by `workspaceId` when the invoicing app is enabled (settlement stays in BudgetCheck).
 
 ### Changed
 
@@ -478,13 +478,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Billing paid state:** `BillingStatus::PAID` with `BillingWriteFacade::markItemsPaid` (invoiced→paid) and `reopenFromPaid` (paid→open) for the invoicing app full-payment / credit-note handshake
+- **Billing paid state:** `BillingStatus::PAID` with `BillingWriteFacade::markItemsPaid` (invoiced→paid) and `reopenFromPaid` (paid→open) for the invoicing-app full-payment / credit-note handshake
 
 ## [1.0.39] - 2026-07-24
 
 ### Added
 
-- `BillingReadFacade::listAccessibleWorkspaceIds` for sibling apps (the invoicing app list/view scope)
+- `BillingReadFacade::listAccessibleWorkspaceIds` for sibling apps (invoicing-app list/view scope)
 
 ## [1.0.38] - 2026-07-24
 

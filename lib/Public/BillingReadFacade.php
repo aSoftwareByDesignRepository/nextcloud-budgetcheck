@@ -52,7 +52,7 @@ class BillingReadFacade
 	}
 
 	/**
-	 * Trusted sibling path — ACL already enforced by the caller (e.g. The invoicing app).
+	 * Trusted sibling path — ACL already enforced by the caller (e.g. the invoicing app).
 	 *
 	 * @param list<int> $itemIds
 	 * @return list<BillableItem>

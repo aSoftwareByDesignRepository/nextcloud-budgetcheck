@@ -7,8 +7,8 @@ namespace OCA\BudgetCheck\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * WP-ECO-BC: soft the invoicing app deep links on project workspace dashboard.
- * BudgetCheck stays standalone — links default null / hidden when IC disabled.
+ * WP-ECO-BC: soft deep links to the invoicing app on project workspace dashboard.
+ * BudgetCheck stays standalone — links default null / hidden when the invoicing app is disabled.
  */
 final class InvoiceCheckComposeContractTest extends TestCase
 {
