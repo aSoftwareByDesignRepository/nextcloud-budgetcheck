@@ -59,6 +59,21 @@ final class AppSettingsTemplateRenderTest extends TestCase
 		foreach (AppSettingsSectionCatalog::SECTIONS as $section) {
 			$vars = match ($section) {
 				'support' => [],
+				// Synced agent partial self-guards on agentAccess['visible'] —
+				// render the admin sees-tokens state so the section emits markup.
+				'agent' => ['agentAccess' => [
+					'visible' => true,
+					'appId' => 'budgetcheck',
+					'agentHeader' => 'X-BudgetCheck-Agent',
+					'ncUrl' => 'https://cloud.example.test',
+					'isAdmin' => true,
+					'canMint' => true,
+					'selfMintEnabled' => false,
+					'tokens' => [],
+					'presets' => ['read' => [], 'act' => []],
+					'allScopes' => [],
+					'scopeLabels' => [],
+				]],
 				default => [],
 			};
 			$html = $this->renderPartial($section, $vars);

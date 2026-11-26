@@ -265,13 +265,16 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<repair-steps>
 		<install>
 			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
+			<step>OCA\BudgetCheck\Repair\EnsureAgentTables</step>
 		</install>
 		<post-migration>
 			<step>OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema</step>
+			<step>OCA\BudgetCheck\Repair\EnsureAgentTables</step>
 			<step>OCA\BudgetCheck\Repair\PruneOrphanedChildRows</step>
 		</post-migration>
 		<uninstall>
 			<step>OCA\BudgetCheck\Repair\UninstallDropTables</step>
+			<step>OCA\BudgetCheck\Repair\UninstallAgentTables</step>
 		</uninstall>
 		<pre-migration>
 			<step>OCA\BudgetCheck\Repair\BackupBeforeUpdate</step>

@@ -656,7 +656,7 @@ OC.L10N.register(
 	"Income target (year)" : "Einnahmeziel (Jahr)",
 	"Income target: {amount}" : "Einnahmeziel: {amount}",
 	"Income:" : "Einnahme:",
-	"Info" : "Info",
+	"Info" : "Information",
 	"Inherit workspace setting" : "Vom Arbeitsbereich übernehmen",
 	"Insights" : "Auswertungen",
 	"Instance-bound columns left empty" : "Instanzgebundene Spalten bleiben leer",

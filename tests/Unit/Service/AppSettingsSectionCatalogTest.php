@@ -42,7 +42,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 	{
 		$sections = AppSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)), 'Section slugs must be unique');
-		self::assertCount(5, $sections);
+		self::assertCount(6, $sections);
 		foreach ($sections as $section) {
 			self::assertMatchesRegularExpression(
 				'/^[a-z]+(-[a-z]+)*$/',
@@ -127,6 +127,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 			'access' => 'T:Access control',
 			'admins' => 'T:App administrators',
 			'defaults' => 'T:Defaults for new workspaces',
+			'agent' => 'T:AI access (MCP)',
 			'transfer' => 'T:Transfer configuration',
 			'support' => 'T:Support & us',
 		];
@@ -143,6 +144,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 			'access' => 'T:Access',
 			'admins' => 'T:App admins',
 			'defaults' => 'T:Defaults',
+			'agent' => 'T:AI access',
 			'transfer' => 'T:Transfer',
 			'support' => 'T:Support us',
 		];
@@ -173,6 +175,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 			'access' => 'door, not the data',
 			'admins' => 'Only real Nextcloud user accounts',
 			'defaults' => 'pre-fill the form',
+			'agent' => 'scoped token',
 		];
 		$seen = [];
 		foreach ($fingerprints as $section => $fingerprint) {

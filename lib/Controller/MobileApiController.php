@@ -49,6 +49,7 @@ use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 
 /**
  * Free BudgetCheck Mobile API (`/api/mobile/v1/*`).
@@ -86,6 +87,7 @@ class MobileApiController extends Controller
 		private readonly ?\OCA\BudgetCheck\Service\AnalyticsService $analytics = null,
 		private readonly ?\OCP\ICacheFactory $cacheFactory = null,
 		private readonly ?\OCP\IAppConfig $appConfig = null,
+		private readonly ?\OCA\BudgetCheck\Agent\AgentContext $agentContext = null,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -128,6 +130,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listWorkspaces(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {
@@ -239,6 +242,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function home(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -384,6 +388,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function monthlySummary(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -417,6 +422,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function yearlySummary(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -460,6 +466,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function yearlyCategoryCompare(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -532,6 +539,7 @@ class MobileApiController extends Controller
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listPayees(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -546,6 +554,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function monthForecast(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -557,6 +566,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function topPayees(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -571,6 +581,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function periodSummary(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -612,6 +623,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listCategories(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -625,6 +637,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listBookingStatuses(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -637,6 +650,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listTransactions(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -679,6 +693,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function getTransaction(int $workspaceId, int $txId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
@@ -696,6 +711,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function createTransaction(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -707,6 +723,13 @@ class MobileApiController extends Controller
 
 			// Required: without a key, concurrent/retried POSTs double-book (Atlas Lens 1 proof).
 			$idemKey = trim((string)$this->request->getHeader('Idempotency-Key'));
+			if ($idemKey === '') {
+				// Agent/MCP contract channel: clientRequestId is the declared
+				// idempotency mechanism — honour it when the header is absent.
+				$idemKey = trim((string)($this->request->getParam('clientRequestId')
+					?? $this->request->getParam('client_request_id')
+					?? ''));
+			}
 			if ($idemKey === '') {
 				throw new \InvalidArgumentException('Idempotency-Key header is required for create.');
 			}
@@ -736,6 +759,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function updateTransaction(int $workspaceId, int $txId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
@@ -764,6 +788,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function deleteTransaction(int $workspaceId, int $txId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
@@ -788,6 +813,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listRecurringSuggestions(int $workspaceId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId): array {
@@ -864,6 +890,7 @@ class MobileApiController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function listTransactionAttachments(int $workspaceId, int $txId): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($workspaceId, $txId): array {
@@ -927,7 +954,7 @@ class MobileApiController extends Controller
 	public function downloadTransactionAttachment(int $workspaceId, int $attachmentId): StreamResponse|DataDisplayResponse
 	{
 		try {
-			$userId = $this->access->currentUserId();
+			$userId = $this->requireUid();
 			$workspaceId = $this->validateId($workspaceId);
 			$attachmentId = $this->validateId($attachmentId);
 			$this->workspaces->getForUser($workspaceId, $userId);
@@ -980,7 +1007,7 @@ class MobileApiController extends Controller
 	public function exportTransactions(int $workspaceId): DataDownloadResponse|DataDisplayResponse
 	{
 		try {
-			$userId = $this->access->currentUserId();
+			$userId = $this->requireUid();
 			$workspaceId = $this->validateId($workspaceId);
 			$this->rateLimit->assertAllowed($userId, 'mobile_transactions_export', 20, 300);
 			$format = (string)$this->request->getParam('format', TransactionExportService::FORMAT_CSV);
@@ -1030,11 +1057,29 @@ class MobileApiController extends Controller
 	 */
 	private function assertSafeMutationChannel(): void
 	{
+		// Scoped agent token (D-01): AgentAuthMiddleware already authenticated
+		// and scoped this request — the session-CSRF/Basic rungs do not apply.
+		if ($this->agentContext !== null && $this->agentContext->isArmed()) {
+			return;
+		}
 		$csrfPassed = $this->request->passesCSRFCheck();
 		$basicValidated = $csrfPassed ? false : $this->authorizationBasicAuthenticatesCurrentUser();
 		if (!MobileMutationChannel::isSafe($csrfPassed, $basicValidated)) {
 			throw new AccessDeniedException();
 		}
+	}
+
+	/**
+	 * Scoped agent token requests carry no session: the armed request-scoped
+	 * principal wins over the session user (explicit credential beats a
+	 * foreign cookie — same posture as ProjectCheck requireUid).
+	 */
+	private function requireUid(): string
+	{
+		if ($this->agentContext !== null && $this->agentContext->isArmed()) {
+			return (string)$this->agentContext->uid();
+		}
+		return $this->access->currentUserId();
 	}
 
 	/**
@@ -1088,7 +1133,7 @@ class MobileApiController extends Controller
 	private function safe(callable $operation): JSONResponse
 	{
 		try {
-			$userId = $this->access->currentUserId();
+			$userId = $this->requireUid();
 			$result = $operation($userId);
 			if ($result instanceof JSONResponse) {
 				return $result;

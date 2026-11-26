@@ -656,7 +656,7 @@ OC.L10N.register(
 	"Income target (year)" : "Inkomstmål (år)",
 	"Income target: {amount}" : "Inkomstmål: {amount}",
 	"Income:" : "Inkomst:",
-	"Info" : "Info",
+	"Info" : "Information",
 	"Inherit workspace setting" : "Ärv arbetsyteinställning",
 	"Insights" : "Insikter",
 	"Instance-bound columns left empty" : "Instansbundna kolumner lämnas tomma",

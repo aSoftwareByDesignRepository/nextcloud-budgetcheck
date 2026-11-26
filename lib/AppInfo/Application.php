@@ -15,7 +15,9 @@ use OCA\BudgetCheck\Repair\BackupBeforeUpdate;
 use OCA\BudgetCheck\Listener\GroupDeletedListener;
 use OCA\BudgetCheck\Listener\UserDeletedListener;
 use OCA\BudgetCheck\Repair\EnsureBudgetCheckSchema;
+use OCA\BudgetCheck\Repair\EnsureAgentTables;
 use OCA\BudgetCheck\Repair\PruneOrphanedChildRows;
+use OCA\BudgetCheck\Repair\UninstallAgentTables;
 use OCA\BudgetCheck\Repair\UninstallDropTables;
 use OCA\BudgetCheck\Middleware\AppAccessMiddleware;
 use OCA\BudgetCheck\Service\AccessControlService;
@@ -101,6 +103,37 @@ class Application extends App implements IBootstrap
 			);
 		});
 		$context->registerMiddleware(AppAccessMiddleware::class);
+
+		// _shared/agent-auth pack — scoped AI-agent tokens (suite MCP contract)
+		$context->registerService(\OCA\BudgetCheck\Agent\AgentManifest::class, function ($c) {
+			return new \OCA\BudgetCheck\Agent\AgentManifest(
+				'budgetcheck',
+				\dirname(__DIR__, 2) . '/appinfo/agent-manifest.json'
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Agent\AgentSeatGate::class, function ($c) {
+			return new \OCA\BudgetCheck\Agent\BudgetCheckAgentSeatGate(
+				$c->query(AccessControlService::class)
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Agent\AgentAccessGate::class, function ($c) {
+			return new \OCA\BudgetCheck\Agent\BudgetCheckAgentAccessGate(
+				$c->query(AccessControlService::class)
+			);
+		});
+		$context->registerService(\OCA\BudgetCheck\Middleware\AgentAuthMiddleware::class, function ($c) {
+			return new \OCA\BudgetCheck\Middleware\AgentAuthMiddleware(
+				$c->query(\OCP\IRequest::class),
+				$c->query(\OCA\BudgetCheck\Agent\AgentContext::class),
+				$c->query(\OCA\BudgetCheck\Agent\AgentTokenService::class),
+				$c->query(\OCA\BudgetCheck\Agent\AgentManifest::class),
+				$c->query(\OCA\BudgetCheck\Agent\AgentSeatGate::class),
+				$c->query(\OCA\BudgetCheck\Agent\AgentAuditMapper::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+				'budgetcheck'
+			);
+		});
+		$context->registerMiddleware(\OCA\BudgetCheck\Middleware\AgentAuthMiddleware::class);
 
 		// Free companion capabilities (no license fields)
 		$context->registerCapability(Capabilities::class);
@@ -500,6 +533,17 @@ class Application extends App implements IBootstrap
 				$c->query(IRootFolder::class),
 			);
 		});
+
+		$context->registerService(EnsureAgentTables::class, function ($c): EnsureAgentTables {
+			return new EnsureAgentTables(
+				$c->query(\OCP\IDBConnection::class),
+			);
+		});
+		$context->registerService(UninstallAgentTables::class, function ($c): UninstallAgentTables {
+			return new UninstallAgentTables(
+				$c->query(\OCP\IDBConnection::class),
+			);
+		});
 		$context->registerService(UpgradeBackupService::class, function ($c): UpgradeBackupService {
 			return new UpgradeBackupService(
 				$c->query(\OCP\IDBConnection::class),
@@ -576,6 +620,7 @@ class Application extends App implements IBootstrap
 		// React to permanent user deletions: remove memberships, scrub configured
 		// app-admin entries. Snapshots and historical ledger rows stay intact for audit.
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
+		$context->registerEventListener(UserDeletedEvent::class, \OCA\BudgetCheck\Listener\AgentUserDeletedListener::class);
 
 		// React to permanent group deletions: drop workspace group assignments and
 		// the directory allow-list entry so authorization never references a ghost group.

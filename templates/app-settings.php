@@ -27,6 +27,7 @@ $canAdminApp = !empty($_['canAdminApp']);
 		'access' => 'access.php',
 		'admins' => 'admins.php',
 		'defaults' => 'defaults.php',
+		'agent' => 'agent.php',
 		'transfer' => 'transfer.php',
 		'support' => 'support.php',
 	];

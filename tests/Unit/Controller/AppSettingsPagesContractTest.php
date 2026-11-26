@@ -191,6 +191,8 @@ final class AppSettingsPagesContractTest extends TestCase
 			// The transfer section is a thin dispatcher wrapper around the
 			// synced config-transfer partial — anchors live in that file.
 			'transfer' => 'templates/parts/settings/transfer.php',
+			// Same bridge pattern for the synced agent-auth pack partial.
+			'agent' => 'templates/parts/settings/agent.php',
 			'support' => 'templates/parts/support-us-section.php',
 		];
 		foreach (AppSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {

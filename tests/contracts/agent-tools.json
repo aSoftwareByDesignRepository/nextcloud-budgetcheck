@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "appId": "budgetcheck",
+  "agentExposure": "declared",
+  "tools": [
+    {
+      "name": "bck_list_workspaces",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listWorkspaces",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces",
+      "scope": "budgetcheck:workspaces:read",
+      "label": "List workspaces",
+      "description": "List the budget workspaces the token owner may see."
+    },
+    {
+      "name": "bck_get_workspace_home",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#home",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/home",
+      "scope": "budgetcheck:workspaces:read",
+      "label": "Workspace home",
+      "description": "Home overview for one workspace: balance, recent activity, alerts.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "scope": { "type": "string", "required": false, "description": "Home scope variant." },
+        "year": { "type": "integer", "required": false },
+        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window." }
+      }
+    },
+    {
+      "name": "bck_monthly_summary",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#monthlySummary",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/monthly-summary",
+      "scope": "budgetcheck:summary:read",
+      "label": "Monthly summary",
+      "description": "Income/expense totals and category breakdown for one month.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window (defaults to current month)." }
+      }
+    },
+    {
+      "name": "bck_yearly_summary",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#yearlySummary",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/yearly-summary",
+      "scope": "budgetcheck:summary:read",
+      "label": "Yearly summary",
+      "description": "Income/expense totals across one calendar year.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "year": { "type": "integer", "required": false }
+      }
+    },
+    {
+      "name": "bck_yearly_category_compare",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#yearlyCategoryCompare",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/yearly-category-compare",
+      "scope": "budgetcheck:summary:read",
+      "label": "Year-over-year category comparison",
+      "description": "Compare per-category totals between two years.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_period_summary",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#periodSummary",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/period-summary",
+      "scope": "budgetcheck:summary:read",
+      "label": "Period summary",
+      "description": "Workspace period totals: income, expense, net and project-cap headroom.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window." }
+      }
+    },
+    {
+      "name": "bck_month_forecast",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#monthForecast",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/month-forecast",
+      "scope": "budgetcheck:summary:read",
+      "label": "Month forecast",
+      "description": "Forecasted month-end balance given booked and planned entries.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_top_payees",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#topPayees",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/top-payees",
+      "scope": "budgetcheck:payees:read",
+      "label": "Top payees",
+      "description": "Highest-volume payees for a period and direction.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "direction": { "type": "string", "required": false, "description": "income|expense." },
+        "limit": { "type": "integer", "required": false },
+        "period": { "type": "string", "required": false }
+      }
+    },
+    {
+      "name": "bck_list_payees",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listPayees",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/payees",
+      "scope": "budgetcheck:payees:read",
+      "label": "List payees",
+      "description": "List payees in one workspace; optional substring search.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "search": { "type": "string", "required": false }
+      }
+    },
+    {
+      "name": "bck_list_categories",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listCategories",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/categories",
+      "scope": "budgetcheck:categories:read",
+      "label": "List categories",
+      "description": "List booking categories for one workspace.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_list_booking_statuses",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listBookingStatuses",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/booking-statuses",
+      "scope": "budgetcheck:booking_statuses:read",
+      "label": "List booking statuses",
+      "description": "List booking statuses (e.g. planned, booked) for one workspace.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_list_transactions",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listTransactions",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions",
+      "scope": "budgetcheck:transactions:read",
+      "label": "List transactions",
+      "description": "List transactions in one workspace with the companion filter subset.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "from": { "type": "string", "required": false, "description": "ISO date lower bound." },
+        "to": { "type": "string", "required": false, "description": "ISO date upper bound." },
+        "categoryId": { "type": "integer", "required": false },
+        "q": { "type": "string", "required": false, "description": "Substring filter on title." },
+        "uncategorized": { "type": "boolean", "required": false },
+        "statusId": { "type": "integer", "required": false },
+        "limit": { "type": "integer", "required": false },
+        "offset": { "type": "integer", "required": false }
+      }
+    },
+    {
+      "name": "bck_get_transaction",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#getTransaction",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}",
+      "scope": "budgetcheck:transactions:read",
+      "label": "Get transaction",
+      "description": "Fetch one transaction by id inside a workspace.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_list_recurring_suggestions",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listRecurringSuggestions",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/recurring-suggestions",
+      "scope": "budgetcheck:recurring:read",
+      "label": "List recurring suggestions",
+      "description": "Pending recurring-rule suggestions awaiting confirmation.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_list_attachments",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_api#listTransactionAttachments",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}/attachments",
+      "scope": "budgetcheck:attachments:read",
+      "label": "List transaction attachments",
+      "description": "Attachment metadata (names, sizes, mime types) on one transaction. File bytes are not exposed to agents.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    },
+    {
+      "name": "bck_create_transaction",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile_api#createTransaction",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions",
+      "idempotency": "clientRequestId",
+      "scope": "budgetcheck:transactions:write",
+      "label": "Create transaction",
+      "description": "Book one transaction in a workspace. clientRequestId is the retry-safe idempotency key.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "direction": { "type": "string", "required": true, "description": "income|expense." },
+        "title": { "type": "string", "required": true },
+        "bookingDate": { "type": "string", "required": true, "description": "ISO date." },
+        "amountMinor": { "type": "integer", "required": false, "description": "Amount in minor units." },
+        "amount": { "type": "string", "required": false, "description": "Decimal amount (alternative to amountMinor)." },
+        "categoryId": { "type": "integer", "required": false },
+        "bookingStatusId": { "type": "integer", "required": false },
+        "payeeId": { "type": "integer", "required": false },
+        "payeeName": { "type": "string", "required": false },
+        "notes": { "type": "string", "required": false },
+        "isSpecial": { "type": "boolean", "required": false },
+        "clientRequestId": { "type": "string", "required": true, "description": "Idempotency key — unique per intended write; safe to retry." }
+      }
+    },
+    {
+      "name": "bck_update_transaction",
+      "kind": "write",
+      "riskClass": 2,
+      "route": "mobile_api#updateTransaction",
+      "method": "PUT",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}",
+      "idempotency": "natural",
+      "confirm": "required",
+      "scope": "budgetcheck:transactions:write",
+      "label": "Update transaction",
+      "description": "Update fields on an existing transaction. CAS-guarded: the current row version must be supplied, so retries are naturally safe.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "txId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "version": { "type": "integer", "required": true, "description": "Current row version (CAS guard)." },
+        "direction": { "type": "string", "required": false },
+        "title": { "type": "string", "required": false },
+        "bookingDate": { "type": "string", "required": false },
+        "amountMinor": { "type": "integer", "required": false },
+        "amount": { "type": "string", "required": false },
+        "categoryId": { "type": "integer", "required": false },
+        "bookingStatusId": { "type": "integer", "required": false },
+        "payeeId": { "type": "integer", "required": false },
+        "payeeName": { "type": "string", "required": false },
+        "notes": { "type": "string", "required": false },
+        "isSpecial": { "type": "boolean", "required": false }
+      }
+    },
+    {
+      "name": "bck_delete_transaction",
+      "kind": "write",
+      "riskClass": 2,
+      "route": "mobile_api#deleteTransaction",
+      "method": "DELETE",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/transactions/{txId}",
+      "idempotency": "natural",
+      "confirm": "required",
+      "scope": "budgetcheck:transactions:write",
+      "label": "Delete transaction",
+      "description": "Delete one transaction. Retrying a deleted id yields a stable not-found, so the write is naturally idempotent.",
+      "params": {
+        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
+        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+      }
+    }
+  ],
+  "deny": [
+    "mobile_api#bootstrap",
+    "mobile_api#widgetSnapshot",
+    "mobile_api#createWorkspace",
+    "mobile_api#updateWorkspace",
+    "mobile_api#deleteWorkspace",
+    "mobile_api#exportTransactions",
+    "mobile_api#uploadTransactionAttachment",
+    "mobile_api#deleteTransactionAttachment",
+    "mobile_api#downloadTransactionAttachment",
+    "mobile_api#applyRecurringSuggestion"
+  ]
+}

@@ -49,6 +49,7 @@ class PageController extends Controller
 		private WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
 		private MobileAppLinks $mobileAppLinks,
 		private \OCA\BudgetCheck\ConfigTransfer\TransferReceiptStore $transferReceipts,
+		private \OCA\BudgetCheck\Agent\AgentSettingsPayload $agentSettings,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -341,6 +342,9 @@ class PageController extends Controller
 		$ctx['canAdminApp'] = true;
 		$ctx['appPolicy'] = $this->access->getAppPolicy();
 		$ctx['settingsSection'] = $section;
+		if ($section === 'agent') {
+			$ctx['agentAccess'] = $this->agentSettings->payload($userId);
+		}
 
 		$appSettingsSectionLabels = [];
 		foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
@@ -528,6 +532,7 @@ class PageController extends Controller
 			'transferLastReceipt' => $this->transferReceipts->lastReceipt(),
 			'invoicingCheckCreateUrl' => null,
 			'invoicingCheckReceivablesUrl' => null,
+			'agentAccess' => $ctx['agentAccess'] ?? null,
 		];
 		// WP-ECO-BC: soft deep link for project workspaces when the invoicing app is enabled.
 		if ($selected !== null && ($selected['type'] ?? '') === 'project') {
@@ -634,6 +639,10 @@ class PageController extends Controller
 			Util::addStyle(Application::APP_ID, 'common/transfer');
 			Util::addScript(Application::APP_ID, 'transfer-bridge');
 			Util::addScript(Application::APP_ID, 'transfer');
+		}
+		if ($pageScript === 'app-settings' && $settingsSection === 'agent') {
+			Util::addStyle(Application::APP_ID, 'agent-access');
+			Util::addScript(Application::APP_ID, 'agent-access');
 		}
 		Util::addScript(Application::APP_ID, $pageScript);
 	}

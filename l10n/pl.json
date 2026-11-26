@@ -1422,7 +1422,7 @@
     "Uses {category} when empty": "Używa {category}, gdy puste",
     "VAT rate": "Stawka VAT",
     "VAT rate must be between 0 and 5000 basis points.": "Stawka VAT musi być między 0 a 5000 punktów bazowych.",
-    "VAT {rate}%": "VAT {rate}%%",
+    "VAT {rate}%": "VAT {rate}%",
     "Validate CSV": "Sprawdź CSV",
     "Validate first. Import is enabled only after validation succeeds.": "Najpierw sprawdź. Import jest możliwy dopiero po udanej walidacji.",
     "Validate your CSV before importing.": "Sprawdź CSV przed importem.",

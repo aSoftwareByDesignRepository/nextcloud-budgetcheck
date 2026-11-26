@@ -25,7 +25,7 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'access|admins|defaults|transfer|support']],
+			'requirements' => ['section' => 'access|admins|defaults|agent|transfer|support']],
 		['name' => 'export#categorizationRules', 'url' => '/api/categorization-rules/export', 'verb' => 'GET'],
 		['name' => 'export#householdYearly', 'url' => '/export/household-yearly', 'verb' => 'GET'],
 		['name' => 'export#projectPeriod', 'url' => '/export/project-period', 'verb' => 'GET'],
@@ -171,5 +171,16 @@ return [
 		['name' => 'mobile_api#deleteTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
 		['name' => 'mobile_api#downloadTransactionAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/attachments/{attachmentId}/download', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+', 'attachmentId' => '\\d+']],
 		['name' => 'mobile_api#widgetSnapshot', 'url' => '/api/widget-snapshot/{workspaceId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\\d+']],
+
+		// Agent (AI/MCP) surface. The manifest is readable by any valid
+		// agent token OR a session user; token administration is session+CSRF
+		// only — AgentAuthMiddleware denies agent credentials on these paths.
+		['name' => 'agent_manifest#show', 'url' => '/agent/v1/manifest', 'verb' => 'GET'],
+		['name' => 'agent_token#index', 'url' => '/agent/v1/tokens', 'verb' => 'GET'],
+		['name' => 'agent_token#mint', 'url' => '/agent/v1/tokens', 'verb' => 'POST'],
+		['name' => 'agent_token#audit', 'url' => '/agent/v1/audit', 'verb' => 'GET'],
+		['name' => 'agent_token#updatePolicy', 'url' => '/agent/v1/policy', 'verb' => 'POST'],
+		['name' => 'agent_token#revoke', 'url' => '/agent/v1/tokens/{id}/revoke', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
+		['name' => 'agent_token#rotate', 'url' => '/agent/v1/tokens/{id}/rotate', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
 	],
 ];
