@@ -17,20 +17,20 @@
 	<summary lang="sv">Hushålls- och projektekonomi med verifierbar månadsavslutning, budgetar och sparmål</summary>
 	<summary lang="nb">Husholdnings- og prosjektøkonomi med verifiserbar månedlig avslutning, budsjetter og sparemål</summary>
 	<description><![CDATA[
-# BudgetCheck — money with edges, on your own server
+# BudgetCheck: money with edges, on your own server
 
-Two kinds of money, kept strictly apart: **household** workspaces run a monthly rhythm with budgets, savings targets and a yearly overview; **project** workspaces track spend against a bounded window with an optional cap warning. Each workspace gets its own ledger, categories, members and tax settings — and every total is computed on the server, in integer minor units, never floating point.
+Two kinds of money, kept strictly apart: **household** workspaces run a monthly rhythm with budgets, savings targets and a yearly overview; **project** workspaces track spend against a bounded window with an optional cap warning. Each workspace gets its own ledger, categories, members and tax settings. Every total is computed on the server, in integer minor units, never floating point.
 
 Month-end is not a screenshot in a spreadsheet: **monthly close** freezes an immutable snapshot with a verifiable calculation hash. Reopen deliberately, with a reason.
 
 ## Why people install it
 
-- **Two scopes that never mix** — household vs. bounded project, separate ledgers and members
-- **Real budgets** — per-category budgets, savings targets, yearly overview
-- **A close you can defend** — immutable monthly snapshot, calculation hash, controlled reopen
-- **Tax-aware when needed** — net or gross entry with deterministic VAT conversion
-- **Server-computed amounts** — integer minor units end to end; no float drift
-- **Accessible by design** — WCAG 2.1 AA target, full keyboard, responsive from 320 px
+- **Two scopes that never mix**: household vs. bounded project, separate ledgers and members
+- **Real budgets**: per-category budgets, savings targets, yearly overview
+- **A close you can defend**: immutable monthly snapshot, calculation hash, controlled reopen
+- **Tax-aware when needed**: net or gross entry with deterministic VAT conversion
+- **Server-computed amounts**: integer minor units end to end; no float drift
+- **Accessible by design**: WCAG 2.1 AA target, full keyboard, responsive from 320 px
 
 ## Clear limits
 
@@ -44,20 +44,20 @@ Month-end is not a screenshot in a spreadsheet: **monthly close** freezes an imm
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
-# BudgetCheck — Geld mit Kanten, auf dem eigenen Server
+# BudgetCheck: Geld mit Kanten, auf dem eigenen Server
 
-Zwei Geldarten, strikt getrennt: **Haushalts-Workspaces** laufen im Monatsrhythmus mit Budgets, Sparzielen und Jahresübersicht; **Projekt-Workspaces** verfolgen Ausgaben in einem begrenzten Zeitfenster mit optionaler Cap-Warnung. Jeder Workspace hat eigenes Ledger, eigene Kategorien, Mitglieder und Steuer-Einstellungen — und jede Summe wird serverseitig in ganzen Cent-Einheiten gerechnet, nie mit Float.
+Zwei Geldarten, strikt getrennt: **Haushalts-Workspaces** laufen im Monatsrhythmus mit Budgets, Sparzielen und Jahresübersicht; **Projekt-Workspaces** verfolgen Ausgaben in einem begrenzten Zeitfenster mit optionaler Cap-Warnung. Jeder Workspace hat eigenes Ledger, eigene Kategorien, Mitglieder und Steuer-Einstellungen. Jede Summe wird serverseitig in ganzen Cent-Einheiten gerechnet, nie mit Float.
 
 Monatsende ist kein Screenshot in einer Tabelle: Der **Monatsabschluss** friert einen unveränderlichen Snapshot mit prüfbarem Rechen-Hash ein. Wiedereröffnung bewusst, mit Begründung.
 
 ## Warum Menschen es installieren
 
-- **Zwei Scopes, die sich nie mischen** — Haushalt vs. begrenztes Projekt, getrennte Ledgers und Mitglieder
-- **Echte Budgets** — Budgets je Kategorie, Sparziele, Jahresübersicht
-- **Ein Abschluss, hinter dem Sie stehen** — unveränderlicher Monats-Snapshot, Rechen-Hash, kontrollierte Wiedereröffnung
-- **Steuer-fähig bei Bedarf** — Netto- oder Bruttoeingabe mit deterministischer USt-Umrechnung
-- **Serverseitig gerechnete Beträge** — Integer-Minor-Units durchgehend; kein Float-Drift
-- **Barrierefrei by design** — WCAG 2.1 AA Ziel, volle Tastatur, responsive ab 320 px
+- **Zwei Scopes, die sich nie mischen**: Haushalt vs. begrenztes Projekt, getrennte Ledgers und Mitglieder
+- **Echte Budgets**: Budgets je Kategorie, Sparziele, Jahresübersicht
+- **Ein Abschluss, hinter dem Sie stehen**: unveränderlicher Monats-Snapshot, Rechen-Hash, kontrollierte Wiedereröffnung
+- **Steuer-fähig bei Bedarf**: Netto- oder Bruttoeingabe mit deterministischer USt-Umrechnung
+- **Serverseitig gerechnete Beträge**: Integer-Minor-Units durchgehend; kein Float-Drift
+- **Barrierefrei by design**: WCAG 2.1 AA Ziel, volle Tastatur, responsive ab 320 px
 
 ## Klare Grenzen
 
@@ -87,7 +87,7 @@ L'interface est **scopée par espace** (totaux foyer et projet ne se mélangent 
 
 ## Retours bienvenus
 
-Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident — ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
+Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident. Ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
 ]]></description>
 	<description lang="da"><![CDATA[
 # BudgetCheck
@@ -100,7 +100,7 @@ Brugerfladen er **adskilt pr. arbejdsområde** (husholdning og projekt blandes i
 
 ## Feedback er velkommen
 
-Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper — åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
+Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper. Åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
 
 ## Krav
 
@@ -119,7 +119,7 @@ La interfaz está **acotada por espacio** (los totales de hogar y proyecto no se
 
 ## Comentarios bienvenidos
 
-Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan — abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
+Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan. Abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
 
 ## Requisitos
 
@@ -138,7 +138,7 @@ De gebruikersinterface is **workspace-gebonden** (totalen voor huishouden en pro
 
 ## Feedback welkom
 
-We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen — open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
+We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen. Open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
 
 ## Vereisten
 
@@ -157,7 +157,7 @@ L’interfaccia è **scopata per workspace** (i totali di nucleo domestico e pro
 
 ## Feedback benvenuto
 
-Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano — aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
+Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano. Aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
 
 ## Requisiti
 
@@ -176,7 +176,7 @@ Interfejs jest **ograniczony do workspace** (sumy dla gospodarstwa domowego i pr
 
 ## Feedback mile widziany
 
-Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają — otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
+Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają. Otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
 
 ## Wymagania
 
@@ -195,7 +195,7 @@ Gränssnittet är **avgränsat per workspace** (totalsummor för hushåll och pr
 
 ## Feedback välkomnas
 
-Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper — öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
+Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper. Öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
 
 ## Krav
 
@@ -214,7 +214,7 @@ Brukergrensesnittet er **avgrenset til workspace** (totalene for husholdning og 
 
 ## Feedback er velkommen
 
-Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper — åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
+Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper. Åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-budgetcheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
 
 ## Krav
 
