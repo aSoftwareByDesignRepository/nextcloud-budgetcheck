@@ -180,6 +180,18 @@
 
 /* One-time secret + config block */
 .bc-agent-secret-dialog { max-width: min(92vw, 560px); }
+
+/* NC core ships an HTML5 shim (server.css: dialog{display:block}) at
+   AUTHOR origin — it beats the UA stylesheet's dialog:not([open]) rule,
+   so closed pack dialogs render inline in the page flow unless the
+   closed state is re-hidden here (same lesson as transfer.css
+   native_dialog_margin_reset_uncentered). */
+dialog.bc-dialog:not([open]),
+dialog.bc-agent-mint-dialog:not([open]),
+dialog.bc-agent-secret-dialog:not([open]),
+dialog.bc-agent-revoke-dialog:not([open]) {
+	display: none !important;
+}
 .bc-agent-config {
 	width: 100%;
 	font-family: var(--bc-font-mono, monospace);
