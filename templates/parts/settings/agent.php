@@ -118,7 +118,7 @@ $bc_tokens = is_array($bc_state['tokens']) ? $bc_state['tokens'] : [];
 	<dialog id="bc-agent-mint-dialog" class="bc-dialog bc-agent-mint-dialog" aria-labelledby="bc-agent-mint-h">
 		<div class="bc-dialog__body">
 			<h3 id="bc-agent-mint-h"><?php p($l->t('Connect your AI')); ?></h3>
-			<form id="bc-agent-mint-form" novalidate>
+			<form id="bc-agent-mint-form" class="bc-form-stack" novalidate>
 				<div class="bc-form-row">
 					<label for="bc-agent-label"><?php p($l->t('Label')); ?></label>
 					<input type="text" id="bc-agent-label" name="label" maxlength="190" required autocomplete="off" placeholder="<?php p($l->t('Claude on my laptop')); ?>">
