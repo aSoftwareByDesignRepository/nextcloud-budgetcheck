@@ -63,8 +63,7 @@ $bc_tokens = is_array($bc_state['tokens']) ? $bc_state['tokens'] : [];
 			<tbody id="bc-agent-tbody">
 				<?php foreach ($bc_tokens as $bc_tok): ?>
 				<tr data-token-id="<?php p((string)($bc_tok['id'] ?? '')); ?>" data-token-label="<?php p((string)($bc_tok['label'] ?? '')); ?>"<?php if (($bc_tok['state'] ?? '') !== 'active'): ?> class="bc-agent-row--inactive"<?php endif; ?>>
-					<td data-cell="<?php p($l->t('Label')); ?>">
-						<span class="bc-agent-label"><?php p((string)($bc_tok['label'] ?? '')); ?></span>
+					<td data-cell="<?php p($l->t('Label')); ?>" class="bc-agent-label-cell"><span class="bc-agent-labelcell"><span class="bc-agent-label" title="<?php p((string)($bc_tok['label'] ?? '')); ?>"><?php p((string)($bc_tok['label'] ?? '')); ?></span>
 						<?php if (($bc_tok['state'] ?? '') === 'revoked'): ?>
 							<span class="bc-badge bc-badge--neutral"><?php p($l->t('Revoked')); ?></span>
 						<?php elseif (($bc_tok['state'] ?? '') === 'expired'): ?>
@@ -74,9 +73,8 @@ $bc_tokens = is_array($bc_state['tokens']) ? $bc_state['tokens'] : [];
 						<?php endif; ?>
 						<?php if ($bc_state['isAdmin'] && ($bc_tok['userId'] ?? '') !== ''): ?>
 							<span class="bc-agent-owner"><?php p((string)$bc_tok['userId']); ?></span>
-						<?php endif; ?>
-					</td>
-					<td data-cell="<?php p($l->t('Scopes')); ?>">
+						<?php endif; ?></span></td>
+					<td data-cell="<?php p($l->t('Scopes')); ?>" class="bc-agent-scopes-cell">
 						<span class="bc-agent-scopes">
 						<?php foreach (($bc_tok['scopes'] ?? []) as $bc_scope): ?>
 							<span class="bc-badge bc-badge--neutral bc-agent-scope" title="<?php p((string)$bc_scope); ?>"><?php p((string)($bc_state['scopeLabels'][$bc_scope] ?? $bc_scope)); ?></span>
