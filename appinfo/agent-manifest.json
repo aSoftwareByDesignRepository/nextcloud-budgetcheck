@@ -25,10 +25,25 @@
       "label": "Workspace home",
       "description": "Home overview for one workspace: balance, recent activity, alerts.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "scope": { "type": "string", "required": false, "description": "Home scope variant." },
-        "year": { "type": "integer", "required": false },
-        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "scope": {
+          "type": "string",
+          "required": false,
+          "description": "Home scope variant."
+        },
+        "year": {
+          "type": "integer",
+          "required": false
+        },
+        "yearMonth": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM window."
+        }
       }
     },
     {
@@ -42,8 +57,16 @@
       "label": "Monthly summary",
       "description": "Income/expense totals and category breakdown for one month.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window (defaults to current month)." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "yearMonth": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM window (defaults to current month)."
+        }
       }
     },
     {
@@ -57,8 +80,15 @@
       "label": "Yearly summary",
       "description": "Income/expense totals across one calendar year.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "year": { "type": "integer", "required": false }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "year": {
+          "type": "integer",
+          "required": false
+        }
       }
     },
     {
@@ -72,7 +102,11 @@
       "label": "Year-over-year category comparison",
       "description": "Compare per-category totals between two years.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -86,8 +120,16 @@
       "label": "Period summary",
       "description": "Workspace period totals: income, expense, net and project-cap headroom.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "yearMonth": { "type": "string", "required": false, "description": "YYYY-MM window." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "yearMonth": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM window."
+        }
       }
     },
     {
@@ -101,7 +143,11 @@
       "label": "Month forecast",
       "description": "Forecasted month-end balance given booked and planned entries.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -115,10 +161,24 @@
       "label": "Top payees",
       "description": "Highest-volume payees for a period and direction.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "direction": { "type": "string", "required": false, "description": "income|expense." },
-        "limit": { "type": "integer", "required": false },
-        "period": { "type": "string", "required": false }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "direction": {
+          "type": "string",
+          "required": false,
+          "description": "income|expense."
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        },
+        "period": {
+          "type": "string",
+          "required": false
+        }
       }
     },
     {
@@ -132,8 +192,15 @@
       "label": "List payees",
       "description": "List payees in one workspace; optional substring search.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "search": { "type": "string", "required": false }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "search": {
+          "type": "string",
+          "required": false
+        }
       }
     },
     {
@@ -147,7 +214,11 @@
       "label": "List categories",
       "description": "List booking categories for one workspace.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -161,7 +232,11 @@
       "label": "List booking statuses",
       "description": "List booking statuses (e.g. planned, booked) for one workspace.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -175,15 +250,46 @@
       "label": "List transactions",
       "description": "List transactions in one workspace with the companion filter subset.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "from": { "type": "string", "required": false, "description": "ISO date lower bound." },
-        "to": { "type": "string", "required": false, "description": "ISO date upper bound." },
-        "categoryId": { "type": "integer", "required": false },
-        "q": { "type": "string", "required": false, "description": "Substring filter on title." },
-        "uncategorized": { "type": "boolean", "required": false },
-        "statusId": { "type": "integer", "required": false },
-        "limit": { "type": "integer", "required": false },
-        "offset": { "type": "integer", "required": false }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "from": {
+          "type": "string",
+          "required": false,
+          "description": "ISO date lower bound."
+        },
+        "to": {
+          "type": "string",
+          "required": false,
+          "description": "ISO date upper bound."
+        },
+        "categoryId": {
+          "type": "integer",
+          "required": false
+        },
+        "q": {
+          "type": "string",
+          "required": false,
+          "description": "Substring filter on title."
+        },
+        "uncategorized": {
+          "type": "boolean",
+          "required": false
+        },
+        "statusId": {
+          "type": "integer",
+          "required": false
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        },
+        "offset": {
+          "type": "integer",
+          "required": false
+        }
       }
     },
     {
@@ -197,8 +303,16 @@
       "label": "Get transaction",
       "description": "Fetch one transaction by id inside a workspace.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "txId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -212,7 +326,11 @@
       "label": "List recurring suggestions",
       "description": "Pending recurring-rule suggestions awaiting confirmation.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -226,8 +344,16 @@
       "label": "List transaction attachments",
       "description": "Attachment metadata (names, sizes, mime types) on one transaction. File bytes are not exposed to agents.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "txId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
       }
     },
     {
@@ -242,19 +368,64 @@
       "label": "Create transaction",
       "description": "Book one transaction in a workspace. clientRequestId is the retry-safe idempotency key.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "direction": { "type": "string", "required": true, "description": "income|expense." },
-        "title": { "type": "string", "required": true },
-        "bookingDate": { "type": "string", "required": true, "description": "ISO date." },
-        "amountMinor": { "type": "integer", "required": false, "description": "Amount in minor units." },
-        "amount": { "type": "string", "required": false, "description": "Decimal amount (alternative to amountMinor)." },
-        "categoryId": { "type": "integer", "required": false },
-        "bookingStatusId": { "type": "integer", "required": false },
-        "payeeId": { "type": "integer", "required": false },
-        "payeeName": { "type": "string", "required": false },
-        "notes": { "type": "string", "required": false },
-        "isSpecial": { "type": "boolean", "required": false },
-        "clientRequestId": { "type": "string", "required": true, "description": "Idempotency key — unique per intended write; safe to retry." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "direction": {
+          "type": "string",
+          "required": true,
+          "description": "income|expense."
+        },
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "bookingDate": {
+          "type": "string",
+          "required": true,
+          "description": "ISO date."
+        },
+        "amountMinor": {
+          "type": "integer",
+          "required": false,
+          "description": "Amount in minor units."
+        },
+        "amount": {
+          "type": "string",
+          "required": false,
+          "description": "Decimal amount (alternative to amountMinor)."
+        },
+        "categoryId": {
+          "type": "integer",
+          "required": false
+        },
+        "bookingStatusId": {
+          "type": "integer",
+          "required": false
+        },
+        "payeeId": {
+          "type": "integer",
+          "required": false
+        },
+        "payeeName": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "isSpecial": {
+          "type": "boolean",
+          "required": false
+        },
+        "clientRequestId": {
+          "type": "string",
+          "required": true,
+          "description": "Idempotency key — unique per intended write; safe to retry."
+        }
       }
     },
     {
@@ -270,20 +441,65 @@
       "label": "Update transaction",
       "description": "Update fields on an existing transaction. CAS-guarded: the current row version must be supplied, so retries are naturally safe.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "txId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "version": { "type": "integer", "required": true, "description": "Current row version (CAS guard)." },
-        "direction": { "type": "string", "required": false },
-        "title": { "type": "string", "required": false },
-        "bookingDate": { "type": "string", "required": false },
-        "amountMinor": { "type": "integer", "required": false },
-        "amount": { "type": "string", "required": false },
-        "categoryId": { "type": "integer", "required": false },
-        "bookingStatusId": { "type": "integer", "required": false },
-        "payeeId": { "type": "integer", "required": false },
-        "payeeName": { "type": "string", "required": false },
-        "notes": { "type": "string", "required": false },
-        "isSpecial": { "type": "boolean", "required": false }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "txId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "version": {
+          "type": "integer",
+          "required": true,
+          "description": "Current row version (CAS guard)."
+        },
+        "direction": {
+          "type": "string",
+          "required": false
+        },
+        "title": {
+          "type": "string",
+          "required": false
+        },
+        "bookingDate": {
+          "type": "string",
+          "required": false
+        },
+        "amountMinor": {
+          "type": "integer",
+          "required": false
+        },
+        "amount": {
+          "type": "string",
+          "required": false
+        },
+        "categoryId": {
+          "type": "integer",
+          "required": false
+        },
+        "bookingStatusId": {
+          "type": "integer",
+          "required": false
+        },
+        "payeeId": {
+          "type": "integer",
+          "required": false
+        },
+        "payeeName": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "isSpecial": {
+          "type": "boolean",
+          "required": false
+        }
       }
     },
     {
@@ -299,8 +515,91 @@
       "label": "Delete transaction",
       "description": "Delete one transaction. Retrying a deleted id yields a stable not-found, so the write is naturally idempotent.",
       "params": {
-        "workspaceId": { "type": "integer", "required": true, "description": "Path parameter." },
-        "txId": { "type": "integer", "required": true, "description": "Path parameter." }
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "txId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "bc_webhooks_list",
+      "kind": "read",
+      "riskClass": 0,
+      "method": "GET",
+      "path": "/agent/v1/webhooks",
+      "scope": "budgetcheck:webhooks:read",
+      "route": "agent_webhook#index",
+      "label": "List webhooks",
+      "description": "List outbound webhook subscriptions for the token owner."
+    },
+    {
+      "name": "bc_webhooks_create",
+      "kind": "write",
+      "riskClass": 2,
+      "method": "POST",
+      "path": "/agent/v1/webhooks",
+      "scope": "budgetcheck:webhooks:write",
+      "route": "agent_webhook#create",
+      "confirm": "required",
+      "batch": "forbidden",
+      "idempotency": "clientRequestId",
+      "label": "Create webhook",
+      "description": "Subscribe to app events — creates an HTTPS endpoint subscription.",
+      "params": {
+        "url": {
+          "type": "string",
+          "required": true,
+          "description": "Public https endpoint."
+        },
+        "events": {
+          "type": "array",
+          "required": true,
+          "description": "Event names or ['*']."
+        }
+      }
+    },
+    {
+      "name": "bc_webhooks_delete",
+      "kind": "write",
+      "riskClass": 2,
+      "method": "DELETE",
+      "path": "/agent/v1/webhooks/{id}",
+      "scope": "budgetcheck:webhooks:write",
+      "route": "agent_webhook#delete",
+      "confirm": "required",
+      "batch": "forbidden",
+      "idempotency": "natural",
+      "label": "Delete webhook",
+      "description": "Remove a webhook subscription.",
+      "params": {
+        "id": {
+          "type": "integer",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "bc_webhooks_test",
+      "kind": "write",
+      "riskClass": 1,
+      "method": "POST",
+      "path": "/agent/v1/webhooks/{id}/test",
+      "scope": "budgetcheck:webhooks:write",
+      "route": "agent_webhook#test",
+      "idempotency": "natural",
+      "label": "Test webhook",
+      "description": "Queue a signed test delivery to a subscription.",
+      "params": {
+        "id": {
+          "type": "integer",
+          "required": true
+        }
       }
     }
   ],
@@ -315,5 +614,9 @@
     "mobile_api#deleteTransactionAttachment",
     "mobile_api#downloadTransactionAttachment",
     "mobile_api#applyRecurringSuggestion"
+  ],
+  "events": [
+    "agent.write.completed",
+    "webhook.test"
   ]
 }

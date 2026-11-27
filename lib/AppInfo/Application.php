@@ -130,7 +130,8 @@ class Application extends App implements IBootstrap
 				$c->query(\OCA\BudgetCheck\Agent\AgentSeatGate::class),
 				$c->query(\OCA\BudgetCheck\Agent\AgentAuditMapper::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
-				'budgetcheck'
+				'budgetcheck',
+				$c->query(\OCA\BudgetCheck\Agent\AgentWebhookDispatcher::class)
 			);
 		});
 		$context->registerMiddleware(\OCA\BudgetCheck\Middleware\AgentAuthMiddleware::class);
