@@ -102,6 +102,25 @@ $bc_tokens = is_array($bc_state['tokens']) ? $bc_state['tokens'] : [];
 	</div>
 	<?php endif; ?>
 
+	<div class="bc-agent-webhooks" id="bc-agent-webhooks">
+		<h3 class="bc-agent-sub-h" id="bc-agent-webhooks-h"><?php p($l->t('Webhook endpoints')); ?></h3>
+		<p class="bc-form-row__hint"><?php p($l->t('Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time.')); ?></p>
+		<div class="bc-table-wrap bc-agent-tablewrap" tabindex="0" role="region" aria-labelledby="bc-agent-webhooks-h">
+			<table class="bc-table bc-table--cards bc-agent-table" id="bc-agent-webhook-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php p($l->t('Endpoint')); ?></th>
+						<th scope="col"><?php p($l->t('Events')); ?></th>
+						<th scope="col"><?php p($l->t('State')); ?></th>
+						<th scope="col"><?php p($l->t('Last delivery')); ?></th>
+						<th scope="col"><span class="bc-visually-hidden"><?php p($l->t('Actions')); ?></span></th>
+					</tr>
+				</thead>
+				<tbody id="bc-agent-webhook-tbody"></tbody>
+			</table>
+		</div>
+	</div>
+
 	<?php if ($bc_state['isAdmin']): ?>
 	<div class="bc-form-row bc-agent-selfmint">
 		<input type="hidden" name="agent_self_mint" value="0">

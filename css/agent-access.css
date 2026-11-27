@@ -477,6 +477,14 @@ dialog.bc-agent-revoke-dialog:not([open]) {
 	font-size: var(--bc-fs-sm);
 	line-height: var(--bc-line-base);
 }
+.bc-agent-sub-h {
+	margin: var(--bc-space-6, 32px) 0 var(--bc-space-1, 4px);
+	font-size: var(--bc-fs-lg, 1.125rem);
+	line-height: var(--bc-line-tight, 1.25);
+}
+.bc-agent-webhooks > .bc-form-row__hint {
+	margin-bottom: var(--bc-space-3, 12px);
+}
 
 /* Inline field error (mint dialog) — family field-errors recipe: danger
    ink, small type; next-step copy lives in the text the server fields-map
