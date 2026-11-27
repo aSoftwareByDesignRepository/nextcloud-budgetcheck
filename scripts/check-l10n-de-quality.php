@@ -43,6 +43,8 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 	// byte-identical to English by correct translation, not an untranslated
 	// string.
 	'Phase: %s' => true,
+	'Test' => true, // "der Test" is the correct German word — identical by nature
+	'Token' => true, // "das Token" is the correct German word — identical by nature
 ];
 
 $bannedSubstrings = [
